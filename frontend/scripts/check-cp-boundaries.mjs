@@ -98,8 +98,13 @@ function importProtectedFiles(root) {
   const exact = [
     path.join(root, 'frontend/features/onboarding/data/repositories/onboarding.repository.impl.ts'),
   ];
-  const future = path.join(root, 'frontend/features/commercial-platform');
-  return [...new Set([...exact.filter(fs.existsSync), ...walk(future)])].sort();
+  const commercialPlatformDirectories = [
+    path.join(root, 'frontend/features/commercialPlatform'),
+    path.join(root, 'frontend/features/commercial-platform'),
+  ];
+  return [
+    ...new Set([...exact.filter(fs.existsSync), ...commercialPlatformDirectories.flatMap(walk)]),
+  ].sort();
 }
 
 function termProtectedFiles(root) {
@@ -116,10 +121,24 @@ function termProtectedFiles(root) {
 }
 
 function isCoreFile(relativePath) {
+  if (isCommercialPlatformFile(relativePath)) {
+    return (
+      relativePath.startsWith('frontend/features/commercialPlatform/contracts/') ||
+      relativePath.includes('/domain/')
+    );
+  }
   return (
     relativePath.includes('/domain/') ||
     relativePath.includes('/application/') ||
-    relativePath.includes('/data/repositories/')
+    relativePath.includes('/data/repositories/') ||
+    relativePath.startsWith('frontend/features/commercialPlatform/contracts/')
+  );
+}
+
+function isCommercialPlatformFile(relativePath) {
+  return (
+    relativePath.startsWith('frontend/features/commercialPlatform/') ||
+    relativePath.startsWith('frontend/features/commercial-platform/')
   );
 }
 
@@ -130,10 +149,12 @@ function matchesImport(moduleName, prefixes) {
 }
 
 function isForbiddenCoreImport(moduleName, relativePath) {
+  const commercialPlatform = isCommercialPlatformFile(relativePath);
   return (
-    matchesImport(moduleName, FORBIDDEN_CORE_IMPORTS) ||
-    (relativePath.startsWith('frontend/features/commercial-platform/') &&
-      matchesImport(moduleName, FUTURE_CP_FORBIDDEN_IMPORTS))
+    (isCoreFile(relativePath) && matchesImport(moduleName, FORBIDDEN_CORE_IMPORTS)) ||
+    (commercialPlatform &&
+      ((isCoreFile(relativePath) && matchesImport(moduleName, FUTURE_CP_FORBIDDEN_IMPORTS)) ||
+        /(?:^|\/)onboarding(?:\/|$)/u.test(moduleName)))
   );
 }
 
@@ -174,7 +195,6 @@ function scanTypeScript(root) {
     const visit = (node) => {
       if (
         importFiles.has(filename) &&
-        isCoreFile(relativePath) &&
         (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
         node.moduleSpecifier &&
         ts.isStringLiteral(node.moduleSpecifier) &&

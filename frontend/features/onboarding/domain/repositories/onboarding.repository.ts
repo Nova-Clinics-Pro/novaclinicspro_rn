@@ -30,11 +30,6 @@ import {
 } from '../entities/workspace-preparation.entity';
 import { JourneyVisibilityProjection } from '../entities/journey-visibility.entity';
 import { ReadyToStart } from '../entities/ready-to-start.entity';
-import {
-  CommercialRetention,
-  CommercialTrial,
-  CommercialTrialHandoff,
-} from '../entities/commercial-trial.entity';
 
 export interface IJourneyVisibilityRepository {
   getJourneyVisibility(tenantId: string): Promise<JourneyVisibilityProjection>;
@@ -42,48 +37,6 @@ export interface IJourneyVisibilityRepository {
 
 export interface IReadyToStartRepository {
   getReadyToStart(tenantId: string, signal?: AbortSignal): Promise<ReadyToStart>;
-}
-
-export interface ICommercialTrialRepository {
-  getCommercialTrial(
-    organizationId: string,
-    tenantId: string,
-    signal?: AbortSignal
-  ): Promise<CommercialTrial>;
-  getCommercialRetention(
-    organizationId: string,
-    tenantId: string,
-    signal?: AbortSignal
-  ): Promise<CommercialRetention>;
-  activateCommercialTrial(
-    organizationId: string,
-    tenantId: string,
-    aggregateVersion: number,
-    confirmed: boolean,
-    idempotencyKey: string
-  ): Promise<CommercialTrial>;
-  requestCommercialTrialExtension(
-    organizationId: string,
-    tenantId: string,
-    reason: string,
-    channel: string,
-    idempotencyKey: string
-  ): Promise<CommercialTrial>;
-  grantCommercialTrialExtension(
-    organizationId: string,
-    tenantId: string,
-    aggregateVersion: number,
-    extensionDays: number,
-    reason: string,
-    channel: string,
-    idempotencyKey: string,
-    requesterId?: string,
-    requestOperationId?: string
-  ): Promise<CommercialTrial>;
-  requestCommercialTrialSubscription(
-    organizationId: string,
-    tenantId: string
-  ): Promise<CommercialTrialHandoff>;
 }
 
 export interface IOnboardingRepository {
