@@ -107,10 +107,9 @@ describe('CP frontend boundary guard', () => {
     expect(result.status).toBe(0);
     expect(result.report).toMatchObject({
       status: 'pass',
-      observation_count: 20,
+      observation_count: 11,
       counts: {
         'frontend.forbidden_import': 1,
-        'frontend.host_terminology': 9,
         'frontend.ui_technical_terminology': 5,
         'frontend.ui_technical_terminology.clinic_entry': 1,
         'frontend.ui_technical_terminology.organization_admin': 4,

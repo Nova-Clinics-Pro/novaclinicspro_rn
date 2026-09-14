@@ -2,20 +2,20 @@ import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { getCommercialRetentionApi } from '../../features/onboarding/data/datasources/onboarding.api';
+import { getCommercialRetentionApi } from '../../features/commercialPlatform/data/datasources/commercial-trial.api';
 import {
   CommercialRetentionResponseDTO,
   CommercialTrialDatasourceError,
-} from '../../features/onboarding/data/models/onboarding.dtos';
+} from '../../features/commercialPlatform/contracts/commercial-trial';
 import {
   commercialTrialRepository,
   mapCommercialRetention,
-  onboardingKeys,
+  commercialTrialKeys,
   useClearCommercialRetentionCache,
   useCommercialRetentionQuery,
-} from '../../features/onboarding/data/repositories/onboarding.repository.impl';
+} from '../../features/commercialPlatform/data/repositories/commercial-trial.repository.impl';
 
-jest.mock('../../features/onboarding/data/datasources/onboarding.api', () => ({
+jest.mock('../../features/commercialPlatform/data/datasources/commercial-trial.api', () => ({
   activateCommercialTrialApi: jest.fn(),
   getCommercialRetentionApi: jest.fn(),
   getCommercialTrialApi: jest.fn(),
@@ -188,7 +188,7 @@ describe('Commercial Retention repository and query', () => {
     );
 
     await waitFor(() => expect(result.current.data?.trialId).toBe('trial-1'));
-    expect(onboardingKeys.commercialRetention('org-1', 'tenant-1')).toEqual([
+    expect(commercialTrialKeys.commercialRetention('org-1', 'tenant-1')).toEqual([
       'onboarding',
       'commercial-retention',
       'org-1',
@@ -244,8 +244,8 @@ describe('Commercial Retention repository and query', () => {
 
   it('cancels and removes only the outgoing retention scope', async () => {
     const queryClient = createClient();
-    queryClient.setQueryData(onboardingKeys.commercialRetention('org-1', 'tenant-1'), dto());
-    queryClient.setQueryData(onboardingKeys.commercialRetention('org-1', 'tenant-2'), dto());
+    queryClient.setQueryData(commercialTrialKeys.commercialRetention('org-1', 'tenant-1'), dto());
+    queryClient.setQueryData(commercialTrialKeys.commercialRetention('org-1', 'tenant-2'), dto());
     const { result, unmount } = renderHook(
       () => useClearCommercialRetentionCache(),
       { wrapper: wrapperFor(queryClient) }
@@ -254,10 +254,10 @@ describe('Commercial Retention repository and query', () => {
     await act(async () => result.current('org-1', 'tenant-1'));
 
     expect(queryClient.getQueryData(
-      onboardingKeys.commercialRetention('org-1', 'tenant-1')
+      commercialTrialKeys.commercialRetention('org-1', 'tenant-1')
     )).toBeUndefined();
     expect(queryClient.getQueryData(
-      onboardingKeys.commercialRetention('org-1', 'tenant-2')
+      commercialTrialKeys.commercialRetention('org-1', 'tenant-2')
     )).toBeDefined();
     unmount();
     queryClient.clear();

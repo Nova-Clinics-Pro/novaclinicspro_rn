@@ -17,13 +17,11 @@ import { ClinicTheme, useClinicTheme } from '../../../../core/theme/useClinicThe
 import {
   CommercialRetentionAction,
   CommercialTrialError,
-} from '../../domain/entities/commercial-trial.entity';
-import {
   useActivateCommercialTrialMutation,
   useCommercialRetentionQuery,
   useGrantCommercialTrialExtensionMutation,
   useRequestCommercialTrialExtensionMutation,
-} from '../../data/repositories/onboarding.repository.impl';
+} from '../../../commercialPlatform';
 import { ErrorScreen } from '../components/ErrorScreen';
 import { LoadingScreen } from '../components/LoadingScreen';
 

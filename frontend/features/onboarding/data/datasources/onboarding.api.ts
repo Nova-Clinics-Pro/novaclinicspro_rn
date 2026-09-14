@@ -30,13 +30,6 @@ import {
   JourneyVisibilityResponseDTO,
   ReadyToStartDatasourceError,
   ReadyToStartResponseDTO,
-  ActivateCommercialTrialRequestDTO,
-  CommercialTrialDatasourceError,
-  CommercialTrialHandoffDTO,
-  CommercialRetentionResponseDTO,
-  CommercialTrialResponseDTO,
-  GrantCommercialTrialExtensionDTO,
-  RequestCommercialTrialExtensionDTO,
 } from '../models/onboarding.dtos';
 import {
   AuthOrganizationContext,
@@ -95,116 +88,6 @@ const throwReadyToStartError = (error: any): never => {
     Boolean(body.retryable),
     error?.response?.status
   );
-};
-
-const throwCommercialTrialError = (error: any): never => {
-  if (error?.code === 'ERR_CANCELED') throw error;
-  const detail = error?.response?.data?.detail ?? {};
-  const body = detail.error ?? detail;
-  throw new CommercialTrialDatasourceError(
-    body.error_code ?? 'commercial_trial.application_failure',
-    body.message_token ?? 'errors.commercialTrial.application_failure',
-    Boolean(body.retryable),
-    error?.response?.status
-  );
-};
-
-const commercialTrialIdempotencyHeaders = (idempotencyKey: string) => ({
-  headers: { 'Idempotency-Key': idempotencyKey },
-});
-
-export const getCommercialTrialApi = async (
-  tenantId: string,
-  signal?: AbortSignal
-): Promise<CommercialTrialResponseDTO> => {
-  try {
-    const response = await axiosClient.get<CommercialTrialResponseDTO>(
-      `/api/v1/onboarding/${tenantId}/commercial-trial`,
-      { signal }
-    );
-    return response.data;
-  } catch (error) {
-    return throwCommercialTrialError(error);
-  }
-};
-
-export const getCommercialRetentionApi = async (
-  tenantId: string,
-  signal?: AbortSignal
-): Promise<CommercialRetentionResponseDTO> => {
-  try {
-    const response = await axiosClient.get<CommercialRetentionResponseDTO>(
-      `/api/v1/onboarding/${tenantId}/commercial-trial/retention`,
-      { signal }
-    );
-    return response.data;
-  } catch (error) {
-    return throwCommercialTrialError(error);
-  }
-};
-
-export const activateCommercialTrialApi = async (
-  tenantId: string,
-  request: ActivateCommercialTrialRequestDTO,
-  idempotencyKey: string
-): Promise<CommercialTrialResponseDTO> => {
-  try {
-    const response = await axiosClient.post<CommercialTrialResponseDTO>(
-      `/api/v1/onboarding/${tenantId}/commercial-trial/activate`,
-      request,
-      commercialTrialIdempotencyHeaders(idempotencyKey)
-    );
-    return response.data;
-  } catch (error) {
-    return throwCommercialTrialError(error);
-  }
-};
-
-export const requestCommercialTrialExtensionApi = async (
-  tenantId: string,
-  request: RequestCommercialTrialExtensionDTO,
-  idempotencyKey: string
-): Promise<CommercialTrialResponseDTO> => {
-  try {
-    const response = await axiosClient.post<CommercialTrialResponseDTO>(
-      `/api/v1/onboarding/${tenantId}/commercial-trial/extension-requests`,
-      request,
-      commercialTrialIdempotencyHeaders(idempotencyKey)
-    );
-    return response.data;
-  } catch (error) {
-    return throwCommercialTrialError(error);
-  }
-};
-
-export const grantCommercialTrialExtensionApi = async (
-  tenantId: string,
-  request: GrantCommercialTrialExtensionDTO,
-  idempotencyKey: string
-): Promise<CommercialTrialResponseDTO> => {
-  try {
-    const response = await axiosClient.post<CommercialTrialResponseDTO>(
-      `/api/v1/onboarding/${tenantId}/commercial-trial/extensions`,
-      request,
-      commercialTrialIdempotencyHeaders(idempotencyKey)
-    );
-    return response.data;
-  } catch (error) {
-    return throwCommercialTrialError(error);
-  }
-};
-
-export const requestCommercialTrialSubscriptionApi = async (
-  tenantId: string
-): Promise<CommercialTrialHandoffDTO> => {
-  try {
-    const response = await axiosClient.post<CommercialTrialHandoffDTO>(
-      `/api/v1/onboarding/${tenantId}/commercial-trial/subscription-request`
-    );
-    return response.data;
-  } catch (error) {
-    return throwCommercialTrialError(error);
-  }
 };
 
 export const getReadyToStartApi = async (

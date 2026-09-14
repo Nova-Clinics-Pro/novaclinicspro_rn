@@ -5,23 +5,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   activateCommercialTrialApi,
   getCommercialTrialApi,
-} from '../../features/onboarding/data/datasources/onboarding.api';
+} from '../../features/commercialPlatform/data/datasources/commercial-trial.api';
 import {
   CommercialTrialDatasourceError,
+  CommercialTrialError,
   CommercialTrialResponseDTO,
-} from '../../features/onboarding/data/models/onboarding.dtos';
+} from '../../features/commercialPlatform/contracts/commercial-trial';
 import {
   commercialTrialRepository,
   mapCommercialTrial,
-  onboardingKeys,
+  commercialTrialKeys,
   shouldRetryCommercialTrial,
   useActivateCommercialTrialMutation,
   useClearCommercialTrialCache,
   useCommercialTrialQuery,
-} from '../../features/onboarding/data/repositories/onboarding.repository.impl';
-import { CommercialTrialError } from '../../features/onboarding/domain/entities/commercial-trial.entity';
+} from '../../features/commercialPlatform/data/repositories/commercial-trial.repository.impl';
 
-jest.mock('../../features/onboarding/data/datasources/onboarding.api', () => ({
+jest.mock('../../features/commercialPlatform/data/datasources/commercial-trial.api', () => ({
   activateCommercialTrialApi: jest.fn(),
   getCommercialTrialApi: jest.fn(),
   grantCommercialTrialExtensionApi: jest.fn(),
@@ -141,7 +141,7 @@ describe('Commercial Trial repository and query', () => {
     );
     await waitFor(() => expect(result.current.data?.trialId).toBe('trial-1'));
 
-    expect(onboardingKeys.commercialTrial('org-1', 'tenant-1')).toEqual([
+    expect(commercialTrialKeys.commercialTrial('org-1', 'tenant-1')).toEqual([
       'onboarding',
       'commercial-trial',
       'org-1',
@@ -155,17 +155,17 @@ describe('Commercial Trial repository and query', () => {
 
   it('cancels and removes only the outgoing commercial-trial scope', async () => {
     const queryClient = createClient();
-    queryClient.setQueryData(onboardingKeys.commercialTrial('org-1', 'tenant-1'), dto());
-    queryClient.setQueryData(onboardingKeys.commercialTrial('org-1', 'tenant-2'), dto());
+    queryClient.setQueryData(commercialTrialKeys.commercialTrial('org-1', 'tenant-1'), dto());
+    queryClient.setQueryData(commercialTrialKeys.commercialTrial('org-1', 'tenant-2'), dto());
     const { result, unmount } = renderHook(() => useClearCommercialTrialCache(), {
       wrapper: wrapperFor(queryClient),
     });
 
     await act(async () => result.current('org-1', 'tenant-1'));
 
-    expect(queryClient.getQueryData(onboardingKeys.commercialTrial('org-1', 'tenant-1')))
+    expect(queryClient.getQueryData(commercialTrialKeys.commercialTrial('org-1', 'tenant-1')))
       .toBeUndefined();
-    expect(queryClient.getQueryData(onboardingKeys.commercialTrial('org-1', 'tenant-2')))
+    expect(queryClient.getQueryData(commercialTrialKeys.commercialTrial('org-1', 'tenant-2')))
       .toBeDefined();
     unmount();
     queryClient.clear();
@@ -173,7 +173,7 @@ describe('Commercial Trial repository and query', () => {
 
   it('preserves caller idempotency, disables mutation retry, and rejects stale cache overwrite', async () => {
     const queryClient = createClient();
-    const queryKey = onboardingKeys.commercialTrial('org-1', 'tenant-1');
+    const queryKey = commercialTrialKeys.commercialTrial('org-1', 'tenant-1');
     queryClient.setQueryData(
       queryKey,
       mapCommercialTrial(dto('org-1', 'tenant-1', 8), 'org-1', 'tenant-1')

@@ -5,7 +5,7 @@ import { Alert } from 'react-native';
 import {
   CommercialRetention,
   CommercialTrialError,
-} from '../../features/onboarding/domain/entities/commercial-trial.entity';
+} from '../../features/commercialPlatform/contracts/commercial-trial';
 import { CommercialRetentionScreen } from '../../features/onboarding/presentation/pages/CommercialRetentionScreen';
 
 const mockUseCommercialRetentionQuery = jest.fn();
@@ -18,8 +18,11 @@ const mockUseGrantExtensionMutation = jest.fn();
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock(
-  '../../features/onboarding/data/repositories/onboarding.repository.impl',
+  '../../features/commercialPlatform',
   () => ({
+    CommercialTrialError: jest.requireActual(
+      '../../features/commercialPlatform/contracts/commercial-trial'
+    ).CommercialTrialError,
     useCommercialRetentionQuery: (...args: unknown[]) =>
       mockUseCommercialRetentionQuery(...args),
     useActivateCommercialTrialMutation: (...args: unknown[]) =>
