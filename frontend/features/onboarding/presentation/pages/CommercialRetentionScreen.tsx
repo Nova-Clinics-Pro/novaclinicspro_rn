@@ -22,12 +22,18 @@ import {
   useGrantCommercialTrialExtensionMutation,
   useRequestCommercialTrialExtensionMutation,
 } from '../../../commercialPlatform';
+import { useOrganizationContextQuery } from '../../data/repositories/onboarding.repository.impl';
 import { ErrorScreen } from '../components/ErrorScreen';
 import { LoadingScreen } from '../components/LoadingScreen';
 
 interface CommercialRetentionScreenProps {
-  organizationId: string;
+  /**
+   * Kept temporarily for source compatibility with existing callers. The
+   * authoritative organization scope is always read from /auth/me below.
+   */
+  organizationId?: string;
   tenantId: string;
+  onCommercialEligibilityConfirmed?: () => Promise<void>;
 }
 
 const ROOT = 'onboarding.progressiveExperience.commercialRetention';
@@ -55,12 +61,21 @@ const createOperationKey = () => {
 };
 
 export function CommercialRetentionScreen({
-  organizationId,
   tenantId,
+  onCommercialEligibilityConfirmed,
 }: CommercialRetentionScreenProps) {
   const theme = useClinicTheme();
   const { t, locale } = useTranslation();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const organizationContext = useOrganizationContextQuery();
+  const organizationId = organizationContext.data?.effectiveOrganizationId ?? '';
+  const scopeMatches = Boolean(
+    organizationId &&
+      tenantId &&
+      organizationContext.data?.effectiveTenantId === tenantId &&
+      !organizationContext.data?.selectionRequired &&
+      !organizationContext.data?.sessionRefreshRequired
+  );
   const query = useCommercialRetentionQuery(organizationId, tenantId);
   const activateMutation = useActivateCommercialTrialMutation(organizationId, tenantId);
   const requestExtensionMutation = useRequestCommercialTrialExtensionMutation(
@@ -83,11 +98,14 @@ export function CommercialRetentionScreen({
   const extensionKey = useRef<string | null>(null);
   const confirmationOpen = useRef(false);
   const submissionInFlight = useRef(false);
+  const completionInFlight = useRef(false);
+  const [completionPending, setCompletionPending] = useState(false);
 
   const actionPending =
     activateMutation.isPending ||
     requestExtensionMutation.isPending ||
-    grantExtensionMutation.isPending;
+    grantExtensionMutation.isPending ||
+    completionPending;
 
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat(locale, {
@@ -116,7 +134,42 @@ export function CommercialRetentionScreen({
 
   const refreshAfterSuccess = async (successToken: string) => {
     setActionMessage({ kind: 'success', token: successToken });
-    await query.refetch();
+    const refreshed = await query.refetch();
+    if (refreshed.error || !refreshed.data) {
+      throw refreshed.error ?? new CommercialTrialError(
+        'BACKEND_FAILURE',
+        'commercial_trial.authoritative_refresh_unavailable',
+        'errors.commercialTrial.application_failure',
+        true
+      );
+    }
+    return refreshed.data;
+  };
+
+  const completeAfterAuthoritativeCommercialRefresh = async (
+    commercialState: string
+  ) => {
+    if (
+      !scopeMatches ||
+      !onCommercialEligibilityConfirmed ||
+      !['ACTIVE', 'EXPIRING'].includes(commercialState) ||
+      completionInFlight.current
+    ) {
+      if (!['ACTIVE', 'EXPIRING'].includes(commercialState)) {
+        setActionMessage({ kind: 'error', token: `${ROOT}.workflow.errors.notAvailable` });
+      }
+      return;
+    }
+    completionInFlight.current = true;
+    setCompletionPending(true);
+    try {
+      await onCommercialEligibilityConfirmed();
+    } catch {
+      setActionMessage({ kind: 'error', token: `${ROOT}.workflow.errors.network` });
+    } finally {
+      completionInFlight.current = false;
+      setCompletionPending(false);
+    }
   };
 
   const refreshIfAuthorityChanged = async (error: unknown) => {
@@ -167,7 +220,12 @@ export function CommercialRetentionScreen({
                 idempotencyKey: activationKey.current,
               });
               activationKey.current = null;
-              await refreshAfterSuccess(`${ROOT}.workflow.startTrial.success`);
+              const refreshed = await refreshAfterSuccess(
+                `${ROOT}.workflow.startTrial.success`
+              );
+              await completeAfterAuthoritativeCommercialRefresh(
+                refreshed.commercialState
+              );
             } catch (error) {
               setActionMessage({ kind: 'error', token: actionErrorToken(error) });
               await refreshIfAuthorityChanged(error);
@@ -277,11 +335,17 @@ export function CommercialRetentionScreen({
     action === 'GRANT_EXTENSION' ||
     action === 'RESTORE_WORKSPACE';
 
-  if (!organizationId || !tenantId) {
+  if (organizationContext.isPending) {
+    return <LoadingScreen message={t(`${ROOT}.loading`)} />;
+  }
+
+  if (organizationContext.error || !scopeMatches) {
     return (
       <ErrorScreen
         title={t(`${ROOT}.empty.title`)}
-        message={t(`${ROOT}.empty.missingWorkspace`)}
+        message={t(`${ROOT}.empty.permissionDenied`)}
+        onRetry={organizationContext.error ? () => void organizationContext.refetch() : undefined}
+        retryLabel={t(`${ROOT}.actions.retry`)}
       />
     );
   }
@@ -443,6 +507,30 @@ export function CommercialRetentionScreen({
         >
           <Text style={styles.messageText}>{t(actionMessage.token)}</Text>
         </View>
+      ) : null}
+
+      {['ACTIVE', 'EXPIRING'].includes(retention.commercialState) &&
+      onCommercialEligibilityConfirmed ? (
+        <Pressable
+          style={[styles.handoffButton, completionPending && styles.disabledButton]}
+          onPress={() =>
+            void completeAfterAuthoritativeCommercialRefresh(retention.commercialState)
+          }
+          disabled={actionPending}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: actionPending, busy: completionPending }}
+          accessibilityLabel={t(
+            'onboarding.progressiveExperience.readyToStart.presentation.actions.continue'
+          )}
+        >
+          {completionPending ? (
+            <ActivityIndicator color={theme.colors.primary.onPrimary} />
+          ) : (
+            <Text style={styles.primaryButtonText}>
+              {t('onboarding.progressiveExperience.readyToStart.presentation.actions.continue')}
+            </Text>
+          )}
+        </Pressable>
       ) : null}
 
       {retention.ineligibilityReasons.length > 0 ? (
@@ -783,6 +871,17 @@ const createStyles = (theme: ClinicTheme) =>
       paddingVertical: theme.spacing.sm,
       borderRadius: theme.spacing.sm,
       backgroundColor: theme.colors.primary.default,
+    },
+    handoffButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.primary.default,
+      borderRadius: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+    },
+    disabledButton: {
+      backgroundColor: theme.colors.primary.light,
     },
     primaryButtonText: {
       ...theme.typography.button,

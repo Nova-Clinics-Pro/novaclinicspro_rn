@@ -15,6 +15,7 @@ const mockGrantExtension = jest.fn();
 const mockUseActivateMutation = jest.fn();
 const mockUseRequestExtensionMutation = jest.fn();
 const mockUseGrantExtensionMutation = jest.fn();
+const mockUseOrganizationContextQuery = jest.fn();
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock(
@@ -66,6 +67,9 @@ jest.mock('../../core/theme/useClinicTheme', () => ({
     },
   }),
 }));
+jest.mock('../../features/onboarding/data/repositories/onboarding.repository.impl', () => ({
+  useOrganizationContextQuery: () => mockUseOrganizationContextQuery(),
+}));
 
 const ROOT = 'onboarding.progressiveExperience.commercialRetention';
 
@@ -98,12 +102,23 @@ const query = (
   data,
   error,
   isPending: false,
-  refetch: jest.fn(),
+  refetch: jest.fn().mockResolvedValue({ data, error: null }),
 });
 
 describe('CommercialRetentionScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseOrganizationContextQuery.mockReturnValue({
+      data: {
+        effectiveOrganizationId: 'org-1',
+        effectiveTenantId: 'tenant-1',
+        selectionRequired: false,
+        sessionRefreshRequired: false,
+      },
+      error: null,
+      isPending: false,
+      refetch: jest.fn(),
+    });
     mockUseCommercialRetentionQuery.mockReturnValue(query(retention()));
     mockUseActivateMutation.mockReturnValue({
       mutateAsync: mockActivate,
@@ -165,7 +180,7 @@ describe('CommercialRetentionScreen', () => {
     );
 
     expect(getByRole('alert')).toBeTruthy();
-    expect(getByText(`${ROOT}.empty.missingWorkspace`)).toBeTruthy();
+    expect(getByText(`${ROOT}.empty.permissionDenied`)).toBeTruthy();
   });
 
   it.each([
@@ -267,7 +282,9 @@ describe('CommercialRetentionScreen', () => {
   });
 
   it('starts the trial only after explicit confirmation and refreshes authority', async () => {
-    const refetch = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue({
+      data: retention({ commercialState: 'ACTIVE', allowedActions: [] }),
+    });
     mockUseCommercialRetentionQuery.mockReturnValue({
       ...query(retention({ commercialState: 'ELIGIBLE', allowedActions: ['START_TRIAL'] })),
       refetch,
@@ -292,6 +309,110 @@ describe('CommercialRetentionScreen', () => {
     alert.mockRestore();
   });
 
+  it('invokes host completion only after the authoritative commercial refresh is eligible', async () => {
+    const completeAfterEligibility = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue({
+      data: retention({ commercialState: 'ACTIVE', allowedActions: [] }),
+      error: null,
+    });
+    mockUseCommercialRetentionQuery.mockReturnValue({
+      ...query(retention({ commercialState: 'ELIGIBLE', allowedActions: ['START_TRIAL'] })),
+      refetch,
+    });
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const { getByRole } = render(
+      <CommercialRetentionScreen
+        tenantId="tenant-1"
+        onCommercialEligibilityConfirmed={completeAfterEligibility}
+      />
+    );
+
+    fireEvent.press(getByRole('button', { name: /actionLabels\.START_TRIAL/ }));
+    await act(async () => {
+      await alert.mock.calls[0][2]?.[1]?.onPress?.();
+    });
+
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(completeAfterEligibility).toHaveBeenCalledTimes(1);
+    alert.mockRestore();
+  });
+
+  it('does not invoke host completion when the authoritative commercial refresh fails', async () => {
+    const completeAfterEligibility = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue({ data: undefined, error: new Error('offline') });
+    mockUseCommercialRetentionQuery.mockReturnValue({
+      ...query(retention({ commercialState: 'ELIGIBLE', allowedActions: ['START_TRIAL'] })),
+      refetch,
+    });
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const { getByRole } = render(
+      <CommercialRetentionScreen
+        tenantId="tenant-1"
+        onCommercialEligibilityConfirmed={completeAfterEligibility}
+      />
+    );
+
+    fireEvent.press(getByRole('button', { name: /actionLabels\.START_TRIAL/ }));
+    await act(async () => {
+      await alert.mock.calls[0][2]?.[1]?.onPress?.();
+    });
+
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(completeAfterEligibility).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it('allows a completion retry after a host completion failure without reactivating the trial', async () => {
+    const completeAfterEligibility = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('session refresh unavailable'))
+      .mockResolvedValueOnce(undefined);
+    mockUseCommercialRetentionQuery.mockReturnValue(
+      query(retention({ commercialState: 'ACTIVE', allowedActions: [] }))
+    );
+    const { getByRole } = render(
+      <CommercialRetentionScreen
+        tenantId="tenant-1"
+        onCommercialEligibilityConfirmed={completeAfterEligibility}
+      />
+    );
+
+    const continueButton = getByRole('button', {
+      name: /readyToStart\.presentation\.actions\.continue/,
+    });
+    await act(async () => {
+      fireEvent.press(continueButton);
+    });
+    await act(async () => {
+      fireEvent.press(continueButton);
+    });
+
+    expect(completeAfterEligibility).toHaveBeenCalledTimes(2);
+    expect(mockActivate).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when authoritative organization context does not match the requested tenant', () => {
+    mockUseOrganizationContextQuery.mockReturnValue({
+      data: {
+        effectiveOrganizationId: 'org-1',
+        effectiveTenantId: 'tenant-2',
+        selectionRequired: false,
+        sessionRefreshRequired: false,
+      },
+      error: null,
+      isPending: false,
+      refetch: jest.fn(),
+    });
+
+    const { getByRole, getByText } = render(
+      <CommercialRetentionScreen tenantId="tenant-1" />
+    );
+
+    expect(getByRole('alert')).toBeTruthy();
+    expect(getByText(`${ROOT}.empty.permissionDenied`)).toBeTruthy();
+    expect(mockActivate).not.toHaveBeenCalled();
+  });
+
   it('cancels trial activation without submitting', () => {
     mockUseCommercialRetentionQuery.mockReturnValue(
       query(retention({ commercialState: 'ELIGIBLE', allowedActions: ['START_TRIAL'] }))
@@ -309,7 +430,7 @@ describe('CommercialRetentionScreen', () => {
   });
 
   it('submits a trimmed Organization Admin extension request and refreshes authority', async () => {
-    const refetch = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue({ data: retention() });
     mockUseCommercialRetentionQuery.mockReturnValue({
       ...query(retention({ allowedActions: ['REQUEST_EXTENSION'] })),
       refetch,
@@ -359,7 +480,7 @@ describe('CommercialRetentionScreen', () => {
   );
 
   it('submits Super Admin grant inputs with the selected approved channel', async () => {
-    const refetch = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue({ data: retention() });
     mockUseCommercialRetentionQuery.mockReturnValue({
       ...query(retention({ allowedActions: ['GRANT_EXTENSION'] })),
       refetch,
@@ -584,7 +705,7 @@ describe('CommercialRetentionScreen', () => {
   });
 
   it('refreshes stale authority once after a conflict without retrying the mutation', async () => {
-    const refetch = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue({ data: retention() });
     mockRequestExtension.mockRejectedValue(
       new CommercialTrialError(
         'CONFLICT',
@@ -618,7 +739,7 @@ describe('CommercialRetentionScreen', () => {
   });
 
   it('keeps activation fail-closed after an authorization failure', async () => {
-    const refetch = jest.fn().mockResolvedValue(undefined);
+    const refetch = jest.fn().mockResolvedValue({ data: retention() });
     mockActivate.mockRejectedValue(
       new CommercialTrialError(
         'FORBIDDEN',

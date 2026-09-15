@@ -982,7 +982,7 @@ describe('SetupWizardFlow — authoritative journey presentation', () => {
     addEventListenerSpy.mockRestore();
   });
 
-  it('clears onboarding drafts when Ready to Start completes', async () => {
+  it('routes Ready to Start to commercial retention without granting shell access', async () => {
     const resetSpy = jest
       .spyOn(wizardStore, 'resetWizardDraftStorage')
       .mockResolvedValue(undefined);
@@ -1001,8 +1001,13 @@ describe('SetupWizardFlow — authoritative journey presentation', () => {
 
     fireEvent.press(getByText('Complete Ready to Start'));
 
-    expect(resetSpy).toHaveBeenCalled();
-    expect(mockRouterReplace).toHaveBeenCalledWith('/clinic-admin?tenantId=test-tenant-456');
+    expect(resetSpy).not.toHaveBeenCalled();
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      '/onboarding/commercial-retention?tenantId=test-tenant-456'
+    );
+    expect(mockRouterReplace).not.toHaveBeenCalledWith(
+      '/clinic-admin?tenantId=test-tenant-456'
+    );
 
     resetSpy.mockRestore();
   });
