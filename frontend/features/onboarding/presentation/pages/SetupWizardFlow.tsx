@@ -32,7 +32,6 @@ import { GoLiveScreen } from './steps/GoLiveScreen';
 import { getPreparationStepDisplayName, SERVICE_CATALOGUE_ALIASES, ServiceCatalogueAlias } from '../../constants/stepAliases';
 import {
   hydrateWizardDraftFromStorage,
-  resetWizardDraftStorage,
   syncWizardDraftToStorage,
   useWizardStore,
 } from '../stores/wizard.store';
@@ -998,8 +997,7 @@ export function SetupWizardFlow() {
           <GoLiveScreen
             tenantId={tenantId || ''}
             onComplete={() => {
-              void resetWizardDraftStorage();
-              router.replace(`/clinic-admin?tenantId=${tenantId}`);
+              router.push(`/onboarding/commercial-retention?tenantId=${tenantId}` as any);
             }}
             onNavigateToSetupStep={navigateToProjectedStep}
             onOpenWorkspacePreparation={() => {
