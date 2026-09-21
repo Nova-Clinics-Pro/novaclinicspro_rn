@@ -30,6 +30,8 @@ export interface AuthUserSession {
   roles: string[];
   permissions: string[];
   isOrgAdmin: boolean;
+  /** Backend-authoritative; never inferred from application lifecycle state. */
+  isDemoTenant: boolean;
   applicationStatus: 'draft' | 'pending_review' | 'approved' | 'onboarding' | 'active' | 'rejected' | null;
   /**
    * List of clinics owned by this user (for clinic owners).
@@ -74,6 +76,7 @@ export const mapCurrentUserToDomain = (dto: {
   roles: string[];
   permissions: string[];
   is_org_admin: boolean;
+  is_demo_tenant?: boolean;
   owned_clinics?: Array<{
     tenant_id: string;
     clinic_name: string;
@@ -110,6 +113,7 @@ export const mapCurrentUserToDomain = (dto: {
     roles: dto.roles,
     permissions: dto.permissions,
     isOrgAdmin: dto.is_org_admin,
+    isDemoTenant: dto.is_demo_tenant === true,
     applicationStatus: dto.application_status || null,
     ownedClinics,
   };

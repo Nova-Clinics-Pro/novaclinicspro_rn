@@ -448,7 +448,9 @@ export const getDemoStatusApi = async (
     return response.data;
   } catch (error: any) {
     logError('getDemoStatusApi', error);
-    throw new Error(getErrorMessage(error, 'Unable to load demo status. Please try again.'));
+    // Preserve the transport status so React Query can distinguish a
+    // deterministic client failure from a retryable transport failure.
+    throw error;
   }
 };
 

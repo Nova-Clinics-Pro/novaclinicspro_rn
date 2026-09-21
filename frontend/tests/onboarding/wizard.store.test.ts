@@ -66,6 +66,7 @@ const setAuthIdentity = (tenantId: string | null, userId = 'user-a') => {
       roles: ['clinic_owner'],
       permissions: [],
       isOrgAdmin: false,
+      isDemoTenant: false,
       applicationStatus: 'onboarding',
       ownedClinics: [],
     },
