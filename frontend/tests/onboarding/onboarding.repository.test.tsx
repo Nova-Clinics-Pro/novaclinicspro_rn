@@ -10,10 +10,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   onboardingKeys,
   useCreateInitialOrganizationMutation,
+  useDemoStatusQuery,
   useSubmitStepMutation,
+  shouldRetryDemoStatusQuery,
 } from '../../features/onboarding/data/repositories/onboarding.repository.impl';
 import {
   createInitialOrganizationApi,
+  getDemoStatusApi,
   getOrganizationContextApi,
   submitStepDataApi,
 } from '../../features/onboarding/data/datasources/onboarding.api';
@@ -39,6 +42,7 @@ jest.mock('../../features/onboarding/data/datasources/onboarding.api', () => ({
 
 const mockSubmitStepDataApi = submitStepDataApi as jest.Mock;
 const mockCreateInitialOrganizationApi = createInitialOrganizationApi as jest.Mock;
+const mockGetDemoStatusApi = getDemoStatusApi as jest.Mock;
 const mockGetOrganizationContextApi = getOrganizationContextApi as jest.Mock;
 
 describe('useSubmitStepMutation', () => {
@@ -184,5 +188,48 @@ describe('useCreateInitialOrganizationMutation', () => {
     expect(mockCreateInitialOrganizationApi.mock.calls[0][0]).toBe('Nova Group');
     unmount();
     queryClient.clear();
+  });
+});
+
+describe('useDemoStatusQuery', () => {
+  const createWrapper = (queryClient: QueryClient) => {
+    const DemoStatusQueryWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    DemoStatusQueryWrapper.displayName = 'DemoStatusQueryWrapper';
+    return DemoStatusQueryWrapper;
+  };
+
+  it('does not run when the authoritative demo gate is disabled', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    renderHook(() => useDemoStatusQuery('tenant-123', { enabled: false }), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    expect(mockGetDemoStatusApi).not.toHaveBeenCalled();
+    queryClient.clear();
+  });
+
+  it('runs for an enabled authoritative demo tenant', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    mockGetDemoStatusApi.mockResolvedValueOnce({ demo_tenant_id: 'tenant-123' });
+    renderHook(() => useDemoStatusQuery('tenant-123', { enabled: true }), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await waitFor(() => {
+      expect(mockGetDemoStatusApi).toHaveBeenCalledWith('tenant-123');
+    });
+    queryClient.clear();
+  });
+
+  it('does not retry deterministic 4xx demo-status failures', () => {
+    expect(shouldRetryDemoStatusQuery(0, { response: { status: 400 } })).toBe(false);
+    expect(shouldRetryDemoStatusQuery(0, { response: { status: 403 } })).toBe(false);
+    expect(shouldRetryDemoStatusQuery(0, { response: { status: 422 } })).toBe(false);
   });
 });

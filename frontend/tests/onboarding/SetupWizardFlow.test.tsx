@@ -419,6 +419,47 @@ describe('SetupWizardFlow — authoritative journey presentation', () => {
     expect(queryByText('Next')).toBeNull();
   });
 
+  it('does not query demo status for a normal onboarding tenant', async () => {
+    mockUseOnboardingStatusQuery.mockReturnValue({
+      data: buildStatus([]),
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    renderFlow();
+
+    await waitFor(() => {
+      expect(mockUseDemoStatusQuery).toHaveBeenCalledWith(
+        'test-tenant-456',
+        expect.objectContaining({ enabled: false })
+      );
+    });
+  });
+
+  it('queries demo status only for a backend-authoritative demo tenant', async () => {
+    mockAuthState.currentUser = {
+      tenantId: 'test-tenant-456',
+      applicationStatus: 'onboarding',
+      isDemoTenant: true,
+    };
+    mockUseOnboardingStatusQuery.mockReturnValue({
+      data: buildStatus([]),
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    renderFlow();
+
+    await waitFor(() => {
+      expect(mockUseDemoStatusQuery).toHaveBeenCalledWith(
+        'test-tenant-456',
+        expect.objectContaining({ enabled: true })
+      );
+    });
+  });
+
   it('does not navigate or log a template error for an empty projection', async () => {
     mockUseOnboardingStatusQuery.mockReturnValue({
       data: buildStatus(null),

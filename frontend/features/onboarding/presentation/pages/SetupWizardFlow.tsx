@@ -263,8 +263,10 @@ export function SetupWizardFlow() {
         authoritativeEvidence.projectionIdentity.capabilityRevision,
     });
   }, [currentStep, organizationId, statusDomain, tenantId]);
+  const isCurrentDemoTenant =
+    currentUser?.isDemoTenant === true && currentUser.tenantId === tenantId;
   const { data: demoStatusData } = useDemoStatusQuery(tenantId, {
-    enabled: !!tenantId && currentUser?.applicationStatus === 'onboarding',
+    enabled: isCurrentDemoTenant,
     retry: false,
   });
   const readyToStartStep = statusData?.per_step_validation?.go_live_checklist;
