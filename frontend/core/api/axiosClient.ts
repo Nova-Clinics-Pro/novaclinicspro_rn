@@ -88,6 +88,8 @@ function hasAuthorizationHeader(config?: AxiosRequestConfig): boolean {
  * No error-tracking service (Sentry etc.) is integrated in this project yet.
  * `reportObservabilityEvent` is the single choke point a future integration
  * would hook into; today it emits a structured, parseable console entry.
+ * Auth-boundary events use `console.warn` so expected recovery paths do not
+ * surface as React Native development error overlays.
  * Exported so it is independently testable (NFR-5).
  */
 export interface ObservabilityEvent {
@@ -101,6 +103,13 @@ export interface ObservabilityEvent {
 
 export function reportObservabilityEvent(event: Omit<ObservabilityEvent, 'timestamp'>): void {
   const payload: ObservabilityEvent = { ...event, timestamp: new Date().toISOString() };
+  // Auth-boundary anomalies remain visible without producing a React Native
+  // development error overlay. Server failures remain errors.
+  if (event.event === 'api.auth_boundary_anomaly') {
+    // eslint-disable-next-line no-console -- intentional structured observability output, not debug logging
+    console.warn('[observability]', JSON.stringify(payload));
+    return;
+  }
   // eslint-disable-next-line no-console -- intentional structured observability output, not debug logging
   console.error('[observability]', JSON.stringify(payload));
 }
@@ -240,7 +249,7 @@ axiosClient.interceptors.response.use(
         const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
         
         if (refreshError || !session) {
-          console.error('❌ Token refresh failed:', refreshError);
+          console.warn('⚠️ Token refresh failed:', refreshError);
           throw new Error('Session expired');
         }
 
@@ -252,9 +261,15 @@ axiosClient.interceptors.response.use(
         }
         
         return axiosClient(originalRequest);
-      } catch (refreshError) {
-        console.error('❌ Token refresh failed:', refreshError);
-        return Promise.reject(refreshError);
+      } catch {
+        reportObservabilityEvent({
+          event: 'api.auth_boundary_anomaly',
+          url: originalRequest.url,
+          method: originalRequest.method,
+          status: error.response?.status,
+          message: 'Authenticated request was rejected and session refresh failed.',
+        });
+        return Promise.reject(error);
       }
     }
 
@@ -264,6 +279,7 @@ axiosClient.interceptors.response.use(
     // pre-login bootstrap) — that's expected, not a real error, so log it
     // quietly instead of under the "❌ API error" banner.
     const isUnauthenticated401 = error.response?.status === 401 && !hasAuthorizationHeader(originalRequest);
+    const isAuthenticated401 = error.response?.status === 401 && hasAuthorizationHeader(originalRequest);
     if (__DEV__) {
       if (isUnauthenticated401) {
         console.log('ℹ️ Unauthenticated request rejected (no active session):', originalRequest.url);
@@ -279,13 +295,13 @@ axiosClient.interceptors.response.use(
 
     // Structured observability (T-0.7) — unconditional, so these two anomaly
     // categories are visible in production, not only in dev console output.
-    if (isUnauthenticated401) {
+    if (isAuthenticated401) {
       reportObservabilityEvent({
         event: 'api.auth_boundary_anomaly',
         url: originalRequest.url,
         method: originalRequest.method,
         status: error.response?.status,
-        message: 'Authenticated request rejected with no active session (e.g. post-logout).',
+        message: 'Authenticated request was rejected by the API.',
       });
     } else if (error.response?.status && error.response.status >= 500) {
       reportObservabilityEvent({

@@ -839,6 +839,17 @@ export const useValidationReportQuery = (
 /**
  * Hook to get demo status
  */
+export const shouldRetryDemoStatusQuery = (
+  failureCount: number,
+  error: unknown
+): boolean => {
+  const status = (error as { response?: { status?: unknown } })?.response?.status;
+  if (typeof status === 'number' && status >= 400 && status < 500) {
+    return false;
+  }
+  return failureCount < 2;
+};
+
 export const useDemoStatusQuery = (
   demoTenantId: string,
   options?: Omit<UseQueryOptions<DemoStatusResponse, Error>, 'queryKey' | 'queryFn'>
@@ -847,6 +858,7 @@ export const useDemoStatusQuery = (
     queryKey: onboardingKeys.demo(demoTenantId),
     queryFn: () => getDemoStatusApi(demoTenantId),
     enabled: !!demoTenantId,
+    retry: shouldRetryDemoStatusQuery,
     refetchInterval: 60000, // Refresh every minute
     ...options,
   });

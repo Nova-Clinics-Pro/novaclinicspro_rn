@@ -13,6 +13,8 @@ export interface CurrentUserResponse {
   roles: string[];
   permissions: string[];
   is_org_admin: boolean;
+  /** Backend-authoritative classification of the effective tenant. */
+  is_demo_tenant: boolean;
   application_status?: 'draft' | 'pending_review' | 'approved' | 'onboarding' | 'active' | 'rejected' | null;
   full_name?: string;
   clinic_name?: string;  // single string (legacy / owner path)
@@ -121,4 +123,3 @@ export const getAuthErrorMessage = (code: AuthErrorCode): string => {
   
   return messages[code];
 };
-

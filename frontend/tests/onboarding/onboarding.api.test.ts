@@ -6,6 +6,7 @@
 
 import {
   ensureWorkspacePreparationApi,
+  getDemoStatusApi,
   getWorkspacePreparationApi,
   retryWorkspacePreparationApi,
   submitStepDataApi,
@@ -185,6 +186,17 @@ describe('submitStepDataApi', () => {
     await expect(
       submitStepDataApi('tenant-123', 'operating_hours', { data: {} })
     ).rejects.toEqual(expect.objectContaining({ kind }));
+  });
+});
+
+describe('getDemoStatusApi', () => {
+  it('preserves the transport response for deterministic retry classification', async () => {
+    const transportError = {
+      response: { status: 400, data: { detail: 'Tenant is not a demo tenant' } },
+    };
+    mockGet.mockRejectedValueOnce(transportError);
+
+    await expect(getDemoStatusApi('tenant-123')).rejects.toBe(transportError);
   });
 });
 describe('Workspace Preparation datasource', () => {

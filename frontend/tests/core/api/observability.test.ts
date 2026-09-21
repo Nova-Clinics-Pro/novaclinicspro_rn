@@ -39,10 +39,12 @@ describe('axiosClient observability hooks (T-0.7)', () => {
     expect(source).toContain("'api.auth_boundary_anomaly'");
   });
 
-  it('reportObservabilityEvent logs unconditionally — not gated behind __DEV__', () => {
+  it('keeps server errors as errors and auth-boundary anomalies as warnings', () => {
     const fnStart = source.indexOf('export function reportObservabilityEvent(');
     const fnBody = source.slice(fnStart, source.indexOf('\n}', fnStart));
     expect(fnBody).not.toContain('__DEV__');
+    expect(fnBody).toContain("event.event === 'api.auth_boundary_anomaly'");
+    expect(fnBody).toContain('console.warn');
     expect(fnBody).toContain('console.error');
   });
 
@@ -55,8 +57,14 @@ describe('axiosClient observability hooks (T-0.7)', () => {
       );
     });
 
-    it('reports an auth_boundary_anomaly event for an unauthenticated 401 (e.g. post-logout)', () => {
-      expect(handlerBody).toMatch(/if \(isUnauthenticated401\) \{[\s\S]*?event: 'api\.auth_boundary_anomaly'/);
+    it('keeps unauthenticated bootstrap 401s quiet while observing authenticated 401s', () => {
+      expect(handlerBody).toContain('const isUnauthenticated401');
+      expect(handlerBody).toContain('const isAuthenticated401');
+      expect(handlerBody).toMatch(/if \(isAuthenticated401\) \{[\s\S]*?event: 'api\.auth_boundary_anomaly'/);
+      const unauthenticatedBranchStart = handlerBody.indexOf('if (isUnauthenticated401) {');
+      const unauthenticatedBranchEnd = handlerBody.indexOf('\n      } else {', unauthenticatedBranchStart);
+      expect(handlerBody.slice(unauthenticatedBranchStart, unauthenticatedBranchEnd))
+        .not.toContain('reportObservabilityEvent');
     });
 
     it('the two observability calls are NOT nested inside the __DEV__-gated block', () => {
