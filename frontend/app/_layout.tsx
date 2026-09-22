@@ -8,6 +8,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../core/providers/AuthProvider';
 import { queryClient } from '../core/api/queryClient';
 import { LogBox } from 'react-native';
+import { ApiRequestFallbackProvider } from '../core/providers/ApiRequestFallbackProvider';
 
 // Ignore only specific non-critical warnings
 LogBox.ignoreLogs([
@@ -30,22 +31,24 @@ LogBox.ignoreLogs([
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="register" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="super-admin" />
-          <Stack.Screen name="clinic-admin" />
-          <Stack.Screen name="doctor" />
-          <Stack.Screen name="therapist" />
-          <Stack.Screen name="theme-demo" />
-          <Stack.Screen name="notifications" />
-          <Stack.Screen name="notification-preferences" />
-          <Stack.Screen name="localization" />
-          <Stack.Screen name="tenant-localization" />
-        </Stack>
-      </AuthProvider>
+      <ApiRequestFallbackProvider>
+        <AuthProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="register" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="super-admin" />
+            <Stack.Screen name="clinic-admin" />
+            <Stack.Screen name="doctor" />
+            <Stack.Screen name="therapist" />
+            <Stack.Screen name="theme-demo" />
+            <Stack.Screen name="notifications" />
+            <Stack.Screen name="notification-preferences" />
+            <Stack.Screen name="localization" />
+            <Stack.Screen name="tenant-localization" />
+          </Stack>
+        </AuthProvider>
+      </ApiRequestFallbackProvider>
     </QueryClientProvider>
   );
 }

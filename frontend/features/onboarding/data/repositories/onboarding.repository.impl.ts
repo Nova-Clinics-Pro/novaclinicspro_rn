@@ -535,6 +535,8 @@ export const useReadyToStartQuery = (
     enabled: Boolean(organizationId && tenantId),
     retry: shouldRetryReadyToStart,
     ...options,
+    // GoLiveScreen owns its localized readiness errors and retry affordance.
+    meta: { apiFailurePresentation: 'feature', ...options?.meta },
   });
 
 export const useClearReadyToStartCache = () => {

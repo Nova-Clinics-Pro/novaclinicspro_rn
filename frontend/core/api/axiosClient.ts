@@ -11,10 +11,14 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { supabase } from './supabaseClient';
 import { isLoggingOut } from './authGuard';
+import { ApiLoadingMode, beginApiRequest, completeApiRequest } from './apiRequestActivity';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
     skipAuthRefreshRetry?: boolean;
+    apiRequestTrackerId?: string;
+    apiLoadingMode?: ApiLoadingMode;
+    apiFailurePresentation?: 'feature';
   }
 }
 
@@ -93,7 +97,7 @@ function hasAuthorizationHeader(config?: AxiosRequestConfig): boolean {
  * Exported so it is independently testable (NFR-5).
  */
 export interface ObservabilityEvent {
-  event: 'api.server_error' | 'api.auth_boundary_anomaly';
+  event: 'api.server_error' | 'api.auth_boundary_anomaly' | 'api.request_timeout';
   url?: string;
   method?: string;
   status?: number;
@@ -103,15 +107,9 @@ export interface ObservabilityEvent {
 
 export function reportObservabilityEvent(event: Omit<ObservabilityEvent, 'timestamp'>): void {
   const payload: ObservabilityEvent = { ...event, timestamp: new Date().toISOString() };
-  // Auth-boundary anomalies remain visible without producing a React Native
-  // development error overlay. Server failures remain errors.
-  if (event.event === 'api.auth_boundary_anomaly') {
-    // eslint-disable-next-line no-console -- intentional structured observability output, not debug logging
-    console.warn('[observability]', JSON.stringify(payload));
-    return;
-  }
-  // eslint-disable-next-line no-console -- intentional structured observability output, not debug logging
-  console.error('[observability]', JSON.stringify(payload));
+  // These are recoverable transport observations, not unhandled exceptions.
+  // Keep them structured and visible without causing a React Native red overlay.
+  console.warn('[observability]', JSON.stringify(payload));
 }
 
 /**
@@ -151,6 +149,7 @@ function transformDatesFromUTC(obj: any): any {
 axiosClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
+      beginApiRequest(config);
       // Transform outgoing dates to UTC
       if (config.data) {
         config.data = transformDatesToUTC(config.data);
@@ -207,6 +206,7 @@ axiosClient.interceptors.request.use(
 // Response interceptor - Handle 401 errors and token refresh
 axiosClient.interceptors.response.use(
   (response) => {
+    completeApiRequest(response.config);
     console.log('✅ API response:', response.config.url, response.status);
     
     // Transform incoming UTC dates to local Date objects
@@ -269,6 +269,7 @@ axiosClient.interceptors.response.use(
           status: error.response?.status,
           message: 'Authenticated request was rejected and session refresh failed.',
         });
+        completeApiRequest(originalRequest, error);
         return Promise.reject(error);
       }
     }
@@ -293,8 +294,9 @@ axiosClient.interceptors.response.use(
       }
     }
 
-    // Structured observability (T-0.7) — unconditional, so these two anomaly
+    // Structured observability (T-0.7) — unconditional, so these recoverable
     // categories are visible in production, not only in dev console output.
+    const isRequestTimeout = error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT';
     if (isAuthenticated401) {
       reportObservabilityEvent({
         event: 'api.auth_boundary_anomaly',
@@ -302,6 +304,14 @@ axiosClient.interceptors.response.use(
         method: originalRequest.method,
         status: error.response?.status,
         message: 'Authenticated request was rejected by the API.',
+      });
+    } else if (isRequestTimeout) {
+      reportObservabilityEvent({
+        event: 'api.request_timeout',
+        url: originalRequest.url,
+        method: originalRequest.method,
+        status: error.response?.status,
+        message: error.message,
       });
     } else if (error.response?.status && error.response.status >= 500) {
       reportObservabilityEvent({
@@ -313,6 +323,7 @@ axiosClient.interceptors.response.use(
       });
     }
 
+    completeApiRequest(originalRequest, error);
     return Promise.reject(error);
   }
 );
@@ -333,6 +344,13 @@ export interface NormalizedError {
 export const normalizeError = (error: unknown): NormalizedError => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<any>;
+    if (axiosError.code === 'ECONNABORTED' || axiosError.code === 'ETIMEDOUT') {
+      return {
+        code: 'REQUEST_TIMEOUT',
+        message: 'The request timed out. Please try again.',
+        status: 408,
+      };
+    }
     
     // Check for CORS errors
     if (axiosError.message?.includes('CORS') || axiosError.message?.includes('Network Error')) {

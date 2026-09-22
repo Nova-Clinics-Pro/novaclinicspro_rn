@@ -97,7 +97,7 @@ export const getReadyToStartApi = async (
   try {
     const response = await axiosClient.get<ReadyToStartResponseDTO>(
       `/api/v1/onboarding/${tenantId}/ready-to-start`,
-      { signal }
+      { signal, apiFailurePresentation: 'feature' }
     );
     return response.data;
   } catch (error) {
