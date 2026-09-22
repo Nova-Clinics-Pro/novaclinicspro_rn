@@ -32,6 +32,14 @@ jest.mock('expo-router', () => ({
 // interaction queue.
 jest.mock('react-native', () => ({
   InteractionManager: { runAfterInteractions: (cb: () => void) => cb() },
+  // Expo SDK 57 initializes expo-modules-core while the test imports its
+  // dependencies. Its Platform bridge requires this minimal React Native
+  // Platform shape; the test's intentionally narrow native mock otherwise
+  // leaves Platform undefined before the logout assertions can run.
+  Platform: {
+    OS: 'ios',
+    select: (values: Record<string, unknown>) => values.ios ?? values.default,
+  },
 }));
 jest.mock('../../../core/api/supabaseClient', () => ({
   supabase: { auth: { signOut: jest.fn(), signInWithPassword: jest.fn(), getSession: jest.fn(), refreshSession: jest.fn() } },

@@ -78,7 +78,10 @@ jest.mock('react-native', () => {
   };
 });
 
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({}), { virtual: true });
+// RN 0.86 moved this helper from Libraries/Animated to src/private/animated.
+// Do not retain a mock for the removed legacy path: the RN Jest resolver maps
+// react-native subpaths to node_modules and rejects the non-existent module
+// before the virtual mock can apply.
 jest.mock('react-native/Libraries/Animated/NativeAnimatedModule', () => ({}), { virtual: true });
 jest.mock('react-native/Libraries/Animated/shouldUseTurboAnimatedModule', () => () => false);
 jest.mock('react-native/src/private/animated/NativeAnimatedHelper', () => ({}));
