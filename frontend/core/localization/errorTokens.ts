@@ -19,6 +19,7 @@ export const ErrorTokens = {
   // Network & Connection Errors
   network: {
     generic: 'errors.network.generic',
+    takingLonger: 'errors.network.takingLonger',
     timeout: 'errors.network.timeout',
     noConnection: 'errors.network.noConnection',
     serverUnavailable: 'errors.network.serverUnavailable',

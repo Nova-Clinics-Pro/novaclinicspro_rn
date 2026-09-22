@@ -72,6 +72,7 @@
   "errors": {
     "network": {
       "generic": "Unable to connect to the server. Please check your internet connection.",
+      "takingLonger": "Taking longer than usual…",
       "timeout": "The request timed out. Please try again.",
       "noConnection": "No internet connection. Please check your network settings.",
       "serverUnavailable": "The server is temporarily unavailable. Please try again later."
