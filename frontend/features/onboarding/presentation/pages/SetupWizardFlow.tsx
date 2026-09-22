@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, BackHandler, AppState, AppStateStatus, AccessibilityInfo } from 'react-native';
 import { useNetInfo } from '@react-native-community/netinfo';
-import * as WebBrowser from 'expo-web-browser';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
@@ -16,7 +15,6 @@ import {
   useDemoStatusQuery,
   useSubmitStepMutation,
 } from '../../data/repositories/onboarding.repository.impl';
-import { createTenantSubscriptionApi, getSubscriptionPlansApi, SubscriptionPlanInfo } from '../../data/datasources/onboarding.api';
 import { WizardStepper } from '../components/WizardStepper';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { PendingMutationRecoveryBanner } from '../components/PendingMutationRecoveryBanner';
@@ -110,9 +108,6 @@ export function SetupWizardFlow() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [hasManuallyNavigated, setHasManuallyNavigated] = useState(false);
   const [isHandlingNext, setIsHandlingNext] = useState(false);
-  const [isSettingUpSubscription, setIsSettingUpSubscription] = useState(false);
-  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlanInfo[]>([]);
-  const [selectedSubscriptionPlan, setSelectedSubscriptionPlan] = useState('BASIC');
   const [showProgressUpdatedNotice, setShowProgressUpdatedNotice] = useState(false);
   const [recoveryVersion, setRecoveryVersion] = useState(0);
   const [busyRecoveryMutationId, setBusyRecoveryMutationId] =
@@ -514,97 +509,6 @@ export function SetupWizardFlow() {
     }
   };
 
-  useEffect(() => {
-    if (currentStep?.code !== 'subscription_payment' || subscriptionPlans.length > 0) {
-      return;
-    }
-
-    let isMounted = true;
-    getSubscriptionPlansApi()
-      .then(result => {
-        if (!isMounted) {
-          return;
-        }
-        const paidPlans = result.plans.filter(plan => plan.plan_code !== 'FREE');
-        setSubscriptionPlans(paidPlans.length > 0 ? paidPlans : result.plans);
-        const defaultPlan = paidPlans.find(plan => plan.plan_code === 'BASIC') || paidPlans[0] || result.plans[0];
-        if (defaultPlan) {
-          setSelectedSubscriptionPlan(defaultPlan.plan_code);
-        }
-      })
-      .catch(error => {
-        console.error('[SetupWizardFlow] Failed to load subscription plans:', error);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentStep?.code, subscriptionPlans.length]);
-
-  const handleSetupSubscriptionPayment = async () => {
-    if (!tenantId || isSettingUpSubscription || isOffline) {
-      return;
-    }
-
-    setIsSettingUpSubscription(true);
-    try {
-      const result = await createTenantSubscriptionApi(tenantId, {
-        plan_code: selectedSubscriptionPlan,
-        billing_cycle: 'monthly',
-      });
-
-      const planCode = result.plan_code || selectedSubscriptionPlan;
-      const billingCycle = result.billing_cycle || 'monthly';
-      const provider = result.provider || 'manual';
-
-      if (result.checkout_url) {
-        await WebBrowser.openBrowserAsync(result.checkout_url);
-        await submitMutation.mutateAsync({
-          idempotencyKey: createSubmissionId(),
-          data: {
-            subscription_id: result.subscription_id,
-            plan_code: planCode,
-            billing_cycle: billingCycle,
-            provider,
-            provider_subscription_id: result.provider_subscription_id,
-            checkout_started: true,
-          },
-          mark_complete: true,
-        });
-        await handleStepComplete();
-        return;
-      }
-
-      if (result.requires_internal_payment_setup || provider === 'manual') {
-        Alert.alert(
-          'Payment Provider Not Configured',
-          'Subscription payment must be completed in a real payment provider checkout. Please configure a supported provider such as Razorpay, Stripe, or PayPal, then try again.'
-        );
-        return;
-      }
-
-      await submitMutation.mutateAsync({
-        idempotencyKey: createSubmissionId(),
-        data: {
-          subscription_id: result.subscription_id,
-          plan_code: planCode,
-          billing_cycle: billingCycle,
-          provider,
-          provider_subscription_id: result.provider_subscription_id,
-          checkout_started: false,
-        },
-        mark_complete: true,
-      });
-
-      await handleStepComplete();
-    } catch (error: any) {
-      console.error('[SetupWizardFlow] Subscription payment setup failed:', error);
-      Alert.alert('Payment Setup Failed', error?.message || 'Unable to set up subscription payment. Please try again.');
-    } finally {
-      setIsSettingUpSubscription(false);
-    }
-  };
-
   // Callback for steps to register their save handler
   const registerSaveHandler = useCallback((handler: RevisionAwareSaveHandler | null) => {
     console.log('[SetupWizardFlow] Registering save handler:', handler ? 'function' : 'null');
@@ -929,71 +833,6 @@ export function SetupWizardFlow() {
           draftBaseEvidence={currentDraftBaseEvidence}
         />;
 
-      case 'subscription_payment':
-        return (
-          <View style={{ padding: theme.spacing.lg }}>
-            <Text style={[theme.typography.h5, { color: theme.colors.text.primary, marginBottom: theme.spacing.md }]}>
-              {t('onboarding.progressiveExperience.flow.subscriptionTitle')}
-            </Text>
-            <Text style={[theme.typography.body1, { color: theme.colors.text.secondary, marginBottom: theme.spacing.lg }]}>
-              {t('onboarding.progressiveExperience.flow.subscriptionDescription')}
-            </Text>
-            <View style={{ gap: theme.spacing.sm, marginBottom: theme.spacing.lg }}>
-              {subscriptionPlans.map(plan => {
-                const isSelected = selectedSubscriptionPlan === plan.plan_code;
-                return (
-                  <TouchableOpacity
-                    key={plan.plan_code}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: isSelected ? theme.colors.primary.default : theme.colors.border.default,
-                      backgroundColor: isSelected ? theme.colors.primary.light : theme.colors.background.elevated,
-                      padding: theme.spacing.md,
-                      borderRadius: theme.spacing.sm,
-                    }}
-                    onPress={() => setSelectedSubscriptionPlan(plan.plan_code)}
-                  >
-                    <Text style={[theme.typography.subtitle1, { color: theme.colors.text.primary }]}>
-                      {plan.name}
-                    </Text>
-                    <Text style={[theme.typography.body2, { color: theme.colors.text.secondary }]}>
-                      ₹{plan.base_price.toLocaleString('en-IN')} / month
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <TouchableOpacity
-              style={[
-                styles.linkButton,
-                {
-                  backgroundColor: theme.colors.primary.default,
-                  padding: theme.spacing.md,
-                  borderRadius: theme.spacing.sm,
-                  alignItems: 'center',
-                  opacity: isSettingUpSubscription || isOffline ? 0.7 : 1,
-                },
-              ]}
-              disabled={isSettingUpSubscription || isOffline}
-              accessibilityState={{ disabled: isSettingUpSubscription || isOffline }}
-              accessibilityLabel={
-                isOffline
-                  ? t('onboarding.progressiveExperience.offline.submitDisabled')
-                  : t('onboarding.progressiveExperience.flow.reviewSubscription')
-              }
-              onPress={handleSetupSubscriptionPayment}
-            >
-              {isSettingUpSubscription ? (
-                <ActivityIndicator color={theme.colors.text.onPrimary} />
-              ) : (
-                <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
-                  {t('onboarding.progressiveExperience.flow.reviewSubscription')}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        );
-
       case 'go_live_checklist':
         return (
           <GoLiveScreen
@@ -1041,6 +880,8 @@ export function SetupWizardFlow() {
         message={errorMessage}
         retryLabel={t('onboarding.progressiveExperience.journey.retry')}
         onRetry={() => void refetch()}
+        dismissLabel={t('common.close')}
+        onDismiss={() => router.replace(`/clinic-admin?tenantId=${tenantId}`)}
       />
     );
   }

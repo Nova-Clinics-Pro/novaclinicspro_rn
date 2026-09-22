@@ -481,6 +481,26 @@ describe('SetupWizardFlow — authoritative journey presentation', () => {
     );
   });
 
+  it('provides a close path for a recoverable journey load failure', async () => {
+    mockUseOnboardingStatusQuery.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: new Error('recoverable journey failure'),
+      refetch: mockRefetch,
+    });
+
+    const { getByLabelText } = renderFlow();
+
+    await waitFor(() => {
+      expect(getByLabelText('Close')).toBeTruthy();
+    });
+    fireEvent.press(getByLabelText('Close'));
+
+    expect(mockRouterReplace).toHaveBeenCalledWith(
+      '/clinic-admin?tenantId=test-tenant-456'
+    );
+  });
+
   // ── 7. Happy path: console.error NOT called when visible_steps is populated ─
   it('does NOT fire console.error when visible_steps is populated', async () => {
     mockUseOnboardingStatusQuery.mockReturnValue({

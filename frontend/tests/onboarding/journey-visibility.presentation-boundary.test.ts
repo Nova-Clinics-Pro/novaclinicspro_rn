@@ -27,4 +27,12 @@ describe('Journey Visibility presentation authority boundary', () => {
       expect(content).not.toMatch(/journey\.cards\.sort|visibleSteps\.sort/);
     });
   });
+
+  it('does not make legacy paid checkout an onboarding presentation authority', () => {
+    const wizard = source('features/onboarding/presentation/pages/SetupWizardFlow.tsx');
+
+    expect(wizard).not.toMatch(/createTenantSubscriptionApi/);
+    expect(wizard).not.toMatch(/getSubscriptionPlansApi/);
+    expect(wizard).not.toMatch(/WebBrowser\.openBrowserAsync/);
+  });
 });
