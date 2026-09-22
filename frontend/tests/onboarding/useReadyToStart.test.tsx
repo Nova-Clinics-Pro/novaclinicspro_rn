@@ -5,6 +5,7 @@ import {
   useOrganizationContextQuery,
   useReadyToStartQuery,
 } from '../../features/onboarding/data/repositories/onboarding.repository.impl';
+import { ReadyToStartError } from '../../features/onboarding/domain/entities/ready-to-start.entity';
 import { useReadyToStart } from '../../features/onboarding/presentation/hooks/useReadyToStart';
 
 jest.mock('../../features/onboarding/data/repositories/onboarding.repository.impl', () => ({
@@ -76,5 +77,27 @@ describe('useReadyToStart', () => {
     expect(result.current.data).toBeUndefined();
     expect(result.current.error).toMatchObject({ kind: 'TENANT_MISMATCH' });
     expect(useReadyToStartQuery).toHaveBeenCalledWith('org-1', 'tenant-other', { enabled: false });
+  });
+
+  it('exits loading and exposes a retryable readiness 503 after bounded retries', () => {
+    const unavailable = new ReadyToStartError(
+      'READINESS_UNAVAILABLE',
+      'readiness.provider_unavailable',
+      'errors.readyToStart.provider_unavailable',
+      true
+    );
+    (useReadyToStartQuery as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isRefetching: false,
+      error: unavailable,
+      refetch: refetchReadiness,
+    });
+
+    const { result } = renderHook(() => useReadyToStart('tenant-1'));
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toBe(unavailable);
   });
 });
