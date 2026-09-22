@@ -11,15 +11,19 @@ import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 interface ErrorScreenProps {
   message: string;
   onRetry?: () => void;
+  onDismiss?: () => void;
   title?: string;
   retryLabel?: string;
+  dismissLabel?: string;
 }
 
 export const ErrorScreen: React.FC<ErrorScreenProps> = ({
   message,
   onRetry,
+  onDismiss,
   title = 'Something went wrong',
   retryLabel = 'Try Again',
+  dismissLabel = 'Close',
 }) => {
   const theme = useClinicTheme();
 
@@ -80,6 +84,18 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
           </Text>
         </TouchableOpacity>
       )}
+      {onDismiss && (
+        <TouchableOpacity
+          style={[styles.dismissButton, { marginTop: theme.spacing.md }]}
+          onPress={onDismiss}
+          accessibilityRole="button"
+          accessibilityLabel={dismissLabel}
+        >
+          <Text style={[theme.typography.button, { color: theme.colors.primary.default }]}>
+            {dismissLabel}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -97,6 +113,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   retryButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  dismissButton: {
     minHeight: 48,
     justifyContent: 'center',
   },
