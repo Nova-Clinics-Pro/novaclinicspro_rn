@@ -37,15 +37,15 @@ describe('axiosClient observability hooks (T-0.7)', () => {
     expect(source).toContain('export function reportObservabilityEvent(');
     expect(source).toContain("'api.server_error'");
     expect(source).toContain("'api.auth_boundary_anomaly'");
+    expect(source).toContain("'api.request_timeout'");
   });
 
-  it('keeps server errors as errors and auth-boundary anomalies as warnings', () => {
+  it('keeps all recoverable transport observations as warnings', () => {
     const fnStart = source.indexOf('export function reportObservabilityEvent(');
     const fnBody = source.slice(fnStart, source.indexOf('\n}', fnStart));
     expect(fnBody).not.toContain('__DEV__');
-    expect(fnBody).toContain("event.event === 'api.auth_boundary_anomaly'");
     expect(fnBody).toContain('console.warn');
-    expect(fnBody).toContain('console.error');
+    expect(fnBody).not.toContain('console.error');
   });
 
   describe('response error interceptor wiring', () => {
@@ -55,6 +55,11 @@ describe('axiosClient observability hooks (T-0.7)', () => {
       expect(handlerBody).toMatch(
         /error\.response\?\.status && error\.response\.status >= 500[\s\S]*?event: 'api\.server_error'/
       );
+    });
+
+    it('reports request timeouts as structured recoverable observations', () => {
+      expect(handlerBody).toContain("const isRequestTimeout");
+      expect(handlerBody).toMatch(/if \(isRequestTimeout\) \{[\s\S]*?event: 'api\.request_timeout'/);
     });
 
     it('keeps unauthenticated bootstrap 401s quiet while observing authenticated 401s', () => {

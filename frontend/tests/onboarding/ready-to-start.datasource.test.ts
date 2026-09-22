@@ -19,7 +19,7 @@ describe('Ready to Start datasource', () => {
     await expect(getReadyToStartApi('tenant-1', controller.signal)).resolves.toBe(response);
     expect(mockGet).toHaveBeenCalledWith(
       '/api/v1/onboarding/tenant-1/ready-to-start',
-      { signal: controller.signal }
+      { signal: controller.signal, apiFailurePresentation: 'feature' }
     );
   });
 

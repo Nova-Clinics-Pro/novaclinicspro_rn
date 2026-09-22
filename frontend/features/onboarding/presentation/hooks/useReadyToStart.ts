@@ -87,9 +87,10 @@ export const useReadyToStart = (tenantId: string) => {
   return {
     data: scopeMatches && hasMatchingIdentity ? query.data : undefined,
     error: organizationContext.error ?? scopeError ?? query.error,
-    loading:
-      organizationContext.isLoading ||
-      (scopeMatches && (query.isLoading || !hasMatchingIdentity)),
+    // Missing data after a terminal query failure is an error state, not a
+    // pending state. Retaining the identity guard here would otherwise keep
+    // the Ready-to-Start screen on its spinner after a bounded 503 retry.
+    loading: organizationContext.isLoading || (scopeMatches && query.isLoading),
     refreshing: query.isRefetching,
     refresh,
     revalidateTenant,
