@@ -101,6 +101,7 @@ describe('TG23.3 authoritative onboarding status mapping', () => {
 
   it.each([
     ['malformed revision', { revision: '2' }],
+    ['projection revision presented as step evidence', { revision: `onboarding-v1:${'a'.repeat(64)}` }],
     ['partial evidence', { capability_revision: null }],
     ['step identity mismatch', { step_code: 'other' }],
   ])('rejects %s', (_label, override) => {

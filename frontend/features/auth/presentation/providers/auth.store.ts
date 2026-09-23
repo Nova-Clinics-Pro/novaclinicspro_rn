@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { supabase } from '../../../../core/api/supabaseClient';
 import { secureStorage } from '../../../../core/utils/secureStorage';
 import { AuthUserSession } from '../../domain/entities/auth.entity';
 
@@ -128,6 +129,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (accessToken && refreshToken) {
         set({ accessToken, refreshToken, selectedClinicId });
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (error) {
+          throw error;
+        }
         console.log('✅ Tokens loaded from storage');
       } else {
         console.log('ℹ️ No stored tokens found');

@@ -25,11 +25,36 @@ const buildProjection = (tenantId: string, stepIds: string[]) => ({
     tenantId,
   },
   projectedAt: new Date('2026-07-22T10:00:00Z'),
+  projectionRevision: `onboarding-v1:${'b'.repeat(64)}`,
   visibleSteps: stepIds.map((stepId, order) => ({
     stepId,
     order,
     visibility: 'VISIBLE',
     progress: order === 0 ? 'INCOMPLETE' : 'COMPLETED',
+  })),
+  resolvedSteps: stepIds.map((stepId, order) => ({
+    stepId,
+    order,
+    rendererKey: 'generic_configuration',
+    applicable: true,
+    required: true,
+    state: order === 0 ? 'BLOCKED' : 'COMPLETE',
+    titleToken: `onboarding.steps.${stepId}.title`,
+    helpToken: `onboarding.steps.${stepId}.help`,
+    requirements: [],
+    blockers: [],
+    correctiveActions: order === 0
+      ? [{
+          kind: 'NAVIGATE',
+          target: stepId,
+          destination: 'onboarding.step_detail',
+          requiredParams: [],
+          labelToken: 'onboarding.actions.configure',
+          availability: 'AVAILABLE',
+          fallbackToken: 'onboarding.actions.unavailable',
+        }]
+      : [],
+    presentation: {},
   })),
 });
 
@@ -116,7 +141,7 @@ describe('useJourneyFoundation authoritative projection integration', () => {
       capabilityRevision: revision,
     });
     expect(result.current.journey?.cards.map(card => card.status)).toEqual([
-      'not_started',
+      'blocked',
       'complete',
     ]);
   });
