@@ -19,7 +19,7 @@ describe('template runtime presentation boundaries', () => {
     ]) {
       const value = source(path);
       expect(value).not.toContain('axiosClient');
-      expect(value).not.toContain('fetch(');
+      expect(value).not.toMatch(/\bfetch\s*\(/);
     }
   });
 

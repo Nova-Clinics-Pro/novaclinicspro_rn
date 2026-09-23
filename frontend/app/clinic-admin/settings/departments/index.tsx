@@ -1,3 +1,3 @@
-import { DepartmentsScreen } from '../../../../../features/departments/presentation/pages/DepartmentsScreen';
+import { DepartmentsScreen } from '../../../../features/departments/presentation/pages/DepartmentsScreen';
 
 export default DepartmentsScreen;

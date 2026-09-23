@@ -60,7 +60,7 @@ export function PendingMutationRecoveryBanner({
   const theme = useClinicTheme();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const titleRef = useRef<View>(null);
+  const titleRef = useRef<Text>(null);
   const activeRecords = useMemo(
     () =>
       records.filter(

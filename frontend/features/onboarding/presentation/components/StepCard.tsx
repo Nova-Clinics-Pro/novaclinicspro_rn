@@ -19,7 +19,6 @@ type DisplayStatus = JourneyCardStatus;
 
 const STATUS_KEYS: Record<DisplayStatus, string> = {
   complete: 'onboarding.progressiveExperience.journeyCard.status.complete',
-  completed: 'onboarding.progressiveExperience.journeyCard.status.complete',
   in_progress: 'onboarding.progressiveExperience.journeyCard.status.inProgress',
   not_started: 'onboarding.progressiveExperience.journeyCard.status.notStarted',
   blocked: 'onboarding.progressiveExperience.journeyCard.status.blocked',
@@ -29,7 +28,6 @@ const STATUS_KEYS: Record<DisplayStatus, string> = {
 const getStatusIcon = (status: DisplayStatus): keyof typeof Ionicons.glyphMap => {
   switch (status) {
     case 'complete':
-    case 'completed':
       return 'checkmark-circle';
     case 'in_progress':
       return 'time';
@@ -46,7 +44,6 @@ const getStatusIcon = (status: DisplayStatus): keyof typeof Ionicons.glyphMap =>
 const getStatusColor = (status: DisplayStatus, theme: ClinicTheme): string => {
   switch (status) {
     case 'complete':
-    case 'completed':
       return theme.colors.feedback.success;
     case 'in_progress':
       return theme.colors.feedback.warning;

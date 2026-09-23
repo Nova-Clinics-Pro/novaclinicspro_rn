@@ -1,2 +1,2 @@
-import { ConfiguredClinicalServicesScreen } from '../../../../../features/configuredClinicalServices/presentation/pages/ConfiguredClinicalServicesScreen';
+import { ConfiguredClinicalServicesScreen } from '../../../../features/configuredClinicalServices/presentation/pages/ConfiguredClinicalServicesScreen';
 export default ConfiguredClinicalServicesScreen;

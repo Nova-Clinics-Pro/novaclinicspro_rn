@@ -1,4 +1,4 @@
-import type { Href, Router } from 'expo-router';
+import type { Href, ImperativeRouter } from 'expo-router';
 import { logError } from '../../../../core/utils/errorHandler';
 import type { JourneyCorrectiveAction } from '../../domain/entities/journey-visibility.entity';
 
@@ -17,7 +17,7 @@ export const onboardingDestinations: Readonly<Record<string, (context: Navigatio
 };
 
 export const executeOnboardingAction = (
-  router: Router,
+  router: ImperativeRouter,
   action: JourneyCorrectiveAction,
   context: NavigationContext,
 ): boolean => {

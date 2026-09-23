@@ -20,7 +20,7 @@ describe('template-authoritative onboarding registries', () => {
   });
 
   it('contains every active renderer key and has no step-code renderer authority', () => {
-    expect(onboardingRendererKeys.sort()).toEqual([
+    expect([...onboardingRendererKeys].sort()).toEqual([
       'clinic_profile',
       'configured_clinical_services',
       'departments',

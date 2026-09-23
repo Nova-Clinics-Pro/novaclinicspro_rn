@@ -49,6 +49,7 @@ import type { PendingMutationRecord } from '../../domain/entities/pending-mutati
 
 interface Step {
   code: string;
+  name: string;
   status: 'completed' | 'in_progress' | 'not_started' | 'blocked';
   order: number;
 }
@@ -317,6 +318,7 @@ export function SetupWizardFlow() {
       .sort((left, right) => left.order - right.order)
       .map(step => ({
         code: step.stepId,
+        name: t(step.titleToken ?? 'onboarding.renderers.unavailable'),
         status: step.state === 'COMPLETE' ? 'completed' : step.state === 'BLOCKED' ? 'blocked' : 'not_started',
         order: step.order,
       }));

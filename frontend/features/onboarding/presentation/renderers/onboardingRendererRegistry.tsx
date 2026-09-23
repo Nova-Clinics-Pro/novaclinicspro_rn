@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import type { Router } from 'expo-router';
+import type { ImperativeRouter } from 'expo-router';
 import { useTranslation } from '../../../../core/localization/useTranslation';
 import { logError } from '../../../../core/utils/errorHandler';
 import { colors } from '../../../../core/theme/colors';
@@ -12,7 +12,7 @@ import { executeOnboardingAction } from '../actions/onboardingActionRegistry';
 interface RendererProps {
   readonly step: JourneyResolvedStep;
   readonly tenantId: string;
-  readonly router: Router;
+  readonly router: ImperativeRouter;
 }
 
 const GenericConfigurationRenderer = ({ step, tenantId, router }: RendererProps) => {
