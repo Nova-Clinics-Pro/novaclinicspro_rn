@@ -39,7 +39,7 @@ const isValidDefinition = (
   definition.stageId.trim().length > 0 &&
   definition.titleKey.trim().length > 0 &&
   definition.descriptionKey.trim().length > 0 &&
-  definition.actionLabelKey.trim().length > 0 &&
+  (definition.actionLabelKey === null || definition.actionLabelKey.trim().length > 0) &&
   definition.iconToken.trim().length > 0 &&
   definition.destination.kind === 'wizard_step' &&
   definition.destination.stepCode === stepCode;
@@ -163,7 +163,9 @@ export const buildJourneyViewModelFromVisibilityProjection = (
       stageId: 'canonical_projection',
       titleKey: step.titleToken ?? 'onboarding.renderers.unavailable',
       descriptionKey: step.helpToken ?? 'onboarding.renderers.unavailable',
-      actionLabelKey: step.correctiveActions[0]?.labelToken ?? 'onboarding.actions.unavailable',
+      actionLabelKey: step.correctiveActions.find(
+        action => action.availability === 'AVAILABLE'
+      )?.labelToken ?? null,
       destination: { kind: 'wizard_step' as const, stepCode: step.stepId },
       iconToken: step.rendererKey ?? 'settings',
       status: step.state === 'COMPLETE' ? 'complete' : step.state === 'BLOCKED' ? 'blocked' : 'not_started',

@@ -86,6 +86,22 @@ describe('StepCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('does not display an unavailable action for a complete card without a corrective action', () => {
+    const { getByText, queryByText } = render(
+      <StepCard
+        journeyCard={createJourneyCard({
+          status: 'complete',
+          isActionable: false,
+          actionLabelKey: null,
+        })}
+        onPress={onPress}
+      />
+    );
+
+    expect(getByText('Complete')).toBeTruthy();
+    expect(queryByText('This action is currently unavailable')).toBeNull();
+  });
+
   it('exposes disabled accessibility semantics from the canonical card', () => {
     const { getByRole } = render(
       <StepCard

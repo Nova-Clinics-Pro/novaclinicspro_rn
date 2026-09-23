@@ -38,7 +38,7 @@ export interface JourneyCardDefinition {
   stageId: string;
   titleKey: string;
   descriptionKey: string;
-  actionLabelKey: string;
+  actionLabelKey: string | null;
   destination: ExistingJourneyDestination;
   iconToken: ExistingThemeIconToken;
 }

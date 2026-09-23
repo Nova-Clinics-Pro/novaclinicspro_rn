@@ -46,6 +46,7 @@ import { executeRecoverableStepSubmission } from '../../application/recoverable-
 import { usePendingMutationReplayLifecycle } from '../hooks/usePendingMutationReplayLifecycle';
 import { usePendingMutationsStore } from '../stores/pending-mutations.store';
 import type { PendingMutationRecord } from '../../domain/entities/pending-mutation.entity';
+import { translateOnboardingToken } from '../config/onboardingPresentationRegistry';
 
 interface Step {
   code: string;
@@ -318,7 +319,7 @@ export function SetupWizardFlow() {
       .sort((left, right) => left.order - right.order)
       .map(step => ({
         code: step.stepId,
-        name: t(step.titleToken ?? 'onboarding.renderers.unavailable'),
+        name: translateOnboardingToken(step.titleToken),
         status: step.state === 'COMPLETE' ? 'completed' : step.state === 'BLOCKED' ? 'blocked' : 'not_started',
         order: step.order,
       }));

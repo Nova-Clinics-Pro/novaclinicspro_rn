@@ -1,13 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { ImperativeRouter } from 'expo-router';
-import { useTranslation } from '../../../../core/localization/useTranslation';
 import { logError } from '../../../../core/utils/errorHandler';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import type { JourneyResolvedStep } from '../../domain/entities/journey-visibility.entity';
 import { executeOnboardingAction } from '../actions/onboardingActionRegistry';
+import { translateOnboardingToken } from '../config/onboardingPresentationRegistry';
 
 interface RendererProps {
   readonly step: JourneyResolvedStep;
@@ -16,12 +16,12 @@ interface RendererProps {
 }
 
 const GenericConfigurationRenderer = ({ step, tenantId, router }: RendererProps) => {
-  const { t } = useTranslation();
-  const action = step.correctiveActions[0] ?? step.blockers[0]?.correctiveAction;
+  const declaredAction = step.correctiveActions[0] ?? step.blockers[0]?.correctiveAction;
+  const action = declaredAction?.availability === 'AVAILABLE' ? declaredAction : null;
   return <View style={styles.container}>
-    {step.helpToken ? <Text style={styles.help}>{t(step.helpToken)}</Text> : null}
-    {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{blocker.blockerToken ? t(blocker.blockerToken) : t('onboarding.actions.unavailable')}</Text>)}
-    {action ? <TouchableOpacity style={styles.action} onPress={() => executeOnboardingAction(router, action, { tenant_id: tenantId, step_id: step.stepId })} accessibilityRole="button" accessibilityLabel={t(action.labelToken)}><Text style={styles.actionText}>{t(action.labelToken)}</Text></TouchableOpacity> : null}
+    {step.helpToken ? <Text style={styles.help}>{translateOnboardingToken(step.helpToken)}</Text> : null}
+    {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{translateOnboardingToken(blocker.blockerToken)}</Text>)}
+    {action ? <TouchableOpacity style={styles.action} onPress={() => executeOnboardingAction(router, action, { tenant_id: tenantId, step_id: step.stepId })} accessibilityRole="button" accessibilityLabel={translateOnboardingToken(action.labelToken, action.fallbackToken)}><Text style={styles.actionText}>{translateOnboardingToken(action.labelToken, action.fallbackToken)}</Text></TouchableOpacity> : declaredAction ? <Text style={styles.blocker}>{translateOnboardingToken(declaredAction.fallbackToken)}</Text> : null}
   </View>;
 };
 
@@ -43,11 +43,10 @@ const registry: Readonly<Record<string, React.ComponentType<RendererProps>>> = {
 export const onboardingRendererKeys = Object.freeze(Object.keys(registry));
 
 export const OnboardingRenderer = ({ step, tenantId, router }: RendererProps) => {
-  const { t } = useTranslation();
   const Renderer = step.rendererKey ? registry[step.rendererKey] : undefined;
   if (!Renderer) {
     logError('onboarding.renderer.unknown', new Error(step.rendererKey ?? 'missing_renderer_key'));
-    return <View style={styles.container}><Text style={styles.blocker}>{t('onboarding.renderers.unavailable')}</Text></View>;
+    return <View style={styles.container}><Text style={styles.blocker}>{translateOnboardingToken(undefined)}</Text></View>;
   }
   return <Renderer step={step} tenantId={tenantId} router={router} />;
 };

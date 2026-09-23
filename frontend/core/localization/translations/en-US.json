@@ -614,10 +614,55 @@
   },
   "onboarding": {
     "actions": {
-      "unavailable": "This action is currently unavailable"
+      "unavailable": "This action is currently unavailable",
+      "edit_clinic_profile": { "label": "Update clinic profile" },
+      "manage_operating_hours": { "label": "Manage operating hours" },
+      "manage_rooms": { "label": "Manage rooms and beds" },
+      "manage_treatments": { "label": "Manage treatments" },
+      "manage_services": { "label": "Manage clinical services" },
+      "manage_staff": { "label": "Manage staff and roles" },
+      "manage_inventory": { "label": "Manage inventory" },
+      "manage_departments": { "label": "Manage departments" },
+      "review_checklist": { "label": "Review clinic readiness" }
     },
     "renderers": {
       "unavailable": "This setup item is currently unavailable. Please try again."
+    },
+    "steps": {
+      "clinic_profile": { "title": "Clinic profile", "help": "Provide the clinic details required for your workspace." },
+      "operating_hours": { "title": "Operating hours", "help": "Set the working hours for your clinic." },
+      "rooms_and_therapy_beds": { "title": "Rooms and therapy beds", "help": "Configure the rooms and therapy beds used by your clinic." },
+      "services_and_specialities": { "title": "Services and specialities", "help": "Configure the clinical services offered by your clinic." },
+      "dental_procedures": { "title": "Dental procedures", "help": "Configure the dental procedures offered by your clinic." },
+      "treatments_and_therapies": { "title": "Treatments and therapies", "help": "Configure the treatments and therapies offered by your clinic." },
+      "staff_and_roles": { "title": "Staff and roles", "help": "Configure the staff and roles required by your clinic." },
+      "departments_and_specialities": { "title": "Departments and specialities", "help": "Configure the departments used by your clinic." },
+      "inventory_setup": { "title": "Inventory setup", "help": "Configure the inventory required by your clinic." },
+      "financials_and_tax": { "title": "Financials and tax", "help": "Review optional financial and tax details." },
+      "subscription_payment": { "title": "Subscription preferences", "help": "Subscription payment is not required to complete clinic preparation." },
+      "go_live_checklist": { "title": "Ready to start", "help": "Review your clinic preparation before starting your trial." }
+    },
+    "requirements": {
+      "clinic_profile": { "title": "Clinic profile details", "help": "Complete the required clinic identity, contact, and location details.", "blocker": "Complete the required clinic profile details." },
+      "operating_hours": { "title": "Operating hours", "help": "Add at least one valid working interval.", "blocker": "Add valid clinic operating hours." },
+      "validation": {
+        "rooms": { "min_therapy_rooms": { "title": "Rooms and therapy beds", "help": "Configure the required rooms and therapy beds.", "blocker": "Add the required rooms or therapy beds." } },
+        "configured_clinical_services": { "min_count": { "title": "Clinical services", "help": "Configure the required active clinical services.", "blocker": "Add the required clinical services." } },
+        "treatments": {
+          "min_therapy": { "title": "Treatments and therapies", "help": "Configure the required active treatments and therapies.", "blocker": "Add the required treatments and therapies." },
+          "min_dental": { "title": "Dental procedures", "help": "Configure the required active dental procedures.", "blocker": "Add the required dental procedures." },
+          "min_physiotherapy": { "title": "Physiotherapy treatments", "help": "Configure the required active physiotherapy treatments.", "blocker": "Add the required physiotherapy treatments." }
+        },
+        "staff": {
+          "min_count": { "title": "Staff and roles", "help": "Configure the required active staff members.", "blocker": "Add the required staff members." },
+          "min_doctor": { "title": "Doctor coverage", "help": "Configure the required active doctor coverage.", "blocker": "Add the required doctor coverage." },
+          "min_therapist": { "title": "Therapist coverage", "help": "Configure the required active therapist coverage.", "blocker": "Add the required therapist coverage." },
+          "min_dentist": { "title": "Dentist coverage", "help": "Configure the required active dentist coverage.", "blocker": "Add the required dentist coverage." },
+          "min_physiotherapist": { "title": "Physiotherapist coverage", "help": "Configure the required active physiotherapist coverage.", "blocker": "Add the required physiotherapist coverage." }
+        },
+        "inventory": { "min_items": { "title": "Inventory", "help": "Configure the required active inventory items.", "blocker": "Add the required inventory items." } },
+        "departments": { "min_count": { "title": "Departments", "help": "Configure the required active departments.", "blocker": "Add the required departments." } }
+      }
     },
     "progressiveExperience": {
       "routes": {

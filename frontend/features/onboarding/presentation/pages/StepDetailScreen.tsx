@@ -9,6 +9,7 @@ import { logError } from '../../../../core/utils/errorHandler';
 import { useJourneyFoundation } from '../hooks/useJourneyFoundation';
 import { OnboardingRenderer } from '../renderers/onboardingRendererRegistry';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { translateOnboardingToken } from '../config/onboardingPresentationRegistry';
 
 export function StepDetailScreen() {
   const { tenantId, stepCode } = useLocalSearchParams<{ tenantId: string; stepCode: string }>();
@@ -24,9 +25,9 @@ export function StepDetailScreen() {
   }
 
   return <View style={styles.screen}>
-    {step.titleToken ? <Text style={styles.title}>{t(step.titleToken)}</Text> : null}
-    {step.helpToken ? <Text style={styles.help}>{t(step.helpToken)}</Text> : null}
-    {step.requirements.map(requirement => <View key={requirement.requirementId} style={styles.requirement}><Text style={styles.requirementText}>{requirement.titleToken ? t(requirement.titleToken) : requirement.requirementId}</Text><Text style={styles.help}>{String(requirement.currentValue)} / {String(requirement.requiredValue)}</Text>{requirement.blockerToken ? <Text style={styles.blocker}>{t(requirement.blockerToken)}</Text> : null}</View>)}
+    {step.titleToken ? <Text style={styles.title}>{translateOnboardingToken(step.titleToken)}</Text> : null}
+    {step.helpToken ? <Text style={styles.help}>{translateOnboardingToken(step.helpToken)}</Text> : null}
+    {step.requirements.map(requirement => <View key={requirement.requirementId} style={styles.requirement}><Text style={styles.requirementText}>{translateOnboardingToken(requirement.titleToken)}</Text><Text style={styles.help}>{String(requirement.currentValue)} / {String(requirement.requiredValue)}</Text>{requirement.blockerToken ? <Text style={styles.blocker}>{translateOnboardingToken(requirement.blockerToken)}</Text> : null}</View>)}
     <OnboardingRenderer step={step} tenantId={tenantId} router={router} />
   </View>;
 }

@@ -8,6 +8,7 @@ import { spacing } from '../../../../../core/theme/spacing';
 import { typography } from '../../../../../core/theme/typography';
 import { executeOnboardingAction } from '../../actions/onboardingActionRegistry';
 import { useJourneyFoundation } from '../../hooks/useJourneyFoundation';
+import { translateOnboardingToken } from '../../config/onboardingPresentationRegistry';
 
 interface GoLiveScreenProps {
   readonly tenantId: string;
@@ -39,9 +40,9 @@ export function GoLiveScreen({ tenantId, onComplete }: GoLiveScreenProps) {
     <Text style={styles.title}>{t('onboarding.progressiveExperience.readyToStart.presentation.title')}</Text>
     <Text style={styles.text}>{blockers.length === 0 ? t('onboarding.progressiveExperience.readyToStart.presentation.states.READY') : t('onboarding.progressiveExperience.readyToStart.presentation.states.NOT_READY')}</Text>
     {required.map(step => <View key={step.stepId} style={styles.card}>
-      <Text style={styles.text}>{t(step.titleToken ?? 'onboarding.renderers.unavailable')}</Text>
-      {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{blocker.blockerToken ? t(blocker.blockerToken, { current: String(blocker.currentValue ?? ''), required: String(blocker.requiredValue ?? '') }) : t('onboarding.renderers.unavailable')}</Text>)}
-      {step.correctiveActions.map(action => <TouchableOpacity key={action.target} style={styles.button} disabled={action.availability !== 'AVAILABLE'} onPress={() => executeOnboardingAction(router, action, { tenant_id: tenantId, step_id: step.stepId })}><Text style={styles.buttonText}>{t(action.labelToken)}</Text></TouchableOpacity>)}
+      <Text style={styles.text}>{translateOnboardingToken(step.titleToken)}</Text>
+      {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{translateOnboardingToken(blocker.blockerToken, 'onboarding.renderers.unavailable', { current: String(blocker.currentValue ?? ''), required: String(blocker.requiredValue ?? '') })}</Text>)}
+      {step.correctiveActions.map(action => action.availability === 'AVAILABLE' ? <TouchableOpacity key={action.target} style={styles.button} onPress={() => executeOnboardingAction(router, action, { tenant_id: tenantId, step_id: step.stepId })}><Text style={styles.buttonText}>{translateOnboardingToken(action.labelToken, action.fallbackToken)}</Text></TouchableOpacity> : <Text key={action.target} style={styles.blocker}>{translateOnboardingToken(action.fallbackToken)}</Text>)}
     </View>)}
     <TouchableOpacity style={styles.button} disabled={blockers.length !== 0} onPress={onComplete} accessibilityRole="button"><Text style={styles.buttonText}>{t('onboarding.progressiveExperience.readyToStart.presentation.actions.continue')}</Text></TouchableOpacity>
   </ScrollView>;

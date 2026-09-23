@@ -9,6 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme, ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { useTranslation } from '../../../../core/localization/useTranslation';
 import { JourneyCardModel, JourneyCardStatus } from '../../domain/entities/journey.entity';
+import {
+  resolveOnboardingIcon,
+  translateOnboardingToken,
+} from '../config/onboardingPresentationRegistry';
 
 interface StepCardProps {
   journeyCard: JourneyCardModel;
@@ -67,11 +71,14 @@ export const StepCard: React.FC<StepCardProps> = ({ journeyCard, onPress }) => {
     [theme, statusColor]
   );
 
-  const title = t(journeyCard.titleKey);
-  const description = t(journeyCard.descriptionKey);
-  const actionLabel = t(journeyCard.actionLabelKey);
+  const title = translateOnboardingToken(journeyCard.titleKey);
+  const description = translateOnboardingToken(journeyCard.descriptionKey);
+  const actionLabel =
+    journeyCard.isActionable && journeyCard.actionLabelKey
+      ? translateOnboardingToken(journeyCard.actionLabelKey)
+      : null;
   const statusLabel = t(STATUS_KEYS[status]);
-  const accessibilityHint = `${description}. ${actionLabel}`;
+  const accessibilityHint = actionLabel ? `${description}. ${actionLabel}` : description;
 
   return (
     <TouchableOpacity
@@ -86,7 +93,7 @@ export const StepCard: React.FC<StepCardProps> = ({ journeyCard, onPress }) => {
     >
       <View style={styles.header}>
         <Ionicons
-          name={journeyCard.iconToken as keyof typeof Ionicons.glyphMap}
+          name={resolveOnboardingIcon(journeyCard.iconToken)}
           size={theme.spacing.lg}
           color={theme.colors.primary.default}
         />
