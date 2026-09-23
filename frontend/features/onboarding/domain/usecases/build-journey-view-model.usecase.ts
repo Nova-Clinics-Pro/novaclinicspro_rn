@@ -141,14 +141,12 @@ export const buildJourneyViewModel = (
 };
 
 export const buildJourneyViewModelFromVisibilityProjection = (
-  definition: JourneyDefinition,
   projection: JourneyVisibilityProjection,
-  status: OnboardingStatus
 ): JourneyViewModel => {
   const diagnostics = createDiagnostics();
   const identity = {
-    journeyId: definition.id,
-    journeyVersion: definition.version,
+    journeyId: 'progressive-experience' as const,
+    journeyVersion: { major: 1, minor: 0, patch: 0 },
     tenantId: projection.identity.tenantId,
     projection: {
       templateVersion: projection.identity.templateVersion,
@@ -156,48 +154,24 @@ export const buildJourneyViewModelFromVisibilityProjection = (
     },
   };
 
-  if (!isSupportedJourneyVersion(definition.version)) {
-    return {
-      identity,
-      cards: [],
-      progress: { completed: 0, total: 0 },
-      diagnostics: freezeDiagnostics(diagnostics),
-      availability: 'unsupported_version',
-    };
-  }
-
-  const seenStepCodes = new Set<string>();
-  const cards: JourneyCardModel[] = [];
-
-  projection.visibleSteps.forEach((projectedStep) => {
-    const stepCode = projectedStep.stepId;
-    if (seenStepCodes.has(stepCode)) {
-      diagnostics.duplicateStepCodes.push(stepCode);
-      return;
-    }
-    seenStepCodes.add(stepCode);
-
-    const cardDefinition = definition.stepMappings[stepCode];
-    if (!cardDefinition) {
-      diagnostics.unknownStepCodes.push(stepCode);
-      return;
-    }
-    if (!isValidDefinition(stepCode, cardDefinition)) {
-      diagnostics.invalidDefinitionStepCodes.push(stepCode);
-      return;
-    }
-
-    const statusStep = status.steps.get(stepCode);
-    if (!statusStep) diagnostics.missingValidationStepCodes.push(stepCode);
-    cards.push({
-      ...cardDefinition,
-      status: projectedStep.progress === 'COMPLETED' ? 'complete' : 'not_started',
+  const cards: JourneyCardModel[] = projection.resolvedSteps
+    .filter(step => step.applicable && step.state !== 'NOT_APPLICABLE')
+    .sort((left, right) => left.order - right.order)
+    .map(step => ({
+      cardId: step.stepId,
+      stepCode: step.stepId,
+      stageId: 'canonical_projection',
+      titleKey: step.titleToken ?? 'onboarding.renderers.unavailable',
+      descriptionKey: step.helpToken ?? 'onboarding.renderers.unavailable',
+      actionLabelKey: step.correctiveActions[0]?.labelToken ?? 'onboarding.actions.unavailable',
+      destination: { kind: 'wizard_step' as const, stepCode: step.stepId },
+      iconToken: step.rendererKey ?? 'settings',
+      status: step.state === 'COMPLETE' ? 'complete' : step.state === 'BLOCKED' ? 'blocked' : 'not_started',
       isEligible: true as const,
       isVisible: true as const,
-      isActionable: statusStep?.isActionable ?? false,
-      order: projectedStep.order,
-    });
-  });
+      isActionable: step.correctiveActions.some(action => action.availability === 'AVAILABLE'),
+      order: step.order,
+    }));
 
   return {
     identity,

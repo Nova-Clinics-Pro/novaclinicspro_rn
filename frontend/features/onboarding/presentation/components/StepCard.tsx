@@ -8,23 +8,14 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme, ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { useTranslation } from '../../../../core/localization/useTranslation';
-import { getPreparationStepDisplayName } from '../../constants/stepAliases';
 import { JourneyCardModel, JourneyCardStatus } from '../../domain/entities/journey.entity';
-import { StepStatus, StepStatusType } from '../../domain/entities/onboarding-status.entity';
 
-type StepCardProps =
-  | {
-      step: StepStatus;
-      journeyCard?: never;
-      onPress: () => void;
-    }
-  | {
-      step?: never;
-      journeyCard: JourneyCardModel;
-      onPress: () => void;
-    };
+interface StepCardProps {
+  journeyCard: JourneyCardModel;
+  onPress: () => void;
+}
 
-type DisplayStatus = JourneyCardStatus | StepStatusType;
+type DisplayStatus = JourneyCardStatus;
 
 const STATUS_KEYS: Record<DisplayStatus, string> = {
   complete: 'onboarding.progressiveExperience.journeyCard.status.complete',
@@ -68,26 +59,22 @@ const getStatusColor = (status: DisplayStatus, theme: ClinicTheme): string => {
   }
 };
 
-export const StepCard: React.FC<StepCardProps> = ({ step, journeyCard, onPress }) => {
+export const StepCard: React.FC<StepCardProps> = ({ journeyCard, onPress }) => {
   const theme = useClinicTheme();
   const { t } = useTranslation();
-  const status = journeyCard ? journeyCard.status : step!.status;
-  const isActionable = journeyCard ? journeyCard.isActionable : step!.isActionable;
+  const status = journeyCard.status;
+  const isActionable = journeyCard.isActionable;
   const statusColor = getStatusColor(status, theme);
   const styles = useMemo(
     () => createStyles(theme, statusColor),
     [theme, statusColor]
   );
 
-  const title = journeyCard
-    ? t(journeyCard.titleKey)
-    : getPreparationStepDisplayName(step!.code, t);
-  const description = journeyCard ? t(journeyCard.descriptionKey) : undefined;
-  const actionLabel = journeyCard ? t(journeyCard.actionLabelKey) : undefined;
+  const title = t(journeyCard.titleKey);
+  const description = t(journeyCard.descriptionKey);
+  const actionLabel = t(journeyCard.actionLabelKey);
   const statusLabel = t(STATUS_KEYS[status]);
-  const accessibilityHint = journeyCard
-    ? `${description}. ${actionLabel}`
-    : undefined;
+  const accessibilityHint = `${description}. ${actionLabel}`;
 
   return (
     <TouchableOpacity
@@ -102,7 +89,7 @@ export const StepCard: React.FC<StepCardProps> = ({ step, journeyCard, onPress }
     >
       <View style={styles.header}>
         <Ionicons
-          name={(journeyCard ? journeyCard.iconToken : step!.icon) as keyof typeof Ionicons.glyphMap}
+          name={journeyCard.iconToken as keyof typeof Ionicons.glyphMap}
           size={theme.spacing.lg}
           color={theme.colors.primary.default}
         />
@@ -121,21 +108,6 @@ export const StepCard: React.FC<StepCardProps> = ({ step, journeyCard, onPress }
         </View>
       </View>
 
-      {step?.issues.length ? (
-        <View style={styles.issues}>
-          {step.issues.map((issue) => (
-            <Text key={issue.errorKey} style={styles.issueText}>
-              • {issue.message}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-
-      {step?.blockedReason ? (
-        <View style={styles.blockedBanner}>
-          <Text style={styles.blockedText}>{step.blockedReason}</Text>
-        </View>
-      ) : null}
     </TouchableOpacity>
   );
 };

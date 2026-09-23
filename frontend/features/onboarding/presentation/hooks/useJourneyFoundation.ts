@@ -7,7 +7,6 @@ import {
   useOrganizationContextQuery,
 } from '../../data/repositories/onboarding.repository.impl';
 import { mapOnboardingStatusToDomain } from '../../domain/entities/onboarding-status.entity';
-import { PROGRESSIVE_EXPERIENCE_JOURNEY_DEFINITION } from '../../domain/entities/journey.entity';
 import { JourneyVisibilityError } from '../../domain/entities/journey-visibility.entity';
 import { buildJourneyViewModelFromVisibilityProjection } from '../../domain/usecases/build-journey-view-model.usecase';
 
@@ -76,9 +75,7 @@ export const useJourneyFoundation = (
     }
 
     return buildJourneyViewModelFromVisibilityProjection(
-      PROGRESSIVE_EXPERIENCE_JOURNEY_DEFINITION,
-      visibilityQuery.data,
-      mapOnboardingStatusToDomain(statusQuery.data)
+      visibilityQuery.data
     );
   }, [hasMatchingProjection, hasMatchingTenant, scopeMatches, statusQuery.data, visibilityQuery.data]);
 

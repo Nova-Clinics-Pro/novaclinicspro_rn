@@ -23,17 +23,14 @@ import { JourneySurface } from '../components/JourneySurface';
 import { DraftConflictModal } from '../components/DraftConflictModal';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ErrorScreen } from '../components/ErrorScreen';
-import { ClinicProfileScreen } from './steps/ClinicProfileScreen';
-import { BillingSetupScreen } from './steps/BillingSetupScreen';
-import { PaymentSetupScreen } from './steps/PaymentSetupScreen';
-import { GoLiveScreen } from './steps/GoLiveScreen';
-import { getPreparationStepDisplayName, SERVICE_CATALOGUE_ALIASES, ServiceCatalogueAlias } from '../../constants/stepAliases';
+import { OnboardingRenderer } from '../renderers/onboardingRendererRegistry';
 import {
   hydrateWizardDraftFromStorage,
   syncWizardDraftToStorage,
   useWizardStore,
 } from '../stores/wizard.store';
 import { useTranslation } from '../../../../core/localization/useTranslation';
+import { logError } from '../../../../core/utils/errorHandler';
 import { useJourneyFoundation } from '../hooks/useJourneyFoundation';
 import { JourneyVisibilityError } from '../../domain/entities/journey-visibility.entity';
 import { createDraftRevisionEvidence } from '../../domain/entities/step-revision.entity';
@@ -52,7 +49,6 @@ import type { PendingMutationRecord } from '../../domain/entities/pending-mutati
 
 interface Step {
   code: string;
-  name: string;
   status: 'completed' | 'in_progress' | 'not_started' | 'blocked';
   order: number;
 }
@@ -316,12 +312,14 @@ export function SetupWizardFlow() {
       setSteps([]);
       return;
     }
-    const stepsArray: Step[] = journey.cards.map(card => ({
-      code: card.stepCode,
-      name: getPreparationStepDisplayName(card.stepCode, t),
-      status: card.status === 'complete' ? 'completed' : 'not_started',
-      order: card.order,
-    }));
+    const stepsArray: Step[] = (projection?.resolvedSteps ?? [])
+      .filter(step => step.applicable && step.state !== 'NOT_APPLICABLE')
+      .sort((left, right) => left.order - right.order)
+      .map(step => ({
+        code: step.stepId,
+        status: step.state === 'COMPLETE' ? 'completed' : step.state === 'BLOCKED' ? 'blocked' : 'not_started',
+        order: step.order,
+      }));
     latestVisibleStepsSignatureRef.current = getVisibleStepSignature(
       journey.cards.map(card => card.stepCode)
     );
@@ -333,7 +331,7 @@ export function SetupWizardFlow() {
     } else if (currentStepIndex >= stepsArray.length && stepsArray.length > 0) {
       setCurrentStepIndex(stepsArray.length - 1);
     }
-  }, [currentStepIndex, hasManuallyNavigated, journey, t, tenantId]);
+  }, [currentStepIndex, hasManuallyNavigated, journey, projection, tenantId]);
 
   useEffect(() => {
     setShowProgressUpdatedNotice(false);
@@ -496,7 +494,7 @@ export function SetupWizardFlow() {
       if (submissionIdRef.current !== submissionId) {
         return;
       }
-      console.error('[SetupWizardFlow] Error submitting step:', error);
+      logError('onboarding.wizard.submit_step', error);
       Alert.alert(
         t('common.error'),
         t('onboarding.progressiveExperience.flow.saveProgressError')
@@ -511,7 +509,6 @@ export function SetupWizardFlow() {
 
   // Callback for steps to register their save handler
   const registerSaveHandler = useCallback((handler: RevisionAwareSaveHandler | null) => {
-    console.log('[SetupWizardFlow] Registering save handler:', handler ? 'function' : 'null');
     currentStepSaveHandlerRef.current = handler;
   }, []);
 
@@ -521,7 +518,6 @@ export function SetupWizardFlow() {
 
     try {
       // Refetch status before navigation so the next step renders from fresh status.
-      console.log('[SetupWizardFlow] Step completed, refetching status before advance...');
       await refetch();
 
       // Auto-advance to next step only after refetch resolves.
@@ -530,7 +526,7 @@ export function SetupWizardFlow() {
         setCurrentStepIndex(nextIndex);
       }
     } catch (error) {
-      console.error('[SetupWizardFlow] Error refetching after step complete:', error);
+      logError('onboarding.wizard.refresh_after_step', error);
       Alert.alert(t('common.error'), t('onboarding.progressiveExperience.flow.refreshProgressError'));
     }
   };
@@ -675,187 +671,8 @@ export function SetupWizardFlow() {
   }, [canOpenReadyToStartChecklist, navigateToStep]);
 
   const renderStepContent = () => {
-    if (steps.length === 0) return null;
-
-    const currentStep = steps[currentStepIndex];
-    if (!currentStep) return null;
-
-    // Service-catalogue aliases all redirect to the Treatments management screen.
-    // See SERVICE_CATALOGUE_ALIASES for the full list (Design Property 5, Req 2 AC-2).
-    if (SERVICE_CATALOGUE_ALIASES.includes(currentStep.code as ServiceCatalogueAlias)) {
-      return (
-        <View style={{ padding: theme.spacing.lg }}>
-          <Text style={[theme.typography.h5, { color: theme.colors.text.primary, marginBottom: theme.spacing.md }]}>
-            Treatments & Therapies
-          </Text>
-          <Text style={[theme.typography.body1, { color: theme.colors.text.secondary, marginBottom: theme.spacing.lg }]}>
-            {t('onboarding.progressiveExperience.flow.treatmentsDescription')}
-          </Text>
-          <TouchableOpacity
-            style={[styles.linkButton, { backgroundColor: theme.colors.primary.default, padding: theme.spacing.md, borderRadius: theme.spacing.sm, alignItems: 'center', marginBottom: theme.spacing.md }]}
-            onPress={() => router.push('/clinic-admin/settings/treatments')}
-          >
-            <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
-              Go to Treatments Management
-            </Text>
-          </TouchableOpacity>
-          <Text style={[theme.typography.caption, { color: theme.colors.text.secondary, textAlign: 'center' }]}>
-            Click Next after adding at least one treatment
-          </Text>
-        </View>
-      );
-    }
-
-    // Render appropriate screen based on step code
-    switch (currentStep.code) {
-      case 'clinic_profile':
-        return <ClinicProfileScreen
-          tenantId={tenantId || ''}
-          isWizardMode={true}
-          onSuccess={handleStepComplete}
-          onRegisterSaveHandler={registerSaveHandler}
-          draftBaseEvidence={currentDraftBaseEvidence}
-        />;
-
-      case 'operating_hours':
-        return (
-          <View style={{ padding: theme.spacing.lg }}>
-            <Text style={[theme.typography.h5, { color: theme.colors.text.primary, marginBottom: theme.spacing.md }]}>
-              Operating Hours
-            </Text>
-            <Text style={[theme.typography.body1, { color: theme.colors.text.secondary, marginBottom: theme.spacing.lg }]}>
-              {t('onboarding.progressiveExperience.flow.operatingHoursDescription')}
-            </Text>
-            <TouchableOpacity
-              style={[styles.linkButton, { backgroundColor: theme.colors.primary.default, padding: theme.spacing.md, borderRadius: theme.spacing.sm, alignItems: 'center', marginBottom: theme.spacing.md }]}
-              onPress={() => router.push('/clinic-admin/settings/operating-hours')}
-            >
-              <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
-                Go to Operating Hours Management
-              </Text>
-            </TouchableOpacity>
-            <Text style={[theme.typography.caption, { color: theme.colors.text.secondary, textAlign: 'center' }]}>
-              Click Next after setting your operating hours
-            </Text>
-          </View>
-        );
-
-      case 'rooms_and_therapy_beds':
-      case 'treatment_rooms':
-        return (
-          <View style={{ padding: theme.spacing.lg }}>
-            <Text style={[theme.typography.h5, { color: theme.colors.text.primary, marginBottom: theme.spacing.md }]}>
-              Rooms & Therapy Beds
-            </Text>
-            <Text style={[theme.typography.body1, { color: theme.colors.text.secondary, marginBottom: theme.spacing.lg }]}>
-              {t('onboarding.progressiveExperience.flow.roomsDescription')}
-            </Text>
-            <TouchableOpacity
-              style={[styles.linkButton, { backgroundColor: theme.colors.primary.default, padding: theme.spacing.md, borderRadius: theme.spacing.sm, alignItems: 'center', marginBottom: theme.spacing.md }]}
-              onPress={() => router.push('/clinic-admin/settings/rooms')}
-            >
-              <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
-                Go to Rooms Management
-              </Text>
-            </TouchableOpacity>
-            <Text style={[theme.typography.caption, { color: theme.colors.text.secondary, textAlign: 'center' }]}>
-              Click Next after adding at least one room
-            </Text>
-          </View>
-        );
-
-      case 'staff_and_roles':
-      case 'staff_setup':
-      case 'staff_members':
-        return (
-          <View style={{ padding: theme.spacing.lg }}>
-            <Text style={[theme.typography.h5, { color: theme.colors.text.primary, marginBottom: theme.spacing.md }]}>
-              Staff & Roles
-            </Text>
-            <Text style={[theme.typography.body1, { color: theme.colors.text.secondary, marginBottom: theme.spacing.lg }]}>
-              {t('onboarding.progressiveExperience.flow.staffDescription')}
-            </Text>
-            <TouchableOpacity
-              style={[styles.linkButton, { backgroundColor: theme.colors.primary.default, padding: theme.spacing.md, borderRadius: theme.spacing.sm, alignItems: 'center', marginBottom: theme.spacing.md }]}
-              onPress={() => router.push('/clinic-admin/staff')}
-            >
-              <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
-                Go to Staff Management
-              </Text>
-            </TouchableOpacity>
-            <Text style={[theme.typography.caption, { color: theme.colors.text.secondary, textAlign: 'center' }]}>
-              Click Next after adding at least one staff member
-            </Text>
-          </View>
-        );
-
-      case 'inventory_setup':
-        return (
-          <View style={{ padding: theme.spacing.lg }}>
-            <Text style={[theme.typography.h5, { color: theme.colors.text.primary, marginBottom: theme.spacing.md }]}>
-              {t('onboarding.progressiveExperience.flow.inventoryTitle')}
-            </Text>
-            <Text style={[theme.typography.body1, { color: theme.colors.text.secondary, marginBottom: theme.spacing.lg }]}>
-              {t('onboarding.progressiveExperience.flow.inventoryDescription')}
-            </Text>
-            <TouchableOpacity
-              style={[styles.linkButton, { backgroundColor: theme.colors.primary.default, padding: theme.spacing.md, borderRadius: theme.spacing.sm, alignItems: 'center', marginBottom: theme.spacing.md }]}
-              onPress={() => router.push('/clinic-admin/inventory')}
-            >
-              <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
-                Go to Inventory Management
-              </Text>
-            </TouchableOpacity>
-            <Text style={[theme.typography.caption, { color: theme.colors.text.secondary, textAlign: 'center' }]}>
-              Click Next after adding inventory items
-            </Text>
-          </View>
-        );
-
-      case 'financials_and_tax':
-      case 'billing_setup':
-      case 'billing_settings':
-        return <BillingSetupScreen
-          tenantId={tenantId || ''}
-          isWizardMode={true}
-          onSuccess={handleStepComplete}
-          onRegisterSaveHandler={registerSaveHandler}
-          draftBaseEvidence={currentDraftBaseEvidence}
-        />;
-
-      case 'payment_setup':
-      case 'payment_methods':
-        return <PaymentSetupScreen
-          tenantId={tenantId || ''}
-          isWizardMode={true}
-          onSuccess={handleStepComplete}
-          onRegisterSaveHandler={registerSaveHandler}
-          draftBaseEvidence={currentDraftBaseEvidence}
-        />;
-
-      case 'go_live_checklist':
-        return (
-          <GoLiveScreen
-            tenantId={tenantId || ''}
-            onComplete={() => {
-              router.push(`/onboarding/commercial-retention?tenantId=${tenantId}` as any);
-            }}
-            onNavigateToSetupStep={navigateToProjectedStep}
-            onOpenWorkspacePreparation={() => {
-              router.push(`/onboarding/workspace-preparation?tenantId=${tenantId}` as any);
-            }}
-          />
-        );
-
-      default:
-        return (
-          <View style={{ padding: theme.spacing.lg }}>
-            <Text style={[theme.typography.body1, { color: theme.colors.text.secondary }]}>
-              Step {currentStep.code} is not yet implemented.
-            </Text>
-          </View>
-        );
-    }
+    const activeStep = projection?.resolvedSteps.find(step => step.stepId === currentStep?.code);
+    return activeStep ? <OnboardingRenderer step={activeStep} tenantId={tenantId} router={router} /> : null;
   };
 
   if (!tenantId) {

@@ -348,13 +348,51 @@ export interface JourneyVisibilityStepDTO {
   progress: JourneyVisibilityProgressDTO;
 }
 
+export interface JourneyCorrectiveActionDTO {
+  kind: 'NAVIGATE';
+  target: string;
+  destination: string;
+  required_params: string[];
+  label_token: string;
+  availability: 'AVAILABLE' | 'UNAVAILABLE';
+  fallback_token: string;
+}
+
+export interface JourneyRequirementDTO {
+  requirement_id: string;
+  satisfied: boolean;
+  current_value: unknown;
+  required_value: unknown;
+  title_token: string | null;
+  help_token: string | null;
+  blocker_token: string | null;
+  corrective_action: JourneyCorrectiveActionDTO | null;
+}
+
+export interface JourneyResolvedStepDTO {
+  step_id: string;
+  order: number;
+  renderer_key: string | null;
+  applicable: boolean;
+  required: boolean;
+  state: 'COMPLETE' | 'BLOCKED' | 'NOT_APPLICABLE';
+  title_token: string | null;
+  help_token: string | null;
+  requirements: JourneyRequirementDTO[];
+  blockers: JourneyRequirementDTO[];
+  corrective_actions: JourneyCorrectiveActionDTO[];
+  presentation: Record<string, unknown>;
+}
+
 export interface JourneyVisibilityResponseDTO {
   contract_version: '1.0';
   template_version: string;
   capability_revision: string;
   tenant_id: string;
   projected_at: string;
+  projection_revision: string;
   visible_steps: JourneyVisibilityStepDTO[];
+  resolved_steps: JourneyResolvedStepDTO[];
 }
 
 export class JourneyVisibilityDatasourceError extends Error {

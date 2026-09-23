@@ -10,12 +10,16 @@ import {
   getCurrentTenantApi,
   createTenantApi,
   updateTenantApi,
+  updateCurrentTenantClinicProfileApi,
+  getCurrentTenantClinicProfileApi,
   deactivateTenantApi,
 } from '../datasources/tenants.api';
 import {
   OrgTenantResponse,
   OrgTenantCreate,
   OrgTenantUpdate,
+  TenantClinicProfileUpdate,
+  TenantClinicProfile,
   ListTenantsParams,
 } from '../models/tenants.dtos';
 
@@ -73,6 +77,26 @@ export const useCurrentTenantQuery = (
     ...options,
   });
 };
+
+/** Update only the signed-in tenant's clinic profile and refresh derived onboarding state. */
+export const useUpdateCurrentTenantClinicProfileMutation = (tenantId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<TenantClinicProfile, Error, TenantClinicProfileUpdate>({
+    mutationFn: (payload) => updateCurrentTenantClinicProfileApi(tenantId, payload),
+    onSuccess: (tenant) => {
+      queryClient.setQueryData(['tenant-clinic-profile', tenantId], tenant);
+      queryClient.invalidateQueries({ queryKey: ['onboarding', 'journey-visibility'] });
+      queryClient.invalidateQueries({ queryKey: ['onboarding', 'ready-to-start'] });
+    },
+  });
+};
+
+export const useCurrentTenantClinicProfileQuery = (tenantId: string) => useQuery<TenantClinicProfile, Error>({
+  queryKey: ['tenant-clinic-profile', tenantId],
+  queryFn: () => getCurrentTenantClinicProfileApi(tenantId),
+  enabled: Boolean(tenantId),
+});
 
 /**
  * Hook to create a new tenant

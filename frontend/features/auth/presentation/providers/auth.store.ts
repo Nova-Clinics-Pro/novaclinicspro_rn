@@ -30,6 +30,7 @@ interface AuthState {
   setSelectedClinic: (clinicId: string | null) => void;
   clearSession: () => Promise<void>;
   initializeFromStorage: () => Promise<void>;
+  completeBootstrap: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -134,9 +135,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Error initializing from storage:', error);
     } finally {
-      set({ isLoading: false });
+      // Storage hydration is only the first half of bootstrap.  Keep the
+      // application routing gate closed until AuthProvider has also resolved
+      // the Supabase session and the authoritative /auth/me context.
     }
   },
+
+  completeBootstrap: () => set({ isLoading: false }),
 }));
 
 /**

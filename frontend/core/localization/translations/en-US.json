@@ -53,7 +53,27 @@
     "good": "Good",
     "fair": "Fair",
     "minEach": "min each",
-    "yesCancel": "Yes, Cancel"
+    "yesCancel": "Yes, Cancel",
+    "departments": "Departments",
+    "department": "Department",
+    "departmentName": "Department name",
+    "departmentCode": "Department code",
+    "description": "Description",
+    "active": "Active",
+    "inactive": "Inactive",
+    "addDepartment": "Add department",
+    "noDepartments": "No departments configured",
+    "noClinicContext": "No clinic context is available",
+    "createFailed": "Unable to save the department. Please try again.",
+    "clinicProfile": "Clinic profile",
+    "clinicName": "Clinic name",
+    "clinicEmail": "Clinic email",
+    "clinicPhone": "Clinic phone",
+    "city": "City",
+    "state": "State",
+    "country": "Country",
+    "profileSaveFailed": "Unable to save the clinic profile. Please try again.",
+    "noCategory": "No category"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -68,6 +88,11 @@
     "notifications": "Notifications",
     "profile": "Profile",
     "logout": "Logout"
+  },
+  "treatment_category": {
+    "therapy": "Therapy",
+    "dental_procedure": "Dental procedure",
+    "physiotherapy": "Physiotherapy"
   },
   "errors": {
     "network": {
@@ -588,6 +613,12 @@
     "dangerZone": "Danger Zone"
   },
   "onboarding": {
+    "actions": {
+      "unavailable": "This action is currently unavailable"
+    },
+    "renderers": {
+      "unavailable": "This setup item is currently unavailable. Please try again."
+    },
     "progressiveExperience": {
       "routes": {
         "prepareClinic": "Prepare Your Clinic",

@@ -77,6 +77,7 @@ import {
 import { buildWorkspacePreparationViewModel } from '../../domain/usecases/build-workspace-preparation-view-model.usecase';
 import {
   JOURNEY_VISIBILITY_CONTRACT_V1,
+  type JourneyCorrectiveAction,
   JourneyVisibilityError,
   JourneyVisibilityProjection,
 } from '../../domain/entities/journey-visibility.entity';
@@ -174,6 +175,8 @@ export const mapJourneyVisibility = (
     dto.contract_version !== JOURNEY_VISIBILITY_CONTRACT_V1 ||
     !dto.template_version ||
     !CAPABILITY_REVISION_V1.test(dto.capability_revision) ||
+    !dto.projection_revision ||
+    !Array.isArray(dto.resolved_steps) ||
     dto.tenant_id !== requestedTenantId ||
     Number.isNaN(projectedAt.getTime()) ||
     invalidStep
@@ -206,7 +209,50 @@ export const mapJourneyVisibility = (
       })
     )
   );
-  return Object.freeze({ identity, projectedAt, visibleSteps });
+  const mapAction = (action: JourneyVisibilityResponseDTO['resolved_steps'][number]['corrective_actions'][number]): JourneyCorrectiveAction => {
+    if (
+      action.kind !== 'NAVIGATE' || !action.target || !action.destination ||
+      !Array.isArray(action.required_params) || !action.label_token || !action.fallback_token ||
+      !['AVAILABLE', 'UNAVAILABLE'].includes(action.availability)
+    ) {
+      throw new JourneyVisibilityError('CONTRACT_MISMATCH', 'journey_visibility.contract_mismatch', 'errors.journeyVisibility.contract_mismatch', false);
+    }
+    return Object.freeze({
+      kind: action.kind,
+      target: action.target,
+      destination: action.destination,
+      requiredParams: Object.freeze([...action.required_params]),
+      labelToken: action.label_token,
+      availability: action.availability,
+      fallbackToken: action.fallback_token,
+    });
+  };
+  const mapRequirement = (requirement: JourneyVisibilityResponseDTO['resolved_steps'][number]['requirements'][number]) =>
+    Object.freeze({
+      requirementId: requirement.requirement_id,
+      satisfied: requirement.satisfied,
+      currentValue: requirement.current_value,
+      requiredValue: requirement.required_value,
+      titleToken: requirement.title_token,
+      helpToken: requirement.help_token,
+      blockerToken: requirement.blocker_token,
+      correctiveAction: requirement.corrective_action ? mapAction(requirement.corrective_action) : null,
+    });
+  const resolvedSteps = Object.freeze(dto.resolved_steps.map((step) => Object.freeze({
+    stepId: step.step_id,
+    order: step.order,
+    rendererKey: step.renderer_key,
+    applicable: step.applicable,
+    required: step.required,
+    state: step.state,
+    titleToken: step.title_token,
+    helpToken: step.help_token,
+    requirements: Object.freeze(step.requirements.map(mapRequirement)),
+    blockers: Object.freeze(step.blockers.map(mapRequirement)),
+    correctiveActions: Object.freeze(step.corrective_actions.map(mapAction)),
+    presentation: Object.freeze({ ...step.presentation }),
+  })));
+  return Object.freeze({ identity, projectedAt, projectionRevision: dto.projection_revision, visibleSteps, resolvedSteps });
 };
 
 const journeyVisibilityFailureKind = (
