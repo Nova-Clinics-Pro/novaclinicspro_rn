@@ -69,7 +69,7 @@ describe('StepCard', () => {
     expect(getByText('Staff & Roles')).toBeTruthy();
     expect(getByText(/Review staff members/)).toBeTruthy();
     expect(getByText('In progress')).toBeTruthy();
-    expect(getByText('Review Step')).toBeTruthy();
+    expect(queryByText('Review Step')).toBeNull();
     expect(queryByText('staff_setup')).toBeNull();
   });
 
@@ -100,6 +100,22 @@ describe('StepCard', () => {
 
     expect(getByText('Complete')).toBeTruthy();
     expect(queryByText('This action is currently unavailable')).toBeNull();
+  });
+
+  it('does not compete with the selected-step CTA for a blocked card', () => {
+    const { getByText, queryByText } = render(
+      <StepCard
+        journeyCard={createJourneyCard({
+          status: 'blocked',
+          isActionable: true,
+          actionLabelKey: 'onboarding.actions.manage_rooms.label',
+        })}
+        onPress={onPress}
+      />
+    );
+
+    expect(getByText('Blocked')).toBeTruthy();
+    expect(queryByText('Manage rooms and beds')).toBeNull();
   });
 
   it('exposes disabled accessibility semantics from the canonical card', () => {

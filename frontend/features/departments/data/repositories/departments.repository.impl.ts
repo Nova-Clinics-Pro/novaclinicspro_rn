@@ -6,6 +6,7 @@ import {
   updateDepartmentApi,
   type DepartmentDTO,
 } from '../datasources/departments.api';
+import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
 const mapDepartment = (dto: DepartmentDTO): Department => Object.freeze({
   id: dto.id,
@@ -25,8 +26,7 @@ export const departmentKeys = {
 const refreshOnboardingProjection = async (client: ReturnType<typeof useQueryClient>, tenantId: string) => {
   await Promise.all([
     client.invalidateQueries({ queryKey: departmentKeys.list(tenantId) }),
-    client.invalidateQueries({ queryKey: ['onboarding', 'journey-visibility'] }),
-    client.invalidateQueries({ queryKey: ['onboarding', 'ready-to-start'] }),
+    invalidateCanonicalOnboardingState(client, tenantId),
   ]);
 };
 

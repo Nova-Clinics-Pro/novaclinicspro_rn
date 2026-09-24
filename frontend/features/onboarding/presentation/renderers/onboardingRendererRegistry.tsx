@@ -7,7 +7,10 @@ import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import type { JourneyResolvedStep } from '../../domain/entities/journey-visibility.entity';
 import { executeOnboardingAction } from '../actions/onboardingActionRegistry';
-import { translateOnboardingToken } from '../config/onboardingPresentationRegistry';
+import {
+  translateOnboardingBlocker,
+  translateOnboardingToken,
+} from '../config/onboardingPresentationRegistry';
 
 interface RendererProps {
   readonly step: JourneyResolvedStep;
@@ -20,7 +23,7 @@ const GenericConfigurationRenderer = ({ step, tenantId, router }: RendererProps)
   const action = declaredAction?.availability === 'AVAILABLE' ? declaredAction : null;
   return <View style={styles.container}>
     {step.helpToken ? <Text style={styles.help}>{translateOnboardingToken(step.helpToken)}</Text> : null}
-    {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{translateOnboardingToken(blocker.blockerToken)}</Text>)}
+    {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{translateOnboardingBlocker(blocker.blockerToken, blocker.currentValue, blocker.requiredValue)}</Text>)}
     {action ? <TouchableOpacity style={styles.action} onPress={() => executeOnboardingAction(router, action, { tenant_id: tenantId, step_id: step.stepId })} accessibilityRole="button" accessibilityLabel={translateOnboardingToken(action.labelToken, action.fallbackToken)}><Text style={styles.actionText}>{translateOnboardingToken(action.labelToken, action.fallbackToken)}</Text></TouchableOpacity> : declaredAction ? <Text style={styles.blocker}>{translateOnboardingToken(declaredAction.fallbackToken)}</Text> : null}
   </View>;
 };

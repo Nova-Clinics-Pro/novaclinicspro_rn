@@ -643,6 +643,7 @@
       "go_live_checklist": { "title": "Ready to start", "help": "Review your clinic preparation before starting your trial." }
     },
     "requirements": {
+      "progress": "{{current}} of {{required}} required items configured",
       "clinic_profile": { "title": "Clinic profile details", "help": "Complete the required clinic identity, contact, and location details.", "blocker": "Complete the required clinic profile details." },
       "operating_hours": { "title": "Operating hours", "help": "Add at least one valid working interval.", "blocker": "Add valid clinic operating hours." },
       "validation": {

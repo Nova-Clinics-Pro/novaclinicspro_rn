@@ -9,6 +9,7 @@ describe('template runtime presentation boundaries', () => {
     expect(goLive).toContain('useJourneyFoundation');
     expect(goLive).not.toContain('useReadyToStart');
     expect(goLive).toContain('executeOnboardingAction');
+    expect(goLive).toContain('translateOnboardingBlocker');
   });
 
   it('keeps profile, configured-service, and department transport outside presentation', () => {
@@ -25,11 +26,25 @@ describe('template runtime presentation boundaries', () => {
 
   it('keeps configured-service category optional and invalidates canonical projections', () => {
     const repository = source('configuredClinicalServices/data/repositories/configuredClinicalServices.repository.impl.ts');
-    expect(repository).toContain("['onboarding', 'journey-visibility']");
-    expect(repository).toContain("['onboarding', 'ready-to-start']");
+    expect(repository).toContain('invalidateCanonicalOnboardingState');
     const screen = source('configuredClinicalServices/presentation/pages/ConfiguredClinicalServicesScreen.tsx');
     expect(screen).toContain('useState<string | null>(null)');
     expect(screen).toContain('category_code: categoryCode');
+  });
+
+  it('refreshes canonical tenant-scoped onboarding state after every corrective mutation', () => {
+    for (const path of [
+      'rooms/data/repositories/rooms.repository.impl.ts',
+      'treatments/data/repositories/treatments.repository.impl.ts',
+      'staff/data/repositories/staff.repository.impl.ts',
+      'operatingHours/data/repositories/operatingHours.repository.impl.ts',
+      'inventory/data/repositories/inventory.repository.impl.ts',
+      'tenants/data/repositories/tenants.repository.impl.ts',
+      'configuredClinicalServices/data/repositories/configuredClinicalServices.repository.impl.ts',
+      'departments/data/repositories/departments.repository.impl.ts',
+    ]) {
+      expect(source(path)).toContain('invalidateCanonicalOnboardingState');
+    }
   });
 
   it('keeps persisted-session routing behind the explicit bootstrap gate', () => {

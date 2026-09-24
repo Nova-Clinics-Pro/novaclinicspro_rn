@@ -18,6 +18,7 @@ import {
   ListRoomsParams,
   PaginatedRoomsResponse,
 } from '../models/rooms.dtos';
+import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
 // ============================================
 // QUERY KEYS
@@ -81,8 +82,11 @@ export const useCreateRoomMutation = (tenantId: string) => {
 
   return useMutation<RoomResponse, Error, RoomCreate>({
     mutationFn: (payload) => createRoomApi(tenantId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: roomsKeys.lists() });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: roomsKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
@@ -95,9 +99,12 @@ export const useUpdateRoomMutation = (tenantId: string, roomId: string) => {
 
   return useMutation<RoomResponse, Error, RoomUpdate>({
     mutationFn: (payload) => updateRoomApi(tenantId, roomId, payload),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(roomsKeys.detail(tenantId, roomId), data);
-      queryClient.invalidateQueries({ queryKey: roomsKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: roomsKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
@@ -110,8 +117,11 @@ export const useDeleteRoomMutation = (tenantId: string) => {
 
   return useMutation<void, Error, string>({
     mutationFn: (roomId) => deleteRoomApi(tenantId, roomId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: roomsKeys.lists() });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: roomsKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };

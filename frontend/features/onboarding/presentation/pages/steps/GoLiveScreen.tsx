@@ -8,7 +8,10 @@ import { spacing } from '../../../../../core/theme/spacing';
 import { typography } from '../../../../../core/theme/typography';
 import { executeOnboardingAction } from '../../actions/onboardingActionRegistry';
 import { useJourneyFoundation } from '../../hooks/useJourneyFoundation';
-import { translateOnboardingToken } from '../../config/onboardingPresentationRegistry';
+import {
+  translateOnboardingBlocker,
+  translateOnboardingToken,
+} from '../../config/onboardingPresentationRegistry';
 
 interface GoLiveScreenProps {
   readonly tenantId: string;
@@ -41,7 +44,7 @@ export function GoLiveScreen({ tenantId, onComplete }: GoLiveScreenProps) {
     <Text style={styles.text}>{blockers.length === 0 ? t('onboarding.progressiveExperience.readyToStart.presentation.states.READY') : t('onboarding.progressiveExperience.readyToStart.presentation.states.NOT_READY')}</Text>
     {required.map(step => <View key={step.stepId} style={styles.card}>
       <Text style={styles.text}>{translateOnboardingToken(step.titleToken)}</Text>
-      {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{translateOnboardingToken(blocker.blockerToken, 'onboarding.renderers.unavailable', { current: String(blocker.currentValue ?? ''), required: String(blocker.requiredValue ?? '') })}</Text>)}
+      {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{translateOnboardingBlocker(blocker.blockerToken, blocker.currentValue, blocker.requiredValue)}</Text>)}
       {step.correctiveActions.map(action => action.availability === 'AVAILABLE' ? <TouchableOpacity key={action.target} style={styles.button} onPress={() => executeOnboardingAction(router, action, { tenant_id: tenantId, step_id: step.stepId })}><Text style={styles.buttonText}>{translateOnboardingToken(action.labelToken, action.fallbackToken)}</Text></TouchableOpacity> : <Text key={action.target} style={styles.blocker}>{translateOnboardingToken(action.fallbackToken)}</Text>)}
     </View>)}
     <TouchableOpacity style={styles.button} disabled={blockers.length !== 0} onPress={onComplete} accessibilityRole="button"><Text style={styles.buttonText}>{t('onboarding.progressiveExperience.readyToStart.presentation.actions.continue')}</Text></TouchableOpacity>

@@ -73,12 +73,8 @@ export const StepCard: React.FC<StepCardProps> = ({ journeyCard, onPress }) => {
 
   const title = translateOnboardingToken(journeyCard.titleKey);
   const description = translateOnboardingToken(journeyCard.descriptionKey);
-  const actionLabel =
-    journeyCard.isActionable && journeyCard.actionLabelKey
-      ? translateOnboardingToken(journeyCard.actionLabelKey)
-      : null;
   const statusLabel = t(STATUS_KEYS[status]);
-  const accessibilityHint = actionLabel ? `${description}. ${actionLabel}` : description;
+  const accessibilityHint = description;
 
   return (
     <TouchableOpacity
@@ -108,7 +104,6 @@ export const StepCard: React.FC<StepCardProps> = ({ journeyCard, onPress }) => {
             />
             <Text style={styles.status}>{statusLabel}</Text>
           </View>
-          {actionLabel && <Text style={styles.action}>{actionLabel}</Text>}
         </View>
       </View>
 
@@ -153,11 +148,6 @@ const createStyles = (theme: ClinicTheme, statusColor: string) =>
       ...theme.typography.caption,
       color: statusColor,
       marginLeft: theme.spacing.xs,
-    },
-    action: {
-      ...theme.typography.button,
-      color: theme.colors.text.link,
-      marginTop: theme.spacing.sm,
     },
     issues: {
       marginTop: theme.spacing.sm,

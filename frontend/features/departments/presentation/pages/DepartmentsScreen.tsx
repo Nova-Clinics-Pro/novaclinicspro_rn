@@ -41,6 +41,7 @@ export const DepartmentsScreen = () => {
       if (editing) await update.mutateAsync(input);
       else await create.mutateAsync(input);
       close();
+      Alert.alert(t('common.success'), t('success.saved'));
     } catch {
       Alert.alert(t('common.error'), t('common.createFailed'));
     }
@@ -48,6 +49,7 @@ export const DepartmentsScreen = () => {
   const toggleActive = useCallback(async (department: Department) => {
     try {
       await setActive.mutateAsync({ id: department.id, isActive: !department.isActive });
+      Alert.alert(t('common.success'), t('success.updated'));
     } catch {
       Alert.alert(t('common.error'), t('common.createFailed'));
     }

@@ -45,3 +45,16 @@ export const translateOnboardingToken = (
   }
   return t(fallbackToken, params);
 };
+
+export const translateOnboardingBlocker = (
+  blockerToken: string | null | undefined,
+  currentValue: unknown,
+  requiredValue: unknown,
+): string =>
+  typeof currentValue === 'number' && Number.isFinite(currentValue) &&
+  typeof requiredValue === 'number' && Number.isFinite(requiredValue)
+    ? translateOnboardingToken('onboarding.requirements.progress', 'onboarding.renderers.unavailable', {
+        current: currentValue,
+        required: requiredValue,
+      })
+    : translateOnboardingToken(blockerToken);

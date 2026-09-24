@@ -22,6 +22,7 @@ import {
   TenantClinicProfile,
   ListTenantsParams,
 } from '../models/tenants.dtos';
+import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
 // Query Keys
 export const tenantsKeys = {
@@ -84,10 +85,9 @@ export const useUpdateCurrentTenantClinicProfileMutation = (tenantId: string) =>
 
   return useMutation<TenantClinicProfile, Error, TenantClinicProfileUpdate>({
     mutationFn: (payload) => updateCurrentTenantClinicProfileApi(tenantId, payload),
-    onSuccess: (tenant) => {
+    onSuccess: async (tenant) => {
       queryClient.setQueryData(['tenant-clinic-profile', tenantId], tenant);
-      queryClient.invalidateQueries({ queryKey: ['onboarding', 'journey-visibility'] });
-      queryClient.invalidateQueries({ queryKey: ['onboarding', 'ready-to-start'] });
+      await invalidateCanonicalOnboardingState(queryClient, tenantId);
     },
   });
 };

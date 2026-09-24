@@ -19,6 +19,7 @@ import {
   ListTreatmentsParams,
   PaginatedTreatmentsResponse,
 } from '../models/treatments.dtos';
+import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
 // ============================================
 // QUERY KEYS
@@ -84,8 +85,11 @@ export const useCreateTreatmentMutation = (tenantId: string) => {
 
   return useMutation<TreatmentResponse, Error, TreatmentCreate>({
     mutationFn: (payload) => createTreatmentApi(tenantId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: treatmentsKeys.lists() });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: treatmentsKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
@@ -98,9 +102,12 @@ export const useUpdateTreatmentMutation = (tenantId: string, treatmentId: string
 
   return useMutation<TreatmentResponse, Error, TreatmentUpdate>({
     mutationFn: (payload) => updateTreatmentApi(tenantId, treatmentId, payload),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(treatmentsKeys.detail(tenantId, treatmentId), data);
-      queryClient.invalidateQueries({ queryKey: treatmentsKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: treatmentsKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
@@ -113,8 +120,11 @@ export const useDeleteTreatmentMutation = (tenantId: string) => {
 
   return useMutation<void, Error, string>({
     mutationFn: (treatmentId) => deleteTreatmentApi(tenantId, treatmentId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: treatmentsKeys.lists() });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: treatmentsKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
