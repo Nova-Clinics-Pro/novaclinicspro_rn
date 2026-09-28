@@ -112,6 +112,7 @@ describe('useClinicEntryOrchestration', () => {
     mockClearWizardDraft.mockResolvedValue(undefined);
     mockRefetchOrganization.mockResolvedValue({ data: context('tenant-1') });
     jest.spyOn(queryClient, 'cancelQueries').mockResolvedValue(undefined);
+    jest.spyOn(queryClient, 'clear').mockImplementation(() => undefined);
     jest.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
   });
 
@@ -136,9 +137,7 @@ describe('useClinicEntryOrchestration', () => {
     expect(mockRefreshTenant).toHaveBeenCalledWith('org-1');
     expect(mockRefreshSession).toHaveBeenCalledTimes(1);
     expect(mockSetSelectedClinic).toHaveBeenCalledWith('tenant-1');
-    expect(mockReplace).toHaveBeenCalledWith(
-      '/onboarding/workspace-preparation?organizationId=org-1&tenantId=tenant-1'
-    );
+    expect(mockReplace).toHaveBeenCalledWith('/onboarding/setup-wizard?tenantId=tenant-1');
     expect(result.current.state).toBe('complete');
   });
 
@@ -216,15 +215,14 @@ describe('useClinicEntryOrchestration', () => {
     });
 
     expect(queryClient.cancelQueries).toHaveBeenCalled();
+    expect(queryClient.clear).toHaveBeenCalledTimes(1);
     expect(mockClearWizardDraft).toHaveBeenCalledWith({
       tenantId: 'tenant-old',
       userId: 'user-1',
     });
     expect(queryClient.invalidateQueries).toHaveBeenCalled();
     expect(mockSetTenantId).toHaveBeenCalledWith('tenant-2');
-    expect(mockReplace).toHaveBeenCalledWith(
-      '/onboarding/workspace-preparation?organizationId=org-1&tenantId=tenant-2'
-    );
+    expect(mockReplace).toHaveBeenCalledWith('/onboarding/setup-wizard?tenantId=tenant-2');
   });
 
   it('retries only session handoff after a stale-session failure', async () => {

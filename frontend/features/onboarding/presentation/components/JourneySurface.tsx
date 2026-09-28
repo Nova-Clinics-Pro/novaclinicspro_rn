@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ClinicTheme, useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { useTranslation } from '../../../../core/localization/useTranslation';
 import { JourneyViewModel } from '../../domain/entities/journey.entity';
+import type { JourneyCorrectiveAction } from '../../domain/entities/journey-visibility.entity';
 import { calculateJourneyProgressPercentage } from '../../domain/usecases/build-journey-view-model.usecase';
 import { ProgressBar } from './ProgressBar';
 import { StepCard } from './StepCard';
@@ -10,12 +11,14 @@ import { StepCard } from './StepCard';
 interface JourneySurfaceProps {
   journey: JourneyViewModel;
   onSelectStep: (stepCode: string) => void | Promise<void>;
+  onExecuteAction?: (action: JourneyCorrectiveAction, stepCode: string) => void;
   refreshing?: boolean;
 }
 
 export const JourneySurface: React.FC<JourneySurfaceProps> = ({
   journey,
   onSelectStep,
+  onExecuteAction,
   refreshing = false,
 }) => {
   const theme = useClinicTheme();
@@ -99,7 +102,9 @@ export const JourneySurface: React.FC<JourneySurfaceProps> = ({
           <StepCard
             key={`${card.cardId}:${card.stepCode}`}
             journeyCard={card}
-            onPress={() => onSelectStep(card.destination.stepCode)}
+            onPress={() => card.action && onExecuteAction
+              ? onExecuteAction(card.action, card.stepCode)
+              : onSelectStep(card.destination.stepCode)}
           />
         ))}
       </View>

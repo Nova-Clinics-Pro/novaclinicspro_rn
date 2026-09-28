@@ -7,10 +7,14 @@ import { create } from 'zustand';
 import { supabase } from '../../../../core/api/supabaseClient';
 import { secureStorage } from '../../../../core/utils/secureStorage';
 import { AuthUserSession } from '../../domain/entities/auth.entity';
+import { logError } from '../../../../core/utils/errorHandler';
 
 const ACCESS_TOKEN_KEY = 'supabase_access_token';
 const REFRESH_TOKEN_KEY = 'supabase_refresh_token';
 const SELECTED_CLINIC_KEY = 'selected_clinic_id';
+
+/** Prevent two app bootstrap paths from consuming the same refresh token. */
+let storageBootstrap: Promise<void> | null = null;
 
 interface AuthState {
   // State
@@ -49,9 +53,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await secureStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
       await secureStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       set({ accessToken, refreshToken });
-      console.log('✅ Tokens saved successfully');
     } catch (error) {
-      console.error('Error saving tokens:', error);
+      logError('auth.token_persistence.save', error);
       // Don't throw - allow login to continue even if storage fails
       // Set tokens in memory even if persistence fails
       set({ accessToken, refreshToken });
@@ -61,9 +64,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Set current user
   setCurrentUser: (user: AuthUserSession) => {
     const currentState = get();
-    
+    const ownedClinicIds = new Set(user.ownedClinics.map(clinic => clinic.tenantId));
+
+    // Never carry a selected tenant across an authoritative session change
+    // unless that tenant remains owned by the resolved user context.  Keeping
+    // the prior id even briefly allows mounted tenant queries to address a
+    // clinic from a previous login or registration handoff.
+    let selectedClinicId =
+      currentState.selectedClinicId && ownedClinicIds.has(currentState.selectedClinicId)
+        ? currentState.selectedClinicId
+        : null;
+
     // Auto-select clinic if user has exactly one owned clinic and none selected
-    let selectedClinicId = currentState.selectedClinicId;
     if (!selectedClinicId && user.ownedClinics.length === 1) {
       selectedClinicId = user.ownedClinics[0].tenantId;
     } else if (!selectedClinicId && user.tenantId) {
@@ -76,7 +88,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isLoading: false,
       selectedClinicId,
     });
-    console.log('✅ User session established:', user.email);
   },
 
   // Set selected clinic
@@ -84,11 +95,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ selectedClinicId: clinicId });
     // Persist selected clinic
     if (clinicId) {
-      secureStorage.setItem(SELECTED_CLINIC_KEY, clinicId).catch(console.error);
+      secureStorage.setItem(SELECTED_CLINIC_KEY, clinicId).catch(error => logError('auth.selected_clinic.save', error));
     } else {
-      secureStorage.removeItem(SELECTED_CLINIC_KEY).catch(console.error);
+      secureStorage.removeItem(SELECTED_CLINIC_KEY).catch(error => logError('auth.selected_clinic.clear', error));
     }
-    console.log('✅ Selected clinic changed:', clinicId);
   },
 
   // Clear session - resets ALL state including selectedClinicId
@@ -113,40 +123,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await secureStorage.removeItem(ACCESS_TOKEN_KEY);
       await secureStorage.removeItem(REFRESH_TOKEN_KEY);
       await secureStorage.removeItem(SELECTED_CLINIC_KEY);
-      console.log('✅ Session cleared');
     } catch (error) {
-      console.error('Error clearing session storage:', error);
+      logError('auth.session_storage.clear', error);
       // In-memory state is already cleared above regardless of storage outcome.
     }
   },
 
   // Initialize from storage on app start
   initializeFromStorage: async () => {
-    try {
+    if (storageBootstrap) return storageBootstrap;
+
+    storageBootstrap = (async () => {
+      try {
+      // Supabase is the runtime session authority.  If it already has a
+      // session, never replay the separately persisted refresh token.
+      const selectedClinicId = await secureStorage.getItem(SELECTED_CLINIC_KEY);
+      const { data: existing } = await supabase.auth.getSession();
+      if (existing.session) {
+        set({ selectedClinicId });
+        await get().setTokens(existing.session.access_token, existing.session.refresh_token);
+        return;
+      }
       const accessToken = await secureStorage.getItem(ACCESS_TOKEN_KEY);
       const refreshToken = await secureStorage.getItem(REFRESH_TOKEN_KEY);
-      const selectedClinicId = await secureStorage.getItem(SELECTED_CLINIC_KEY);
 
       if (accessToken && refreshToken) {
         set({ accessToken, refreshToken, selectedClinicId });
-        const { error } = await supabase.auth.setSession({
+        const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         });
         if (error) {
           throw error;
         }
-        console.log('✅ Tokens loaded from storage');
-      } else {
-        console.log('ℹ️ No stored tokens found');
+        if (!data.session) {
+          throw new Error('Supabase did not restore a session');
+        }
+        // setSession may rotate the refresh token.  Persist the exact
+        // authoritative result before /auth/me can make another request.
+        await get().setTokens(data.session.access_token, data.session.refresh_token);
       }
     } catch (error) {
-      console.error('Error initializing from storage:', error);
+      // A consumed/reused refresh token is terminal. Remove it once rather
+      // than retrying the same token or leaving a future cold start poisoned.
+      await get().clearSession();
     } finally {
       // Storage hydration is only the first half of bootstrap.  Keep the
       // application routing gate closed until AuthProvider has also resolved
       // the Supabase session and the authoritative /auth/me context.
-    }
+      }
+    })().finally(() => {
+      storageBootstrap = null;
+    });
+    return storageBootstrap;
   },
 
   completeBootstrap: () => set({ isLoading: false }),

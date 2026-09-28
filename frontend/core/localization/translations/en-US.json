@@ -89,10 +89,60 @@
     "profile": "Profile",
     "logout": "Logout"
   },
+  "clinicProfile": {
+    "title": "Clinic Profile",
+    "subtitle": "Manage your clinic information",
+    "sections": { "basic": "Basic Info", "contact": "Contact & Address", "business": "Business Details", "branding": "Branding" },
+    "fields": { "name": "Clinic name", "type": "Clinic type", "email": "Email", "phone": "Phone", "website": "Website", "street": "Street address", "city": "City", "state": "State", "pincode": "Postal code", "country": "Country", "registration": "Registration number", "pan": "PAN number", "gst": "GST number", "logo": "Clinic logo" },
+    "typeHelp": "Clinic type cannot be changed after registration.",
+    "requiredMarker": "*",
+    "optionalMarker": "(Optional)",
+    "saveFailed": "Unable to save the clinic profile. Please try again.",
+    "loadFailed": "Unable to load the clinic profile. Please try again.",
+    "saving": "Saving…",
+    "chooseLogo": "Choose logo",
+    "noLogo": "No logo selected",
+    "logoHelp": "Your logo may appear on clinic communications.",
+    "logoPermissionRequired": "Photo library permission is required to choose a logo.",
+    "logoUploadFailed": "Unable to upload the logo. Please try again."
+  },
   "treatment_category": {
+    "general": "General",
     "therapy": "Therapy",
     "dental_procedure": "Dental procedure",
     "physiotherapy": "Physiotherapy"
+  },
+  "clinicConfiguration": {
+    "multiday": {
+      "title": "Enable multi-day appointments",
+      "description": "Allow eligible configured treatments to be scheduled across multiple days.",
+      "error": "Unable to update multi-day appointments. Please try again."
+    }
+  },
+  "treatments": {
+    "form": {
+      "sections": { "basic": "Basic information", "durationAndPricing": "Duration and pricing", "ayurvedicProperties": "Ayurvedic properties", "safety": "Safety information" },
+      "code": { "label": "Treatment code", "placeholder": "For example, ABHYANGA", "editHelp": "Treatment code cannot be changed.", "createHelp": "Unique identifier; it will be uppercased." },
+      "name": { "label": "Treatment name", "placeholder": "For example, Abhyanga massage" },
+      "description": { "label": "Description", "placeholder": "Describe the treatment" },
+      "duration": { "label": "Duration (minutes)", "placeholder": "60", "requiredMessage": "Enter a positive duration in minutes." },
+      "price": { "label": "Price", "placeholder": "1500", "requiredMessage": "Enter a valid price of zero or more." },
+      "dosha": {
+        "help": "Select the doshas this treatment helps balance.",
+        "vata": { "label": "Vata", "description": "Air and space", "placeholder": "Notes on Vata benefits" },
+        "pitta": { "label": "Pitta", "description": "Fire and water", "placeholder": "Notes on Pitta benefits" },
+        "kapha": { "label": "Kapha", "description": "Earth and water", "placeholder": "Notes on Kapha benefits" }
+      },
+      "contraindications": { "label": "Contraindications", "placeholder": "List conditions where this treatment should be avoided" },
+      "changes": { "unsaved": "Unsaved changes", "none": "No changes" },
+      "actions": { "create": "Create treatment" },
+      "category": {
+        "label": "Category",
+        "requiredLabel": "Category *",
+        "help": "Select the category that applies to this treatment.",
+        "requiredMessage": "Select a treatment category before saving."
+      }
+    }
   },
   "errors": {
     "network": {
@@ -110,7 +160,35 @@
       "permissionDenied": "Your role does not have permission to access this feature. Please contact your administrator.",
       "loginFailed": "Login failed. Please try again.",
       "logoutFailed": "Logout failed. Please try again.",
-      "tokenRefreshFailed": "Failed to refresh your session. Please log in again."
+      "tokenRefreshFailed": "Failed to refresh your session. Please log in again.",
+      "registration": {
+        "USER_ALREADY_EXISTS": "An account with this email already exists. Please sign in instead.",
+        "FIELD_VALIDATION": "Please correct the highlighted information and try again.",
+        "FORM_VALIDATION": "Please review your registration information and try again.",
+        "ELIGIBILITY": "This registration cannot continue at the moment. Please review the information and try again.",
+        "INVALID_CREDENTIALS": "The email or password is invalid. Please review your details and try again.",
+        "VALIDATION": "Review the highlighted registration details and try again.",
+        "TOO_MANY_ATTEMPTS": "Too many attempts. Please wait a few minutes and try again.",
+        "CONFLICT": "This registration conflicts with an existing account. Please review your details and try again.",
+        "UNEXPECTED": "Registration could not be completed. Please try again.",
+        "signIn": "Sign in instead",
+        "validation": {
+          "field_required": "This field is required.",
+          "field_invalid": "Enter a valid value.",
+          "form_invalid": "Please review the registration information.",
+          "full_name_too_short": "Enter at least 2 characters.",
+          "contact_name_forbidden_term": "Enter an authentic contact name.",
+          "email_invalid": "Enter a valid email address.",
+          "temporary_email_not_allowed": "Use a business email address.",
+          "phone_invalid": "Enter a valid 10-digit phone number.",
+          "password_too_short": "Password must contain at least 8 characters.",
+          "passwords_do_not_match": "Passwords do not match.",
+          "clinic_name_too_short": "Enter at least 2 characters.",
+          "clinic_name_forbidden_term": "Enter an authentic clinic name.",
+          "clinic_type_invalid": "Select a valid clinic type.",
+          "postal_code_invalid": "Enter a valid 6-digit postal code."
+        }
+      }
     },
     "clinicEntry": {
       "validation": "Review the highlighted clinic information and try again.",
@@ -365,6 +443,43 @@
       "prescriptionsLoadFailed": "Could not load prescriptions. Please try again."
     }
   },
+  "applicationStatus": {
+    "loading": "Loading...",
+    "loadingDashboard": "Loading your dashboard...",
+    "actions": {
+      "refresh": "Refresh status",
+      "signOut": "Sign out"
+    },
+    "draft": {
+      "title": "Registration needs attention",
+      "description": "Some information must be corrected before your registration can continue.",
+      "detail": "Your registration is not under review yet. Please use the information from your registration attempt and contact the Nova Clinics team if you need help.",
+      "accessibility": "Registration needs attention"
+    },
+    "noClinic": {
+      "title": "No clinic assigned",
+      "description": "Your account is not assigned to a clinic. Please contact your administrator for access.",
+      "loggedInAs": "Signed in as: {{email}}"
+    },
+    "pendingReview": {
+      "title": "Clinic registration under review",
+      "description": "Your clinic registration has been submitted and is awaiting review.",
+      "status": "Pending review",
+      "submitted": "Submitted",
+      "nextStepsTitle": "What happens next?",
+      "submittedStep": "Application submitted",
+      "reviewStep": "Under review",
+      "setupStep": "Approval and setup",
+      "accessibility": "Clinic registration under review"
+    },
+    "rejected": {
+      "title": "Application not approved",
+      "description": "Your application cannot continue at this time.",
+      "detail": "There is no supported self-service update or resubmission path for this application. Please contact the Nova Clinics team if you need help.",
+      "accessibility": "Application not approved",
+      "signOut": "Sign out"
+    }
+  },
   "episodeWorkspace": {
     "header": {
       "episode": "Episode",
@@ -616,6 +731,7 @@
     "actions": {
       "unavailable": "This action is currently unavailable",
       "edit_clinic_profile": { "label": "Update clinic profile" },
+      "manage_clinic_profile": { "label": "Manage clinic profile" },
       "manage_operating_hours": { "label": "Manage operating hours" },
       "manage_rooms": { "label": "Manage rooms and beds" },
       "manage_treatments": { "label": "Manage treatments" },
@@ -644,6 +760,7 @@
     },
     "requirements": {
       "progress": "{{current}} of {{required}} required items configured",
+      "progressWithTitle": "{{title}}: {{current}} of {{required}} required items configured",
       "clinic_profile": { "title": "Clinic profile details", "help": "Complete the required clinic identity, contact, and location details.", "blocker": "Complete the required clinic profile details." },
       "operating_hours": { "title": "Operating hours", "help": "Add at least one valid working interval.", "blocker": "Add valid clinic operating hours." },
       "validation": {
@@ -666,6 +783,9 @@
       }
     },
     "progressiveExperience": {
+      "staff": {
+        "dateOfBirth": { "label": "Date of birth (optional)", "placeholder": "YYYY-MM-DD" }
+      },
       "routes": {
         "prepareClinic": "Prepare Your Clinic",
         "clinicPreparation": "Clinic Preparation",
@@ -811,6 +931,23 @@
         "title": "Workspace access",
         "introduction": "Review your workspace status, retention information, and the options currently available to your organization.",
         "loading": "Loading workspace access information...",
+        "preActivation": {
+          "title": "Ready to start",
+          "description": "Your clinic setup is complete. Start your trial to activate your clinic.",
+          "actionTitle": "Start your trial",
+          "actionDescription": "Your trial starts only after you confirm this action.",
+          "accessibility": "Ready to start trial"
+        },
+        "trialConfirmation": {
+          "title": "Trial started",
+          "description": "Your clinic workspace is ready.",
+          "startedAt": "Started",
+          "expiresAt": "Valid until",
+          "daysRemaining": "{{count}} days remaining",
+          "workspaceReady": "You can now enter your clinic workspace.",
+          "continue": "Continue to Dashboard",
+          "accessibility": "Trial started confirmation"
+        },
         "workspaceStatus": {
           "title": "Workspace status"
         },
@@ -894,7 +1031,7 @@
           },
           "startTrial": {
             "confirmTitle": "Start your trial?",
-            "confirmMessage": "The trial clock starts immediately after confirmation and is controlled by Nova's authoritative commercial record.",
+            "confirmMessage": "Your 30-day trial starts immediately after you confirm. You can start using NovaClinics right away.",
             "confirmAction": "Start trial",
             "success": "Your trial has started."
           },
@@ -921,6 +1058,7 @@
             "permissionDenied": "You are not authorized to perform this commercial action.",
             "confirmationRequired": "Confirmation is required before the trial can start.",
             "conflict": "The commercial record changed. It has been refreshed; review it before trying again.",
+            "setupChanged": "Your clinic setup changed. Review the remaining setup items, then try again.",
             "notAvailable": "This action is no longer available for the current workspace status.",
             "network": "The action could not be completed. Check your connection and try again."
           }
@@ -1037,7 +1175,7 @@
         "saveProgressError": "Failed to save preparation progress. Please try again.",
         "refreshProgressError": "Failed to refresh preparation progress. Please try again.",
         "exitTitle": "Exit Preparation?",
-        "exitMessage": "You can continue reviewing and personalizing your clinic later from the dashboard.",
+        "exitMessage": "Your preparation remains available until you start your trial. Closing returns you to the current preparation flow.",
         "treatmentsDescription": "Review your Ayurvedic treatments and therapy services in the full management screen. After adding items, return here to continue preparing your clinic.",
         "operatingHoursDescription": "Review your clinic operating hours in the full management screen. After setting your hours, return here to continue preparing your clinic.",
         "roomsDescription": "Review your treatment rooms and therapy beds in the full management screen. After adding items, return here to continue preparing your clinic.",
@@ -1051,6 +1189,7 @@
         "loadPreparationFailed": "Unable to load clinic preparation",
         "noPreparationSteps": "No preparation steps found. Nova may not have generated readiness steps for your clinic type yet.",
         "prepareYourClinic": "Prepare Your Clinic",
+        "currentStepPosition": "Current step {{current}} of {{total}}",
         "progressUpdatedNotice": "Your onboarding progress has been updated.",
         "readyToStart": "Ready to Start",
         "backToPreparation": "Back to Preparation",
@@ -1086,7 +1225,12 @@
         "successTitle": "Congratulations!",
         "goToDashboard": "Go to Dashboard",
         "presentation": {
+          "finalReadiness": {
+            "title": "Clinic setup complete",
+            "message": "Your clinic setup is complete. We’re finishing the final readiness check before you start your trial."
+          },
           "title": "Clinic readiness",
+          "manageSetup": "Manage clinic setup",
           "screenLabel": "Clinic readiness checklist",
           "loading": "Checking whether your clinic is ready...",
           "refreshing": "Refreshing clinic readiness...",

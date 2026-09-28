@@ -178,10 +178,6 @@ axiosClient.interceptors.request.use(
         if (session?.access_token) {
           // Add JWT to Authorization header
           config.headers.Authorization = `Bearer ${session.access_token}`;
-          console.log('🔐 JWT added to request:', config.url);
-          console.log('🔐 Token (first 50 chars):', session.access_token.substring(0, 50));
-        } else {
-          console.log('ℹ️ No JWT available for request:', config.url);
         }
       }
 
@@ -218,6 +214,14 @@ axiosClient.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+    // React Query intentionally aborts obsolete requests on a scope change,
+    // unmount, or explicit cache clear.  That is a terminal control-flow
+    // signal, not an API failure and must reach the query layer unchanged.
+    if (error.code === 'ERR_CANCELED' || error.name === 'CanceledError') {
+      completeApiRequest(originalRequest, error);
+      return Promise.reject(error);
+    }
 
     // Log CORS errors specifically (using console.log to avoid error banners)
     if (error.message?.includes('CORS') || error.message?.includes('Network Error')) {

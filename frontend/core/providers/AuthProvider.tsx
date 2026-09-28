@@ -7,6 +7,7 @@ import React, { useEffect } from 'react';
 import { ThemeProvider } from '../theme/useClinicTheme';
 import { useAuthStore } from '../../features/auth/presentation/providers/auth.store';
 import { useAuth } from '../../features/auth/presentation/hooks/useAuth';
+import { supabase } from '../api/supabaseClient';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -30,6 +31,15 @@ const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
     initialize();
   }, [bootstrapSession]);
+
+  useEffect(() => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        void useAuthStore.getState().setTokens(session.access_token, session.refresh_token);
+      }
+    });
+    return () => subscription.subscription.unsubscribe();
+  }, []);
 
   return <>{children}</>;
 };

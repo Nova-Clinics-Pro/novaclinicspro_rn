@@ -8,7 +8,7 @@
  * - Used for both create and edit flows
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -22,9 +22,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing } from '../../../../core/theme/spacing';
-import { typography } from '../../../../core/theme/typography';
-import { colors } from '../../../../core/theme/colors';
+import { ClinicTheme, useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { useTreatmentCategoriesQuery } from '../../../configuredClinicalServices/data/repositories/configuredClinicalServices.repository.impl';
 import {
   TreatmentResponse,
   TreatmentCreate,
@@ -49,6 +49,7 @@ interface FormData {
   duration: string;
   price: string;
   contraindications: string;
+  categoryCode: string | null;
 }
 
 interface DoshaFormState {
@@ -81,6 +82,7 @@ const getInitialFormData = (data?: TreatmentResponse | null): FormData => {
       duration: '',
       price: '',
       contraindications: '',
+      categoryCode: null,
     };
   }
 
@@ -91,6 +93,7 @@ const getInitialFormData = (data?: TreatmentResponse | null): FormData => {
     duration: data.duration_minutes?.toString() || '',
     price: data.price || data.base_price || '',
     contraindications: data.contraindications || '',
+    categoryCode: data.category_code ?? null,
   };
 };
 
@@ -134,6 +137,7 @@ const hasFormChanges = (
   if (formData.duration !== initial.duration) return true;
   if (formData.price !== initial.price) return true;
   if (formData.contraindications.trim() !== (initial.contraindications || '')) return true;
+  if (formData.categoryCode !== initial.categoryCode) return true;
 
   // Check dosha benefits
   const doshas: Array<keyof DoshaFormState> = ['vata', 'pitta', 'kapha'];
@@ -157,17 +161,44 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
   mode,
 }) => {
   const isEditing = mode === 'edit';
+  const theme = useClinicTheme();
+  const { t } = useTranslation();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const categoriesQuery = useTreatmentCategoriesQuery();
 
   // Form state
   const [formData, setFormData] = useState<FormData>(() => getInitialFormData(initialData));
   const [doshaBenefits, setDoshaBenefits] = useState<DoshaFormState>(() => 
     getInitialDoshaState(initialData?.dosha_benefits)
   );
+  const [categoryValidationVisible, setCategoryValidationVisible] = useState(false);
+  const [pricingValidationVisible, setPricingValidationVisible] = useState(false);
+
+  // Creation defaults are supplied by the canonical category catalogue. An
+  // edit always preserves its saved category, including a historical null.
+  useEffect(() => {
+    if (isEditing || formData.categoryCode !== null) return;
+    const defaultCategory = categoriesQuery.data?.find(category => category.is_active && category.is_default);
+    if (defaultCategory) {
+      setFormData(current => current.categoryCode === null
+        ? { ...current, categoryCode: defaultCategory.code }
+        : current);
+    }
+  }, [categoriesQuery.data, formData.categoryCode, isEditing]);
 
   // Validation
   const isValid = useMemo(() => {
-    return formData.code.trim().length > 0 && formData.name.trim().length > 0;
-  }, [formData.code, formData.name]);
+    return (
+      formData.code.trim().length > 0 &&
+      formData.name.trim().length > 0 &&
+      formData.categoryCode !== null &&
+      Number.isInteger(Number(formData.duration)) &&
+      Number(formData.duration) > 0 &&
+      formData.price.trim().length > 0 &&
+      Number.isFinite(Number(formData.price)) &&
+      Number(formData.price) >= 0
+    );
+  }, [formData.categoryCode, formData.code, formData.duration, formData.name, formData.price]);
 
   // Check for changes
   const formHasChanges = useMemo(() => {
@@ -175,6 +206,20 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
   }, [formData, doshaBenefits, initialData]);
 
   const handleSubmit = useCallback(() => {
+    if (formData.categoryCode === null) {
+      setCategoryValidationVisible(true);
+      return;
+    }
+    if (
+      !Number.isInteger(Number(formData.duration)) ||
+      Number(formData.duration) <= 0 ||
+      formData.price.trim().length === 0 ||
+      !Number.isFinite(Number(formData.price)) ||
+      Number(formData.price) < 0
+    ) {
+      setPricingValidationVisible(true);
+      return;
+    }
     if (!isValid) return;
 
     // Build dosha benefits object
@@ -206,6 +251,7 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
       base_price: formData.price ? parseFloat(formData.price) : null,
       dosha_benefits: Object.keys(doshaData).length > 0 ? doshaData : null,
       contraindications: formData.contraindications.trim() || null,
+      category_code: formData.categoryCode,
     };
 
     onSubmit(payload, formHasChanges);
@@ -223,41 +269,78 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
       >
         {/* Basic Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+          <Text style={styles.sectionTitle}>{t('treatments.form.sections.basic')}</Text>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Treatment Code *</Text>
+            <Text style={styles.label}>{t('treatments.form.code.label')}</Text>
             <TextInput
               style={[styles.input, isEditing && styles.inputDisabled]}
-              placeholder="e.g., ABHYANGA"
-              placeholderTextColor="#9CA3AF"
+              placeholder={t('treatments.form.code.placeholder')}
+              placeholderTextColor={theme.colors.text.tertiary}
               value={formData.code}
               onChangeText={(text) => setFormData(prev => ({ ...prev, code: text }))}
               autoCapitalize="characters"
               editable={!isEditing} // Code is typically not editable
             />
             <Text style={styles.hint}>
-              {isEditing ? 'Treatment code cannot be changed' : 'Unique identifier (will be uppercased)'}
+              {isEditing ? t('treatments.form.code.editHelp') : t('treatments.form.code.createHelp')}
             </Text>
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Treatment Name *</Text>
+            <Text style={styles.label}>{t('treatments.form.category.requiredLabel')}</Text>
+            <Text style={styles.hint}>{t('treatments.form.category.help')}</Text>
+            {categoriesQuery.isError ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t('common.retry')}
+                onPress={() => void categoriesQuery.refetch()}
+                style={styles.categoryRetry}
+              >
+                <Text style={styles.categoryRetryText}>{t('common.retry')}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.categoryOptions} accessibilityRole="radiogroup">
+                {(categoriesQuery.data ?? []).filter(category => category.is_active).map(category => (
+                  <TouchableOpacity
+                    key={category.code}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: formData.categoryCode === category.code }}
+                    style={[styles.categoryOption, formData.categoryCode === category.code && styles.categoryOptionSelected]}
+                    onPress={() => {
+                      setCategoryValidationVisible(false);
+                      setFormData(previous => ({ ...previous, categoryCode: category.code }));
+                    }}
+                  >
+                    <Text style={styles.categoryOptionText}>{t(category.display_key)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {categoryValidationVisible && formData.categoryCode === null ? (
+              <Text style={styles.validationMessage} accessibilityRole="alert">
+                {t('treatments.form.category.requiredMessage')}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>{t('treatments.form.name.label')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., Abhyanga Massage"
-              placeholderTextColor="#9CA3AF"
+              placeholder={t('treatments.form.name.placeholder')}
+              placeholderTextColor={theme.colors.text.tertiary}
               value={formData.name}
               onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{t('treatments.form.description.label')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Describe the treatment..."
-              placeholderTextColor="#9CA3AF"
+              placeholder={t('treatments.form.description.placeholder')}
+              placeholderTextColor={theme.colors.text.tertiary}
               value={formData.description}
               onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
               multiline
@@ -269,61 +352,75 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
 
         {/* Duration & Pricing */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Duration & Pricing</Text>
+          <Text style={styles.sectionTitle}>{t('treatments.form.sections.durationAndPricing')}</Text>
 
           <View style={styles.row}>
             <View style={[styles.formGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Duration (minutes)</Text>
+              <Text style={styles.label}>{t('treatments.form.duration.label')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="60"
-                placeholderTextColor="#9CA3AF"
+              placeholder={t('treatments.form.duration.placeholder')}
+              placeholderTextColor={theme.colors.text.tertiary}
                 value={formData.duration}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, duration: text }))}
                 keyboardType="number-pad"
               />
+              {pricingValidationVisible &&
+              (!Number.isInteger(Number(formData.duration)) || Number(formData.duration) <= 0) ? (
+                <Text style={styles.validationMessage} accessibilityRole="alert">
+                  {t('treatments.form.duration.requiredMessage')}
+                </Text>
+              ) : null}
             </View>
 
             <View style={[styles.formGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Price (₹)</Text>
+              <Text style={styles.label}>{t('treatments.form.price.label')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="1500"
-                placeholderTextColor="#9CA3AF"
+              placeholder={t('treatments.form.price.placeholder')}
+              placeholderTextColor={theme.colors.text.tertiary}
                 value={formData.price}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, price: text }))}
                 keyboardType="decimal-pad"
               />
+              {pricingValidationVisible &&
+              (formData.price.trim().length === 0 ||
+                !Number.isFinite(Number(formData.price)) ||
+                Number(formData.price) < 0) ? (
+                <Text style={styles.validationMessage} accessibilityRole="alert">
+                  {t('treatments.form.price.requiredMessage')}
+                </Text>
+              ) : null}
             </View>
           </View>
         </View>
 
         {/* Ayurveda Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ayurvedic Properties</Text>
-          <Text style={styles.sectionHint}>Select doshas this treatment helps balance</Text>
+          <Text style={styles.sectionTitle}>{t('treatments.form.sections.ayurvedicProperties')}</Text>
+          <Text style={styles.sectionHint}>{t('treatments.form.dosha.help')}</Text>
 
           {/* Vata */}
           <View style={styles.doshaCard}>
             <View style={styles.doshaHeader}>
               <View style={[styles.doshaIndicator, { backgroundColor: DOSHA_COLORS.vata }]} />
-              <Text style={styles.doshaName}>Vata</Text>
-              <Text style={styles.doshaDesc}>(Air + Space)</Text>
+              <Text style={styles.doshaName}>{t('treatments.form.dosha.vata.label')}</Text>
+              <Text style={styles.doshaDesc}>{t('treatments.form.dosha.vata.description')}</Text>
               <Switch
                 value={doshaBenefits.vata.balances}
                 onValueChange={(value) => setDoshaBenefits(prev => ({
                   ...prev,
                   vata: { ...prev.vata, balances: value },
                 }))}
-                trackColor={{ false: '#E5E7EB', true: DOSHA_COLORS.vata + '60' }}
-                thumbColor={doshaBenefits.vata.balances ? DOSHA_COLORS.vata : '#F4F4F5'}
+                trackColor={{ false: theme.colors.border.default, true: DOSHA_COLORS.vata }}
+                thumbColor={doshaBenefits.vata.balances ? DOSHA_COLORS.vata : theme.colors.surface.default}
               />
             </View>
             {doshaBenefits.vata.balances && (
               <TextInput
                 style={styles.doshaInput}
-                placeholder="Notes on Vata benefits..."
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('treatments.form.dosha.vata.placeholder')}
+                placeholderTextColor={theme.colors.text.tertiary}
                 value={doshaBenefits.vata.notes}
                 onChangeText={(text) => setDoshaBenefits(prev => ({
                   ...prev,
@@ -337,23 +434,23 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
           <View style={styles.doshaCard}>
             <View style={styles.doshaHeader}>
               <View style={[styles.doshaIndicator, { backgroundColor: DOSHA_COLORS.pitta }]} />
-              <Text style={styles.doshaName}>Pitta</Text>
-              <Text style={styles.doshaDesc}>(Fire + Water)</Text>
+              <Text style={styles.doshaName}>{t('treatments.form.dosha.pitta.label')}</Text>
+              <Text style={styles.doshaDesc}>{t('treatments.form.dosha.pitta.description')}</Text>
               <Switch
                 value={doshaBenefits.pitta.balances}
                 onValueChange={(value) => setDoshaBenefits(prev => ({
                   ...prev,
                   pitta: { ...prev.pitta, balances: value },
                 }))}
-                trackColor={{ false: '#E5E7EB', true: DOSHA_COLORS.pitta + '60' }}
-                thumbColor={doshaBenefits.pitta.balances ? DOSHA_COLORS.pitta : '#F4F4F5'}
+                trackColor={{ false: theme.colors.border.default, true: DOSHA_COLORS.pitta }}
+                thumbColor={doshaBenefits.pitta.balances ? DOSHA_COLORS.pitta : theme.colors.surface.default}
               />
             </View>
             {doshaBenefits.pitta.balances && (
               <TextInput
                 style={styles.doshaInput}
-                placeholder="Notes on Pitta benefits..."
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('treatments.form.dosha.pitta.placeholder')}
+                placeholderTextColor={theme.colors.text.tertiary}
                 value={doshaBenefits.pitta.notes}
                 onChangeText={(text) => setDoshaBenefits(prev => ({
                   ...prev,
@@ -367,23 +464,23 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
           <View style={styles.doshaCard}>
             <View style={styles.doshaHeader}>
               <View style={[styles.doshaIndicator, { backgroundColor: DOSHA_COLORS.kapha }]} />
-              <Text style={styles.doshaName}>Kapha</Text>
-              <Text style={styles.doshaDesc}>(Earth + Water)</Text>
+              <Text style={styles.doshaName}>{t('treatments.form.dosha.kapha.label')}</Text>
+              <Text style={styles.doshaDesc}>{t('treatments.form.dosha.kapha.description')}</Text>
               <Switch
                 value={doshaBenefits.kapha.balances}
                 onValueChange={(value) => setDoshaBenefits(prev => ({
                   ...prev,
                   kapha: { ...prev.kapha, balances: value },
                 }))}
-                trackColor={{ false: '#E5E7EB', true: DOSHA_COLORS.kapha + '60' }}
-                thumbColor={doshaBenefits.kapha.balances ? DOSHA_COLORS.kapha : '#F4F4F5'}
+                trackColor={{ false: theme.colors.border.default, true: DOSHA_COLORS.kapha }}
+                thumbColor={doshaBenefits.kapha.balances ? DOSHA_COLORS.kapha : theme.colors.surface.default}
               />
             </View>
             {doshaBenefits.kapha.balances && (
               <TextInput
                 style={styles.doshaInput}
-                placeholder="Notes on Kapha benefits..."
-                placeholderTextColor="#9CA3AF"
+                placeholder={t('treatments.form.dosha.kapha.placeholder')}
+                placeholderTextColor={theme.colors.text.tertiary}
                 value={doshaBenefits.kapha.notes}
                 onChangeText={(text) => setDoshaBenefits(prev => ({
                   ...prev,
@@ -396,14 +493,14 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
 
         {/* Contraindications */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Safety Information</Text>
+          <Text style={styles.sectionTitle}>{t('treatments.form.sections.safety')}</Text>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Contraindications</Text>
+            <Text style={styles.label}>{t('treatments.form.contraindications.label')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="List any conditions where this treatment should be avoided..."
-              placeholderTextColor="#9CA3AF"
+              placeholder={t('treatments.form.contraindications.placeholder')}
+              placeholderTextColor={theme.colors.text.tertiary}
               value={formData.contraindications}
               onChangeText={(text) => setFormData(prev => ({ ...prev, contraindications: text }))}
               multiline
@@ -419,13 +516,13 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
             <Ionicons 
               name={formHasChanges ? 'ellipse' : 'checkmark-circle'} 
               size={16} 
-              color={formHasChanges ? '#F59E0B' : '#10B981'} 
+              color={formHasChanges ? theme.colors.feedback.warning : theme.colors.feedback.success}
             />
             <Text style={[
               styles.changeText,
-              { color: formHasChanges ? '#F59E0B' : '#10B981' }
+              { color: formHasChanges ? theme.colors.feedback.warning : theme.colors.feedback.success }
             ]}>
-              {formHasChanges ? 'Unsaved changes' : 'No changes'}
+              {formHasChanges ? t('treatments.form.changes.unsaved') : t('treatments.form.changes.none')}
             </Text>
           </View>
         )}
@@ -434,7 +531,7 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
       {/* Action Buttons */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -444,21 +541,21 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
             isEditing && !formHasChanges && styles.noChangesButton,
           ]}
           onPress={handleSubmit}
-          disabled={!isValid || isLoading}
+          disabled={isLoading}
         >
           {isLoading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={theme.colors.text.onPrimary} />
           ) : (
             <>
               <Ionicons 
                 name={isEditing ? 'checkmark-circle' : 'add-circle'} 
                 size={20} 
-                color="#FFFFFF" 
+                color={theme.colors.text.onPrimary}
               />
               <Text style={styles.submitButtonText}>
                 {isEditing 
-                  ? (formHasChanges ? 'Save Changes' : 'No Changes')
-                  : 'Create Treatment'
+                  ? (formHasChanges ? t('common.save') : t('treatments.form.changes.none'))
+                  : t('treatments.form.actions.create')
                 }
               </Text>
             </>
@@ -473,7 +570,7 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -481,74 +578,111 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.md,
-    paddingBottom: spacing.xl,
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
   },
   section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    backgroundColor: theme.colors.surface.default,
+    borderRadius: theme.spacing.sm,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border.default,
   },
   sectionTitle: {
-    ...typography.h6,
-    color: '#1F2937',
-    marginBottom: spacing.sm,
+    ...theme.typography.h6,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
   },
   sectionHint: {
-    ...typography.caption,
-    color: '#6B7280',
-    marginBottom: spacing.md,
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.md,
   },
   formGroup: {
-    marginBottom: spacing.md,
+    marginBottom: theme.spacing.md,
   },
   label: {
-    ...typography.body2,
+    ...theme.typography.body2,
     fontWeight: '600',
-    color: '#374151',
-    marginBottom: spacing.xs,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
   },
   hint: {
-    ...typography.caption,
-    color: '#9CA3AF',
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
     marginTop: 4,
   },
-  input: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
+  categoryOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+  },
+  categoryOption: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    ...typography.body1,
-    color: '#1F2937',
+    borderColor: theme.colors.border.default,
+    borderRadius: 10,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    backgroundColor: theme.colors.surface.default,
+  },
+  categoryOptionSelected: {
+    borderColor: theme.colors.primary.default,
+    backgroundColor: theme.colors.surface.muted,
+  },
+  categoryOptionText: {
+    ...theme.typography.body2,
+    color: theme.colors.text.primary,
+  },
+  categoryRetry: {
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  categoryRetryText: {
+    ...theme.typography.body2,
+    color: theme.colors.primary.default,
+  },
+  validationMessage: {
+    ...theme.typography.caption,
+    color: theme.colors.feedback.error,
+    marginTop: theme.spacing.xs,
+  },
+  input: {
+    backgroundColor: theme.colors.surface.muted,
+    borderRadius: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border.default,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    ...theme.typography.body1,
+    color: theme.colors.text.primary,
     minHeight: 48,
   },
   inputDisabled: {
-    backgroundColor: '#F3F4F6',
-    color: '#6B7280',
+    backgroundColor: theme.colors.surface.elevated,
+    color: theme.colors.text.secondary,
   },
   textArea: {
     minHeight: 100,
-    paddingTop: spacing.sm,
+    paddingTop: theme.spacing.sm,
   },
   row: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: theme.spacing.md,
   },
   halfWidth: {
     flex: 1,
   },
   doshaCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+    backgroundColor: theme.colors.surface.muted,
+    borderRadius: theme.spacing.sm,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border.default,
   },
   doshaHeader: {
     flexDirection: 'row',
@@ -558,84 +692,84 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    marginRight: spacing.xs,
+    marginRight: theme.spacing.xs,
   },
   doshaName: {
-    ...typography.body1,
+    ...theme.typography.body1,
     fontWeight: '600',
-    color: '#1F2937',
+    color: theme.colors.text.primary,
   },
   doshaDesc: {
-    ...typography.caption,
-    color: '#6B7280',
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
     flex: 1,
-    marginLeft: spacing.xs,
+    marginLeft: theme.spacing.xs,
   },
   doshaInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    backgroundColor: theme.colors.surface.default,
+    borderRadius: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginTop: spacing.sm,
-    ...typography.body2,
-    color: '#1F2937',
+    borderColor: theme.colors.border.default,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    ...theme.typography.body2,
+    color: theme.colors.text.primary,
   },
   changeIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
+    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.sm,
   },
   changeText: {
-    ...typography.caption,
+    ...theme.typography.caption,
     fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',
-    padding: spacing.md,
-    backgroundColor: '#FFFFFF',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface.default,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    gap: spacing.md,
+    borderTopColor: theme.colors.border.default,
+    gap: theme.spacing.md,
   },
   cancelButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: 10,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.colors.border.default,
+    backgroundColor: theme.colors.surface.default,
   },
   cancelButtonText: {
-    ...typography.body1,
+    ...theme.typography.body1,
     fontWeight: '600',
-    color: '#6B7280',
+    color: theme.colors.text.secondary,
   },
   submitButton: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: '#2F6F4E',
-    borderRadius: 10,
-    paddingVertical: spacing.md,
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.primary.default,
+    borderRadius: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
   },
   disabledButton: {
     opacity: 0.6,
   },
   noChangesButton: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: theme.colors.text.disabled,
   },
   submitButtonText: {
-    ...typography.body1,
+    ...theme.typography.body1,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.text.onPrimary,
   },
 });
 

@@ -100,6 +100,19 @@ export interface EffectiveTenantResult {
   metadataSynchronized: boolean;
 }
 
+/**
+ * A request requiring an authenticated clinic-entry context reached the
+ * transport after the session was removed or expired.  It is deliberately
+ * distinct from a clinic-entry failure: routing must return to authentication
+ * rather than presenting a transient clinic-entry error.
+ */
+export class AuthSessionInvalidError extends Error {
+  constructor() {
+    super('errors.auth.sessionExpired');
+    this.name = 'AuthSessionInvalidError';
+  }
+}
+
 export class ClinicEntryTransportError extends Error {
   constructor(
     readonly errorCode: string,
@@ -113,7 +126,9 @@ export class ClinicEntryTransportError extends Error {
 }
 
 export const clinicEntryErrorToken = (error: unknown): string =>
-  error instanceof ClinicEntryTransportError
+  error instanceof AuthSessionInvalidError
+    ? 'errors.auth.sessionExpired'
+    : error instanceof ClinicEntryTransportError
     ? error.messageToken
     : error instanceof Error && error.message === 'clinic_entry.organization_required'
       ? 'errors.clinicEntry.organizationRequired'

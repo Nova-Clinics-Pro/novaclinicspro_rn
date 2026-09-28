@@ -9,6 +9,12 @@ import {
   resetApiRequestActivityForTests,
 } from '../../../core/api/apiRequestActivity';
 
+const mockLogError = jest.fn();
+
+jest.mock('../../../core/utils/errorHandler', () => ({
+  logError: (...args: unknown[]) => mockLogError(...args),
+}));
+
 const FALLBACK_MESSAGE = 'An unexpected error occurred. Please try again.';
 
 const createClient = () => new QueryClient({
@@ -64,6 +70,7 @@ describe('ApiRequestFallbackProvider', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     resetApiRequestActivityForTests();
+    mockLogError.mockClear();
   });
   afterEach(() => {
     jest.useRealTimers();
@@ -82,7 +89,9 @@ describe('ApiRequestFallbackProvider', () => {
       await jest.advanceTimersByTimeAsync(5_000);
     });
 
-    expect(screen.getByText(FALLBACK_MESSAGE)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(FALLBACK_MESSAGE)).toBeTruthy();
+    });
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
     // This is a UI fallback, not a forced HTTP/query cancellation.
     expect(client.isFetching()).toBe(1);
@@ -174,8 +183,31 @@ describe('ApiRequestFallbackProvider', () => {
       completeApiRequest(request!, { response: { status: 503 } });
     });
 
-    expect(screen.getByText(FALLBACK_MESSAGE)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(FALLBACK_MESSAGE)).toBeTruthy();
+    });
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(mockLogError).toHaveBeenCalledWith(
+      'api.fallback.transport_failure',
+      { response: { status: 503 } }
+    );
     client.clear();
+  });
+
+  it('does not classify a canceled request during navigation as an unexpected failure', async () => {
+    const client = createClient();
+    const screen = renderWithClient(client, <Text>onboarding-screen</Text>);
+    let request: ReturnType<typeof beginApiRequest>;
+    await act(async () => {
+      request = beginApiRequest({});
+    });
+    await act(async () => {
+      completeApiRequest(request!, { code: 'ERR_CANCELED', name: 'CanceledError' });
+    });
+
+    expect(screen.queryByText(FALLBACK_MESSAGE)).toBeNull();
+    await act(async () => {
+      client.clear();
+    });
   });
 });

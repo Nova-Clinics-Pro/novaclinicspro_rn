@@ -1,5 +1,5 @@
 import { onboardingDestinations } from '../../features/onboarding/presentation/actions/onboardingActionRegistry';
-import { onboardingRendererKeys } from '../../features/onboarding/presentation/renderers/onboardingRendererRegistry';
+import { onboardingRendererKeys } from '../../features/onboarding/presentation/renderers/onboardingRendererContract';
 
 describe('template-authoritative onboarding registries', () => {
   it('resolves every approved corrective destination and omits nonblocking financials', () => {
@@ -13,6 +13,8 @@ describe('template-authoritative onboarding registries', () => {
       'clinic.staff',
       'clinic.treatments',
       'onboarding.step_detail',
+      'onboarding.workspace_preparation',
+      'workspace_preparation.retry',
     ]);
     expect(onboardingDestinations['onboarding.step_detail']({ tenant_id: 'tenant-1', step_id: 'go_live_checklist' }))
       .toContain('/onboarding/step-detail');

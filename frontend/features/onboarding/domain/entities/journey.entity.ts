@@ -169,6 +169,7 @@ export interface JourneyCardModel extends JourneyCardDefinition {
   isEligible: true;
   isVisible: true;
   isActionable: boolean;
+  action: import('./journey-visibility.entity').JourneyCorrectiveAction | null;
   order: number;
 }
 

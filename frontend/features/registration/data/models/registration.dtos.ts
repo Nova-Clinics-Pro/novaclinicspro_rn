@@ -171,7 +171,8 @@ export const PAIN_POINTS = [
 export interface RegistrationStatusResponse {
   status: 'registered' | 'no_applications';
   application_id?: string;
-  application_status?: 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+  application_status?: 'draft' | 'pending_review' | 'approved' | 'onboarding' | 'active' | 'rejected'
+    | 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'ONBOARDING' | 'ACTIVE' | 'REJECTED';
   tenant_name?: string;
   tenant_id?: string;
   created_at?: string;
@@ -183,7 +184,8 @@ export interface RegistrationStatusResponse {
 export interface RegistrationStatusResponse {
   status: 'registered' | 'no_applications';
   application_id?: string;
-  application_status?: 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+  application_status?: 'draft' | 'pending_review' | 'approved' | 'onboarding' | 'active' | 'rejected'
+    | 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'ONBOARDING' | 'ACTIVE' | 'REJECTED';
   tenant_name?: string;
   tenant_id?: string;
   created_at?: string;

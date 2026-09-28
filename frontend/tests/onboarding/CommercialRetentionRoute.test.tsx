@@ -22,8 +22,9 @@ jest.mock('../../features/onboarding/presentation/stores/wizard.store', () => ({
   resetWizardDraftStorage: (...args: unknown[]) => mockResetDraft(...args),
 }));
 jest.mock('../../features/onboarding/presentation/pages/CommercialRetentionScreen', () => ({
-  CommercialRetentionScreen: ({ onCommercialEligibilityConfirmed }: {
+  CommercialRetentionScreen: ({ onCommercialEligibilityConfirmed, onCommercialConfirmationAcknowledged }: {
     onCommercialEligibilityConfirmed: () => Promise<void>;
+    onCommercialConfirmationAcknowledged: () => void;
   }) => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- Jest factory must resolve this lazily.
     const { Pressable, Text } = require('react-native');
@@ -31,7 +32,11 @@ jest.mock('../../features/onboarding/presentation/pages/CommercialRetentionScree
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="complete-after-commercial-eligibility"
-        onPress={() => void onCommercialEligibilityConfirmed().catch(() => undefined)}
+        onPress={() =>
+          void onCommercialEligibilityConfirmed()
+            .then(onCommercialConfirmationAcknowledged)
+            .catch(() => undefined)
+        }
       >
         <Text>Complete</Text>
       </Pressable>
@@ -44,7 +49,7 @@ describe('CommercialRetentionRoute', () => {
     jest.clearAllMocks();
     mockComplete.mockResolvedValue(undefined);
     mockResetDraft.mockResolvedValue(undefined);
-    mockRefreshSession.mockResolvedValue(undefined);
+    mockRefreshSession.mockResolvedValue({ applicationStatus: 'active' });
   });
 
   it('completes only after commercial eligibility, refreshes /auth/me, then returns to the existing root router', async () => {

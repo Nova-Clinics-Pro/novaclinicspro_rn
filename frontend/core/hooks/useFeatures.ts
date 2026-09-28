@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../api/supabaseClient';
 import { axiosClient } from '../api/axiosClient';
+import { logError } from '../utils/errorHandler';
 
 /**
  * Phase 1 · T-E.1 (ADR-P1-05, FR-D1): single authoritative allowed-list for
@@ -93,7 +94,7 @@ function normalizeFeatures(raw?: any): FeatureConfig {
     appointments: {
       allow_multiday: !!raw?.appointments?.allow_multiday,
       enable_gender_matching: therapyClinic && !!raw?.appointments?.enable_gender_matching,
-      multiday_appointment_types: therapyClinic ? raw?.appointments?.multiday_appointment_types : [],
+      multiday_appointment_types: raw?.appointments?.multiday_appointment_types ?? [],
       gender_matching_treatments: therapyClinic ? raw?.appointments?.gender_matching_treatments : [],
     },
     treatment_sheets: {
@@ -161,11 +162,8 @@ export function useFeatures(): FeatureConfig {
             }
             lastTenantIdRef.current = tenantId;
           }
-          console.log('[useFeatures] Features loaded from API:', response.data);
-        } catch (apiError: any) {
-          const errorStatus = apiError?.response?.status;
-          const errorDetail = apiError?.response?.data?.detail;
-          console.log('[useFeatures] API feature load failed:', errorStatus, errorDetail);
+        } catch (apiError: unknown) {
+          logError('features.load_api', apiError);
 
           if (isMounted) {
             const next = metadataFeatures ? normalizeFeatures(metadataFeatures) : DEFAULT_FEATURES;
@@ -177,7 +175,7 @@ export function useFeatures(): FeatureConfig {
           }
         }
       } catch (error) {
-        console.error('[useFeatures] Error loading features:', error);
+        logError('features.load_session', error);
         if (isMounted) {
           setFeatures(DEFAULT_FEATURES);
         }

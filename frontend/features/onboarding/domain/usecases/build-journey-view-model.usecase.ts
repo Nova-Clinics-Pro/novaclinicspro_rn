@@ -9,7 +9,11 @@ import {
   JourneyProgress,
   JourneyViewModel,
 } from '../entities/journey.entity';
-import { JourneyVisibilityProjection } from '../entities/journey-visibility.entity';
+import {
+  JourneyResolvedStep,
+  JourneyVisibilityProjection,
+} from '../entities/journey-visibility.entity';
+import { buildOnboardingRuntime } from './build-onboarding-runtime.usecase';
 
 export const calculateJourneyProgressPercentage = (
   progress: JourneyProgress
@@ -59,6 +63,23 @@ const mapStatus = (step: StepStatus | undefined): JourneyCardStatus => {
     case 'not_started':
     default:
       return 'not_started';
+  }
+};
+
+const mapCanonicalLifecycleStatus = (
+  state: JourneyResolvedStep['state'],
+): JourneyCardStatus => {
+  switch (state) {
+    case 'COMPLETE':
+      return 'complete';
+    case 'IN_PROGRESS':
+      return 'in_progress';
+    case 'NOT_STARTED':
+      return 'not_started';
+    case 'BLOCKED':
+      return 'blocked';
+    case 'NOT_APPLICABLE':
+      return 'unavailable';
   }
 };
 
@@ -124,6 +145,7 @@ export const buildJourneyViewModel = (
       isEligible: true as const,
       isVisible: true as const,
       isActionable: step?.isActionable ?? false,
+      action: null,
       order: cards.length,
     });
   });
@@ -154,33 +176,33 @@ export const buildJourneyViewModelFromVisibilityProjection = (
     },
   };
 
-  const cards: JourneyCardModel[] = projection.resolvedSteps
-    .filter(step => step.applicable && step.state !== 'NOT_APPLICABLE')
-    .sort((left, right) => left.order - right.order)
-    .map(step => ({
+  const runtime = buildOnboardingRuntime(projection, null);
+  const cards: JourneyCardModel[] = runtime.visibleSteps
+    .map(({ step, action, isOpenable }) => {
+      return ({
       cardId: step.stepId,
       stepCode: step.stepId,
       stageId: 'canonical_projection',
       titleKey: step.titleToken ?? 'onboarding.renderers.unavailable',
       descriptionKey: step.helpToken ?? 'onboarding.renderers.unavailable',
-      actionLabelKey: step.correctiveActions.find(
-        action => action.availability === 'AVAILABLE'
-      )?.labelToken ?? null,
+      actionLabelKey: action?.labelToken ?? null,
       destination: { kind: 'wizard_step' as const, stepCode: step.stepId },
       iconToken: step.rendererKey ?? 'settings',
-      status: step.state === 'COMPLETE' ? 'complete' : step.state === 'BLOCKED' ? 'blocked' : 'not_started',
+      status: mapCanonicalLifecycleStatus(step.state),
       isEligible: true as const,
       isVisible: true as const,
-      isActionable: step.correctiveActions.some(action => action.availability === 'AVAILABLE'),
+      isActionable: isOpenable,
+      action,
       order: step.order,
-    }));
+    });
+    });
 
   return {
     identity,
     cards,
     progress: {
-      completed: cards.filter((card) => card.status === 'complete').length,
-      total: cards.length,
+      completed: runtime.completedSteps,
+      total: runtime.totalSteps,
     },
     diagnostics: freezeDiagnostics(diagnostics),
     availability: 'available',

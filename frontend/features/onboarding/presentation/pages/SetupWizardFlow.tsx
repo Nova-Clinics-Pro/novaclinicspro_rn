@@ -13,6 +13,7 @@ import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import {
   executePendingMutation,
   useDemoStatusQuery,
+  useCompleteSetupMutation,
   useSubmitStepMutation,
 } from '../../data/repositories/onboarding.repository.impl';
 import { WizardStepper } from '../components/WizardStepper';
@@ -26,18 +27,16 @@ import { ErrorScreen } from '../components/ErrorScreen';
 import { OnboardingRenderer } from '../renderers/onboardingRendererRegistry';
 import {
   hydrateWizardDraftFromStorage,
+  resetWizardDraftStorage,
   syncWizardDraftToStorage,
   useWizardStore,
 } from '../stores/wizard.store';
 import { useTranslation } from '../../../../core/localization/useTranslation';
 import { logError } from '../../../../core/utils/errorHandler';
-import { useJourneyFoundation } from '../hooks/useJourneyFoundation';
+import { useOnboardingRuntime } from '../hooks/useOnboardingRuntime';
+import { buildOnboardingRuntime } from '../../domain/usecases/build-onboarding-runtime.usecase';
 import { JourneyVisibilityError } from '../../domain/entities/journey-visibility.entity';
-import { createDraftRevisionEvidence } from '../../domain/entities/step-revision.entity';
-import {
-  RevisionAwareSaveHandler,
-  useDraftConflictRecovery,
-} from '../hooks/useDraftConflictRecovery';
+import { useDraftConflictRecovery } from '../hooks/useDraftConflictRecovery';
 import {
   PendingMutationReplayCoordinator,
   type ReplayAuthorityResult,
@@ -47,7 +46,7 @@ import { usePendingMutationReplayLifecycle } from '../hooks/usePendingMutationRe
 import { usePendingMutationsStore } from '../stores/pending-mutations.store';
 import type { PendingMutationRecord } from '../../domain/entities/pending-mutation.entity';
 import { translateOnboardingToken } from '../config/onboardingPresentationRegistry';
-
+import { executeOnboardingAction } from '../actions/onboardingActionRegistry';
 interface Step {
   code: string;
   name: string;
@@ -96,32 +95,42 @@ export function SetupWizardFlow() {
   const netInfo = useNetInfo();
   const router = useRouter();
   const { tenantId: tenantIdParam } = useLocalSearchParams<{ tenantId: string }>();
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser, isAuthenticated, refreshSession, logout } = useAuth();
 
   // Use tenantId from URL params, or fall back to currentUser's tenantId
   const tenantId = tenantIdParam || currentUser?.tenantId || '';
   const setWizardTenantId = useWizardStore(state => state.setTenantId);
 
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [hasManuallyNavigated, setHasManuallyNavigated] = useState(false);
   const [isHandlingNext, setIsHandlingNext] = useState(false);
   const [showProgressUpdatedNotice, setShowProgressUpdatedNotice] = useState(false);
   const [recoveryVersion, setRecoveryVersion] = useState(0);
   const [busyRecoveryMutationId, setBusyRecoveryMutationId] =
     useState<string | null>(null);
-  const currentStepSaveHandlerRef = useRef<RevisionAwareSaveHandler | null>(null);
   const submissionIdRef = useRef<string | null>(null);
   const isSubmittingRef = useRef(false);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const backgroundStepSignatureRef = useRef<string | null>(null);
   const latestVisibleStepsSignatureRef = useRef<string | null>(null);
   const nextButtonRef = useRef<View>(null);
-  const currentStep = steps[currentStepIndex];
-  const submitMutation = useSubmitStepMutation(tenantId, currentStep?.code || '');
+  const submitMutation = useSubmitStepMutation(tenantId);
+  const completeSetupMutation = useCompleteSetupMutation(tenantId);
   const isOffline = netInfo.isConnected === false || netInfo.isInternetReachable === false;
   const isNextPending = isHandlingNext || submitMutation.isPending;
   const isNextDisabled = isNextPending || isOffline;
+
+  const completeAfterCommercialEligibility = useCallback(async () => {
+    if (!tenantId || completeSetupMutation.isPending) {
+      throw new Error('Onboarding completion is not available.');
+    }
+    await completeSetupMutation.mutateAsync();
+    await resetWizardDraftStorage();
+    // /auth/me is refreshed before Index becomes responsible for the active
+    // application-status route. No local status mutation is permitted here.
+    const refreshedUser = await refreshSession();
+    if (refreshedUser.applicationStatus !== 'active') {
+      throw new Error('Authoritative application context is not active.');
+    }
+  }, [completeSetupMutation, refreshSession, tenantId]);
 
   // Fetch onboarding status - only if tenantId is available
   const {
@@ -136,9 +145,20 @@ export function SetupWizardFlow() {
     scopeMatches,
     organizationId,
     statusDomain,
-  } = useJourneyFoundation(tenantId, {
-    enabled: !!tenantId, // Only fetch if tenantId exists
-  });
+    runtime,
+    selectStep,
+  } = useOnboardingRuntime(tenantId, !!tenantId);
+  const steps = useMemo<Step[]>(
+    () => runtime?.visibleSteps.map(({ step, status }) => ({
+      code: step.stepId,
+      name: translateOnboardingToken(step.titleToken),
+      status,
+      order: step.order,
+    })) ?? [],
+    [runtime],
+  );
+  const currentStepIndex = runtime?.selectedStepIndex ?? -1;
+  const currentStep = currentStepIndex >= 0 ? steps[currentStepIndex] : undefined;
   const refreshReplayAuthority = useCallback(
     async (
       record: PendingMutationRecord,
@@ -197,7 +217,7 @@ export function SetupWizardFlow() {
           tenantId,
         }
         : null,
-    [currentUser?.userId, organizationId, scopeMatches, tenantId]
+    [currentUser, organizationId, scopeMatches, tenantId]
   );
   usePendingMutationReplayLifecycle({
     coordinator: replayCoordinator,
@@ -240,30 +260,24 @@ export function SetupWizardFlow() {
     onRecovered: () => setRecoveryVersion((version) => version + 1),
     announce: announceConflictResolution,
   });
-  const currentDraftBaseEvidence = useMemo(() => {
-    const authoritativeEvidence = currentStep
-      ? statusDomain?.steps.get(currentStep.code)?.authoritativeEvidence
-      : null;
-    if (!authoritativeEvidence || !organizationId) return undefined;
-    return createDraftRevisionEvidence({
-      organizationId,
-      tenantId,
-      stepCode: authoritativeEvidence.stepCode,
-      revision: authoritativeEvidence.revision.value,
-      templateVersion:
-        authoritativeEvidence.projectionIdentity.templateVersion,
-      capabilityRevision:
-        authoritativeEvidence.projectionIdentity.capabilityRevision,
-    });
-  }, [currentStep, organizationId, statusDomain, tenantId]);
   const isCurrentDemoTenant =
     currentUser?.isDemoTenant === true && currentUser.tenantId === tenantId;
   const { data: demoStatusData } = useDemoStatusQuery(tenantId, {
     enabled: isCurrentDemoTenant,
     retry: false,
   });
-  const readyToStartStep = statusData?.per_step_validation?.go_live_checklist;
-  const readyToStartStepIndex = steps.findIndex(step => step.code === 'go_live_checklist');
+  const finalReviewStep = useMemo(
+    () => (projection?.resolvedSteps ?? []).find(
+      step => step.applicable && step.rendererKey === 'go_live_review'
+    ),
+    [projection?.resolvedSteps]
+  );
+  const readyToStartStep = finalReviewStep
+    ? statusData?.per_step_validation?.[finalReviewStep.stepId]
+    : undefined;
+  const readyToStartStepIndex = finalReviewStep
+    ? steps.findIndex(step => step.code === finalReviewStep.stepId)
+    : -1;
   const canOpenReadyToStartChecklist = readyToStartStepIndex >= 0 && readyToStartStep?.actionable === true;
 
   useEffect(() => {
@@ -310,35 +324,10 @@ export function SetupWizardFlow() {
   );
 
   useEffect(() => {
-    if (!journey || journey.identity.tenantId !== tenantId) {
-      setSteps([]);
-      return;
-    }
-    const stepsArray: Step[] = (projection?.resolvedSteps ?? [])
-      .filter(step => step.applicable && step.state !== 'NOT_APPLICABLE')
-      .sort((left, right) => left.order - right.order)
-      .map(step => ({
-        code: step.stepId,
-        name: translateOnboardingToken(step.titleToken),
-        status: step.state === 'COMPLETE' ? 'completed' : step.state === 'BLOCKED' ? 'blocked' : 'not_started',
-        order: step.order,
-      }));
     latestVisibleStepsSignatureRef.current = getVisibleStepSignature(
-      journey.cards.map(card => card.stepCode)
+      runtime?.visibleSteps.map(step => step.stepId),
     );
-    setSteps(stepsArray);
-
-    if (!hasManuallyNavigated && stepsArray.length > 0) {
-      const firstIncompleteIndex = stepsArray.findIndex(step => step.status === 'not_started');
-      setCurrentStepIndex(firstIncompleteIndex >= 0 ? firstIncompleteIndex : stepsArray.length - 1);
-    } else if (currentStepIndex >= stepsArray.length && stepsArray.length > 0) {
-      setCurrentStepIndex(stepsArray.length - 1);
-    }
-  }, [currentStepIndex, hasManuallyNavigated, journey, projection, tenantId]);
-
-  useEffect(() => {
-    setShowProgressUpdatedNotice(false);
-  }, [currentStepIndex]);
+  }, [runtime?.visibleSteps]);
 
   const persistDraftOnLifecyclePause = useCallback(async () => {
     backgroundStepSignatureRef.current = latestVisibleStepsSignatureRef.current;
@@ -397,18 +386,24 @@ export function SetupWizardFlow() {
       return;
     }
 
+    // Completed steps remain selectable for explicit management, but the
+    // footer is forward navigation only and must never replay that action.
+    if (runtime?.selectedStep?.status === 'completed') {
+      if (runtime.nextNavigationStepId) {
+        selectStep(runtime.nextNavigationStepId);
+      }
+      return;
+    }
+
     isSubmittingRef.current = true;
     const submissionId = createSubmissionId();
     submissionIdRef.current = submissionId;
 
-    // Mark that user has manually navigated
-    setHasManuallyNavigated(true);
     setIsHandlingNext(true);
 
     try {
       const stepAtSubmission = currentStep;
       if (!stepAtSubmission) return;
-      const saveHandler = currentStepSaveHandlerRef.current;
       const evidence =
         statusDomain?.steps.get(stepAtSubmission.code)?.authoritativeEvidence;
       const draftData = asRecord(
@@ -427,14 +422,10 @@ export function SetupWizardFlow() {
         idempotencyKey: submissionId,
         submit: async ({ expectedRevision, idempotencyKey }) => {
           const runOriginalSubmission = async () => {
-            if (saveHandler) {
-              await saveHandler({ expectedRevision, idempotencyKey });
-              return;
-            }
-
             await submitMutation.mutateAsync(
               {
                 idempotencyKey,
+                stepCode: stepAtSubmission.code,
                 data: recoveryBody ?? {},
                 mark_complete: true,
                 expected_revision: expectedRevision,
@@ -449,14 +440,6 @@ export function SetupWizardFlow() {
               }
             );
             if (submissionIdRef.current !== submissionId) return;
-
-            await refetch();
-            if (submissionIdRef.current !== submissionId) return;
-            if (currentStepIndex < steps.length - 1) {
-              setCurrentStepIndex(currentStepIndex + 1);
-            } else {
-              router.replace(`/clinic-admin?tenantId=${tenantId}`);
-            }
           };
 
           if (
@@ -493,6 +476,19 @@ export function SetupWizardFlow() {
           });
         },
       });
+      if (submissionIdRef.current !== submissionId) return;
+      const refreshed = await refetch();
+      if (submissionIdRef.current !== submissionId || !refreshed.projection) return;
+      const refreshedRuntime = buildOnboardingRuntime(
+        refreshed.projection,
+        stepAtSubmission.code,
+      );
+      if (
+        refreshedRuntime.selectedStep?.status === 'completed' &&
+        refreshedRuntime.nextNavigationStepId
+      ) {
+        selectStep(refreshedRuntime.nextNavigationStepId);
+      }
     } catch (error) {
       if (submissionIdRef.current !== submissionId) {
         return;
@@ -510,40 +506,10 @@ export function SetupWizardFlow() {
     }
   };
 
-  // Callback for steps to register their save handler
-  const registerSaveHandler = useCallback((handler: RevisionAwareSaveHandler | null) => {
-    currentStepSaveHandlerRef.current = handler;
-  }, []);
-
-  const handleStepComplete = async () => {
-    // Mark that user has manually navigated FIRST (to prevent auto-jump during refetch)
-    setHasManuallyNavigated(true);
-
-    try {
-      // Refetch status before navigation so the next step renders from fresh status.
-      await refetch();
-
-      // Auto-advance to next step only after refetch resolves.
-      const nextIndex = currentStepIndex + 1;
-      if (nextIndex < steps.length) {
-        setCurrentStepIndex(nextIndex);
-      }
-    } catch (error) {
-      logError('onboarding.wizard.refresh_after_step', error);
-      Alert.alert(t('common.error'), t('onboarding.progressiveExperience.flow.refreshProgressError'));
-    }
-  };
-
   const handlePrevious = useCallback(async () => {
-    // Mark that user has manually navigated
-    setHasManuallyNavigated(true);
-
     await syncWizardDraftToStorage();
-
-    if (currentStepIndex > 0) {
-      setCurrentStepIndex(currentStepIndex - 1);
-    }
-  }, [currentStepIndex]);
+    if (runtime?.previousStepId) selectStep(runtime.previousStepId);
+  }, [runtime, selectStep]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -571,23 +537,24 @@ export function SetupWizardFlow() {
       t('onboarding.progressiveExperience.flow.exitMessage'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.close'), onPress: () => router.replace(`/clinic-admin?tenantId=${tenantId}`) },
+        { text: t('common.close'), onPress: () => router.replace('/') },
       ]
     );
   };
 
+  const handleSignOut = useCallback(() => {
+    void logout().catch(error => logError('onboarding.wizard.logout', error));
+  }, [logout]);
+
   const navigateToStep = useCallback((stepCode: string) => {
-    if (!scopeMatches || journey?.identity.tenantId !== tenantId) return false;
-    const stepIndex = steps.findIndex(step => step.code === stepCode);
-    if (stepIndex < 0) {
+    if (!scopeMatches || journey?.identity.tenantId !== tenantId ||
+      !runtime?.visibleSteps.some(step => step.stepId === stepCode)) {
       return false;
     }
-
-    setHasManuallyNavigated(true);
     setShowProgressUpdatedNotice(false);
-    setCurrentStepIndex(stepIndex);
+    selectStep(stepCode);
     return true;
-  }, [journey?.identity.tenantId, scopeMatches, steps, tenantId]);
+  }, [journey?.identity.tenantId, runtime?.visibleSteps, scopeMatches, selectStep, tenantId]);
 
   const retryPendingMutation = useCallback(
     async (record: PendingMutationRecord) => {
@@ -655,27 +622,41 @@ export function SetupWizardFlow() {
     }
   }, [journey?.cards, navigateToStep, revalidateTenant]);
 
+  const executeProjectedAction = useCallback((action: import('../../domain/entities/journey-visibility.entity').JourneyCorrectiveAction, stepCode: string) => {
+    if (scopeMatches && tenantId) {
+      executeOnboardingAction(router, action, { tenant_id: tenantId, step_id: stepCode });
+    }
+  }, [router, scopeMatches, tenantId]);
+
   const handleContinueSetupFromBanner = useCallback(() => {
     const targetStep = statusData?.next_recommended_step;
     if (targetStep && navigateToStep(targetStep)) {
       return;
     }
 
-    const firstActionableStep = steps.find(step => step.status !== 'completed' && step.status !== 'blocked');
-    if (firstActionableStep) {
-      navigateToStep(firstActionableStep.code);
+    if (runtime?.recommendedNextStepId) {
+      navigateToStep(runtime.recommendedNextStepId);
     }
-  }, [navigateToStep, statusData?.next_recommended_step, steps]);
+  }, [navigateToStep, runtime, statusData?.next_recommended_step]);
 
   const handleReadyToStartFromBanner = useCallback(() => {
     if (canOpenReadyToStartChecklist) {
-      navigateToStep('go_live_checklist');
+      if (finalReviewStep) navigateToStep(finalReviewStep.stepId);
     }
-  }, [canOpenReadyToStartChecklist, navigateToStep]);
+  }, [canOpenReadyToStartChecklist, finalReviewStep, navigateToStep]);
 
   const renderStepContent = () => {
     const activeStep = projection?.resolvedSteps.find(step => step.stepId === currentStep?.code);
-    return activeStep ? <OnboardingRenderer step={activeStep} tenantId={tenantId} router={router} /> : null;
+    return activeStep ? (
+      <OnboardingRenderer
+        step={activeStep}
+        tenantId={tenantId}
+        router={router}
+        applicationStatus={currentUser?.applicationStatus}
+        onCommercialEligibilityConfirmed={completeAfterCommercialEligibility}
+        onCommercialConfirmationAcknowledged={() => router.replace('/')}
+      />
+    ) : null;
   };
 
   if (!tenantId) {
@@ -701,7 +682,7 @@ export function SetupWizardFlow() {
         retryLabel={t('onboarding.progressiveExperience.journey.retry')}
         onRetry={() => void refetch()}
         dismissLabel={t('common.close')}
-        onDismiss={() => router.replace(`/clinic-admin?tenantId=${tenantId}`)}
+        onDismiss={() => router.replace('/')}
       />
     );
   }
@@ -718,12 +699,19 @@ export function SetupWizardFlow() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.colors.surface.default, padding: theme.spacing.lg, borderBottomWidth: 1, borderBottomColor: theme.colors.border.default }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={[theme.typography.h5, { color: theme.colors.text.primary }]}>
+          <Text
+            style={[theme.typography.h5, { color: theme.colors.text.primary }]}
+          >
             {t('onboarding.progressiveExperience.flow.prepareYourClinic')}
           </Text>
-          <TouchableOpacity onPress={handleExit}>
-            <Ionicons name="close" size={24} color={theme.colors.text.secondary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+            <TouchableOpacity onPress={handleSignOut} accessibilityRole="button" accessibilityLabel={t('navigation.logout')}>
+              <Text style={[theme.typography.button, { color: theme.colors.text.secondary }]}>{t('navigation.logout')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleExit} accessibilityRole="button" accessibilityLabel={t('common.close')}>
+              <Ionicons name="close" size={24} color={theme.colors.text.secondary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -793,24 +781,25 @@ export function SetupWizardFlow() {
         accessibilityLabel={t('onboarding.progressiveExperience.journey.heading')}
         accessibilityState={{ busy: isRefreshing }}
       >
-        {journey && (
-          <JourneySurface
-            journey={journey}
-            onSelectStep={navigateToProjectedStep}
-            refreshing={isRefreshing}
-          />
-        )}
         {journey?.availability === 'available' && journey.cards.length > 0 ? (
           <React.Fragment key={`${tenantId}:${currentStep?.code}:${recoveryVersion}`}>
             {renderStepContent()}
           </React.Fragment>
         ) : null}
+        {journey && (
+          <JourneySurface
+            journey={journey}
+            onSelectStep={navigateToProjectedStep}
+            onExecuteAction={executeProjectedAction}
+            refreshing={isRefreshing}
+          />
+        )}
       </ScrollView>
 
       {/* Navigation Footer */}
       {journey?.availability === 'available' &&
         journey.cards.length > 0 &&
-        currentStep?.code !== 'go_live_checklist' && (
+        projection?.resolvedSteps.find(step => step.stepId === currentStep?.code)?.rendererKey !== 'go_live_review' && (
         <View style={[styles.footer, { backgroundColor: theme.colors.surface.default, padding: theme.spacing.lg, borderTopWidth: 1, borderTopColor: theme.colors.border.default, flexDirection: 'row', justifyContent: 'space-between' }]}>
         <TouchableOpacity
           style={[

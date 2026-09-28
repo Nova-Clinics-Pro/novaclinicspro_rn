@@ -307,8 +307,10 @@ const getExpiredDraftMetadata = (stepDrafts: Record<string, DraftEntry>, now = D
   return { expiredStepCodes, oldestDraftAgeMs };
 };
 
-const emitWizardDraftEvent = (eventName: string, metadata: Record<string, unknown>) => {
-  console.log(`[WizardStore] ${eventName}`, metadata);
+const emitWizardDraftEvent = (_eventName: string, _metadata: Record<string, unknown>) => {
+  // Draft persistence is deliberately non-user-facing. A future telemetry
+  // adapter can consume this single boundary without turning expected account
+  // switching or recoverable storage failures into a React Native LogBox.
 };
 
 const validateIdentity = (payload: DraftPayload, identity: DraftIdentity): boolean =>
@@ -550,7 +552,6 @@ export async function syncWizardDraftToStorage(): Promise<void> {
         reason: 'draft_size_exceeded_after_compression',
         sizeKB: compressedSizeKB,
       });
-      console.warn('[WizardStore] Draft payload exceeds maximum size after compression');
       return;
     }
 
@@ -561,7 +562,6 @@ export async function syncWizardDraftToStorage(): Promise<void> {
       reason: 'storage_write_failed',
       message: error instanceof Error ? error.message : String(error),
     });
-    console.error('[WizardStore] Failed to persist wizard draft:', error);
   }
 }
 
@@ -584,7 +584,12 @@ export async function hydrateWizardDraftFromStorage(): Promise<void> {
         payload.userId = identity.userId;
       }
       if (!validateIdentity(payload, identity)) {
-        console.warn('[WizardStore] Ignoring wizard draft for a different tenant or user');
+        // A foreign draft is expected after account or tenant switching. Reject it
+        // without escalating normal defensive control flow into a LogBox warning.
+        useWizardStore.getState().restoreStepDrafts({});
+        if (removeOnFailure) {
+          await AsyncStorage.removeItem(storageKey);
+        }
         return false;
       }
 
@@ -653,7 +658,7 @@ export async function hydrateWizardDraftFromStorage(): Promise<void> {
 
   const legacyValue = await AsyncStorage.getItem(LEGACY_WIZARD_STORAGE_KEY);
   if (legacyValue) {
-    const hydratedLegacy = await hydrateFromValue(legacyValue, LEGACY_WIZARD_STORAGE_KEY, false, true);
+    const hydratedLegacy = await hydrateFromValue(legacyValue, LEGACY_WIZARD_STORAGE_KEY, true, true);
     if (hydratedLegacy) {
       await syncWizardDraftToStorage();
       await AsyncStorage.removeItem(LEGACY_WIZARD_STORAGE_KEY);

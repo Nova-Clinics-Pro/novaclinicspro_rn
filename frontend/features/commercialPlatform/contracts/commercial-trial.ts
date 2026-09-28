@@ -42,6 +42,24 @@ export interface CommercialTrial {
   readonly allowedActions: readonly CommercialTrialAction[];
 }
 
+/** Explicit, normal state before the first authoritative trial aggregate. */
+export interface CommercialTrialNotStarted {
+  readonly kind: 'TRIAL_NOT_STARTED';
+  readonly organizationId: string;
+  readonly tenantId: string;
+}
+
+export type CommercialTrialStateResult = CommercialTrial | CommercialTrialNotStarted;
+
+export const isCommercialTrialNotStarted = (
+  value: CommercialTrialStateResult | undefined
+): value is CommercialTrialNotStarted =>
+  value !== undefined && 'kind' in value && value.kind === 'TRIAL_NOT_STARTED';
+
+export const isCommercialTrialAggregate = (
+  value: CommercialTrialStateResult | undefined
+): value is CommercialTrial => value !== undefined && !isCommercialTrialNotStarted(value);
+
 export interface CommercialTrialHandoff {
   readonly owner: 'E9';
   readonly action: 'REQUEST_SUBSCRIPTION';
@@ -67,6 +85,17 @@ export interface CommercialRetention {
   readonly ineligibilityReasons: readonly CommercialRetentionIneligibilityReason[];
 }
 
+export type CommercialRetentionStateResult = CommercialRetention | CommercialTrialNotStarted;
+
+export const isCommercialRetentionNotStarted = (
+  value: CommercialRetentionStateResult | undefined
+): value is CommercialTrialNotStarted =>
+  value !== undefined && 'kind' in value && value.kind === 'TRIAL_NOT_STARTED';
+
+export const isCommercialRetention = (
+  value: CommercialRetentionStateResult | undefined
+): value is CommercialRetention => value !== undefined && !isCommercialRetentionNotStarted(value);
+
 export type CommercialTrialFailureKind =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
@@ -77,6 +106,7 @@ export type CommercialTrialFailureKind =
   | 'NOT_READY'
   | 'CONFIRMATION_REQUIRED'
   | 'CONFLICT'
+  | 'TRIAL_NOT_STARTED'
   | 'NOT_FOUND'
   | 'RETENTION_EVIDENCE_UNAVAILABLE'
   | 'BACKEND_FAILURE';
@@ -90,7 +120,12 @@ export class CommercialTrialError extends Error {
 
 export interface CommercialTrialResponseDTO { contract_version: string; trial_id: string; organization_id: string; tenant_id: string; state: string; aggregate_version: number; activation_at: string | null; expires_at: string | null; final_notice_starts_at: string | null; allowed_actions: string[]; }
 export interface CommercialRetentionResponseDTO { contract_version: string; trial_id: string; organization_id: string; tenant_id: string; commercial_state: string; aggregate_version: number; archived_at: string | null; retention_until: string | null; restore_eligible: boolean; permanent_deletion_eligible: boolean; extension_eligible: boolean; workspace_data_export_request_permitted: boolean; legal_hold_active: boolean | null; statutory_retention_active: boolean | null; allowed_actions: string[]; ineligibility_reasons: string[]; }
-export interface ActivateCommercialTrialRequestDTO { contract_version: typeof COMMERCIAL_TRIAL_CONTRACT_V1; aggregate_version: number; confirmed: boolean; }
+/**
+ * aggregate_version is supplied after a commercial aggregate has been read.
+ * The host establishes the first ELIGIBLE aggregate atomically during an
+ * explicit activation, so a documented pre-trial activation omits it.
+ */
+export interface ActivateCommercialTrialRequestDTO { contract_version: typeof COMMERCIAL_TRIAL_CONTRACT_V1; aggregate_version?: number; confirmed: boolean; }
 export interface RequestCommercialTrialExtensionDTO { contract_version: typeof COMMERCIAL_TRIAL_CONTRACT_V1; reason: string; channel: string; }
 export interface GrantCommercialTrialExtensionDTO { contract_version: typeof COMMERCIAL_TRIAL_CONTRACT_V1; aggregate_version: number; extension_days: number; reason: string; channel: string; requester_id?: string; request_operation_id?: string; }
 export interface CommercialTrialHandoffDTO { owner: string; action: string; tenant_id: string; }

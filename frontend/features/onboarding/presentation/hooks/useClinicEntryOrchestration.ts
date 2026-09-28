@@ -116,6 +116,11 @@ export function useClinicEntryOrchestration() {
     async (resolvedOrganizationId: string, tenantId: string) => {
       setState('refreshing_session');
       await queryClient.cancelQueries();
+      // A tenant handoff is an identity boundary, not an ordinary freshness
+      // event. Remove A-scoped server state before the B session is hydrated;
+      // invalidating it would retain mounted A observers that can refetch with
+      // the old route parameter during the transition.
+      queryClient.clear();
       const outgoingTenantId = selectedClinicId ?? currentUser?.tenantId ?? null;
       const currentUserId = currentUser?.userId ?? currentUser?.id ?? null;
       if (outgoingTenantId && outgoingTenantId !== tenantId && currentUserId) {
@@ -139,9 +144,10 @@ export function useClinicEntryOrchestration() {
       setErrorToken(null);
       idempotencyKeys.current = {};
       setState('complete');
-      router.replace(
-        `/onboarding/workspace-preparation?organizationId=${resolvedOrganizationId}&tenantId=${tenantId}` as any
-      );
+      // Workspace preparation is an internal readiness handshake. A newly
+      // provisioned clinic starts the canonical setup journey; the final
+      // review invokes preparation after required setup is complete.
+      router.replace(`/onboarding/setup-wizard?tenantId=${tenantId}` as any);
     },
     [
       currentUser,

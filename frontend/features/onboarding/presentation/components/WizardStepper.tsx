@@ -3,10 +3,12 @@
  * Visual stepper component showing all steps with progress
  */
 
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { getStepperScrollOffset } from './wizardStepperGeometry';
 
 interface Step {
   code: string;
@@ -20,15 +22,45 @@ interface WizardStepperProps {
   currentStepIndex: number;
 }
 
+export const updateStepOffsets = (
+  current: Readonly<Record<number, number>>,
+  index: number,
+  x: number,
+): Record<number, number> =>
+  current[index] === x ? current : { ...current, [index]: x };
+
+export const getCurrentStepScrollOffset = (stepX: number, padding: number): number =>
+  Math.max(0, stepX - padding);
+
 export function WizardStepper({ steps, currentStepIndex }: WizardStepperProps) {
   const theme = useClinicTheme();
+  const { t } = useTranslation();
+  const completedCount = useMemo(
+    () => steps.filter(step => step.status === 'completed').length,
+    [steps],
+  );
+  const circleSize = theme.spacing.xl;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [stepOffsets, setStepOffsets] = useState<Record<number, number>>({});
+  const [stepWidths, setStepWidths] = useState<Record<number, number>>({});
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
 
-  const getStepIcon = (index: number, status: string) => {
-    if (status === 'completed') return 'checkmark-circle';
-    if (index === currentStepIndex) return 'radio-button-on';
-    if (status === 'blocked') return 'lock-closed';
-    return 'ellipse-outline';
-  };
+  useEffect(() => {
+    const offset = stepOffsets[currentStepIndex];
+    const width = stepWidths[currentStepIndex];
+    if (offset !== undefined && width !== undefined) {
+      scrollViewRef.current?.scrollTo({
+        x: getStepperScrollOffset({
+          itemX: offset,
+          itemWidth: width,
+          contentWidth,
+          viewportWidth,
+        }),
+        animated: true,
+      });
+    }
+  }, [contentWidth, currentStepIndex, stepOffsets, stepWidths, viewportWidth]);
 
   const getStepColor = (index: number, status: string) => {
     if (status === 'completed') return theme.colors.feedback.success;
@@ -46,7 +78,7 @@ export function WizardStepper({ steps, currentStepIndex }: WizardStepperProps) {
             styles.progressBar,
             {
               backgroundColor: theme.colors.primary.default,
-              width: `${((currentStepIndex + 1) / steps.length) * 100}%`,
+              width: `${steps.length ? (completedCount / steps.length) * 100 : 0}%`,
               height: 4,
               borderRadius: 2,
             },
@@ -65,32 +97,48 @@ export function WizardStepper({ steps, currentStepIndex }: WizardStepperProps) {
           },
         ]}
       >
-        Step {currentStepIndex + 1} of {steps.length}
+        {t('onboarding.progressiveExperience.flow.currentStepPosition', {
+          current: currentStepIndex + 1,
+          total: steps.length,
+        })}
       </Text>
 
       {/* Step Indicators - Horizontal Scroll */}
       <ScrollView
+        ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: theme.spacing.sm }}
+        onLayout={event => setViewportWidth(event.nativeEvent.layout.width)}
+        onContentSizeChange={width => setContentWidth(width)}
+        contentContainerStyle={{ paddingHorizontal: theme.spacing.md }}
       >
         <View style={[styles.stepsContainer, { flexDirection: 'row', alignItems: 'flex-start' }]}>
           {steps.map((step, index) => {
             const isCurrent = index === currentStepIndex;
-            const isPast = index < currentStepIndex;
+            const isCompleted = step.status === 'completed';
             const stepColor = getStepColor(index, step.status);
 
             return (
-              <View key={step.code} style={[styles.stepItem, { alignItems: 'center', marginHorizontal: theme.spacing.xs }]}>
+              <View
+                key={step.code}
+                testID={`wizard-step-${step.code}`}
+                onLayout={event => {
+                  const x = event.nativeEvent.layout.x;
+                  const width = event.nativeEvent.layout.width;
+                  setStepOffsets(current => updateStepOffsets(current, index, x));
+                  setStepWidths(current => updateStepOffsets(current, index, width));
+                }}
+                style={[styles.stepItem, { alignItems: 'center', width: circleSize + theme.spacing.xxl }]}
+              >
                 {/* Step Number/Icon */}
                 <View
                   style={[
                     styles.stepCircle,
                     {
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: isCurrent ? theme.colors.primary.default : isPast ? theme.colors.feedback.success : theme.colors.surface.elevated,
+                      width: circleSize,
+                      height: circleSize,
+                      borderRadius: circleSize / 2,
+                      backgroundColor: isCompleted ? theme.colors.feedback.success : isCurrent ? theme.colors.primary.default : theme.colors.surface.elevated,
                       borderWidth: 2,
                       borderColor: stepColor,
                       justifyContent: 'center',
@@ -99,7 +147,7 @@ export function WizardStepper({ steps, currentStepIndex }: WizardStepperProps) {
                     },
                   ]}
                 >
-                  {step.status === 'completed' || isPast ? (
+                  {isCompleted ? (
                     <Ionicons name="checkmark" size={20} color={theme.colors.text.onPrimary} />
                   ) : (
                     <Text
@@ -124,8 +172,7 @@ export function WizardStepper({ steps, currentStepIndex }: WizardStepperProps) {
                       color: isCurrent ? theme.colors.text.primary : theme.colors.text.secondary,
                       fontWeight: isCurrent ? '600' : '400',
                       textAlign: 'center',
-                      width: 70,
-                      fontSize: 10,
+                      width: circleSize + theme.spacing.xxl,
                     },
                   ]}
                   numberOfLines={2}
@@ -140,11 +187,11 @@ export function WizardStepper({ steps, currentStepIndex }: WizardStepperProps) {
                       styles.connector,
                       {
                         position: 'absolute',
-                        top: 18,
-                        left: 36,
-                        width: 20,
+                        top: circleSize / 2,
+                        left: (circleSize + theme.spacing.xxl) / 2,
+                        width: circleSize + theme.spacing.xxl,
                         height: 2,
-                        backgroundColor: isPast ? theme.colors.feedback.success : theme.colors.border.default,
+                        backgroundColor: isCompleted ? theme.colors.feedback.success : theme.colors.border.default,
                         zIndex: -1,
                       },
                     ]}

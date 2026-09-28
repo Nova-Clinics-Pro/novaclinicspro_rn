@@ -11,10 +11,12 @@ import {
 import {
   COMMERCIAL_TRIAL_CONTRACT_V1,
   type CommercialRetention,
+  type CommercialRetentionStateResult,
   type CommercialRetentionAction,
   type CommercialRetentionIneligibilityReason,
   type CommercialRetentionResponseDTO,
   type CommercialTrial,
+  type CommercialTrialStateResult,
   type CommercialTrialAction,
   CommercialTrialDatasourceError,
   CommercialTrialError,
@@ -22,6 +24,7 @@ import {
   type CommercialTrialHandoffDTO,
   type CommercialTrialResponseDTO,
   type CommercialTrialState,
+  isCommercialTrialAggregate,
 } from '../../contracts/commercial-trial';
 import type { ICommercialTrialRepository } from '../../domain/repositories/commercial-trial.repository';
 
@@ -74,6 +77,12 @@ const failureKind = (error: CommercialTrialDatasourceError): CommercialTrialErro
   if (error.httpStatus === 404 || error.errorCode === 'commercial_trial.not_found') return 'NOT_FOUND';
   return 'BACKEND_FAILURE';
 };
+const isRecognizedPretrialAbsence = (error: unknown): error is CommercialTrialDatasourceError =>
+  error instanceof CommercialTrialDatasourceError &&
+  error.httpStatus === 404 &&
+  error.errorCode === 'commercial_trial.not_found';
+const notStarted = (organizationId: string, tenantId: string) =>
+  Object.freeze({ kind: 'TRIAL_NOT_STARTED' as const, organizationId, tenantId });
 const mapError = (error: unknown): never => {
   if (error instanceof Error && (error.name === 'CanceledError' || (error as Error & { code?: string }).code === 'ERR_CANCELED')) throw error;
   if (error instanceof CommercialTrialError) throw error;
@@ -81,9 +90,13 @@ const mapError = (error: unknown): never => {
   throw new CommercialTrialError('BACKEND_FAILURE', 'commercial_trial.application_failure', 'errors.commercialTrial.application_failure', true);
 };
 
+const mapRetentionError = (error: unknown): never => {
+  return mapError(error);
+};
+
 export const commercialTrialRepository: ICommercialTrialRepository = {
-  async getCommercialTrial(organizationId, tenantId, signal) { try { return mapCommercialTrial(await getCommercialTrialApi(tenantId, signal), organizationId, tenantId); } catch (error) { return mapError(error); } },
-  async getCommercialRetention(organizationId, tenantId, signal) { try { return mapCommercialRetention(await getCommercialRetentionApi(tenantId, signal), organizationId, tenantId); } catch (error) { return mapError(error); } },
+  async getCommercialTrial(organizationId, tenantId, signal) { try { return mapCommercialTrial(await getCommercialTrialApi(tenantId, signal), organizationId, tenantId); } catch (error) { if (isRecognizedPretrialAbsence(error)) return notStarted(organizationId, tenantId); return mapError(error); } },
+  async getCommercialRetention(organizationId, tenantId, signal) { try { return mapCommercialRetention(await getCommercialRetentionApi(tenantId, signal), organizationId, tenantId); } catch (error) { if (isRecognizedPretrialAbsence(error)) return notStarted(organizationId, tenantId); return mapRetentionError(error); } },
   async activateCommercialTrial(organizationId, tenantId, aggregateVersion, confirmed, idempotencyKey) { try { return mapCommercialTrial(await activateCommercialTrialApi(tenantId, { contract_version: COMMERCIAL_TRIAL_CONTRACT_V1, aggregate_version: aggregateVersion, confirmed }, idempotencyKey), organizationId, tenantId); } catch (error) { return mapError(error); } },
   async requestCommercialTrialExtension(organizationId, tenantId, reason, channel, idempotencyKey) { try { return mapCommercialTrial(await requestCommercialTrialExtensionApi(tenantId, { contract_version: COMMERCIAL_TRIAL_CONTRACT_V1, reason, channel }, idempotencyKey), organizationId, tenantId); } catch (error) { return mapError(error); } },
   async grantCommercialTrialExtension(organizationId, tenantId, aggregateVersion, extensionDays, reason, channel, idempotencyKey, requesterId, requestOperationId) { try { return mapCommercialTrial(await grantCommercialTrialExtensionApi(tenantId, { contract_version: COMMERCIAL_TRIAL_CONTRACT_V1, aggregate_version: aggregateVersion, extension_days: extensionDays, reason, channel, ...(requesterId ? { requester_id: requesterId } : {}), ...(requestOperationId ? { request_operation_id: requestOperationId } : {}) }, idempotencyKey), organizationId, tenantId); } catch (error) { return mapError(error); } },
@@ -91,11 +104,11 @@ export const commercialTrialRepository: ICommercialTrialRepository = {
 };
 
 export const shouldRetryCommercialTrial = (failureCount: number, error: Error): boolean => error instanceof CommercialTrialError && error.retryable && failureCount < 2;
-const updateCache = (current: CommercialTrial | undefined, incoming: CommercialTrial): CommercialTrial => current && current.aggregateVersion > incoming.aggregateVersion ? current : incoming;
-export const useCommercialTrialQuery = (organizationId: string, tenantId: string, options?: Omit<UseQueryOptions<CommercialTrial, Error>, 'queryKey' | 'queryFn'>) => useQuery<CommercialTrial, Error>({ queryKey: commercialTrialKeys.commercialTrial(organizationId, tenantId), queryFn: ({ signal }) => commercialTrialRepository.getCommercialTrial(organizationId, tenantId, signal), enabled: Boolean(organizationId && tenantId), retry: shouldRetryCommercialTrial, ...options });
-export const useCommercialRetentionQuery = (organizationId: string, tenantId: string, options?: Omit<UseQueryOptions<CommercialRetention, Error>, 'queryKey' | 'queryFn'>) => useQuery<CommercialRetention, Error>({ queryKey: commercialTrialKeys.commercialRetention(organizationId, tenantId), queryFn: ({ signal }) => commercialTrialRepository.getCommercialRetention(organizationId, tenantId, signal), enabled: Boolean(organizationId && tenantId), retry: shouldRetryCommercialTrial, ...options });
-const useCommercialMutation = <Variables, Result extends CommercialTrial | CommercialTrialHandoff>(organizationId: string, tenantId: string, mutationFn: (variables: Variables) => Promise<Result>) => { const client = useQueryClient(); const key = commercialTrialKeys.commercialTrial(organizationId, tenantId); return useMutation<Result, Error, Variables>({ mutationFn, onSuccess: value => { if ('aggregateVersion' in value) client.setQueryData<CommercialTrial>(key, current => updateCache(current, value)); client.invalidateQueries({ queryKey: key }); }, retry: false }); };
-export const useActivateCommercialTrialMutation = (organizationId: string, tenantId: string) => useCommercialMutation(organizationId, tenantId, ({ aggregateVersion, confirmed, idempotencyKey }: { aggregateVersion: number; confirmed: boolean; idempotencyKey: string }) => commercialTrialRepository.activateCommercialTrial(organizationId, tenantId, aggregateVersion, confirmed, idempotencyKey));
+const updateCache = (current: CommercialTrialStateResult | undefined, incoming: CommercialTrial): CommercialTrial => isCommercialTrialAggregate(current) && current.aggregateVersion > incoming.aggregateVersion ? current : incoming;
+export const useCommercialTrialQuery = (organizationId: string, tenantId: string, options?: Omit<UseQueryOptions<CommercialTrialStateResult, Error>, 'queryKey' | 'queryFn'>) => useQuery<CommercialTrialStateResult, Error>({ queryKey: commercialTrialKeys.commercialTrial(organizationId, tenantId), queryFn: ({ signal }) => commercialTrialRepository.getCommercialTrial(organizationId, tenantId, signal), enabled: Boolean(organizationId && tenantId), retry: shouldRetryCommercialTrial, ...options });
+export const useCommercialRetentionQuery = (organizationId: string, tenantId: string, options?: Omit<UseQueryOptions<CommercialRetentionStateResult, Error>, 'queryKey' | 'queryFn'>) => useQuery<CommercialRetentionStateResult, Error>({ queryKey: commercialTrialKeys.commercialRetention(organizationId, tenantId), queryFn: ({ signal }) => commercialTrialRepository.getCommercialRetention(organizationId, tenantId, signal), enabled: Boolean(organizationId && tenantId), retry: shouldRetryCommercialTrial, ...options, meta: { apiFailurePresentation: 'feature' } });
+const useCommercialMutation = <Variables, Result extends CommercialTrial | CommercialTrialHandoff>(organizationId: string, tenantId: string, mutationFn: (variables: Variables) => Promise<Result>) => { const client = useQueryClient(); const key = commercialTrialKeys.commercialTrial(organizationId, tenantId); return useMutation<Result, Error, Variables>({ mutationFn, onSuccess: value => { if ('aggregateVersion' in value) client.setQueryData<CommercialTrialStateResult>(key, current => updateCache(current, value)); client.invalidateQueries({ queryKey: key }); }, retry: false }); };
+export const useActivateCommercialTrialMutation = (organizationId: string, tenantId: string) => useCommercialMutation(organizationId, tenantId, ({ aggregateVersion, confirmed, idempotencyKey }: { aggregateVersion?: number; confirmed: boolean; idempotencyKey: string }) => commercialTrialRepository.activateCommercialTrial(organizationId, tenantId, aggregateVersion, confirmed, idempotencyKey));
 export const useRequestCommercialTrialExtensionMutation = (organizationId: string, tenantId: string) => useCommercialMutation(organizationId, tenantId, ({ reason, channel, idempotencyKey }: { reason: string; channel: string; idempotencyKey: string }) => commercialTrialRepository.requestCommercialTrialExtension(organizationId, tenantId, reason, channel, idempotencyKey));
 export const useGrantCommercialTrialExtensionMutation = (organizationId: string, tenantId: string) => useCommercialMutation(organizationId, tenantId, ({ aggregateVersion, extensionDays, reason, channel, idempotencyKey, requesterId, requestOperationId }: { aggregateVersion: number; extensionDays: number; reason: string; channel: string; idempotencyKey: string; requesterId?: string; requestOperationId?: string }) => commercialTrialRepository.grantCommercialTrialExtension(organizationId, tenantId, aggregateVersion, extensionDays, reason, channel, idempotencyKey, requesterId, requestOperationId));
 export const useCommercialTrialSubscriptionMutation = (organizationId: string, tenantId: string) => useCommercialMutation<void, CommercialTrialHandoff>(organizationId, tenantId, () => commercialTrialRepository.requestCommercialTrialSubscription(organizationId, tenantId));

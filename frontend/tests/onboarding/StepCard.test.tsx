@@ -55,6 +55,7 @@ describe('StepCard', () => {
     isEligible: true,
     isVisible: true,
     isActionable: true,
+    action: null,
     order: 0,
     ...overrides,
   });

@@ -6,6 +6,8 @@ import { getCommercialRetentionApi } from '../../features/commercialPlatform/dat
 import {
   CommercialRetentionResponseDTO,
   CommercialTrialDatasourceError,
+  isCommercialRetention,
+  isCommercialRetentionNotStarted,
 } from '../../features/commercialPlatform/contracts/commercial-trial';
 import {
   commercialTrialRepository,
@@ -159,7 +161,6 @@ describe('Commercial Retention repository and query', () => {
   it.each([
     [401, 'commercial_trial.application_failure', 'UNAUTHORIZED'],
     [403, 'commercial_trial.forbidden', 'FORBIDDEN'],
-    [404, 'commercial_trial.not_found', 'NOT_FOUND'],
     [
       409,
       'commercial_trial.retention_evidence_unavailable',
@@ -180,6 +181,25 @@ describe('Commercial Retention repository and query', () => {
     ).rejects.toMatchObject({ kind, code });
   });
 
+  it('maps only the recognized pretrial 404 to an explicit successful not-started state', async () => {
+    mockGetRetention.mockRejectedValue(
+      new CommercialTrialDatasourceError(
+        'commercial_trial.not_found',
+        'errors.commercialTrial.not_found',
+        false,
+        404
+      )
+    );
+
+    await expect(
+      commercialTrialRepository.getCommercialRetention('org-1', 'tenant-1')
+    ).resolves.toEqual({
+      kind: 'TRIAL_NOT_STARTED',
+      organizationId: 'org-1',
+      tenantId: 'tenant-1',
+    });
+  });
+
   it('uses a tenant-aware contract-scoped cache key and cancellation signal', async () => {
     const queryClient = createClient();
     const { result, unmount } = renderHook(
@@ -187,7 +207,8 @@ describe('Commercial Retention repository and query', () => {
       { wrapper: wrapperFor(queryClient) }
     );
 
-    await waitFor(() => expect(result.current.data?.trialId).toBe('trial-1'));
+    await waitFor(() => expect(isCommercialRetention(result.current.data)).toBe(true));
+    expect(isCommercialRetention(result.current.data) && result.current.data.trialId).toBe('trial-1');
     expect(commercialTrialKeys.commercialRetention('org-1', 'tenant-1')).toEqual([
       'onboarding',
       'commercial-retention',
@@ -199,6 +220,57 @@ describe('Commercial Retention repository and query', () => {
       'tenant-1',
       expect.any(AbortSignal)
     );
+    unmount();
+    queryClient.clear();
+  });
+
+  it('marks retention failures as feature-owned so the global fallback never overlays a valid screen', async () => {
+    const queryClient = createClient();
+    const { result, unmount } = renderHook(
+      () => useCommercialRetentionQuery('org-1', 'tenant-1'),
+      { wrapper: wrapperFor(queryClient) }
+    );
+
+    await waitFor(() => expect(isCommercialRetention(result.current.data)).toBe(true));
+    const query = queryClient.getQueryCache().find({
+      queryKey: commercialTrialKeys.commercialRetention('org-1', 'tenant-1'),
+    });
+    expect(query?.meta?.apiFailurePresentation).toBe('feature');
+    unmount();
+    queryClient.clear();
+  });
+
+  it('exposes recognized pretrial retention absence as query data instead of a query failure', async () => {
+    mockGetRetention.mockRejectedValue(
+      new CommercialTrialDatasourceError(
+        'commercial_trial.not_found',
+        'errors.commercialTrial.not_found',
+        false,
+        404
+      )
+    );
+    const queryClient = createClient();
+    const { result, unmount } = renderHook(
+      () => useCommercialRetentionQuery('org-1', 'tenant-1'),
+      { wrapper: wrapperFor(queryClient) }
+    );
+
+    await waitFor(() => expect(isCommercialRetentionNotStarted(result.current.data)).toBe(true));
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.isError).toBe(false);
+    unmount();
+    queryClient.clear();
+  });
+
+  it('does not request retention when the lifecycle-aware caller disables the query before trial activation', async () => {
+    const queryClient = createClient();
+    const { result, unmount } = renderHook(
+      () => useCommercialRetentionQuery('org-1', 'tenant-1', { enabled: false }),
+      { wrapper: wrapperFor(queryClient) }
+    );
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(mockGetRetention).not.toHaveBeenCalled();
     unmount();
     queryClient.clear();
   });

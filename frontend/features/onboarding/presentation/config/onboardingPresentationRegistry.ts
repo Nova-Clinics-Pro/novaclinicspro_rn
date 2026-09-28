@@ -50,11 +50,16 @@ export const translateOnboardingBlocker = (
   blockerToken: string | null | undefined,
   currentValue: unknown,
   requiredValue: unknown,
+  titleToken?: string | null,
 ): string =>
   typeof currentValue === 'number' && Number.isFinite(currentValue) &&
   typeof requiredValue === 'number' && Number.isFinite(requiredValue)
-    ? translateOnboardingToken('onboarding.requirements.progress', 'onboarding.renderers.unavailable', {
+    ? translateOnboardingToken(
+        titleToken ? 'onboarding.requirements.progressWithTitle' : 'onboarding.requirements.progress',
+        'onboarding.renderers.unavailable', {
+        ...(titleToken ? { title: translateOnboardingToken(titleToken) } : {}),
         current: currentValue,
         required: requiredValue,
-      })
+      }
+      )
     : translateOnboardingToken(blockerToken);
