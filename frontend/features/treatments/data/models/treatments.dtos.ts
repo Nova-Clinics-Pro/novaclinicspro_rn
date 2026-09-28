@@ -41,6 +41,8 @@ export interface TreatmentCreate {
   price?: number | string | null;
   dosha_benefits?: DoshaBenefits | null;
   contraindications?: string | null;
+  /** Canonical global treatment taxonomy code; null is a valid uncategorized treatment. */
+  category_code?: string | null;
   metadata?: Record<string, any> | null;
 }
 
@@ -54,6 +56,7 @@ export interface TreatmentUpdate {
   price?: number | string | null;
   dosha_benefits?: DoshaBenefits | null;
   contraindications?: string | null;
+  category_code?: string | null;
   metadata?: Record<string, any> | null;
   is_active?: boolean | null;
 }
@@ -83,6 +86,7 @@ export interface TreatmentResponse {
   price: string | null;
   dosha_benefits: DoshaBenefits | null;
   contraindications: string | null;
+  category_code: string | null;
   metadata_: Record<string, any> | null; // Note: API returns metadata_
   is_active: boolean;
   created_at: string;

@@ -44,18 +44,30 @@ export interface TenantClinicProfileUpdate {
   email?: string | null;
   phones?: string[] | null;
   address?: {
+    street?: string | null;
     city?: string | null;
     state?: string | null;
+    pincode?: string | null;
     country?: string | null;
   } | null;
+  website_address?: string | null;
+  clinic_registration?: string | null;
+  clinic_pan?: string | null;
+  clinic_gst?: string | null;
 }
 
 export interface TenantClinicProfile {
   id: string;
   name: string;
+  clinic_type?: string;
   email?: string | null;
   phones?: string[] | null;
-  address?: { city?: string | null; state?: string | null; country?: string | null } | null;
+  address?: { street?: string | null; city?: string | null; state?: string | null; pincode?: string | null; country?: string | null } | null;
+  website_address?: string | null;
+  clinic_logo?: string | null;
+  clinic_registration?: string | null;
+  clinic_pan?: string | null;
+  clinic_gst?: string | null;
 }
 
 export interface ListTenantsParams {

@@ -43,12 +43,18 @@ export interface JourneyResolvedStep {
   readonly rendererKey: string | null;
   readonly applicable: boolean;
   readonly required: boolean;
-  readonly state: 'COMPLETE' | 'BLOCKED' | 'NOT_APPLICABLE';
+  readonly state:
+    | 'NOT_STARTED'
+    | 'IN_PROGRESS'
+    | 'COMPLETE'
+    | 'BLOCKED'
+    | 'NOT_APPLICABLE';
   readonly titleToken: string | null;
   readonly helpToken: string | null;
   readonly requirements: readonly JourneyRequirement[];
   readonly blockers: readonly JourneyRequirement[];
   readonly correctiveActions: readonly JourneyCorrectiveAction[];
+  readonly managementActions: readonly JourneyCorrectiveAction[];
   readonly presentation: Readonly<Record<string, unknown>>;
 }
 

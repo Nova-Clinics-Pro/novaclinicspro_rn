@@ -33,6 +33,7 @@ import {
 } from '../models/onboarding.dtos';
 import {
   AuthOrganizationContext,
+  AuthSessionInvalidError,
   BringClinicInput,
   ClinicEntryResult,
   ClinicEntryTransportError,
@@ -201,6 +202,13 @@ export const getOrganizationContextApi = async (): Promise<AuthOrganizationConte
       sessionRefreshRequired: data.session_refresh_required,
     };
   } catch (error) {
+    // /auth/me returning 401 without a session is an expected auth-state
+    // boundary, never a clinic-entry transport failure.  The query hook is
+    // gated by the authoritative auth store; this protects the small window
+    // in which an in-flight request completes during logout.
+    if ((error as { response?: { status?: number } })?.response?.status === 401) {
+      throw new AuthSessionInvalidError();
+    }
     return throwClinicEntryError(error);
   }
 };
@@ -534,7 +542,6 @@ export const getOnboardingStatusApi = async (
   signal?: AbortSignal
 ): Promise<OnboardingStatusResponse> => {
   try {
-    console.log('[getOnboardingStatusApi] Fetching status for tenant:', tenantId);
     const response = await axiosClient.get<OnboardingStatusResponse>(
       `/api/v1/onboarding/${tenantId}/status`,
       {
@@ -552,15 +559,12 @@ export const getOnboardingStatusApi = async (
         false
       );
     }
-    console.log('[getOnboardingStatusApi] Status fetched successfully');
     return response.data;
   } catch (error: any) {
     if (error?.code === 'ERR_CANCELED' || error instanceof OnboardingStatusDatasourceError) {
       throw error;
     }
-    if (error?.response?.status === 401) {
-      console.log('[getOnboardingStatusApi] Skipping status fetch: no authenticated session');
-    } else {
+    if (error?.response?.status !== 401) {
       logError('getOnboardingStatusApi', error);
     }
     
@@ -741,8 +745,6 @@ export const submitStepDataApi = async (
 ): Promise<StepSubmitResponse> => {
   try {
     const url = `/api/v1/onboarding/${tenantId}/steps/${stepCode}`;
-    console.log('[submitStepDataApi] POST', url);
-    console.log('[submitStepDataApi] Request data:', JSON.stringify(data, null, 2));
 
     const headers: Record<string, string> = {
       'X-Tenant-ID': tenantId, // TODO: Req 11 - remove after staging confirms tenant_id is present in JWT for provisional and live tenants.
@@ -764,7 +766,6 @@ export const submitStepDataApi = async (
       }
     );
     
-    console.log('[submitStepDataApi] Response:', JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error: any) {
     return throwStepSubmissionError(error);

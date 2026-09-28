@@ -375,12 +375,18 @@ export interface JourneyResolvedStepDTO {
   renderer_key: string | null;
   applicable: boolean;
   required: boolean;
-  state: 'COMPLETE' | 'BLOCKED' | 'NOT_APPLICABLE';
+  state:
+    | 'NOT_STARTED'
+    | 'IN_PROGRESS'
+    | 'COMPLETE'
+    | 'BLOCKED'
+    | 'NOT_APPLICABLE';
   title_token: string | null;
   help_token: string | null;
   requirements: JourneyRequirementDTO[];
   blockers: JourneyRequirementDTO[];
   corrective_actions: JourneyCorrectiveActionDTO[];
+  management_actions?: JourneyCorrectiveActionDTO[];
   presentation: Record<string, unknown>;
 }
 

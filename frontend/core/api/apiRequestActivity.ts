@@ -11,11 +11,14 @@ type TrackableRequest = {
 };
 
 type TransportError = {
+  code?: unknown;
+  name?: unknown;
   response?: { status?: unknown };
 };
 
 export type UnhandledTransportFailure = {
   key: string;
+  error: unknown;
 };
 
 let nextRequestId = 0;
@@ -42,12 +45,15 @@ export const completeApiRequest = (config?: TrackableRequest, error?: unknown): 
   if (!config?.apiRequestTrackerId) return;
   const requestId = config.apiRequestTrackerId;
   const completed = activeOrdinaryRequests.delete(requestId);
-  const status = (error as TransportError | undefined)?.response?.status;
+  const transportError = error as TransportError | undefined;
+  const status = transportError?.response?.status;
+  const cancelled =
+    transportError?.code === 'ERR_CANCELED' || transportError?.name === 'CanceledError';
   // Raw Axios callers do not necessarily have React Query to surface an
   // unhandled network/5xx failure. Auth and feature-owned failures keep their
   // current owners; this only gives the root fallback a terminal UI path.
-  if ((typeof status !== 'number' || status >= 500) && error) {
-    latestUnhandledFailure = { key: `${requestId}:${++unhandledFailureVersion}` };
+  if (!cancelled && (typeof status !== 'number' || status >= 500) && error) {
+    latestUnhandledFailure = { key: `${requestId}:${++unhandledFailureVersion}`, error };
   }
   if (completed || error) notify();
 };

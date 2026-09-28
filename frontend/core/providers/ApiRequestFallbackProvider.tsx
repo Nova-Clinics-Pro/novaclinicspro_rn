@@ -14,6 +14,7 @@ import {
   getUnhandledTransportFailureVersion,
   subscribeToApiRequestActivity,
 } from '../api/apiRequestActivity';
+import { logError } from '../utils/errorHandler';
 
 type QueryFailure = {
   queryKey?: readonly unknown[];
@@ -63,7 +64,18 @@ export function ApiRequestFallbackProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     const transportFailure = getUnhandledTransportFailure();
-    if (transportFailure) setFailure(transportFailure);
+    if (!transportFailure) return;
+
+    let disposed = false;
+    queueMicrotask(() => {
+      if (disposed) return;
+      logError('api.fallback.transport_failure', transportFailure.error);
+      setFailure(transportFailure);
+    });
+
+    return () => {
+      disposed = true;
+    };
   }, [transportFailureVersion]);
 
   useEffect(() => {
@@ -80,6 +92,7 @@ export function ApiRequestFallbackProvider({ children }: PropsWithChildren) {
       const key = `${query.queryHash}:${query.state.errorUpdatedAt}`;
       if (surfacedErrors.current.has(key)) return;
       surfacedErrors.current.add(key);
+      logError('api.fallback.query_failure', query.state.error);
       setFailure({ queryKey: query.queryKey, key });
     });
   }, [queryClient]);
@@ -87,9 +100,15 @@ export function ApiRequestFallbackProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const ordinaryWorkActive = fetching > 0 || activeTransportRequests > 0;
     if (!ordinaryWorkActive) {
-      setSuppressedUntilIdle(false);
-      setTakingLonger(false);
-      return;
+      let disposed = false;
+      queueMicrotask(() => {
+        if (disposed) return;
+        setSuppressedUntilIdle(false);
+        setTakingLonger(false);
+      });
+      return () => {
+        disposed = true;
+      };
     }
     if (failure || suppressedUntilIdle) return;
 

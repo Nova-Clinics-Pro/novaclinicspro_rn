@@ -82,6 +82,20 @@ describe('Commercial Trial datasource', () => {
     );
   });
 
+  it('allows the host to establish the first commercial aggregate during explicit activation', async () => {
+    await activateCommercialTrialApi(
+      'tenant-1',
+      { contract_version: 'commercial_trial_v1', confirmed: true },
+      'first-activation-key'
+    );
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/onboarding/tenant-1/commercial-trial/activate',
+      { contract_version: 'commercial_trial_v1', confirmed: true },
+      { headers: { 'Idempotency-Key': 'first-activation-key' } }
+    );
+  });
+
   it('uses only the approved E9 subscription handoff route', async () => {
     await requestCommercialTrialSubscriptionApi('tenant-1');
     expect(mockPost).toHaveBeenCalledWith(

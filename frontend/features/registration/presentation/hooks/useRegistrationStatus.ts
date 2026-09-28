@@ -4,8 +4,11 @@
  */
 
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
-import { getRegistrationStatusApi } from '../../data/datasources/registration.api';
-import { RegistrationStatusResponse } from '../../data/models/registration.dtos';
+import { registrationRepository } from '../../data/repositories/registration.repository.impl';
+import type { RegistrationStatus } from '../../domain/entities/registration.entity';
+import { GetRegistrationStatusUseCase } from '../../domain/usecases/get-registration-status.usecase';
+
+const getRegistrationStatus = new GetRegistrationStatusUseCase(registrationRepository);
 
 export const registrationStatusKeys = {
   all: ['registration-status'] as const,
@@ -17,21 +20,11 @@ export const registrationStatusKeys = {
  */
 export const useRegistrationStatus = (
   userId: string,
-  options?: Omit<UseQueryOptions<RegistrationStatusResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<RegistrationStatus, Error>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<RegistrationStatusResponse, Error>({
+  return useQuery<RegistrationStatus, Error>({
     queryKey: registrationStatusKeys.status(userId),
-    queryFn: async () => {
-      try {
-        return await getRegistrationStatusApi(userId);
-      } catch (error: any) {
-        console.error('[useRegistrationStatus] Error:', error);
-        throw new Error(
-          error.response?.data?.detail || 
-          'Failed to fetch registration status. Please try again.'
-        );
-      }
-    },
+    queryFn: () => getRegistrationStatus.execute(userId),
     enabled: !!userId,
     staleTime: 30000, // 30 seconds
     ...options,

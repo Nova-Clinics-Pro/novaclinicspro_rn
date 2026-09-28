@@ -28,7 +28,7 @@ import {
   useUpdateTreatmentMutation,
   useDeleteTreatmentMutation,
 } from '../../../../features/treatments/data/repositories/treatments.repository.impl';
-import { useTenantQuery } from '../../../../features/tenants/data/repositories/tenants.repository.impl';
+import { useCurrentTenantQuery } from '../../../../features/tenants/data/repositories/tenants.repository.impl';
 import { useFeatures, isAyurvedaClinic as checkIsAyurveda } from '../../../../core/hooks/useFeatures';
 import { 
   formatPrice, 
@@ -53,7 +53,7 @@ export default function TreatmentDetailScreen() {
     enabled: !!tenantId && !!treatmentId,
   });
 
-  const { data: tenant } = useTenantQuery(tenantId, {
+  const { data: tenant } = useCurrentTenantQuery(tenantId, {
     enabled: !!tenantId,
   });
 

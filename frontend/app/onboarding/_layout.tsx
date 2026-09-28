@@ -29,7 +29,11 @@ export default function OnboardingLayout() {
       />
       <Stack.Screen 
         name="pending-review" 
-        options={{ title: 'Application Status' }} 
+        options={{ title: t('applicationStatus.pendingReview.title') }}
+      />
+      <Stack.Screen
+        name="draft"
+        options={{ title: t('applicationStatus.draft.title') }}
       />
       <Stack.Screen 
         name="setup-wizard" 
@@ -56,11 +60,7 @@ export default function OnboardingLayout() {
       />
       <Stack.Screen 
         name="rejected" 
-        options={{ title: 'Application Rejected' }} 
-      />
-      <Stack.Screen 
-        name="improve" 
-        options={{ title: 'Improve Application' }} 
+        options={{ title: t('applicationStatus.rejected.title') }}
       />
     </Stack>
   );

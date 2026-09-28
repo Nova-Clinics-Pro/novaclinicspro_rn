@@ -70,6 +70,7 @@ const card = (stepCode: string, status: JourneyCardModel['status']): JourneyCard
   isEligible: true,
   isVisible: true,
   isActionable: status !== 'blocked',
+  action: null,
   order: 0,
 });
 
@@ -156,6 +157,44 @@ describe('JourneySurface', () => {
     ]);
     fireEvent.press(getByTestId('surface-card-clinic_profile'));
     expect(onSelectStep).toHaveBeenCalledWith('clinic_profile');
+  });
+
+  it('executes a backend-declared action instead of selecting a wizard step', () => {
+    const onSelectStep = jest.fn();
+    const onExecuteAction = jest.fn();
+    const action = {
+      kind: 'NAVIGATE' as const,
+      target: 'manage_clinic_profile',
+      destination: 'clinic.profile',
+      requiredParams: ['tenant_id', 'step_id'],
+      labelToken: 'onboarding.actions.manage_clinic_profile.label',
+      availability: 'AVAILABLE' as const,
+      fallbackToken: 'onboarding.actions.unavailable',
+    };
+    const { getByTestId } = render(
+      <JourneySurface
+        journey={journey({ cards: [{ ...card('clinic_profile', 'complete'), action, isActionable: true }] })}
+        onSelectStep={onSelectStep}
+        onExecuteAction={onExecuteAction}
+      />
+    );
+
+    fireEvent.press(getByTestId('surface-card-clinic_profile'));
+    expect(onExecuteAction).toHaveBeenCalledWith(action, 'clinic_profile');
+    expect(onSelectStep).not.toHaveBeenCalled();
+  });
+
+  it('keeps a complete card selectable when canonical runtime marks it openable without a management action', () => {
+    const onSelectStep = jest.fn();
+    const { getByTestId } = render(
+      <JourneySurface
+        journey={journey({ cards: [{ ...card('staff_and_roles', 'complete'), action: null, isActionable: true }] })}
+        onSelectStep={onSelectStep}
+      />
+    );
+
+    fireEvent.press(getByTestId('surface-card-staff_and_roles'));
+    expect(onSelectStep).toHaveBeenCalledWith('staff_and_roles');
   });
 
   it('announces tenant-scoped refresh without replacing the current cards', () => {

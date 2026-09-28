@@ -6,6 +6,9 @@
 
 const mockStorage = new Map<string, string>();
 
+process.env.EXPO_PUBLIC_SUPABASE_URL ??= 'https://example.supabase.co';
+process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??= 'test-anon-key';
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn((key: string) => Promise.resolve(mockStorage.get(key) ?? null)),
   setItem: jest.fn((key: string, value: string) => {
@@ -21,6 +24,10 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     keys.forEach((key) => mockStorage.delete(key));
     return Promise.resolve();
   }),
+}));
+
+jest.mock('../../core/api/supabaseClient', () => ({
+  supabase: {},
 }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -175,9 +182,11 @@ describe('wizard.store draft persistence', () => {
     }));
 
     setAuthIdentity('tenant-b');
+    const consoleWarn = jest.spyOn(console, 'warn');
     await hydrateWizardDraftFromStorage();
 
     expect(useWizardStore.getState().getStepData('clinic_profile')).toBeUndefined();
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 
   it('does not hydrate another user draft for the same tenant', async () => {
@@ -198,6 +207,22 @@ describe('wizard.store draft persistence', () => {
     await hydrateWizardDraftFromStorage();
 
     expect(useWizardStore.getState().getStepData('clinic_profile')).toBeUndefined();
+  });
+
+  it('clears a foreign global legacy draft without logging a warning', async () => {
+    mockStorage.set('wizard-storage', JSON.stringify({
+      version: WIZARD_DRAFT_SCHEMA_VERSION,
+      tenantId: 'tenant-other',
+      userId: 'user-other',
+      stepDrafts: {},
+    }));
+    const consoleWarn = jest.spyOn(console, 'warn');
+
+    await hydrateWizardDraftFromStorage();
+
+    expect(useWizardStore.getState().stepDrafts).toEqual({});
+    expect(mockStorage.has('wizard-storage')).toBe(false);
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 
   it('uses an isolated user fallback key when tenant is unavailable', async () => {

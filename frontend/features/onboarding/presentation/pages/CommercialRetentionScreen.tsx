@@ -16,15 +16,24 @@ import { useTranslation } from '../../../../core/localization/useTranslation';
 import { ClinicTheme, useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import {
   CommercialRetentionAction,
+  CommercialRetention,
   CommercialTrialError,
+  CommercialTrial,
+  isCommercialTrialAggregate,
+  isCommercialTrialNotStarted,
+  isCommercialRetention,
   useActivateCommercialTrialMutation,
+  useCommercialTrialQuery,
   useCommercialRetentionQuery,
   useGrantCommercialTrialExtensionMutation,
   useRequestCommercialTrialExtensionMutation,
 } from '../../../commercialPlatform';
 import { useOrganizationContextQuery } from '../../data/repositories/onboarding.repository.impl';
+import { useReadyToStart } from '../hooks/useReadyToStart';
+import { logError } from '../../../../core/utils/errorHandler';
 import { ErrorScreen } from '../components/ErrorScreen';
 import { LoadingScreen } from '../components/LoadingScreen';
+import type { AuthUserSession } from '../../../auth/domain/entities/auth.entity';
 
 interface CommercialRetentionScreenProps {
   /**
@@ -33,7 +42,10 @@ interface CommercialRetentionScreenProps {
    */
   organizationId?: string;
   tenantId: string;
+  /** Read-only /auth/me lifecycle evidence; no local lifecycle mutation. */
+  applicationStatus?: AuthUserSession['applicationStatus'];
   onCommercialEligibilityConfirmed?: () => Promise<void>;
+  onCommercialConfirmationAcknowledged?: () => void;
 }
 
 const ROOT = 'onboarding.progressiveExperience.commercialRetention';
@@ -62,7 +74,9 @@ const createOperationKey = () => {
 
 export function CommercialRetentionScreen({
   tenantId,
+  applicationStatus,
   onCommercialEligibilityConfirmed,
+  onCommercialConfirmationAcknowledged,
 }: CommercialRetentionScreenProps) {
   const theme = useClinicTheme();
   const { t, locale } = useTranslation();
@@ -76,7 +90,15 @@ export function CommercialRetentionScreen({
       !organizationContext.data?.selectionRequired &&
       !organizationContext.data?.sessionRefreshRequired
   );
-  const query = useCommercialRetentionQuery(organizationId, tenantId);
+  const readiness = useReadyToStart(tenantId);
+  const trialQuery = useCommercialTrialQuery(organizationId, tenantId);
+  const trial = trialQuery.data;
+  const query = useCommercialRetentionQuery(organizationId, tenantId, {
+    enabled: Boolean(
+      isCommercialTrialAggregate(trial)
+    ),
+  });
+  const retention = query.data;
   const activateMutation = useActivateCommercialTrialMutation(organizationId, tenantId);
   const requestExtensionMutation = useRequestCommercialTrialExtensionMutation(
     organizationId,
@@ -100,6 +122,7 @@ export function CommercialRetentionScreen({
   const submissionInFlight = useRef(false);
   const completionInFlight = useRef(false);
   const [completionPending, setCompletionPending] = useState(false);
+  const [trialConfirmation, setTrialConfirmation] = useState<CommercialTrial | null>(null);
 
   const actionPending =
     activateMutation.isPending ||
@@ -126,16 +149,19 @@ export function CommercialRetentionScreen({
     if (error.kind === 'CONFLICT') {
       return `${ROOT}.workflow.errors.conflict`;
     }
-    if (error.kind === 'NOT_READY' || error.kind === 'INVALID_AGGREGATE') {
+    if (error.kind === 'NOT_READY') {
+      return `${ROOT}.workflow.errors.setupChanged`;
+    }
+    if (error.kind === 'INVALID_AGGREGATE') {
       return `${ROOT}.workflow.errors.notAvailable`;
     }
     return `${ROOT}.workflow.errors.network`;
   };
 
-  const refreshAfterSuccess = async (successToken: string) => {
+  const refreshAfterSuccess = async (successToken: string): Promise<CommercialRetention> => {
     setActionMessage({ kind: 'success', token: successToken });
     const refreshed = await query.refetch();
-    if (refreshed.error || !refreshed.data) {
+    if (refreshed.error || !isCommercialRetention(refreshed.data)) {
       throw refreshed.error ?? new CommercialTrialError(
         'BACKEND_FAILURE',
         'commercial_trial.authoritative_refresh_unavailable',
@@ -164,7 +190,24 @@ export function CommercialRetentionScreen({
     setCompletionPending(true);
     try {
       await onCommercialEligibilityConfirmed();
-    } catch {
+      const refreshedTrial = await trialQuery.refetch();
+      if (
+        refreshedTrial.error ||
+        !isCommercialTrialAggregate(refreshedTrial.data) ||
+        !['ACTIVE', 'EXPIRING'].includes(refreshedTrial.data.state) ||
+        !refreshedTrial.data.activationAt ||
+        !refreshedTrial.data.expiresAt
+      ) {
+        throw refreshedTrial.error ?? new CommercialTrialError(
+          'BACKEND_FAILURE',
+          'commercial_trial.confirmation_evidence_unavailable',
+          'errors.commercialTrial.application_failure',
+          true
+        );
+      }
+      setTrialConfirmation(refreshedTrial.data);
+    } catch (error) {
+      logError('onboarding.commercial_completion', error);
       setActionMessage({ kind: 'error', token: `${ROOT}.workflow.errors.network` });
     } finally {
       completionInFlight.current = false;
@@ -182,6 +225,8 @@ export function CommercialRetentionScreen({
       await query.refetch();
     }
   };
+
+  const isPreActivationState = isCommercialTrialNotStarted(trial);
 
   const startTrial = () => {
     if (actionPending || confirmationOpen.current || submissionInFlight.current) return;
@@ -206,7 +251,7 @@ export function CommercialRetentionScreen({
             if (
               activateMutation.isPending ||
               submissionInFlight.current ||
-              !query.data ||
+              (!trial && !isPreActivationState) ||
               !activationKey.current
             ) {
               return;
@@ -214,8 +259,15 @@ export function CommercialRetentionScreen({
             submissionInFlight.current = true;
             setActionMessage(null);
             try {
+              const existingTrial = await trialQuery.refetch();
+              if (existingTrial.error) {
+                throw existingTrial.error;
+              }
               await activateMutation.mutateAsync({
-                aggregateVersion: query.data.aggregateVersion,
+                aggregateVersion:
+                  isCommercialTrialAggregate(existingTrial.data)
+                    ? existingTrial.data.aggregateVersion
+                    : undefined,
                 confirmed: true,
                 idempotencyKey: activationKey.current,
               });
@@ -255,11 +307,12 @@ export function CommercialRetentionScreen({
   };
 
   const submitExtension = async () => {
+    const currentRetention = query.data;
     if (
       !extensionAction ||
       actionPending ||
       submissionInFlight.current ||
-      !query.data ||
+      !isCommercialRetention(currentRetention) ||
       !extensionKey.current
     ) {
       return;
@@ -293,7 +346,7 @@ export function CommercialRetentionScreen({
     try {
       if (isGrant) {
         await grantExtensionMutation.mutateAsync({
-          aggregateVersion: query.data.aggregateVersion,
+          aggregateVersion: currentRetention.aggregateVersion,
           extensionDays: parsedDays,
           reason: trimmedReason,
           channel: extensionChannel as ExtensionChannel,
@@ -350,11 +403,101 @@ export function CommercialRetentionScreen({
     );
   }
 
-  if (query.isPending) {
+  if (trialQuery.isPending) {
     return <LoadingScreen message={t(`${ROOT}.loading`)} />;
   }
 
-  if (query.error || !query.data) {
+  // The retention endpoint intentionally has no record before the first
+  // explicit activation. That documented absence is a pre-trial state, not
+  // a missing workspace or a reason to hide the authoritative Start Trial command.
+  if (isPreActivationState && !trialConfirmation) {
+    const readinessAllowsActivation = readiness.data?.state === 'READY';
+    return (
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        accessibilityLabel={t(`${ROOT}.preActivation.accessibility`)}
+      >
+        <View style={styles.header}>
+          <Ionicons
+            name="rocket-outline"
+            size={theme.spacing.xxl}
+            color={theme.colors.primary.default}
+          />
+          <Text style={styles.title} accessibilityRole="header">
+            {t(`${ROOT}.preActivation.title`)}
+          </Text>
+          <Text style={styles.introduction}>{t(`${ROOT}.preActivation.description`)}</Text>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            {t(`${ROOT}.preActivation.actionTitle`)}
+          </Text>
+          <Text style={styles.body}>{t(`${ROOT}.preActivation.actionDescription`)}</Text>
+          <Pressable
+            style={[styles.handoffButton, (actionPending || !readinessAllowsActivation) && styles.disabledButton]}
+            onPress={startTrial}
+            disabled={actionPending || !readinessAllowsActivation}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: actionPending || !readinessAllowsActivation, busy: actionPending || readiness.loading }}
+            accessibilityLabel={t(`${ROOT}.actionLabels.START_TRIAL`)}
+          >
+            {actionPending ? (
+              <ActivityIndicator color={theme.colors.primary.onPrimary} />
+            ) : (
+              <Text style={styles.primaryButtonText}>
+                {t(`${ROOT}.actionLabels.START_TRIAL`)}
+              </Text>
+            )}
+          </Pressable>
+          {!readiness.loading && !readinessAllowsActivation ? (
+            <Text style={styles.body} accessibilityRole="alert">
+              {t(`${ROOT}.workflow.errors.setupChanged`)}
+            </Text>
+          ) : null}
+        </View>
+        {actionMessage ? (
+          <View
+            style={actionMessage.kind === 'error' ? styles.errorMessage : styles.successMessage}
+            accessible
+            accessibilityRole={actionMessage.kind === 'error' ? 'alert' : undefined}
+            accessibilityLiveRegion="polite"
+          >
+            <Text style={styles.messageText}>{t(actionMessage.token)}</Text>
+          </View>
+        ) : null}
+      </ScrollView>
+    );
+  }
+
+  if ((trialQuery.error || !trial) && !trialConfirmation) {
+    const kind =
+      trialQuery.error instanceof CommercialTrialError
+        ? trialQuery.error.kind
+        : 'BACKEND_FAILURE';
+    const retryable =
+      trialQuery.error instanceof CommercialTrialError && trialQuery.error.retryable;
+    const messageKey =
+      kind === 'UNAUTHORIZED' || kind === 'FORBIDDEN'
+        ? 'permissionDenied'
+        : kind === 'NOT_FOUND'
+          ? 'missingWorkspace'
+          : kind === 'RETENTION_EVIDENCE_UNAVAILABLE'
+            ? 'missingEvidence'
+            : kind === 'UNSUPPORTED_CONTRACT' || kind === 'INVALID_AGGREGATE'
+              ? 'unsupported'
+              : 'network';
+    return (
+      <ErrorScreen
+        title={t(`${ROOT}.empty.title`)}
+        message={t(`${ROOT}.empty.${messageKey}`)}
+        onRetry={retryable ? () => void trialQuery.refetch() : undefined}
+        retryLabel={t(`${ROOT}.actions.retry`)}
+      />
+    );
+  }
+
+  if (query.error && !trialConfirmation) {
     const kind =
       query.error instanceof CommercialTrialError
         ? query.error.kind
@@ -381,7 +524,90 @@ export function CommercialRetentionScreen({
     );
   }
 
-  const retention = query.data;
+  if (isCommercialTrialAggregate(trial) && query.isPending) {
+    return <LoadingScreen message={t(`${ROOT}.loading`)} />;
+  }
+  if (
+    !trialConfirmation &&
+    isCommercialRetention(retention) &&
+    ['ACTIVE', 'EXPIRING'].includes(retention.commercialState) &&
+    trialQuery.isPending
+  ) {
+    return <LoadingScreen message={t(`${ROOT}.loading`)} />;
+  }
+  // An active trial is a terminal onboarding outcome.  The same compact
+  // confirmation is rendered after an in-session activation and after a
+  // restart, so this final-review surface never exposes stale retention or
+  // management actions as though activation were still pending.
+  const confirmedTrial = trialConfirmation ?? (isCommercialTrialAggregate(trial) ? trial : null);
+  if (
+    (trialConfirmation || (isCommercialRetention(retention) && ['ACTIVE', 'EXPIRING'].includes(retention.commercialState))) &&
+    confirmedTrial?.activationAt &&
+    confirmedTrial.expiresAt
+  ) {
+    return (
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        accessibilityLabel={t(`${ROOT}.trialConfirmation.accessibility`)}
+      >
+        <View style={styles.header}>
+          <Ionicons
+            name="checkmark-circle-outline"
+            size={theme.spacing.xxl}
+            color={theme.colors.feedback.success}
+          />
+          <Text style={styles.title} accessibilityRole="header">
+            {t(`${ROOT}.trialConfirmation.title`)}
+          </Text>
+          <Text style={styles.introduction}>
+            {t(`${ROOT}.trialConfirmation.description`)}
+          </Text>
+        </View>
+        <View style={styles.card}>
+          <InformationRow
+            label={t(`${ROOT}.trialConfirmation.startedAt`)}
+            value={formatDate(confirmedTrial.activationAt)}
+            styles={styles}
+          />
+          <InformationRow
+            label={t(`${ROOT}.trialConfirmation.expiresAt`)}
+            value={formatDate(confirmedTrial.expiresAt)}
+            styles={styles}
+          />
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.body}>{t(`${ROOT}.trialConfirmation.workspaceReady`)}</Text>
+          <Pressable
+            style={styles.handoffButton}
+            onPress={onCommercialConfirmationAcknowledged}
+            disabled={!onCommercialConfirmationAcknowledged}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !onCommercialConfirmationAcknowledged }}
+            accessibilityLabel={t(`${ROOT}.trialConfirmation.continue`)}
+          >
+            <Text style={styles.primaryButtonText}>
+              {t(`${ROOT}.trialConfirmation.continue`)}
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    );
+  }
+  if (!isCommercialRetention(retention)) {
+    return (
+      <ErrorScreen
+        title={t(`${ROOT}.empty.title`)}
+        message={t(`${ROOT}.empty.network`)}
+        onRetry={() => void query.refetch()}
+        retryLabel={t(`${ROOT}.actions.retry`)}
+      />
+    );
+  }
+  const completionAvailable =
+    ['ACTIVE', 'EXPIRING'].includes(retention.commercialState) &&
+    applicationStatus === 'onboarding' &&
+    Boolean(onCommercialEligibilityConfirmed);
   return (
     <ScrollView
       style={styles.screen}
@@ -411,6 +637,37 @@ export function CommercialRetentionScreen({
           {t(`${ROOT}.stateDescriptions.${retention.commercialState}`)}
         </Text>
       </View>
+
+      {completionAvailable ? (
+        <View style={styles.card} accessible>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            {t('onboarding.progressiveExperience.readyToStart.presentation.title')}
+          </Text>
+          <Text style={styles.body}>
+            {t('onboarding.progressiveExperience.readyToStart.presentation.states.READY')}
+          </Text>
+          <Pressable
+            style={[styles.handoffButton, completionPending && styles.disabledButton]}
+            onPress={() =>
+              void completeAfterAuthoritativeCommercialRefresh(retention.commercialState)
+            }
+            disabled={actionPending}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: actionPending, busy: completionPending }}
+            accessibilityLabel={t(
+              'onboarding.progressiveExperience.readyToStart.presentation.actions.continue'
+            )}
+          >
+            {completionPending ? (
+              <ActivityIndicator color={theme.colors.primary.onPrimary} />
+            ) : (
+              <Text style={styles.primaryButtonText}>
+                {t('onboarding.progressiveExperience.readyToStart.presentation.actions.continue')}
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -507,30 +764,6 @@ export function CommercialRetentionScreen({
         >
           <Text style={styles.messageText}>{t(actionMessage.token)}</Text>
         </View>
-      ) : null}
-
-      {['ACTIVE', 'EXPIRING'].includes(retention.commercialState) &&
-      onCommercialEligibilityConfirmed ? (
-        <Pressable
-          style={[styles.handoffButton, completionPending && styles.disabledButton]}
-          onPress={() =>
-            void completeAfterAuthoritativeCommercialRefresh(retention.commercialState)
-          }
-          disabled={actionPending}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: actionPending, busy: completionPending }}
-          accessibilityLabel={t(
-            'onboarding.progressiveExperience.readyToStart.presentation.actions.continue'
-          )}
-        >
-          {completionPending ? (
-            <ActivityIndicator color={theme.colors.primary.onPrimary} />
-          ) : (
-            <Text style={styles.primaryButtonText}>
-              {t('onboarding.progressiveExperience.readyToStart.presentation.actions.continue')}
-            </Text>
-          )}
-        </Pressable>
       ) : null}
 
       {retention.ineligibilityReasons.length > 0 ? (

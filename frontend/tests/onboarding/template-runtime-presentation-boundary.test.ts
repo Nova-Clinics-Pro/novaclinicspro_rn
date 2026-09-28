@@ -4,12 +4,28 @@ import { resolve } from 'node:path';
 const source = (path: string) => readFileSync(resolve(__dirname, '../../features', path), 'utf8');
 
 describe('template runtime presentation boundaries', () => {
-  it('keeps GoLive projection-authoritative and retires useReadyToStart', () => {
+  it('keeps GoLive dependent on canonical projection and backend readiness only', () => {
     const goLive = source('onboarding/presentation/pages/steps/GoLiveScreen.tsx');
-    expect(goLive).toContain('useJourneyFoundation');
-    expect(goLive).not.toContain('useReadyToStart');
+    expect(goLive).toContain('useOnboardingRuntime');
+    expect(goLive).toContain('useReadyToStart');
     expect(goLive).toContain('executeOnboardingAction');
+    expect(goLive).toContain('executeReadinessAction');
+    expect(goLive).toContain('readiness.data?.authorizesHandoff');
     expect(goLive).toContain('translateOnboardingBlocker');
+    expect(goLive).toContain('CommercialRetentionScreen');
+    expect(goLive).not.toContain('subscription_payment');
+    expect(goLive).not.toContain('workspace_preparation.system.missing');
+  });
+
+  it('selects the renderer-declared final review and cannot close onboarding into dashboard', () => {
+    const flow = source('onboarding/presentation/pages/SetupWizardFlow.tsx');
+    const renderer = source('onboarding/presentation/renderers/onboardingRendererRegistry.tsx');
+    expect(flow).toContain("step.rendererKey === 'go_live_review'");
+    expect(flow).toContain("router.replace('/')");
+    expect(flow).not.toContain('router.replace(`/clinic-admin?tenantId=${tenantId}`)');
+    expect(renderer).toContain('GoLiveReviewRenderer');
+    expect(renderer).toContain('go_live_review: GoLiveReviewRenderer');
+    expect(renderer).toContain('onCommercialEligibilityConfirmed={onCommercialEligibilityConfirmed}');
   });
 
   it('keeps profile, configured-service, and department transport outside presentation', () => {
@@ -45,6 +61,11 @@ describe('template runtime presentation boundaries', () => {
     ]) {
       expect(source(path)).toContain('invalidateCanonicalOnboardingState');
     }
+  });
+
+  it('renders the active projection renderer before the passive journey overview', () => {
+    const flow = source('onboarding/presentation/pages/SetupWizardFlow.tsx');
+    expect(flow.indexOf('{renderStepContent()}')).toBeLessThan(flow.indexOf('<JourneySurface'));
   });
 
   it('keeps persisted-session routing behind the explicit bootstrap gate', () => {

@@ -6,6 +6,8 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 import { queryClient as sharedQueryClient } from '../../../../core/api/queryClient';
+import { isLoggingOut } from '../../../../core/api/authGuard';
+import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 import {
   getApplicationDetailApi,
   getValidationReportApi,
@@ -75,6 +77,7 @@ import {
   WorkspacePreparationError,
 } from '../../domain/entities/workspace-preparation.entity';
 import { buildWorkspacePreparationViewModel } from '../../domain/usecases/build-workspace-preparation-view-model.usecase';
+import { invalidateCanonicalOnboardingState } from './onboardingFreshness';
 import {
   JOURNEY_VISIBILITY_CONTRACT_V1,
   type JourneyCorrectiveAction,
@@ -110,6 +113,8 @@ import {
 
 type StepSubmitVariables = StepSubmitRequest & {
   idempotencyKey?: string;
+  /** Required only for generic projection-driven callers. Never sent as body data. */
+  stepCode?: string;
 };
 
 // ============================================
@@ -244,12 +249,13 @@ export const mapJourneyVisibility = (
     rendererKey: step.renderer_key,
     applicable: step.applicable,
     required: step.required,
-    state: step.state,
+    state: assertResolvedOnboardingStepState(step.state),
     titleToken: step.title_token,
     helpToken: step.help_token,
     requirements: Object.freeze(step.requirements.map(mapRequirement)),
     blockers: Object.freeze(step.blockers.map(mapRequirement)),
     correctiveActions: Object.freeze(step.corrective_actions.map(mapAction)),
+    managementActions: Object.freeze((step.management_actions ?? []).map(mapAction)),
     presentation: Object.freeze({ ...step.presentation }),
   })));
   return Object.freeze({ identity, projectedAt, projectionRevision: dto.projection_revision, visibleSteps, resolvedSteps });
@@ -344,6 +350,24 @@ const CHECKLIST_STATUSES = [
 ] as const;
 const PROVIDER_OUTCOMES = ['SATISFIED', 'BLOCKER', 'ADVISORY'] as const;
 const NEXT_ACTION_KINDS = ['NAVIGATE', 'REFRESH', 'RETRY', 'CONTACT_SUPPORT'] as const;
+const assertResolvedOnboardingStepState = (
+  value: unknown,
+): JourneyVisibilityResponseDTO['resolved_steps'][number]['state'] => {
+  switch (value) {
+    case 'NOT_STARTED':
+    case 'IN_PROGRESS':
+    case 'COMPLETE':
+    case 'BLOCKED':
+    case 'NOT_APPLICABLE':
+      return value;
+  }
+  throw new JourneyVisibilityError(
+    'CONTRACT_MISMATCH',
+    'journey_visibility.contract_mismatch',
+    'errors.journeyVisibility.contract_mismatch',
+    false,
+  );
+};
 
 const present = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
@@ -696,6 +720,7 @@ export const useEnsureWorkspacePreparationMutation = (
     onSuccess: (value) => {
       queryClient.setQueryData(queryKey, value);
       queryClient.invalidateQueries({ queryKey });
+      void invalidateCanonicalOnboardingState(queryClient, tenantId);
     },
     retry: false,
   });
@@ -734,6 +759,7 @@ export const useRetryWorkspacePreparationMutation = (
     onSuccess: (value) => {
       queryClient.setQueryData(queryKey, value);
       queryClient.invalidateQueries({ queryKey });
+      void invalidateCanonicalOnboardingState(queryClient, tenantId);
       pendingIntent.current = null;
     },
     retry: false,
@@ -752,11 +778,21 @@ export const useClearWorkspacePreparationCache = () => {
   );
 };
 
-export const useOrganizationContextQuery = () =>
-  useQuery({
+export const useOrganizationContextQuery = () => {
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const isBootstrapping = useAuthStore(state => state.isLoading);
+  const currentUser = useAuthStore(state => state.currentUser);
+  const enabled = isAuthenticated && !isBootstrapping && Boolean(currentUser) && !isLoggingOut();
+
+  return useQuery({
     queryKey: onboardingKeys.organizationContext(),
     queryFn: getOrganizationContextApi,
+    // /auth/me is an authenticated context query.  It must remain disabled
+    // until bootstrap has resolved an actual session, and immediately after
+    // logout clears that authoritative state.
+    enabled,
   });
+};
 
 export const useCreateInitialOrganizationMutation = () =>
   useMutation<InitialOrganizationResult, Error, string>({
@@ -1290,13 +1326,22 @@ export const executePendingMutation =
 /**
  * Hook to submit step data
  */
-export const useSubmitStepMutation = (tenantId: string, stepCode: string) => {
+export const useSubmitStepMutation = (tenantId: string, fixedStepCode?: string) => {
   const queryClient = useQueryClient();
   const organizationContext = useOrganizationContextQuery();
   const organizationId = organizationContext.data?.effectiveOrganizationId ?? '';
 
   return useMutation<StepSubmitResponse, StepConflictError, StepSubmitVariables>({
-    mutationFn: async ({ idempotencyKey, ...data }) => {
+    mutationFn: async ({ idempotencyKey, stepCode: suppliedStepCode, ...data }) => {
+      const stepCode = suppliedStepCode ?? fixedStepCode;
+      if (!stepCode) {
+        throw new StepConflictError(
+          'UNSUPPORTED_CONTRACT',
+          'onboarding.step_missing',
+          'errors.onboarding.stepMissing',
+          false,
+        );
+      }
       try {
         const response = await submitStepDataApi(
           tenantId,

@@ -12,6 +12,7 @@ import {
   updateTenantApi,
   updateCurrentTenantClinicProfileApi,
   getCurrentTenantClinicProfileApi,
+  uploadCurrentTenantClinicLogoApi,
   deactivateTenantApi,
 } from '../datasources/tenants.api';
 import {
@@ -97,6 +98,17 @@ export const useCurrentTenantClinicProfileQuery = (tenantId: string) => useQuery
   queryFn: () => getCurrentTenantClinicProfileApi(tenantId),
   enabled: Boolean(tenantId),
 });
+
+export const useUploadCurrentTenantClinicLogoMutation = (tenantId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation<{ clinic_logo?: string | null }, Error, string>({
+    mutationFn: (clinicLogo) => uploadCurrentTenantClinicLogoApi(tenantId, clinicLogo),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tenant-clinic-profile', tenantId] });
+      await invalidateCanonicalOnboardingState(queryClient, tenantId);
+    },
+  });
+};
 
 /**
  * Hook to create a new tenant

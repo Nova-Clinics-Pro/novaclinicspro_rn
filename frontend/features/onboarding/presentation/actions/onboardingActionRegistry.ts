@@ -1,6 +1,7 @@
 import type { Href, ImperativeRouter } from 'expo-router';
 import { logError } from '../../../../core/utils/errorHandler';
 import type { JourneyCorrectiveAction } from '../../domain/entities/journey-visibility.entity';
+import type { NextAction } from '../../domain/entities/ready-to-start.entity';
 
 type NavigationContext = Readonly<Record<string, string>>;
 
@@ -14,6 +15,10 @@ export const onboardingDestinations: Readonly<Record<string, (context: Navigatio
   'clinic.inventory': () => '/clinic-admin/inventory' as Href,
   'clinic.departments': () => '/clinic-admin/settings/departments' as Href,
   'clinic.profile': () => '/clinic-admin/settings/clinic-profile' as Href,
+  'onboarding.workspace_preparation': context =>
+    `/onboarding/workspace-preparation?tenantId=${context.tenant_id}` as Href,
+  'workspace_preparation.retry': context =>
+    `/onboarding/workspace-preparation?tenantId=${context.tenant_id}` as Href,
 };
 
 export const executeOnboardingAction = (
@@ -28,6 +33,38 @@ export const executeOnboardingAction = (
   const destination = onboardingDestinations[action.destination];
   if (!destination) {
     logError('onboarding.action.unknown_destination', new Error(action.destination));
+    return false;
+  }
+  router.push(destination(context));
+  return true;
+};
+
+/**
+ * Readiness owns these actions. This registry only translates an approved,
+ * backend-emitted target into Expo Router mechanics; it never derives a
+ * readiness action from a step or tenant type.
+ */
+export const executeReadinessAction = (
+  router: ImperativeRouter,
+  action: NextAction,
+  context: NavigationContext,
+  options?: Readonly<{ onRefresh?: () => void }>,
+): boolean => {
+  if (action.kind === 'REFRESH') {
+    if (options?.onRefresh) {
+      options.onRefresh();
+      return true;
+    }
+    logError('onboarding.readiness_action.unavailable', new Error(action.actionId));
+    return false;
+  }
+  if (!action.targetId) {
+    logError('onboarding.readiness_action.unavailable', new Error(action.actionId));
+    return false;
+  }
+  const destination = onboardingDestinations[action.targetId];
+  if (!destination) {
+    logError('onboarding.readiness_action.unknown_destination', new Error(action.targetId));
     return false;
   }
   router.push(destination(context));

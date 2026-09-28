@@ -96,3 +96,12 @@ export const updateCurrentTenantClinicProfileApi = async (
 
 export const getCurrentTenantClinicProfileApi = async (tenantId: string): Promise<TenantClinicProfile> =>
   (await axiosClient.get<TenantClinicProfile>(`/api/v1/tenants/${tenantId}/clinic-profile`)).data;
+
+/** Upload branding media through the tenant-scoped profile API. */
+export const uploadCurrentTenantClinicLogoApi = async (
+  tenantId: string,
+  clinicLogo: string,
+): Promise<{ clinic_logo?: string | null }> =>
+  (await axiosClient.post<{ clinic_logo?: string | null }>(`/api/v1/tenants/${tenantId}/upload-logo`, {
+    clinic_logo: clinicLogo,
+  })).data;

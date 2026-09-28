@@ -18,6 +18,15 @@ import {
 } from '../../features/onboarding/data/models/onboarding.dtos';
 import { WorkspacePreparationError } from '../../features/onboarding/domain/entities/workspace-preparation.entity';
 
+jest.mock('../../core/api/supabaseClient', () => ({
+  supabase: {
+    auth: {
+      getSession: jest.fn(),
+      onAuthStateChange: jest.fn(),
+    },
+  },
+}));
+
 jest.mock('../../features/onboarding/data/datasources/onboarding.api', () => ({
   ensureWorkspacePreparationApi: jest.fn(),
   getWorkspacePreparationApi: jest.fn(),

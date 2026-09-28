@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import { useCreateTreatmentMutation } from '../../../../features/treatments/data/repositories/treatments.repository.impl';
 import { TreatmentForm } from '../../../../features/treatments/presentation/components/TreatmentForm';
-import { TreatmentCreate } from '../../../../features/treatments/data/models/treatments.dtos';
+import { TreatmentCreate, TreatmentUpdate } from '../../../../features/treatments/data/models/treatments.dtos';
 import { useAuthStore } from '../../../../features/auth/presentation/providers/auth.store';
 
 export default function CreateTreatmentScreen() {
@@ -20,13 +20,17 @@ export default function CreateTreatmentScreen() {
 
   const createMutation = useCreateTreatmentMutation(tenantId);
 
-  const handleCreate = useCallback(async (data: TreatmentCreate) => {
+  const handleCreate = useCallback(async (data: TreatmentCreate | TreatmentUpdate) => {
+    if (typeof data.code !== 'string' || typeof data.name !== 'string') {
+      throw new Error('Treatment creation requires a code and name');
+    }
+
     try {
-      await createMutation.mutateAsync(data);
+      await createMutation.mutateAsync({ ...data, code: data.code, name: data.name });
       Alert.alert('Success', 'Treatment created successfully', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to create treatment');
     }
   }, [createMutation, router]);

@@ -10,6 +10,8 @@ import {
   CommercialTrialDatasourceError,
   CommercialTrialError,
   CommercialTrialResponseDTO,
+  isCommercialTrialAggregate,
+  isCommercialTrialNotStarted,
 } from '../../features/commercialPlatform/contracts/commercial-trial';
 import {
   commercialTrialRepository,
@@ -122,7 +124,6 @@ describe('Commercial Trial repository and query', () => {
     [409, 'commercial_trial.activation_conflict', 'CONFLICT'],
     [422, 'commercial_trial.not_ready', 'NOT_READY'],
     [422, 'commercial_trial.confirmation_required', 'CONFIRMATION_REQUIRED'],
-    [404, 'commercial_trial.not_found', 'NOT_FOUND'],
     [500, 'commercial_trial.application_failure', 'BACKEND_FAILURE'],
   ])('maps %s %s to %s', async (httpStatus, code, kind) => {
     mockGet.mockRejectedValue(
@@ -133,13 +134,54 @@ describe('Commercial Trial repository and query', () => {
     ).rejects.toMatchObject({ kind, code });
   });
 
+  it('maps only the recognized pretrial 404 to an explicit successful not-started state', async () => {
+    mockGet.mockRejectedValue(
+      new CommercialTrialDatasourceError(
+        'commercial_trial.not_found',
+        'errors.commercialTrial.not_found',
+        false,
+        404
+      )
+    );
+
+    await expect(
+      commercialTrialRepository.getCommercialTrial('org-1', 'tenant-1')
+    ).resolves.toEqual({
+      kind: 'TRIAL_NOT_STARTED',
+      organizationId: 'org-1',
+      tenantId: 'tenant-1',
+    });
+  });
+
+  it('keeps unrecognized 404 and network failures as real errors', async () => {
+    mockGet.mockRejectedValueOnce(
+      new CommercialTrialDatasourceError(
+        'commercial_trial.unrecognized_missing',
+        'errors.commercialTrial.unrecognized_missing',
+        false,
+        404
+      )
+    );
+    await expect(
+      commercialTrialRepository.getCommercialTrial('org-1', 'tenant-1')
+    ).rejects.toMatchObject({ kind: 'NOT_FOUND' });
+
+    mockGet.mockRejectedValueOnce(new Error('network unavailable'));
+    await expect(
+      commercialTrialRepository.getCommercialTrial('org-1', 'tenant-1')
+    ).rejects.toMatchObject({ kind: 'BACKEND_FAILURE' });
+  });
+
   it('uses an organization, tenant, and contract-scoped query with cancellation', async () => {
     const queryClient = createClient();
     const { result, unmount } = renderHook(
       () => useCommercialTrialQuery('org-1', 'tenant-1'),
       { wrapper: wrapperFor(queryClient) }
     );
-    await waitFor(() => expect(result.current.data?.trialId).toBe('trial-1'));
+    await waitFor(() => {
+      expect(isCommercialTrialAggregate(result.current.data)).toBe(true);
+    });
+    expect(isCommercialTrialAggregate(result.current.data) && result.current.data.trialId).toBe('trial-1');
 
     expect(commercialTrialKeys.commercialTrial('org-1', 'tenant-1')).toEqual([
       'onboarding',
@@ -149,6 +191,28 @@ describe('Commercial Trial repository and query', () => {
       'commercial_trial_v1',
     ]);
     expect(mockGet).toHaveBeenCalledWith('tenant-1', expect.any(AbortSignal));
+    unmount();
+    queryClient.clear();
+  });
+
+  it('exposes recognized pretrial absence as query data instead of a query failure', async () => {
+    mockGet.mockRejectedValue(
+      new CommercialTrialDatasourceError(
+        'commercial_trial.not_found',
+        'errors.commercialTrial.not_found',
+        false,
+        404
+      )
+    );
+    const queryClient = createClient();
+    const { result, unmount } = renderHook(
+      () => useCommercialTrialQuery('org-1', 'tenant-1'),
+      { wrapper: wrapperFor(queryClient) }
+    );
+
+    await waitFor(() => expect(isCommercialTrialNotStarted(result.current.data)).toBe(true));
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.isError).toBe(false);
     unmount();
     queryClient.clear();
   });

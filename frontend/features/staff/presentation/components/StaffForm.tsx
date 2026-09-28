@@ -38,6 +38,7 @@ import {
   StaffType,
   getStaffTypeLabel,
 } from '../../data/models/staff.dtos';
+import { StaffDateOfBirthField } from './StaffDateOfBirthField';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -405,18 +406,13 @@ export const StaffForm: React.FC<StaffFormProps> = ({
 
           {/* Date of Birth */}
           <View style={styles.field}>
-            <Text style={styles.label}>Date of Birth (Optional)</Text>
             <Controller
               control={control}
               name="date_of_birth"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={styles.input}
-                  value={value || ''}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.text.tertiary}
+              render={({ field: { onChange, value } }) => (
+                <StaffDateOfBirthField
+                  value={value}
+                  onChange={onChange}
                 />
               )}
             />

@@ -85,9 +85,6 @@ export const mapCurrentUserToDomain = (dto: {
   }>;
   application_status?: 'draft' | 'pending_review' | 'approved' | 'onboarding' | 'active' | 'rejected' | null;
 }): AuthUserSession => {
-  console.log('[mapCurrentUserToDomain] Input DTO:', dto);
-  console.log('[mapCurrentUserToDomain] application_status from DTO:', dto.application_status);
-
   const ownedClinics = (dto.owned_clinics || []).map(c => ({
     tenantId: c.tenant_id,
     clinicName: c.clinic_name,
@@ -103,7 +100,7 @@ export const mapCurrentUserToDomain = (dto: {
     ownedClinics[0]?.clinicName ||
     '';
 
-  const mapped = {
+  return {
     id: dto.user_id,
     userId: dto.user_id,
     email: dto.email,
@@ -117,11 +114,6 @@ export const mapCurrentUserToDomain = (dto: {
     applicationStatus: dto.application_status || null,
     ownedClinics,
   };
-  
-  console.log('[mapCurrentUserToDomain] Mapped entity:', mapped);
-  console.log('[mapCurrentUserToDomain] applicationStatus:', mapped.applicationStatus);
-  
-  return mapped;
 };
 
 /**
