@@ -37,11 +37,13 @@ import {
   useTransitionCasesheetStatusMutation,
   usePrintCasesheetMutation,
   useArchiveCasesheetMutation,
-  CasesheetStatus,
+} from '../../data/repositories/casesheets.repository.impl';
+import {
   formatDateTime,
   isEditable,
   getAllowedTransitions,
-} from '../../index';
+} from '../../data/models/casesheets.dtos';
+import type { CasesheetStatus } from '../../data/models/casesheets.dtos';
 import { useCreateTreatmentSheetMutation } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { CasesheetStatusBadge } from '../components/CasesheetStatusBadge';
 import { EmptyCasesheetsState } from '../components/EmptyCasesheetsState';

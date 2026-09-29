@@ -20,11 +20,11 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
-import {
-  useCasesheetsListQuery,
+import { useCasesheetsListQuery } from '../../data/repositories/casesheets.repository.impl';
+import type {
   CasesheetResponse,
   CasesheetStatus,
-} from '../../index';
+} from '../../data/models/casesheets.dtos';
 import { CasesheetListItem } from '../components/CasesheetListItem';
 import { EmptyCasesheetsState } from '../components/EmptyCasesheetsState';
 

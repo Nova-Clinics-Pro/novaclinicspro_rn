@@ -9,7 +9,7 @@ import {
   useCasesheetDetailQuery,
   useCreateCasesheetMutation,
   useUpdateCasesheetMutation,
-} from '../../../features/casesheets/index';
+} from '../../../features/casesheets/data/repositories/casesheets.repository.impl';
 import { useAppointmentDetailQuery } from '../../../features/appointments/data/repositories/appointments.repository.impl';
 import { useEpisodeQuery, useEpisodeDetailsQuery } from '../../../features/episodes/data/repositories/episodes.repository.impl';
 
@@ -31,11 +31,14 @@ jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
 jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
   useAuth: jest.fn(),
 }));
-jest.mock('../../../features/casesheets/index', () => ({
-  isEditable: (status: string) => status === 'DRAFT',
+jest.mock('../../../features/casesheets/data/repositories/casesheets.repository.impl', () => ({
   useCasesheetDetailQuery: jest.fn(),
   useCreateCasesheetMutation: jest.fn(),
   useUpdateCasesheetMutation: jest.fn(),
+}));
+jest.mock('../../../features/casesheets/data/models/casesheets.dtos', () => ({
+  ...jest.requireActual('../../../features/casesheets/data/models/casesheets.dtos'),
+  isEditable: (status: string) => status === 'DRAFT',
 }));
 jest.mock('../../../features/appointments/data/repositories/appointments.repository.impl', () => ({
   useAppointmentDetailQuery: jest.fn(),
@@ -91,7 +94,7 @@ describe('CasesheetStandaloneScreen (R3B · T-B.2)', () => {
 
     it('does NOT import CasesheetForm as a rendered component (only its CasesheetFormData type, for the shared data shape)', () => {
       expect(source).not.toMatch(/import\s*\{[^}]*\bCasesheetForm\b[^}]*\}.*from '\.\.\/components\/CasesheetForm'/);
-      expect(source).toMatch(/import\s*\{\s*CasesheetFormData\s*\}\s*from '\.\.\/components\/CasesheetForm'/);
+      expect(source).toMatch(/import\s+type\s*\{\s*CasesheetFormData\s*\}\s*from '\.\.\/components\/CasesheetForm'/);
     });
   });
 

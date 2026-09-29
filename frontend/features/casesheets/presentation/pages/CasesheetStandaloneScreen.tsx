@@ -70,9 +70,9 @@ import {
   useCasesheetDetailQuery,
   useCreateCasesheetMutation,
   useUpdateCasesheetMutation,
-  isEditable,
-} from '../../index';
-import { CasesheetFormData } from '../components/CasesheetForm';
+} from '../../data/repositories/casesheets.repository.impl';
+import { isEditable } from '../../data/models/casesheets.dtos';
+import type { CasesheetFormData } from '../components/CasesheetForm';
 import { CasesheetStatusBadge } from '../components/CasesheetStatusBadge';
 import { EmptyCasesheetsState } from '../components/EmptyCasesheetsState';
 import { ChiefComplaintSection } from '../components/ChiefComplaintSection';
