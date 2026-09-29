@@ -80,4 +80,27 @@ describe('root registration lifecycle routing', () => {
     render(<Index />);
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/clinic-admin'));
   });
+
+  it('routes a hydrated Doctor tenant to the Doctor dashboard without no-clinic fallback', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      currentUser: user({
+        tenantId: 'tenant-doctor',
+        applicationStatus: 'active',
+        roles: ['DOCTOR'],
+      }),
+      logout: jest.fn(),
+    });
+    mockUseRegistrationStatus.mockReturnValue({ data: undefined, isLoading: false });
+
+    const screen = render(<Index />);
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/doctor'));
+    expect(screen.queryByText('applicationStatus.noClinic.title')).toBeNull();
+    expect(mockUseRegistrationStatus).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ enabled: false }),
+    );
+  });
 });
