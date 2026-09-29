@@ -53,7 +53,27 @@
     "good": "Good",
     "fair": "Fair",
     "minEach": "min each",
-    "yesCancel": "Yes, Cancel"
+    "yesCancel": "Yes, Cancel",
+    "departments": "Departments",
+    "department": "Department",
+    "departmentName": "Department name",
+    "departmentCode": "Department code",
+    "description": "Description",
+    "active": "Active",
+    "inactive": "Inactive",
+    "addDepartment": "Add department",
+    "noDepartments": "No departments configured",
+    "noClinicContext": "No clinic context is available",
+    "createFailed": "Unable to save the department. Please try again.",
+    "clinicProfile": "Clinic profile",
+    "clinicName": "Clinic name",
+    "clinicEmail": "Clinic email",
+    "clinicPhone": "Clinic phone",
+    "city": "City",
+    "state": "State",
+    "country": "Country",
+    "profileSaveFailed": "Unable to save the clinic profile. Please try again.",
+    "noCategory": "No category"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -69,9 +89,65 @@
     "profile": "Profile",
     "logout": "Logout"
   },
+  "clinicProfile": {
+    "title": "Clinic Profile",
+    "subtitle": "Manage your clinic information",
+    "sections": { "basic": "Basic Info", "contact": "Contact & Address", "business": "Business Details", "branding": "Branding" },
+    "fields": { "name": "Clinic name", "type": "Clinic type", "email": "Email", "phone": "Phone", "website": "Website", "street": "Street address", "city": "City", "state": "State", "pincode": "Postal code", "country": "Country", "registration": "Registration number", "pan": "PAN number", "gst": "GST number", "logo": "Clinic logo" },
+    "typeHelp": "Clinic type cannot be changed after registration.",
+    "requiredMarker": "*",
+    "optionalMarker": "(Optional)",
+    "saveFailed": "Unable to save the clinic profile. Please try again.",
+    "loadFailed": "Unable to load the clinic profile. Please try again.",
+    "saving": "Saving…",
+    "chooseLogo": "Choose logo",
+    "noLogo": "No logo selected",
+    "logoHelp": "Your logo may appear on clinic communications.",
+    "logoPermissionRequired": "Photo library permission is required to choose a logo.",
+    "logoUploadFailed": "Unable to upload the logo. Please try again."
+  },
+  "treatment_category": {
+    "general": "General",
+    "therapy": "Therapy",
+    "dental_procedure": "Dental procedure",
+    "physiotherapy": "Physiotherapy"
+  },
+  "clinicConfiguration": {
+    "multiday": {
+      "title": "Enable multi-day appointments",
+      "description": "Allow eligible configured treatments to be scheduled across multiple days.",
+      "error": "Unable to update multi-day appointments. Please try again."
+    }
+  },
+  "treatments": {
+    "form": {
+      "sections": { "basic": "Basic information", "durationAndPricing": "Duration and pricing", "ayurvedicProperties": "Ayurvedic properties", "safety": "Safety information" },
+      "code": { "label": "Treatment code", "placeholder": "For example, ABHYANGA", "editHelp": "Treatment code cannot be changed.", "createHelp": "Unique identifier; it will be uppercased." },
+      "name": { "label": "Treatment name", "placeholder": "For example, Abhyanga massage" },
+      "description": { "label": "Description", "placeholder": "Describe the treatment" },
+      "duration": { "label": "Duration (minutes)", "placeholder": "60", "requiredMessage": "Enter a positive duration in minutes." },
+      "price": { "label": "Price", "placeholder": "1500", "requiredMessage": "Enter a valid price of zero or more." },
+      "dosha": {
+        "help": "Select the doshas this treatment helps balance.",
+        "vata": { "label": "Vata", "description": "Air and space", "placeholder": "Notes on Vata benefits" },
+        "pitta": { "label": "Pitta", "description": "Fire and water", "placeholder": "Notes on Pitta benefits" },
+        "kapha": { "label": "Kapha", "description": "Earth and water", "placeholder": "Notes on Kapha benefits" }
+      },
+      "contraindications": { "label": "Contraindications", "placeholder": "List conditions where this treatment should be avoided" },
+      "changes": { "unsaved": "Unsaved changes", "none": "No changes" },
+      "actions": { "create": "Create treatment" },
+      "category": {
+        "label": "Category",
+        "requiredLabel": "Category *",
+        "help": "Select the category that applies to this treatment.",
+        "requiredMessage": "Select a treatment category before saving."
+      }
+    }
+  },
   "errors": {
     "network": {
       "generic": "Unable to connect to the server. Please check your internet connection.",
+      "takingLonger": "Taking longer than usual…",
       "timeout": "The request timed out. Please try again.",
       "noConnection": "No internet connection. Please check your network settings.",
       "serverUnavailable": "The server is temporarily unavailable. Please try again later."
@@ -84,7 +160,61 @@
       "permissionDenied": "Your role does not have permission to access this feature. Please contact your administrator.",
       "loginFailed": "Login failed. Please try again.",
       "logoutFailed": "Logout failed. Please try again.",
-      "tokenRefreshFailed": "Failed to refresh your session. Please log in again."
+      "tokenRefreshFailed": "Failed to refresh your session. Please log in again.",
+      "registration": {
+        "USER_ALREADY_EXISTS": "An account with this email already exists. Please sign in instead.",
+        "FIELD_VALIDATION": "Please correct the highlighted information and try again.",
+        "FORM_VALIDATION": "Please review your registration information and try again.",
+        "ELIGIBILITY": "This registration cannot continue at the moment. Please review the information and try again.",
+        "INVALID_CREDENTIALS": "The email or password is invalid. Please review your details and try again.",
+        "VALIDATION": "Review the highlighted registration details and try again.",
+        "TOO_MANY_ATTEMPTS": "Too many attempts. Please wait a few minutes and try again.",
+        "CONFLICT": "This registration conflicts with an existing account. Please review your details and try again.",
+        "UNEXPECTED": "Registration could not be completed. Please try again.",
+        "signIn": "Sign in instead",
+        "validation": {
+          "field_required": "This field is required.",
+          "field_invalid": "Enter a valid value.",
+          "form_invalid": "Please review the registration information.",
+          "full_name_too_short": "Enter at least 2 characters.",
+          "contact_name_forbidden_term": "Enter an authentic contact name.",
+          "email_invalid": "Enter a valid email address.",
+          "temporary_email_not_allowed": "Use a business email address.",
+          "phone_invalid": "Enter a valid 10-digit phone number.",
+          "password_too_short": "Password must contain at least 8 characters.",
+          "passwords_do_not_match": "Passwords do not match.",
+          "clinic_name_too_short": "Enter at least 2 characters.",
+          "clinic_name_forbidden_term": "Enter an authentic clinic name.",
+          "clinic_type_invalid": "Select a valid clinic type.",
+          "postal_code_invalid": "Enter a valid 6-digit postal code."
+        }
+      }
+    },
+    "clinicEntry": {
+      "validation": "Review the highlighted clinic information and try again.",
+      "fieldInvalid": "One or more clinic fields are invalid.",
+      "duplicate": "This clinic is already connected to the organization.",
+      "unauthorized": "You are not authorized to add a clinic to this organization.",
+      "alreadyAssociated": "This clinic is already connected.",
+      "idempotencyConflict": "This request changed while it was being retried. Review it and submit again.",
+      "associationConflict": "This clinic cannot be connected to the selected organization.",
+      "inProgress": "Clinic entry is already in progress. Check again shortly.",
+      "transientFailure": "Clinic entry is temporarily unavailable. Please try again.",
+      "sessionRefreshFailed": "The clinic was saved, but the secure session could not be refreshed. Please try again.",
+      "organizationRequired": "Select an organization before continuing.",
+      "organizationNameRequired": "Enter an organization name before continuing.",
+      "organizationCreationUnauthorized": "Your account cannot create an organization.",
+      "organizationCreationConflict": "Your organization context has changed. Reload and select an organization.",
+      "organizationCreationRetryableFailure": "The organization could not be created. Please try again.",
+      "verificationInvalid": "Ownership verification is invalid or no longer available.",
+      "verificationExpired": "Ownership verification has expired. Request a new approval.",
+      "unsupported": "This clinic entry request is not supported.",
+      "contactVerificationInvalid": "Clinic contact verification is invalid.",
+      "contactVerificationExpired": "Clinic contact verification has expired.",
+      "contactVerificationRevoked": "Clinic contact verification was revoked.",
+      "contactVerificationConsumed": "Clinic contact verification was already used.",
+      "contactVerificationMismatch": "The clinic contact does not match the verified account contact.",
+      "contactVerificationInProgress": "Clinic contact verification is still pending."
     },
     "generic": {
       "loadFailed": "Failed to load data. Please try again.",
@@ -507,6 +637,43 @@
       "alternativesTitle": "Other things you could do instead"
     }
   },
+  "applicationStatus": {
+    "loading": "Loading...",
+    "loadingDashboard": "Loading your dashboard...",
+    "actions": {
+      "refresh": "Refresh status",
+      "signOut": "Sign out"
+    },
+    "draft": {
+      "title": "Registration needs attention",
+      "description": "Some information must be corrected before your registration can continue.",
+      "detail": "Your registration is not under review yet. Please use the information from your registration attempt and contact the Nova Clinics team if you need help.",
+      "accessibility": "Registration needs attention"
+    },
+    "noClinic": {
+      "title": "No clinic assigned",
+      "description": "Your account is not assigned to a clinic. Please contact your administrator for access.",
+      "loggedInAs": "Signed in as: {{email}}"
+    },
+    "pendingReview": {
+      "title": "Clinic registration under review",
+      "description": "Your clinic registration has been submitted and is awaiting review.",
+      "status": "Pending review",
+      "submitted": "Submitted",
+      "nextStepsTitle": "What happens next?",
+      "submittedStep": "Application submitted",
+      "reviewStep": "Under review",
+      "setupStep": "Approval and setup",
+      "accessibility": "Clinic registration under review"
+    },
+    "rejected": {
+      "title": "Application not approved",
+      "description": "Your application cannot continue at this time.",
+      "detail": "There is no supported self-service update or resubmission path for this application. Please contact the Nova Clinics team if you need help.",
+      "accessibility": "Application not approved",
+      "signOut": "Sign out"
+    }
+  },
   "episodeWorkspace": {
     "header": {
       "episode": "Episode",
@@ -781,10 +948,69 @@
     "dangerZone": "Danger Zone"
   },
   "onboarding": {
+    "actions": {
+      "unavailable": "This action is currently unavailable",
+      "edit_clinic_profile": { "label": "Update clinic profile" },
+      "manage_clinic_profile": { "label": "Manage clinic profile" },
+      "manage_operating_hours": { "label": "Manage operating hours" },
+      "manage_rooms": { "label": "Manage rooms and beds" },
+      "manage_treatments": { "label": "Manage treatments" },
+      "manage_services": { "label": "Manage clinical services" },
+      "manage_staff": { "label": "Manage staff and roles" },
+      "manage_inventory": { "label": "Manage inventory" },
+      "manage_departments": { "label": "Manage departments" },
+      "review_checklist": { "label": "Review clinic readiness" }
+    },
+    "renderers": {
+      "unavailable": "This setup item is currently unavailable. Please try again."
+    },
+    "steps": {
+      "clinic_profile": { "title": "Clinic profile", "help": "Provide the clinic details required for your workspace." },
+      "operating_hours": { "title": "Operating hours", "help": "Set the working hours for your clinic." },
+      "rooms_and_therapy_beds": { "title": "Rooms and therapy beds", "help": "Configure the rooms and therapy beds used by your clinic." },
+      "services_and_specialities": { "title": "Services and specialities", "help": "Configure the clinical services offered by your clinic." },
+      "dental_procedures": { "title": "Dental procedures", "help": "Configure the dental procedures offered by your clinic." },
+      "treatments_and_therapies": { "title": "Treatments and therapies", "help": "Configure the treatments and therapies offered by your clinic." },
+      "staff_and_roles": { "title": "Staff and roles", "help": "Configure the staff and roles required by your clinic." },
+      "departments_and_specialities": { "title": "Departments and specialities", "help": "Configure the departments used by your clinic." },
+      "inventory_setup": { "title": "Inventory setup", "help": "Configure the inventory required by your clinic." },
+      "financials_and_tax": { "title": "Financials and tax", "help": "Review optional financial and tax details." },
+      "subscription_payment": { "title": "Subscription preferences", "help": "Subscription payment is not required to complete clinic preparation." },
+      "go_live_checklist": { "title": "Ready to start", "help": "Review your clinic preparation before starting your trial." }
+    },
+    "requirements": {
+      "progress": "{{current}} of {{required}} required items configured",
+      "progressWithTitle": "{{title}}: {{current}} of {{required}} required items configured",
+      "clinic_profile": { "title": "Clinic profile details", "help": "Complete the required clinic identity, contact, and location details.", "blocker": "Complete the required clinic profile details." },
+      "operating_hours": { "title": "Operating hours", "help": "Add at least one valid working interval.", "blocker": "Add valid clinic operating hours." },
+      "validation": {
+        "rooms": { "min_therapy_rooms": { "title": "Rooms and therapy beds", "help": "Configure the required rooms and therapy beds.", "blocker": "Add the required rooms or therapy beds." } },
+        "configured_clinical_services": { "min_count": { "title": "Clinical services", "help": "Configure the required active clinical services.", "blocker": "Add the required clinical services." } },
+        "treatments": {
+          "min_therapy": { "title": "Treatments and therapies", "help": "Configure the required active treatments and therapies.", "blocker": "Add the required treatments and therapies." },
+          "min_dental": { "title": "Dental procedures", "help": "Configure the required active dental procedures.", "blocker": "Add the required dental procedures." },
+          "min_physiotherapy": { "title": "Physiotherapy treatments", "help": "Configure the required active physiotherapy treatments.", "blocker": "Add the required physiotherapy treatments." }
+        },
+        "staff": {
+          "min_count": { "title": "Staff and roles", "help": "Configure the required active staff members.", "blocker": "Add the required staff members." },
+          "min_doctor": { "title": "Doctor coverage", "help": "Configure the required active doctor coverage.", "blocker": "Add the required doctor coverage." },
+          "min_therapist": { "title": "Therapist coverage", "help": "Configure the required active therapist coverage.", "blocker": "Add the required therapist coverage." },
+          "min_dentist": { "title": "Dentist coverage", "help": "Configure the required active dentist coverage.", "blocker": "Add the required dentist coverage." },
+          "min_physiotherapist": { "title": "Physiotherapist coverage", "help": "Configure the required active physiotherapist coverage.", "blocker": "Add the required physiotherapist coverage." }
+        },
+        "inventory": { "min_items": { "title": "Inventory", "help": "Configure the required active inventory items.", "blocker": "Add the required inventory items." } },
+        "departments": { "min_count": { "title": "Departments", "help": "Configure the required active departments.", "blocker": "Add the required departments." } }
+      }
+    },
     "progressiveExperience": {
+      "staff": {
+        "dateOfBirth": { "label": "Date of birth (optional)", "placeholder": "YYYY-MM-DD" }
+      },
       "routes": {
         "prepareClinic": "Prepare Your Clinic",
         "clinicPreparation": "Clinic Preparation",
+        "workspacePreparation": "Workspace Preparation",
+        "commercialRetention": "Workspace Access",
         "reviewStep": "Review Step"
       },
       "dashboard": {
@@ -811,23 +1037,365 @@
         "preparingSampleClinic": "Preparing your sample clinic...",
         "sampleError": "Unable to create sample clinic. Please try again."
       },
+      "clinicEntry": {
+        "loading": "Loading clinic entry options...",
+        "loadError": "Clinic entry options could not be loaded. Please try again.",
+        "empty": "Clinic entry is unavailable because the application context could not be resolved.",
+        "approvedTitle": "Application approved",
+        "question": "How would you like to add your clinic?",
+        "questionHint": "Choose the path that matches your clinic. Selecting a path does not create or connect a clinic.",
+        "selectionHeading": "Selected clinic path",
+        "selectionPrompt": "Select one clinic path to review its requirements.",
+        "authoritativeHandoff": "Nova continues only after the platform confirms an authorized effective clinic. Multiple clinics require an explicit selection.",
+        "newClinic": {
+          "title": "Create a new clinic",
+          "description": "Use this path when this clinic does not yet exist in Nova.",
+          "badge": "NEW CLINIC",
+          "identity": "Confirm clinic name and business address",
+          "contact": "Provide a primary contact and verified email or mobile",
+          "specialty": "Choose a clinic type or specialty without limiting future specialties",
+          "validation": "Required identity and contact details are validated before Nova can create and associate a clinic. This presentation does not provision a tenant."
+        },
+        "bringYourClinic": {
+          "title": "Bring your clinic",
+          "description": "Use this path to connect an existing Nova-managed clinic to your organization.",
+          "badge": "EXISTING NOVA CLINIC",
+          "novaManaged": "The clinic must already be managed in Nova",
+          "approval": "An authorized clinic administrator must approve ownership",
+          "noImport": "No records, external databases, or clinical data are imported",
+          "validation": "Nova requires authenticated ownership approval before an existing clinic can be associated. Selecting this path is not ownership verification."
+        },
+        "form": {
+          "organization": "Organization",
+          "organizationName": "Organization name",
+          "clinicName": "Clinic name",
+          "specialty": "Clinic type or specialty",
+          "addressLine1": "Address line 1",
+          "addressLine2": "Address line 2 (optional)",
+          "city": "City",
+          "state": "State",
+          "postalCode": "Postal code",
+          "countryCode": "Country code",
+          "ownershipReference": "Ownership approval reference",
+          "contactKind": "Verified contact method",
+          "email": "Email",
+          "mobile": "Mobile",
+          "emailValue": "Clinic email",
+          "mobileValue": "Clinic mobile",
+          "requiredError": "Complete all required fields before continuing.",
+          "submit": "Verify and continue"
+        },
+        "status": {
+          "loading": "Verifying clinic information securely...",
+          "pending": "Verification is pending. You can check again after the authorized review is complete.",
+          "checkAgain": "Check verification status",
+          "retry": "Try again",
+          "logout": "Log out",
+          "selectClinic": "Choose the clinic to use now"
+        }
+      },
+      "workspacePreparation": {
+        "loading": "Preparing your clinic workspace...",
+        "title": "Workspace preparation",
+        "progressSummary": "{{completed}} of {{total}} preparation steps complete",
+        "progressIndeterminate": "Preparation status is being confirmed.",
+        "unitsTitle": "Preparation steps",
+        "states": {
+          "PENDING": "Preparation is ready to begin.",
+          "PREPARING": "Nova is preparing your workspace.",
+          "PERSONALIZATION_AVAILABLE": "Your workspace is ready to personalize.",
+          "RETRYABLE_FAILURE": "Preparation needs your attention.",
+          "TERMINAL_FAILURE": "Preparation cannot continue automatically."
+        },
+        "units": {
+          "TENANT_FOUNDATION": "Clinic foundation",
+          "ACCESS_FOUNDATION": "Access foundation",
+          "ONBOARDING_FOUNDATION": "Onboarding foundation",
+          "PERSONALIZATION_HANDOFF": "Personalization handoff"
+        },
+        "unitStatus": { "completed": "Complete", "current": "In progress", "remaining": "Not started" },
+        "failure": {
+          "title": "Workspace preparation unavailable",
+          "safeMessage": "We could not complete workspace preparation. Your clinic information is safe.",
+          "retryableTitle": "Preparation was interrupted",
+          "terminalTitle": "Support is required"
+        },
+        "retry": {
+          "exhausted": "No more retries are available.",
+          "remaining": "{{count}} retries remaining",
+          "retrying": "Retrying..."
+        },
+        "actions": {
+          "reload": "Reload",
+          "retry": "Retry preparation",
+          "personalize": "Personalize clinic",
+          "START": "Start preparation",
+          "WAIT": "Wait for preparation",
+          "REFRESH": "Refresh preparation",
+          "RETRY": "Retry preparation",
+          "CONTACT_SUPPORT": "Contact support",
+          "ENTER_PERSONALIZATION": "Personalize clinic"
+        },
+        "complete": {
+          "title": "Your workspace is ready",
+          "message": "Continue to review and personalize your clinic setup."
+        },
+        "nextAction": "Next: {{action}}",
+        "accessibility": {
+          "screen": "Workspace preparation status",
+          "progress": "Workspace preparation progress",
+          "progressIndeterminate": "Workspace preparation is in progress"
+        }
+      },
+      "commercialRetention": {
+        "title": "Workspace access",
+        "introduction": "Review your workspace status, retention information, and the options currently available to your organization.",
+        "loading": "Loading workspace access information...",
+        "preActivation": {
+          "title": "Ready to start",
+          "description": "Your clinic setup is complete. Start your trial to activate your clinic.",
+          "actionTitle": "Start your trial",
+          "actionDescription": "Your trial starts only after you confirm this action.",
+          "accessibility": "Ready to start trial"
+        },
+        "trialConfirmation": {
+          "title": "Trial started",
+          "description": "Your clinic workspace is ready.",
+          "startedAt": "Started",
+          "expiresAt": "Valid until",
+          "daysRemaining": "{{count}} days remaining",
+          "workspaceReady": "You can now enter your clinic workspace.",
+          "continue": "Continue to Dashboard",
+          "accessibility": "Trial started confirmation"
+        },
+        "workspaceStatus": {
+          "title": "Workspace status"
+        },
+        "states": {
+          "ELIGIBLE": "Ready to start",
+          "ACTIVE": "Active",
+          "EXPIRING": "Trial ending soon",
+          "EXPIRED": "Trial ended",
+          "SUSPENDED": "Access paused",
+          "ARCHIVED": "Workspace archived",
+          "DELETED": "Workspace deleted"
+        },
+        "stateDescriptions": {
+          "ELIGIBLE": "Your organization can start its approved trial when an authorized administrator is ready.",
+          "ACTIVE": "Your workspace is available for normal use.",
+          "EXPIRING": "Your workspace remains active while the current trial approaches its end date.",
+          "EXPIRED": "Your trial has ended. Review the options authorized for your organization.",
+          "SUSPENDED": "Normal workspace use is paused while your data remains retained.",
+          "ARCHIVED": "Your workspace is not operational, but its data remains retained according to policy.",
+          "DELETED": "Operational workspace data is no longer available."
+        },
+        "retention": {
+          "title": "Retention information",
+          "archivedAt": "Archived on",
+          "retentionUntil": "Retained until",
+          "legalHold": "Legal hold",
+          "statutoryRetention": "Statutory retention",
+          "active": "Active",
+          "notActive": "Not active",
+          "notApplicable": "No retention dates or hold information apply to the current workspace status."
+        },
+        "availableActions": {
+          "title": "Available options",
+          "none": "No commercial actions are currently available."
+        },
+        "actionLabels": {
+          "START_TRIAL": "Start trial",
+          "REQUEST_EXTENSION": "Request an extension",
+          "GRANT_EXTENSION": "Grant an extension",
+          "RESTORE_WORKSPACE": "Restore workspace",
+          "REQUEST_PERMANENT_DELETION": "Request permanent deletion",
+          "REQUEST_WORKSPACE_DATA_EXPORT": "Request workspace data export",
+          "REQUEST_SUBSCRIPTION": "Review subscription options",
+          "CONTACT_SUPPORT": "Contact support"
+        },
+        "actionDescriptions": {
+          "START_TRIAL": "An authorized administrator may explicitly start the approved trial.",
+          "REQUEST_EXTENSION": "Your organization may ask for additional trial time.",
+          "GRANT_EXTENSION": "An authorized platform administrator may approve additional trial time.",
+          "RESTORE_WORKSPACE": "An authorized platform administrator may restore this retained workspace through an approved extension.",
+          "REQUEST_PERMANENT_DELETION": "An authorized administrator may request permanent deletion when all protections permit it.",
+          "REQUEST_WORKSPACE_DATA_EXPORT": "A future workspace data export service may accept a request. No export or download has been created.",
+          "REQUEST_SUBSCRIPTION": "Subscription options are not available in this version. No request has been submitted.",
+          "CONTACT_SUPPORT": "Support contact is not available in this version. No support request has been created."
+        },
+        "unavailable": {
+          "title": "Why some options are unavailable"
+        },
+        "ineligibilityReasons": {
+          "PROTECTION_EVIDENCE_UNAVAILABLE": "Required protection information is unavailable, so protected actions cannot continue.",
+          "LEGAL_HOLD_ACTIVE": "A legal hold currently prevents protected workspace changes.",
+          "STATUTORY_RETENTION_ACTIVE": "Mandatory statutory retention currently prevents protected workspace changes.",
+          "EXPORT_IN_PROGRESS": "An approved workspace data export is still in progress.",
+          "RETENTION_PERIOD_ACTIVE": "The workspace retention period is still active."
+        },
+        "empty": {
+          "title": "Workspace access unavailable",
+          "missingWorkspace": "The selected workspace could not be found.",
+          "permissionDenied": "You do not have permission to view commercial information for this workspace.",
+          "missingEvidence": "Retention information is temporarily unavailable. Protected actions remain unavailable.",
+          "unsupported": "This workspace status cannot be displayed safely. Refresh the app or contact your administrator.",
+          "network": "Workspace access information could not be loaded. Check your connection and try again."
+        },
+        "actions": {
+          "retry": "Try again"
+        },
+        "workflow": {
+          "actions": {
+            "cancel": "Cancel",
+            "submitting": "Submitting..."
+          },
+          "startTrial": {
+            "confirmTitle": "Start your trial?",
+            "confirmMessage": "Your 30-day trial starts immediately after you confirm. You can start using NovaClinics right away.",
+            "confirmAction": "Start trial",
+            "success": "Your trial has started."
+          },
+          "extension": {
+            "title": "Trial extension",
+            "guidance": "Provide a business reason only. Do not include patient or clinical information, credentials, or payment details.",
+            "reasonLabel": "Business reason",
+            "reasonHint": "Enter between 1 and 160 characters.",
+            "remaining": "{{count}} characters remaining",
+            "reasonError": "Enter a business reason between 1 and 160 characters.",
+            "daysLabel": "Extension days",
+            "daysError": "Enter a whole number from 1 to 30.",
+            "channelLabel": "Verified interaction channel",
+            "channelError": "Select the verified interaction channel.",
+            "channels": {
+              "SUPPORT": "Support",
+              "SALES": "Sales",
+              "CUSTOMER_SUCCESS": "Customer success"
+            },
+            "submit": "Submit",
+            "success": "The extension action was submitted successfully."
+          },
+          "errors": {
+            "permissionDenied": "You are not authorized to perform this commercial action.",
+            "confirmationRequired": "Confirmation is required before the trial can start.",
+            "conflict": "The commercial record changed. It has been refreshed; review it before trying again.",
+            "setupChanged": "Your clinic setup changed. Review the remaining setup items, then try again.",
+            "notAvailable": "This action is no longer available for the current workspace status.",
+            "network": "The action could not be completed. Check your connection and try again."
+          }
+        },
+        "accessibility": {
+          "screen": "Workspace access and retention information"
+        },
+        "footer": "Options shown here come from Nova's authoritative commercial record."
+      },
       "statusBanner": {
-        "commercialTrialEnded": "Commercial Trial Ended",
-        "trialEndedMessage": "Your clinic data is safely stored. Choose a subscription plan to continue using Nova.",
+        "commercialTrialEnded": "Access Paused",
+        "trialEndedMessage": "Your clinic data is safely stored. Review subscription options to continue using Nova.",
         "commercialTrial": "Commercial Trial",
-        "sampleClinic": "Sample Clinic",
-        "sampleAccessEndsIn": "Sample access ends in:",
+        "sampleClinic": "Clinic Preparation",
+        "sampleAccessEndsIn": "Preparation access ends in:",
         "commercialTrialEndsIn": "Commercial trial ends in:",
-        "extendSampleAccess": "Extend Sample Access",
-        "choosePlan": "Choose Plan",
+        "extendSampleAccess": "Continue Setup",
+        "choosePlan": "Review Subscription",
         "readyToStart": "Ready to Start",
         "expired": "Expired"
+      },
+      "drafts": {
+        "restored": "Unsaved changes restored"
+      },
+      "conflict": {
+        "title": "Choose which changes to continue with",
+        "description": "Newer clinic setup progress is available from another device or session.",
+        "reassurance": "Your unsaved changes are still safe. Choose whether to use the latest clinic setup or keep your local changes.",
+        "actions": {
+          "useLatest": "Use Latest",
+          "keepLocal": "Keep Local"
+        },
+        "pending": {
+          "useLatest": "Loading the latest clinic setup...",
+          "keepLocal": "Saving your local changes..."
+        },
+        "success": {
+          "useLatest": "The latest clinic setup is now displayed.",
+          "keepLocal": "Your local changes were saved successfully."
+        },
+        "errors": {
+          "refresh": "The latest clinic setup could not be loaded. Your local changes are still safe. Try again.",
+          "draft": "Your local changes could not be updated safely. Nothing was discarded.",
+          "secondConflict": "Clinic setup changed again. Review the choices and try again.",
+          "tenantMismatch": "The selected clinic changed. Return to the current clinic before continuing.",
+          "unauthorized": "You no longer have permission to update this clinic setup.",
+          "unsupported": "This app cannot safely resolve the current setup changes. Refresh the app or contact support.",
+          "generic": "The changes could not be saved. Your local changes are still safe. Try again."
+        },
+        "accessibility": {
+          "dialog": "Clinic setup changes need your choice",
+          "opened": "Newer clinic setup progress is available. Choose Use Latest or Keep Local.",
+          "useLatestLabel": "Use the latest clinic setup",
+          "useLatestHint": "Discards the local draft for this step after the latest setup is loaded safely",
+          "keepLocalLabel": "Keep and save local changes",
+          "keepLocalHint": "Keeps the local draft and attempts to save it against the latest clinic setup"
+        }
+      },
+      "journeyCard": {
+        "description": "Review and personalize this clinic preparation step.",
+        "action": "Review step",
+        "status": {
+          "complete": "Complete",
+          "inProgress": "In progress",
+          "notStarted": "Not started",
+          "blocked": "Blocked",
+          "unavailable": "Unavailable"
+        }
+      },
+      "journey": {
+        "heading": "Your clinic preparation journey",
+        "loading": "Loading your clinic preparation journey...",
+        "refreshing": "Refreshing your clinic preparation journey...",
+        "retry": "Try again",
+        "unavailable": "This journey version is not available in this app version. Your saved clinic information has not been changed.",
+        "empty": "No supported journey steps are available yet. Your clinic is not marked complete by this state.",
+        "progress": "{{completed}} of {{total}} journey steps complete",
+        "failure": {
+          "unauthorized": "Please sign in again to view this clinic journey.",
+          "forbidden": "You do not have permission to view this clinic journey.",
+          "tenantMismatch": "The selected clinic changed. Return to the clinic selector and try again.",
+          "unavailable": "Your clinic journey is temporarily unavailable. Please try again.",
+          "contractMismatch": "This clinic journey cannot be safely displayed by this app version.",
+          "generic": "Your clinic journey could not be loaded. Please try again."
+        }
+      },
+      "offline": {
+        "title": "You're offline",
+        "message": "Changes are saved locally. Connect to the internet to submit this step.",
+        "submitDisabled": "Connect to the internet to submit this step"
+      },
+      "mutationRecovery": {
+        "title": "Setup changes need attention",
+        "pendingCount": "{{count}} saved changes are waiting",
+        "states": {
+          "PENDING": "A saved change will be retried when Nova confirms a safe connection.",
+          "REPLAYING": "Nova is safely retrying your saved change.",
+          "CONFLICT_BLOCKED": "Newer clinic setup progress is available. Review this step before continuing.",
+          "MANUAL_ACTION_REQUIRED": "Nova could not retry this change automatically. Review the available actions.",
+          "EXPIRED": "This saved change expired without being submitted. Review the step before continuing.",
+          "RECOVERY_REQUIRED": "Saved recovery data could not be validated and was not submitted."
+        },
+        "actions": {
+          "retry": "Try again",
+          "edit": "Review step",
+          "discard": "Discard saved change"
+        },
+        "discard": {
+          "title": "Discard saved change?",
+          "message": "This removes the saved recovery intent. It does not undo any change already accepted by Nova."
+        }
       },
       "flow": {
         "saveProgressError": "Failed to save preparation progress. Please try again.",
         "refreshProgressError": "Failed to refresh preparation progress. Please try again.",
         "exitTitle": "Exit Preparation?",
-        "exitMessage": "You can continue reviewing and personalizing your clinic later from the dashboard.",
+        "exitMessage": "Your preparation remains available until you start your trial. Closing returns you to the current preparation flow.",
         "treatmentsDescription": "Review your Ayurvedic treatments and therapy services in the full management screen. After adding items, return here to continue preparing your clinic.",
         "operatingHoursDescription": "Review your clinic operating hours in the full management screen. After setting your hours, return here to continue preparing your clinic.",
         "roomsDescription": "Review your treatment rooms and therapy beds in the full management screen. After adding items, return here to continue preparing your clinic.",
@@ -841,6 +1409,8 @@
         "loadPreparationFailed": "Unable to load clinic preparation",
         "noPreparationSteps": "No preparation steps found. Nova may not have generated readiness steps for your clinic type yet.",
         "prepareYourClinic": "Prepare Your Clinic",
+        "currentStepPosition": "Current step {{current}} of {{total}}",
+        "progressUpdatedNotice": "Your onboarding progress has been updated.",
         "readyToStart": "Ready to Start",
         "backToPreparation": "Back to Preparation",
         "clinicPreparation": "Clinic Preparation"
@@ -873,7 +1443,105 @@
         "confirmAccuracy": "I confirm that all information is accurate and I am ready to start accepting patients",
         "info": "Once you start, your clinic workspace is ready for appointments, patients, and daily operations.",
         "successTitle": "Congratulations!",
-        "goToDashboard": "Go to Dashboard"
+        "goToDashboard": "Go to Dashboard",
+        "presentation": {
+          "finalReadiness": {
+            "title": "Clinic setup complete",
+            "message": "Your clinic setup is complete. We’re finishing the final readiness check before you start your trial."
+          },
+          "title": "Clinic readiness",
+          "manageSetup": "Manage clinic setup",
+          "screenLabel": "Clinic readiness checklist",
+          "loading": "Checking whether your clinic is ready...",
+          "refreshing": "Refreshing clinic readiness...",
+          "errorTitle": "Readiness could not be loaded",
+          "explanationTitle": "Why this status",
+          "checklistTitle": "What is ready and what needs attention",
+          "unavailableExplanation": "This readiness detail is currently unavailable.",
+          "blockerCount": "Blocking items: {{count}}",
+          "advisoryCount": "Advisory items: {{count}}",
+          "states": {
+            "READY": "Ready",
+            "NOT_READY": "Not ready",
+            "EVALUATING": "Evaluating",
+            "UNKNOWN": "Unknown",
+            "UNAVAILABLE": "Unavailable",
+            "STALE": "Needs refresh"
+          },
+          "itemStates": {
+            "COMPLETE": "Complete",
+            "BLOCKED": "Blocking readiness",
+            "ADVISORY": "Advisory",
+            "EVALUATING": "Being evaluated",
+            "UNKNOWN": "Unknown",
+            "UNAVAILABLE": "Unavailable",
+            "STALE": "Needs refresh"
+          },
+          "actions": {
+            "continue": "Continue to clinic workspace",
+            "retryQuery": "Check again",
+            "unavailable": "Action unavailable"
+          },
+          "errors": {
+            "unauthorized": "Please sign in again to check clinic readiness.",
+            "forbidden": "You do not have permission to view readiness for this clinic.",
+            "tenantMismatch": "The selected clinic changed. Return to the current clinic and check again.",
+            "organizationMismatch": "This clinic is not available in the selected organization.",
+            "unsupportedContract": "This app version cannot display the current readiness result.",
+            "stale": "Readiness changed while it was loading. Check again for the latest result.",
+            "unavailable": "Clinic readiness is temporarily unavailable. Please check again.",
+            "invalidAggregate": "The readiness result could not be safely displayed.",
+            "generic": "Clinic readiness could not be loaded. Please try again."
+          }
+        }
+      }
+    },
+    "progressive_experience": {
+      "ready_to_start": {
+        "providers": {
+          "journey_setup_progress": {
+            "severity": "Clinic setup progress",
+            "ready": "All required clinic setup steps are complete.",
+            "not_ready": "One or more clinic setup steps still need attention.",
+            "evaluating": "Clinic setup progress is being checked.",
+            "unknown": "Clinic setup progress could not be determined.",
+            "unavailable": "Clinic setup progress is temporarily unavailable.",
+            "stale": "Clinic setup progress has changed and must be refreshed.",
+            "steps": {
+              "clinic_profile": { "title": "Clinic profile", "complete": "Clinic profile is complete.", "blocked": "Complete the clinic profile.", "advisory": "Review the optional clinic profile details." },
+              "operating_hours": { "title": "Operating hours", "complete": "Operating hours are complete.", "blocked": "Add the clinic operating hours.", "advisory": "Review the optional operating-hour details." },
+              "rooms_and_therapy_beds": { "title": "Rooms and therapy beds", "complete": "Rooms and therapy beds are complete.", "blocked": "Add the required rooms or therapy beds.", "advisory": "Review the optional room and therapy-bed details." },
+              "treatments_and_therapies": { "title": "Treatments and therapies", "complete": "Treatments and therapies are complete.", "blocked": "Add the required treatments or therapies.", "advisory": "Review the optional treatment and therapy details." },
+              "staff_and_roles": { "title": "Staff and roles", "complete": "Staff and roles are complete.", "blocked": "Add the required staff and roles.", "advisory": "Review the optional staff and role details." },
+              "inventory_setup": { "title": "Inventory setup", "complete": "Inventory setup is complete.", "blocked": "Complete the required inventory setup.", "advisory": "Review the optional inventory details." },
+              "financials_and_tax": { "title": "Financial and tax details", "complete": "Financial and tax details are complete.", "blocked": "Complete the required financial and tax details.", "advisory": "Review the optional financial and tax details." },
+              "subscription_payment": { "title": "Subscription preferences", "complete": "Subscription preferences are complete.", "blocked": "Complete the required subscription preferences.", "advisory": "Review the optional subscription preferences." },
+              "go_live_checklist": { "title": "Clinic readiness", "complete": "Clinic readiness review is complete.", "blocked": "Review the clinic readiness checklist.", "advisory": "Review the optional readiness details." }
+            }
+          },
+          "workspace_preparation": {
+            "severity": "Clinic workspace preparation",
+            "ready": "Your clinic workspace is prepared.",
+            "not_ready": "Your clinic workspace still needs preparation.",
+            "evaluating": "Your clinic workspace is being prepared.",
+            "unknown": "Workspace preparation could not be determined.",
+            "unavailable": "Workspace preparation is temporarily unavailable.",
+            "stale": "Workspace preparation has changed and must be refreshed.",
+            "states": {
+              "ready": { "title": "Clinic workspace", "explanation": "Your clinic workspace is prepared." },
+              "not_ready": { "title": "Clinic workspace", "explanation": "Your clinic workspace still needs preparation." },
+              "evaluating": { "title": "Clinic workspace", "explanation": "Your clinic workspace is being prepared." },
+              "unknown": { "title": "Clinic workspace", "explanation": "Workspace preparation could not be determined." },
+              "unavailable": { "title": "Clinic workspace", "explanation": "Workspace preparation is temporarily unavailable." },
+              "stale": { "title": "Clinic workspace", "explanation": "Workspace preparation has changed and must be refreshed." }
+            },
+            "actions": {
+              "refresh": "Refresh readiness",
+              "retry": "Retry workspace preparation",
+              "open": "Open workspace preparation"
+            }
+          }
+        }
       }
     }
   },

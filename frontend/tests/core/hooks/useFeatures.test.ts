@@ -137,6 +137,19 @@ describe('Release 5 · T-F.2c/T-F.2d: hasMultiDayAppointments/hasTreatmentSheets
   });
 });
 
+describe('feature loading observability', () => {
+  it('uses the centralized error handler rather than console logging in the feature boundary', () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../../../core/hooks/useFeatures.ts'),
+      'utf8'
+    );
+
+    expect(source).toContain("import { logError } from '../utils/errorHandler'");
+    expect(source).toContain("logError('features.load_api', apiError)");
+    expect(source).not.toMatch(/console\.(log|error)/);
+  });
+});
+
 describe('requirements.md N-10: hasGenderMatching is deferred configuration, untouched by T-F.2d', () => {
   it('hasGenderMatching still requires both a therapy clinic AND enable_gender_matching=true (unchanged)', () => {
     expect(
@@ -190,7 +203,7 @@ describe('Release 5 · T-F.2d.1: normalizeFeatures() ownership transfer complete
       fnBody.indexOf('\n', fnBody.indexOf('enable_sheet_sync: '))
     );
     expect(genderMatchingLine).toContain('therapyClinic');
-    expect(multidayTypesLine).toContain('therapyClinic');
+    expect(multidayTypesLine).not.toContain('therapyClinic');
     expect(genderTreatmentsLine).toContain('therapyClinic');
     expect(sheetSyncLine).toContain('therapyClinic');
   });

@@ -1,168 +1,169 @@
 /**
  * StepCard Component
- * Displays a single onboarding step with status and validation
+ * Displays either a legacy onboarding step or a prepared Journey Card model.
  */
 
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
-import { StepStatus } from '../../domain/entities/onboarding-status.entity';
+import { useClinicTheme, ClinicTheme } from '../../../../core/theme/useClinicTheme';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { JourneyCardModel, JourneyCardStatus } from '../../domain/entities/journey.entity';
+import {
+  resolveOnboardingIcon,
+  translateOnboardingToken,
+} from '../config/onboardingPresentationRegistry';
 
 interface StepCardProps {
-  step: StepStatus;
+  journeyCard: JourneyCardModel;
   onPress: () => void;
 }
 
-export const StepCard: React.FC<StepCardProps> = ({ step, onPress }) => {
+type DisplayStatus = JourneyCardStatus;
+
+const STATUS_KEYS: Record<DisplayStatus, string> = {
+  complete: 'onboarding.progressiveExperience.journeyCard.status.complete',
+  in_progress: 'onboarding.progressiveExperience.journeyCard.status.inProgress',
+  not_started: 'onboarding.progressiveExperience.journeyCard.status.notStarted',
+  blocked: 'onboarding.progressiveExperience.journeyCard.status.blocked',
+  unavailable: 'onboarding.progressiveExperience.journeyCard.status.unavailable',
+};
+
+const getStatusIcon = (status: DisplayStatus): keyof typeof Ionicons.glyphMap => {
+  switch (status) {
+    case 'complete':
+      return 'checkmark-circle';
+    case 'in_progress':
+      return 'time';
+    case 'blocked':
+      return 'lock-closed';
+    case 'unavailable':
+      return 'remove-circle-outline';
+    case 'not_started':
+    default:
+      return 'ellipse-outline';
+  }
+};
+
+const getStatusColor = (status: DisplayStatus, theme: ClinicTheme): string => {
+  switch (status) {
+    case 'complete':
+      return theme.colors.feedback.success;
+    case 'in_progress':
+      return theme.colors.feedback.warning;
+    case 'blocked':
+      return theme.colors.feedback.error;
+    case 'unavailable':
+    case 'not_started':
+    default:
+      return theme.colors.text.disabled;
+  }
+};
+
+export const StepCard: React.FC<StepCardProps> = ({ journeyCard, onPress }) => {
   const theme = useClinicTheme();
+  const { t } = useTranslation();
+  const status = journeyCard.status;
+  const isActionable = journeyCard.isActionable;
+  const statusColor = getStatusColor(status, theme);
+  const styles = useMemo(
+    () => createStyles(theme, statusColor),
+    [theme, statusColor]
+  );
 
-  const getStatusColor = () => {
-    switch (step.status) {
-      case 'completed':
-        return theme.colors.feedback.success;
-      case 'in_progress':
-        return theme.colors.feedback.warning;
-      case 'blocked':
-        return theme.colors.feedback.error;
-      default:
-        return theme.colors.text.disabled;
-    }
-  };
-
-  const getStatusIcon = () => {
-    switch (step.status) {
-      case 'completed':
-        return 'checkmark-circle';
-      case 'in_progress':
-        return 'time';
-      case 'blocked':
-        return 'lock-closed';
-      default:
-        return 'ellipse-outline';
-    }
-  };
-
-  const getStepTitle = () => {
-    return step.code
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (l) => l.toUpperCase());
-  };
+  const title = translateOnboardingToken(journeyCard.titleKey);
+  const description = translateOnboardingToken(journeyCard.descriptionKey);
+  const statusLabel = t(STATUS_KEYS[status]);
+  const accessibilityHint = description;
 
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface.default,
-          borderColor: theme.colors.border.default,
-          padding: theme.spacing.md,
-          marginBottom: theme.spacing.sm,
-          borderRadius: 8,
-          borderWidth: 1,
-          opacity: step.isActionable ? 1 : 0.6,
-        },
-      ]}
+      style={styles.card}
       onPress={onPress}
-      disabled={!step.isActionable}
+      disabled={!isActionable}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${statusLabel}`}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: !isActionable }}
     >
       <View style={styles.header}>
         <Ionicons
-          name={step.icon as any}
-          size={24}
+          name={resolveOnboardingIcon(journeyCard.iconToken)}
+          size={theme.spacing.lg}
           color={theme.colors.primary.default}
         />
-        <View style={[styles.content, { marginLeft: theme.spacing.md }]}>
-          <Text
-            style={[
-              theme.typography.h6,
-              { color: theme.colors.text.primary },
-            ]}
-          >
-            {getStepTitle()}
-          </Text>
-          <View style={[styles.statusRow, { marginTop: theme.spacing.xs }]}>
+        <View style={styles.content}>
+          <Text style={styles.title}>{title}</Text>
+          {description && <Text style={styles.description}>{description}</Text>}
+          <View style={styles.statusRow}>
             <Ionicons
-              name={getStatusIcon()}
-              size={16}
-              color={getStatusColor()}
+              name={getStatusIcon(status)}
+              size={theme.spacing.md}
+              color={statusColor}
             />
-            <Text
-              style={[
-                theme.typography.caption,
-                {
-                  color: getStatusColor(),
-                  marginLeft: 4,
-                },
-              ]}
-            >
-              {step.status.replace('_', ' ').toUpperCase()}
-            </Text>
+            <Text style={styles.status}>{statusLabel}</Text>
           </View>
         </View>
       </View>
 
-      {step.issues.length > 0 && (
-        <View style={[styles.issues, { marginTop: theme.spacing.sm }]}>
-          {step.issues.map((issue, index) => (
-            <Text
-              key={index}
-              style={[
-                theme.typography.caption,
-                { color: theme.colors.feedback.error },
-              ]}
-            >
-              • {issue.message}
-            </Text>
-          ))}
-        </View>
-      )}
-
-      {step.blockedReason && (
-        <View
-          style={[
-            styles.blockedBanner,
-            {
-              backgroundColor: theme.colors.feedback.errorLight,
-              padding: theme.spacing.sm,
-              marginTop: theme.spacing.sm,
-              borderRadius: 4,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              theme.typography.caption,
-              { color: theme.colors.feedback.error },
-            ]}
-          >
-            {step.blockedReason}
-          </Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
-  card: {
-    // Styles set inline with theme
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  issues: {
-    // Styles set inline with theme
-  },
-  blockedBanner: {
-    // Styles set inline with theme
-  },
-});
+const createStyles = (theme: ClinicTheme, statusColor: string) =>
+  StyleSheet.create({
+    card: {
+      minHeight: theme.spacing.xxl,
+      backgroundColor: theme.colors.surface.default,
+      borderColor: theme.colors.border.default,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: theme.spacing.sm,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    content: {
+      flex: 1,
+      marginLeft: theme.spacing.md,
+    },
+    title: {
+      ...theme.typography.h6,
+      color: theme.colors.text.primary,
+    },
+    description: {
+      ...theme.typography.body2,
+      color: theme.colors.text.secondary,
+      marginTop: theme.spacing.xs,
+    },
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: theme.spacing.xs,
+    },
+    status: {
+      ...theme.typography.caption,
+      color: statusColor,
+      marginLeft: theme.spacing.xs,
+    },
+    issues: {
+      marginTop: theme.spacing.sm,
+    },
+    issueText: {
+      ...theme.typography.caption,
+      color: theme.colors.feedback.error,
+    },
+    blockedBanner: {
+      backgroundColor: theme.colors.feedback.errorLight,
+      padding: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
+      borderRadius: theme.spacing.xs,
+    },
+    blockedText: {
+      ...theme.typography.caption,
+      color: theme.colors.feedback.error,
+    },
+  });

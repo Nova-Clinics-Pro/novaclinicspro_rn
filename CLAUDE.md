@@ -86,6 +86,9 @@ on. Verify before relying on it.
   or another agent's worktree unless the task names it.
 - Never implement features directly on `main`, `dev`, or `test`.
 - Create a task-specific branch/worktree from the approved base.
+- Commercial Platform work uses the permanent `cp` integration branch as its
+  approved base. Commercial Platform feature branches must originate from
+  synchronized `origin/cp`, never from `dev`; `cp` remains integration-only.
 - Stage only intended files. Never `git add .`.
 - Never commit `.env` files, secrets, caches, generated files, or unrelated docs.
 - Stop when the requested task is complete.

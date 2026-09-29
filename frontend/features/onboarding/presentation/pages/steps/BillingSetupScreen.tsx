@@ -19,16 +19,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
 import { axiosClient } from '../../../../../core/api/axiosClient';
-import { useWizardStore } from '../../stores/wizard.store';
+import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
+import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
+import { DraftRevisionEvidence, StepConflictError } from '../../../domain/entities/step-revision.entity';
+import { RevisionAwareSaveContext, RevisionAwareSaveHandler } from '../../hooks/useDraftConflictRecovery';
 
 interface BillingSetupScreenProps {
   tenantId: string;
   isWizardMode?: boolean;
   onSuccess?: () => void;
-  onRegisterSaveHandler?: (handler: (() => Promise<void>) | null) => void;
+  onRegisterSaveHandler?: (handler: RevisionAwareSaveHandler | null) => void;
+  draftBaseEvidence?: DraftRevisionEvidence;
 }
 
-export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, onRegisterSaveHandler }: BillingSetupScreenProps) {
+export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, onRegisterSaveHandler, draftBaseEvidence }: BillingSetupScreenProps) {
   const theme = useClinicTheme();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -36,7 +40,9 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
   const [taxRate, setTaxRate] = useState('18');
   const [invoicePrefix, setInvoicePrefix] = useState('INV');
   const { setBilling, getStepData } = useWizardStore();
+  const [draftRestored, setDraftRestored] = useState(false);
   const initialSnapshotRef = useRef<string | null>(null);
+  const restoredSnapshotRef = useRef<string | null>(null);
 
   const submitStepMutation = useSubmitStepMutation(tenantId, 'financials_and_tax');
 
@@ -47,42 +53,34 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
   // Save to Zustand whenever form data changes
   useEffect(() => {
     if (!loading) {
-      setBilling({
-        tax_enabled: taxEnabled,
-        tax_rate: taxEnabled ? parseFloat(taxRate) : 0,
-        invoice_prefix: invoicePrefix,
-      });
+      const currentSnapshot = JSON.stringify({ taxEnabled, taxRate, invoicePrefix });
+      if (draftRestored && restoredSnapshotRef.current !== currentSnapshot) {
+        setDraftRestored(false);
+        restoredSnapshotRef.current = null;
+      }
+
+      const timeout = setTimeout(() => {
+        setBilling({
+          tax_enabled: taxEnabled,
+          tax_rate: taxEnabled ? parseFloat(taxRate) : 0,
+          invoice_prefix: invoicePrefix,
+        }, draftBaseEvidence);
+      }, 500);
+
+      return () => clearTimeout(timeout);
     }
-  }, [taxEnabled, taxRate, invoicePrefix, loading, setBilling]);
+  }, [taxEnabled, taxRate, invoicePrefix, loading, setBilling, draftRestored, draftBaseEvidence]);
 
   const fetchBillingSettings = async () => {
     try {
       setLoading(true);
       console.log('[BillingSetupScreen] Fetching billing settings for tenant:', tenantId);
       
-      // First, check if we have data in Zustand store
-      const zustandData = getStepData('financials_and_tax');
-      if (zustandData) {
-        console.log('[BillingSetupScreen] Loading data from Zustand store');
-        setTaxEnabled(zustandData.tax_enabled);
-        setTaxRate(String(zustandData.tax_rate));
-        setInvoicePrefix(zustandData.invoice_prefix);
-        setLoading(false);
-        
-        // Set initial snapshot with loaded values
-        initialSnapshotRef.current = JSON.stringify({
-          taxEnabled: zustandData.tax_enabled,
-          taxRate: String(zustandData.tax_rate),
-          invoicePrefix: zustandData.invoice_prefix,
-        });
-        
-        return;
-      }
-      
       // Track loaded values to set snapshot correctly
       let loadedTaxEnabled = false;
       let loadedTaxRate = '0';
       let loadedInvoicePrefix = 'INV';
+      let hasServerBillingSettings = false;
       
       // Try to fetch existing billing settings from tenant
       try {
@@ -92,14 +90,17 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
         // Check for billing settings in tenant data
         if (response.data.tax_enabled !== undefined) {
           loadedTaxEnabled = response.data.tax_enabled;
+          hasServerBillingSettings = true;
           setTaxEnabled(loadedTaxEnabled);
         }
         if (response.data.tax_rate !== undefined) {
           loadedTaxRate = String(response.data.tax_rate);
+          hasServerBillingSettings = true;
           setTaxRate(loadedTaxRate);
         }
         if (response.data.invoice_prefix) {
           loadedInvoicePrefix = response.data.invoice_prefix;
+          hasServerBillingSettings = true;
           setInvoicePrefix(loadedInvoicePrefix);
         }
         
@@ -114,14 +115,17 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
             const billing = settingsResponse.data.billing;
             if (billing.tax_enabled !== undefined) {
               loadedTaxEnabled = billing.tax_enabled;
+              hasServerBillingSettings = true;
               setTaxEnabled(loadedTaxEnabled);
             }
             if (billing.tax_rate !== undefined) {
               loadedTaxRate = String(billing.tax_rate);
+              hasServerBillingSettings = true;
               setTaxRate(loadedTaxRate);
             }
             if (billing.invoice_prefix) {
               loadedInvoicePrefix = billing.invoice_prefix;
+              hasServerBillingSettings = true;
               setInvoicePrefix(loadedInvoicePrefix);
             }
             console.log('[BillingSetupScreen] Loaded billing settings from settings endpoint');
@@ -137,6 +141,23 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
         taxRate: loadedTaxRate,
         invoicePrefix: loadedInvoicePrefix,
       });
+
+      if (!hasServerBillingSettings) {
+        const zustandData = getStepData('financials_and_tax');
+        if (zustandData) {
+          console.log('[BillingSetupScreen] Restoring billing settings draft');
+          setTaxEnabled(zustandData.tax_enabled);
+          setTaxRate(String(zustandData.tax_rate));
+          setInvoicePrefix(zustandData.invoice_prefix);
+          const restoredSnapshot = JSON.stringify({
+            taxEnabled: zustandData.tax_enabled,
+            taxRate: String(zustandData.tax_rate),
+            invoicePrefix: zustandData.invoice_prefix,
+          });
+          restoredSnapshotRef.current = restoredSnapshot;
+          setDraftRestored(true);
+        }
+      }
     } catch (error: any) {
       console.error('[BillingSetupScreen] Error in fetchBillingSettings:', error);
     } finally {
@@ -156,7 +177,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
     return true;
   };
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (saveContext?: RevisionAwareSaveContext) => {
     if (loading) {
       console.log('[BillingSetupScreen] Skipping submit - still loading');
       return;
@@ -198,12 +219,14 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
 
       // Then, mark the step as complete
       const result = await submitStepMutation.mutateAsync({
+        idempotencyKey: saveContext?.idempotencyKey,
         data: {
           tax_enabled: taxEnabled,
           tax_rate: taxEnabled ? parseFloat(taxRate) : 0,
           invoice_prefix: invoicePrefix,
         },
         mark_complete: true,
+        expected_revision: saveContext?.expectedRevision,
       });
 
       console.log('[BillingSetupScreen] Step completed successfully');
@@ -211,6 +234,9 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       
       // Update snapshot after successful save
       initialSnapshotRef.current = currentSnapshot;
+      restoredSnapshotRef.current = null;
+      setDraftRestored(false);
+      await clearStepDraftAndSync('financials_and_tax');
 
       // In wizard mode, call onSuccess callback
       if (isWizardMode && onSuccess) {
@@ -229,7 +255,9 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
         router.replace(`/onboarding/setup-wizard?tenantId=${tenantId}`);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save billing settings');
+      if (!(error instanceof StepConflictError)) {
+        Alert.alert('Error', 'Failed to save billing settings');
+      }
       throw error;
     }
   }, [loading, taxEnabled, taxRate, invoicePrefix, tenantId, submitStepMutation, isWizardMode, onSuccess, router, validateForm]);
@@ -262,6 +290,8 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       style={[styles.container, { backgroundColor: theme.colors.background.default }]}
       contentContainerStyle={{ padding: theme.spacing.lg }}
     >
+      {draftRestored && <RestoredDraftIndicator />}
+
       <View style={[styles.header, { marginBottom: theme.spacing.xl }]}>
         <Ionicons name="receipt" size={48} color={theme.colors.primary.default} />
         <Text
@@ -431,7 +461,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
                 alignItems: 'center',
               },
             ]}
-            onPress={handleSubmit}
+            onPress={() => void handleSubmit()}
             disabled={submitStepMutation.isPending}
           >
             <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>

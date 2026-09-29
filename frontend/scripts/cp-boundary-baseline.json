@@ -1,0 +1,68 @@
+{
+  "entries": [
+    {
+      "fingerprints": [
+        "8607e4dc6456f5d85a98894bfd76ef4ff6a6d4cf7c12d7b5e3e5ac81a12317ba"
+      ],
+      "id": "FE-I-001",
+      "max_count": 1,
+      "path": "frontend/features/onboarding/data/repositories/onboarding.repository.impl.ts",
+      "rule_id": "frontend.forbidden_import"
+    },
+    {
+      "fingerprints": [
+        "08a3e5f65681c8f9210f68c9157183a2d7fcc1e7420ae84fffccba6d8bc74863",
+        "3b1e2d337b8e4907716aa5c50e6ec73c85d0f81ef0a81066cf2ae609071e8382",
+        "52fd088e76ab4f805ca7dccf6c7874eb4528b5e9bd67a4ca128b1d2c7995174b",
+        "5e0cca417cd8974697eafff4e258bc5e4ace77e9ac4d0d354d507eb7c06b5715",
+        "7954d42d0deffac052da9611ad14953467f633c678dce49d646f509079c60da3",
+        "8616fb18352d6a8d59c2e65537d9191b6d97a640a60f00845239216de00dd91e",
+        "9484d29bd7ef07095b0b2499867375fb8ba424e8df8185b62a0fdd4a93e0c3f1",
+        "e099b75d2b44a28c7960b32e13f6b8e6b3ae9988501d30bc0a661d474d30befb",
+        "f04f5598f96f6d0ab8d3f5cc88c7d07596c1d9f32457ce02c85cf07f5fbe6271"
+      ],
+      "id": "FE-T-001",
+      "max_count": 9,
+      "path": "frontend/features/onboarding/domain/entities/commercial-trial.entity.ts",
+      "rule_id": "frontend.host_terminology"
+    },
+    {
+      "fingerprints": [
+        "16b120d5d3b6787adde95c982401aa0361cc3e6ace85c30ff3803fa1aa98bacc",
+        "30cac0535e907ffa7c83ea117b26f148259782b9fd776ee11aa328adc83405e8",
+        "36247e08186dbb94588e9c986abdd118a61b16172edf42fa576aeaf125d53c61",
+        "40b77153aef9b3fb317c9f2717ee38f01a677285d30b10c5fce6b54bfffc3923",
+        "589a0721def8a6a27a296345f246ed1ece42727b4e5e9d6f4f7ff3b6754655c5"
+      ],
+      "id": "UI-T-001",
+      "max_count": 5,
+      "path": "frontend/core/localization/translations/en-US.json",
+      "rule_id": "frontend.ui_technical_terminology"
+    },
+    {
+      "fingerprints": [
+        "39be91157a64dc7f8dfbaadcdf6df06ae39ca23c4724ca74bdd9146646c2039d",
+        "6878c4ee85b81b22a619f6cc27cc653a2551a2da123a61a454f5cba6189c0574",
+        "e197d79c57eec9038a8145d8baae17791d1592fa124926e3c8f5097908898f1c",
+        "fd6874c51cee0f8ea81902f8489eb5f3ee5dce7ffc419b9052afc1e8006f8ea9"
+      ],
+      "id": "UI-T-002A",
+      "max_count": 4,
+      "path": "frontend/core/localization/translations/hi-IN.json",
+      "rule_id": "frontend.ui_technical_terminology.organization_admin"
+    },
+    {
+      "fingerprints": [
+        "cf9f9d68bc8b0f2f4004712963a3e8a73039223a6f9458291e8c217edd6fd833"
+      ],
+      "id": "UI-T-002B",
+      "max_count": 1,
+      "path": "frontend/core/localization/translations/hi-IN.json",
+      "rule_id": "frontend.ui_technical_terminology.clinic_entry"
+    }
+  ],
+  "policy": "legacy-baseline-with-ratchet",
+  "repository": "frontend",
+  "retired_fingerprints": [],
+  "schema_version": 1
+}

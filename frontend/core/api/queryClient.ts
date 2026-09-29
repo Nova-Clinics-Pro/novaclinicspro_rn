@@ -27,20 +27,19 @@
  * invalidate the query cache. That wiring is a later, flag-gated task.
  */
 import { QueryClient } from '@tanstack/react-query';
+import { shouldRetryApiRequest } from './requestPolicy';
+
+export {
+  ORDINARY_API_LOADING_FALLBACK_MS,
+  ORDINARY_API_LOADING_NOTICE_MS,
+  shouldRetryApiRequest,
+} from './requestPolicy';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Only retry on network errors, not on business errors (401, 403, 404)
-      retry: (failureCount, error: any) => {
-        // Don't retry on authentication/authorization errors
-        const status = error?.response?.status;
-        if (status === 401 || status === 403 || status === 404) {
-          return false;
-        }
-        // Retry up to 2 times for other errors (network issues, 500s)
-        return failureCount < 2;
-      },
+      // Retry only transient/network failures; every deterministic 4xx is terminal.
+      retry: shouldRetryApiRequest,
       staleTime: 5 * 60 * 1000, // 5 minutes
       // Errors are handled in UI components, not via a global query-level
       // onError — that callback was removed from query defaultOptions in

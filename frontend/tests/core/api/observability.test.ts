@@ -37,13 +37,15 @@ describe('axiosClient observability hooks (T-0.7)', () => {
     expect(source).toContain('export function reportObservabilityEvent(');
     expect(source).toContain("'api.server_error'");
     expect(source).toContain("'api.auth_boundary_anomaly'");
+    expect(source).toContain("'api.request_timeout'");
   });
 
-  it('reportObservabilityEvent logs unconditionally — not gated behind __DEV__', () => {
+  it('keeps all recoverable transport observations as warnings', () => {
     const fnStart = source.indexOf('export function reportObservabilityEvent(');
     const fnBody = source.slice(fnStart, source.indexOf('\n}', fnStart));
     expect(fnBody).not.toContain('__DEV__');
-    expect(fnBody).toContain('console.error');
+    expect(fnBody).toContain('console.warn');
+    expect(fnBody).not.toContain('console.error');
   });
 
   describe('response error interceptor wiring', () => {
@@ -55,8 +57,19 @@ describe('axiosClient observability hooks (T-0.7)', () => {
       );
     });
 
-    it('reports an auth_boundary_anomaly event for an unauthenticated 401 (e.g. post-logout)', () => {
-      expect(handlerBody).toMatch(/if \(isUnauthenticated401\) \{[\s\S]*?event: 'api\.auth_boundary_anomaly'/);
+    it('reports request timeouts as structured recoverable observations', () => {
+      expect(handlerBody).toContain("const isRequestTimeout");
+      expect(handlerBody).toMatch(/if \(isRequestTimeout\) \{[\s\S]*?event: 'api\.request_timeout'/);
+    });
+
+    it('keeps unauthenticated bootstrap 401s quiet while observing authenticated 401s', () => {
+      expect(handlerBody).toContain('const isUnauthenticated401');
+      expect(handlerBody).toContain('const isAuthenticated401');
+      expect(handlerBody).toMatch(/if \(isAuthenticated401\) \{[\s\S]*?event: 'api\.auth_boundary_anomaly'/);
+      const unauthenticatedBranchStart = handlerBody.indexOf('if (isUnauthenticated401) {');
+      const unauthenticatedBranchEnd = handlerBody.indexOf('\n      } else {', unauthenticatedBranchStart);
+      expect(handlerBody.slice(unauthenticatedBranchStart, unauthenticatedBranchEnd))
+        .not.toContain('reportObservabilityEvent');
     });
 
     it('the two observability calls are NOT nested inside the __DEV__-gated block', () => {

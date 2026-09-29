@@ -4,6 +4,12 @@
  */
 
 import { IOnboardingRepository } from '../repositories/onboarding.repository';
+import { logError } from '../../../../core/utils/errorHandler';
+
+type DemoTransitionRepository = Pick<
+  IOnboardingRepository,
+  'getDemoStatus' | 'transitionDemoToLive'
+>;
 
 export interface TransitionDemoToLiveResult {
   success: boolean;
@@ -14,7 +20,7 @@ export interface TransitionDemoToLiveResult {
 }
 
 export class TransitionDemoToLiveUseCase {
-  constructor(private repository: IOnboardingRepository) {}
+  constructor(private readonly repository: DemoTransitionRepository) {}
 
   async execute(demoTenantId: string): Promise<TransitionDemoToLiveResult> {
     try {
@@ -35,7 +41,7 @@ export class TransitionDemoToLiveUseCase {
         };
       }
 
-      if (demoStatus.status === 'expired') {
+      if (demoStatus.is_demo_expired) {
         return {
           success: false,
           error: 'Demo period has ended. Please complete the setup wizard to create your permanent clinic.',
@@ -49,13 +55,6 @@ export class TransitionDemoToLiveUseCase {
         };
       }
 
-      if (demoStatus.days_remaining <= 0) {
-        return {
-          success: false,
-          error: 'Demo period has ended. Please complete the setup wizard to create your permanent clinic.',
-        };
-      }
-
       // Transition demo to live
       const result = await this.repository.transitionDemoToLive(demoTenantId);
 
@@ -66,7 +65,7 @@ export class TransitionDemoToLiveUseCase {
         message: 'Demo successfully transitioned to live tenant! Your clinic is now fully operational.',
       };
     } catch (error) {
-      console.error('[TransitionDemoToLiveUseCase] Error:', error);
+      logError('onboarding.demo.transition_failed', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to transition demo to live tenant',

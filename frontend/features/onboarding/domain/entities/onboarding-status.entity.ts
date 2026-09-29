@@ -4,6 +4,11 @@
  */
 
 import { OnboardingStatusResponse, StepValidationDTO, ValidationIssueDTO } from '../../data/models/onboarding.dtos';
+import {
+  AuthoritativeStepUpdateEvidence,
+  StepConflictError,
+  createAuthoritativeStepUpdateEvidence,
+} from './step-revision.entity';
 
 export interface OnboardingStatus {
   tenantId: string;
@@ -32,6 +37,8 @@ export interface StepStatus {
   category: string;
   isVisible: boolean;
   isActionable: boolean;
+  evidenceAvailability: 'AVAILABLE' | 'UNAVAILABLE';
+  authoritativeEvidence: AuthoritativeStepUpdateEvidence | null;
 }
 
 export type StepStatusType = 'completed' | 'in_progress' | 'not_started' | 'blocked';
@@ -54,7 +61,7 @@ export const mapOnboardingStatusToDomain = (
 
   // Convert per_step_validation to Map
   Object.entries(dto.per_step_validation || {}).forEach(([stepCode, stepDto]) => {
-    stepsMap.set(stepCode, mapStepValidationToDomain(stepDto, dto.tenant_id));
+    stepsMap.set(stepCode, mapStepValidationToDomain(stepCode, stepDto, dto.tenant_id));
   });
 
   return {
@@ -76,9 +83,46 @@ export const mapOnboardingStatusToDomain = (
  * Map step validation DTO to domain
  */
 const mapStepValidationToDomain = (
+  authoritativeStepCode: string,
   dto: StepValidationDTO,
   tenantId: string
 ): StepStatus => {
+  if (dto.step_code !== authoritativeStepCode) {
+    throw new StepConflictError(
+      'UNSUPPORTED_CONTRACT',
+      'onboarding.step_identity_mismatch',
+      'errors.onboarding.stepIdentityMismatch',
+      false
+    );
+  }
+  const evidenceFields = [
+    dto.revision,
+    dto.updated_at,
+    dto.template_version,
+    dto.capability_revision,
+  ];
+  const hasAnyEvidence = evidenceFields.some((value) => value !== null && value !== undefined);
+  const hasCompleteEvidence = evidenceFields.every(
+    (value) => value !== null && value !== undefined
+  );
+  if (hasAnyEvidence && !hasCompleteEvidence) {
+    throw new StepConflictError(
+      'UNSUPPORTED_CONTRACT',
+      'onboarding.step_evidence_incomplete',
+      'errors.onboarding.stepEvidenceIncomplete',
+      false
+    );
+  }
+  const authoritativeEvidence = hasCompleteEvidence
+    ? createAuthoritativeStepUpdateEvidence({
+        tenantId,
+        stepCode: dto.step_code,
+        revision: dto.revision,
+        updatedAt: dto.updated_at,
+        templateVersion: dto.template_version,
+        capabilityRevision: dto.capability_revision,
+      })
+    : null;
   return {
     code: dto.step_code,
     status: dto.status,
@@ -86,12 +130,14 @@ const mapStepValidationToDomain = (
     isValid: dto.is_valid,
     issues: (dto.issues || []).map(mapIssueToDomain),
     blockedReason: dto.blocked_reason,
-    actionUrl: dto.action_url_template.replace('{tenant_id}', tenantId),
-    entityType: dto.entity_type,
-    icon: dto.icon,
-    category: dto.category,
+    actionUrl: dto.action_url_template?.replace('{tenant_id}', tenantId) ?? '',
+    entityType: dto.entity_type ?? '',
+    icon: dto.icon ?? '',
+    category: dto.category ?? '',
     isVisible: dto.visible,
     isActionable: dto.actionable,
+    evidenceAvailability: authoritativeEvidence ? 'AVAILABLE' : 'UNAVAILABLE',
+    authoritativeEvidence,
   };
 };
 

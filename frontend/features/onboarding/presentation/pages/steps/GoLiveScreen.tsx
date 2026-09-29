@@ -1,249 +1,279 @@
-/**
- * GoLiveScreen
- * Final step - Review clinic preparation and mark clinic as ready to start
- */
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
-import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
-import { useAuth } from '../../../../auth/presentation/hooks/useAuth';
-import { useSubmitStepMutation, onboardingKeys, useCompleteSetupMutation } from '../../../data/repositories/onboarding.repository.impl';
 import { useTranslation } from '../../../../../core/localization/useTranslation';
+import { ClinicTheme, useClinicTheme } from '../../../../../core/theme/useClinicTheme';
+import {
+  executeOnboardingAction,
+  executeReadinessAction,
+} from '../../actions/onboardingActionRegistry';
+import { useOnboardingRuntime } from '../../hooks/useOnboardingRuntime';
+import { useReadyToStart } from '../../hooks/useReadyToStart';
+import {
+  useEnsureWorkspacePreparationMutation,
+  useOrganizationContextQuery,
+} from '../../../data/repositories/onboarding.repository.impl';
+import { CommercialRetentionScreen } from '../CommercialRetentionScreen';
+import {
+  translateOnboardingBlocker,
+  translateOnboardingToken,
+} from '../../config/onboardingPresentationRegistry';
+import type { AuthUserSession } from '../../../../auth/domain/entities/auth.entity';
+import { uniqueBlockers } from './goLivePresentation';
 
 interface GoLiveScreenProps {
-  tenantId: string;
-  onComplete: () => void;
-  completedSteps: number;
-  totalSteps: number;
-  allSteps?: Array<{ code: string; name: string; status: string }>; // Add all steps for dynamic checklist
-  isWizardMode?: boolean; // Hide internal button when in wizard mode
-  onRegisterSaveHandler?: (handler: (() => Promise<void>) | null) => void;
+  readonly tenantId: string;
+  readonly finalReviewStepId: string;
+  readonly applicationStatus?: AuthUserSession['applicationStatus'];
+  readonly onCommercialEligibilityConfirmed?: () => Promise<void>;
+  readonly onCommercialConfirmationAcknowledged?: () => void;
 }
 
-export function GoLiveScreen({ tenantId, onComplete, completedSteps, totalSteps, allSteps = [], isWizardMode = false, onRegisterSaveHandler }: GoLiveScreenProps) {
-  const theme = useClinicTheme();
+/**
+ * Final review renders only backend-resolved setup and readiness evidence.
+ * The workspace handoff is an explicit, backend-owned readiness action.
+ */
+export function GoLiveScreen({
+  tenantId,
+  finalReviewStepId,
+  applicationStatus,
+  onCommercialEligibilityConfirmed,
+  onCommercialConfirmationAcknowledged,
+}: GoLiveScreenProps) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { refreshSession } = useAuth();
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const submitStepMutation = useSubmitStepMutation(tenantId, 'go_live_checklist');
-  const completeSetupMutation = useCompleteSetupMutation(tenantId);
+  const theme = useClinicTheme();
+  const router = useRouter();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const journey = useOnboardingRuntime(tenantId);
+  const readiness = useReadyToStart(tenantId);
+  const organizationContext = useOrganizationContextQuery();
+  const organizationId = organizationContext.data?.effectiveOrganizationId ?? '';
+  const preparation = useEnsureWorkspacePreparationMutation(organizationId, tenantId);
+  const attemptedPreparationScope = useRef<string | null>(null);
+  const [preparationFailure, setPreparationFailure] = useState(false);
+  const projection = journey.projection;
+  const runtime = journey.runtime;
+  const required = useMemo(
+    () =>
+      (runtime?.visibleSteps ?? []).filter(
+        item => item.step.required && item.stepId !== finalReviewStepId
+      ),
+    [finalReviewStepId, runtime?.visibleSteps]
+  );
+  const incompletePrerequisites = required.filter(item => item.status !== 'completed');
+  const managementSteps = required.filter(item => item.status === 'completed' && item.action);
+  const prerequisitesComplete = incompletePrerequisites.length === 0;
+  const preparationAction = readiness.data?.blockers.find(
+    blocker => blocker.nextAction?.targetId === 'onboarding.workspace_preparation'
+  )?.nextAction;
+  const automaticPreparationRequired = prerequisitesComplete && Boolean(preparationAction);
+  const readyForTrial = prerequisitesComplete && readiness.data?.authorizesHandoff === true;
 
-  // Generate checklist dynamically from all steps (excluding go_live_checklist itself)
-  const checklistItems = allSteps
-    .filter(step => step.code !== 'go_live_checklist')
-    .map((step, index) => ({
-      id: index + 1,
-      label: step.name,
-      completed: step.status === 'completed',
-    }));
-
-  const allComplete = checklistItems.every(item => item.completed);
-  const isGoLivePending = submitStepMutation.isPending || completeSetupMutation.isPending;
-
-  const handleGoLive = useCallback(async () => {
-    if (!agreedToTerms) {
-      Alert.alert(t('onboarding.progressiveExperience.readyToStart.agreementRequiredTitle'), t('onboarding.progressiveExperience.readyToStart.agreementRequiredMessage'));
-      return;
-    }
-
-    if (!allComplete) {
-      Alert.alert(t('onboarding.progressiveExperience.readyToStart.notReadyTitle'), t('onboarding.progressiveExperience.readyToStart.notReadyMessage'));
-      return;
-    }
-
+  const prepareWorkspace = useCallback(async () => {
+    if (!organizationId || !tenantId || preparation.isPending) return;
+    setPreparationFailure(false);
     try {
-      console.log('[GoLiveScreen] Starting go-live process...');
-      
-      // First, mark the go_live_checklist step as complete
-      console.log('[GoLiveScreen] Marking go_live_checklist step as complete...');
-      await submitStepMutation.mutateAsync({
-        data: { ready_to_go_live: true },
-        mark_complete: true,
-      });
-
-      // Then, call the complete setup endpoint to finalize everything
-      console.log('[GoLiveScreen] Calling complete setup endpoint...');
-      await completeSetupMutation.mutateAsync();
-
-      // Refresh auth session to get updated application_status
-      console.log('[GoLiveScreen] Refreshing auth session to get updated status...');
-      await refreshSession();
-
-      // Invalidate all onboarding queries to refresh status
-      await queryClient.invalidateQueries({ queryKey: onboardingKeys.all });
-      await queryClient.invalidateQueries({ queryKey: onboardingKeys.status(tenantId) });
-
-      console.log('[GoLiveScreen] Go-live process completed successfully!');
-      
-      // Navigate to clinic admin (router.replace prevents going back to wizard)
-      Alert.alert(
-        t('onboarding.progressiveExperience.readyToStart.successTitle'),
-        t('onboarding.progressiveExperience.readyToStart.successMessage'),
-        [
-          {
-            text: t('onboarding.progressiveExperience.readyToStart.goToDashboard'),
-            onPress: () => {
-              onComplete();
-            },
-          },
-        ]
-      );
-    } catch (error: any) {
-      console.error('[GoLiveScreen] Error during go-live:', error);
-      Alert.alert(t('common.error'), error.message || t('onboarding.progressiveExperience.readyToStart.errorMessage'));
+      await preparation.mutateAsync();
+      await Promise.all([journey.refetch(), readiness.refresh()]);
+    } catch {
+      setPreparationFailure(true);
     }
-  }, [agreedToTerms, allComplete, completeSetupMutation, onComplete, queryClient, refreshSession, submitStepMutation, tenantId, t]);
+  }, [journey, organizationId, preparation, readiness, tenantId]);
 
   useEffect(() => {
-    if (!isWizardMode || !onRegisterSaveHandler) {
+    const scope = `${organizationId}:${tenantId}`;
+    if (!automaticPreparationRequired || !organizationId || attemptedPreparationScope.current === scope) {
       return;
     }
+    attemptedPreparationScope.current = scope;
+    void prepareWorkspace();
+  }, [automaticPreparationRequired, organizationId, prepareWorkspace, tenantId]);
 
-    onRegisterSaveHandler(handleGoLive);
+  if (
+    journey.isLoading ||
+    (prerequisitesComplete && (readiness.loading || preparation.isPending))
+  ) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={theme.colors.primary.default} />
+      </View>
+    );
+  }
 
-    return () => {
-      onRegisterSaveHandler(null);
-    };
-  }, [handleGoLive, isWizardMode, onRegisterSaveHandler]);
+  if (journey.error || !projection) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.text}>{t('onboarding.renderers.unavailable')}</Text>
+        <TouchableOpacity style={styles.button} onPress={() => void journey.refetch()}>
+          <Text style={styles.buttonText}>{t('common.retry')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: theme.spacing.lg }}>
-      {/* Header */}
-      <View style={{ alignItems: 'center', marginBottom: theme.spacing.xl }}>
-        <View
-          style={{
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            backgroundColor: theme.colors.feedback.successLight,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: theme.spacing.md,
-          }}
-        >
-          <Ionicons name="rocket" size={40} color={theme.colors.feedback.success} />
-        </View>
-        <Text style={[theme.typography.h4, { color: theme.colors.text.primary, textAlign: 'center' }]}>
-          {t('onboarding.progressiveExperience.readyToStart.title')}
-        </Text>
-        <Text style={[theme.typography.body1, { color: theme.colors.text.secondary, textAlign: 'center', marginTop: theme.spacing.sm }]}>
-          {t('onboarding.progressiveExperience.readyToStart.preparedCount', { completed: completedSteps, total: totalSteps })}
-        </Text>
-      </View>
+    <ScrollView contentContainerStyle={styles.screen} accessibilityRole="summary">
+      <Text style={styles.title}>{t('onboarding.progressiveExperience.readyToStart.presentation.title')}</Text>
+      <Text style={styles.text}>
+        {readyForTrial
+          ? t('onboarding.progressiveExperience.readyToStart.presentation.states.READY')
+          : t('onboarding.progressiveExperience.readyToStart.presentation.states.NOT_READY')}
+      </Text>
 
-      {/* Readiness Summary */}
-      <View
-        style={{
-          backgroundColor: theme.colors.surface.default,
-          borderRadius: 12,
-          padding: theme.spacing.lg,
-          marginBottom: theme.spacing.lg,
-        }}
-      >
-        <Text style={[theme.typography.h6, { color: theme.colors.text.primary, marginBottom: theme.spacing.md }]}>
-          {t('onboarding.progressiveExperience.readyToStart.checklistTitle')}
-        </Text>
-
-        {checklistItems.map((item) => (
-          <View
-            key={item.id}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: theme.spacing.sm,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.border.default,
-            }}
-          >
-            <Ionicons
-              name={item.completed ? 'checkmark-circle' : 'ellipse-outline'}
-              size={24}
-              color={item.completed ? theme.colors.feedback.success : theme.colors.text.disabled}
-            />
-            <Text
-              style={[
-                theme.typography.body2,
-                {
-                  color: item.completed ? theme.colors.text.primary : theme.colors.text.disabled,
-                  marginLeft: theme.spacing.sm,
-                  flex: 1,
-                },
-              ]}
+      {incompletePrerequisites.map(({ step, action }) => (
+        <View key={step.stepId} style={styles.card}>
+          <Text style={styles.text}>{translateOnboardingToken(step.titleToken)}</Text>
+          {uniqueBlockers(step.blockers).map(blocker => (
+            <Text key={blocker.requirementId} style={styles.blocker}>
+              {translateOnboardingBlocker(
+                blocker.blockerToken,
+                blocker.currentValue,
+                blocker.requiredValue,
+                blocker.titleToken
+              )}
+            </Text>
+          ))}
+          {action ? (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() =>
+                executeOnboardingAction(router, action, {
+                  tenant_id: tenantId,
+                  step_id: step.stepId,
+                })
+              }
             >
-              {item.label}
-            </Text>
-          </View>
-        ))}
-      </View>
+              <Text style={styles.buttonText}>
+                {translateOnboardingToken(action.labelToken, action.fallbackToken)}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ))}
 
-      {/* Terms Agreement */}
-      <TouchableOpacity
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          padding: theme.spacing.md,
-          backgroundColor: theme.colors.surface.default,
-          borderRadius: 8,
-          marginBottom: theme.spacing.lg,
-        }}
-        onPress={() => setAgreedToTerms(!agreedToTerms)}
-      >
-        <Ionicons
-          name={agreedToTerms ? 'checkbox' : 'square-outline'}
-          size={24}
-          color={agreedToTerms ? theme.colors.primary.default : theme.colors.text.secondary}
-        />
-        <Text style={[theme.typography.body2, { color: theme.colors.text.primary, marginLeft: theme.spacing.sm, flex: 1 }]}>
-          {t('onboarding.progressiveExperience.readyToStart.confirmAccuracy')}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Info Box */}
-      <View
-        style={{
-          backgroundColor: theme.colors.feedback.infoLight,
-          padding: theme.spacing.md,
-          borderRadius: 8,
-          flexDirection: 'row',
-          marginBottom: theme.spacing.xl,
-        }}
-      >
-        <Ionicons name="information-circle" size={20} color={theme.colors.feedback.info} />
-        <Text style={[theme.typography.body2, { color: theme.colors.text.primary, marginLeft: theme.spacing.sm, flex: 1 }]}>
-          {t('onboarding.progressiveExperience.readyToStart.info')}
-        </Text>
-      </View>
-
-      {/* Ready to Start Button - Only show in standalone mode, not in wizard */}
-      {!isWizardMode && (
-        <TouchableOpacity
-          style={{
-            backgroundColor: allComplete && agreedToTerms ? theme.colors.feedback.success : theme.colors.surface.elevated,
-            padding: theme.spacing.md,
-            borderRadius: theme.spacing.sm,
-            alignItems: 'center',
-            opacity: allComplete && agreedToTerms && !isGoLivePending ? 1 : 0.5,
-          }}
-          onPress={handleGoLive}
-          disabled={!allComplete || !agreedToTerms || isGoLivePending}
-          accessibilityState={{ disabled: !allComplete || !agreedToTerms || isGoLivePending }}
-        >
-          {isGoLivePending ? (
-            <ActivityIndicator size="small" color={theme.colors.text.onPrimary} />
-          ) : (
-            <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
-              {t('onboarding.progressiveExperience.readyToStart.title')}
-            </Text>
+      {managementSteps.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.text}>
+            {t('onboarding.progressiveExperience.readyToStart.presentation.manageSetup')}
+          </Text>
+          {managementSteps.map(({ step, action }) =>
+            action ? (
+              <TouchableOpacity
+                key={step.stepId}
+                style={styles.button}
+                onPress={() =>
+                  executeOnboardingAction(router, action, {
+                    tenant_id: tenantId,
+                    step_id: step.stepId,
+                  })
+                }
+              >
+                <Text style={styles.buttonText}>
+                  {translateOnboardingToken(action.labelToken, action.fallbackToken)}
+                </Text>
+              </TouchableOpacity>
+            ) : null
           )}
-        </TouchableOpacity>
-      )}
+        </View>
+      ) : null}
+
+      {prerequisitesComplete && readiness.error ? (
+        <View style={styles.card} accessibilityRole="alert">
+          <Text style={styles.blocker}>{t('onboarding.renderers.unavailable')}</Text>
+          <TouchableOpacity style={styles.button} onPress={() => void readiness.refresh()}>
+            <Text style={styles.buttonText}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {prerequisitesComplete && readiness.data && !readiness.data.authorizesHandoff ? (
+        <View style={styles.card} accessibilityRole="summary">
+          <Text style={styles.text}>
+            {t('onboarding.progressiveExperience.readyToStart.presentation.finalReadiness.title')}
+          </Text>
+          <Text style={styles.text}>
+            {t('onboarding.progressiveExperience.readyToStart.presentation.finalReadiness.message')}
+          </Text>
+          {preparationFailure ? (
+            <TouchableOpacity style={styles.button} onPress={() => {
+              attemptedPreparationScope.current = null;
+              void prepareWorkspace();
+            }}>
+              <Text style={styles.buttonText}>{t('common.retry')}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {readiness.data.blockers.filter(
+            item => item.nextAction?.targetId !== 'onboarding.workspace_preparation'
+          ).map(item => {
+            const action = item.nextAction;
+            return (
+              <View key={`${item.providerId}:${item.itemId}`} style={styles.requirementCard}>
+                {action ? (
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={() =>
+                      executeReadinessAction(
+                        router,
+                        action,
+                        { tenant_id: tenantId },
+                        { onRefresh: () => void readiness.refresh() }
+                      )
+                    }
+                  >
+                    <Text style={styles.buttonText}>
+                      {translateOnboardingToken(action.labelToken)}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
+      {readyForTrial ? (
+        <CommercialRetentionScreen
+          tenantId={tenantId}
+          applicationStatus={applicationStatus}
+          onCommercialEligibilityConfirmed={onCommercialEligibilityConfirmed}
+          onCommercialConfirmationAcknowledged={onCommercialConfirmationAcknowledged}
+        />
+      ) : null}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  // Styles set inline with theme
-});
+const createStyles = (theme: ClinicTheme) =>
+  StyleSheet.create({
+    screen: {
+      padding: theme.spacing.lg,
+      gap: theme.spacing.md,
+      backgroundColor: theme.colors.background.default,
+    },
+    center: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+    },
+    title: { ...theme.typography.h4, color: theme.colors.text.primary },
+    text: { ...theme.typography.body1, color: theme.colors.text.primary },
+    blocker: { ...theme.typography.body2, color: theme.colors.feedback.error },
+    card: {
+      gap: theme.spacing.sm,
+      padding: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+      borderRadius: theme.spacing.sm,
+      backgroundColor: theme.colors.surface.default,
+    },
+    requirementCard: { gap: theme.spacing.sm },
+    button: {
+      alignItems: 'center',
+      padding: theme.spacing.md,
+      borderRadius: theme.spacing.sm,
+      backgroundColor: theme.colors.primary.default,
+    },
+    buttonText: { ...theme.typography.button, color: theme.colors.text.onPrimary },
+  });

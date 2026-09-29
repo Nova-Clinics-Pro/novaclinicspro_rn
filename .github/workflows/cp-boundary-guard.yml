@@ -1,0 +1,72 @@
+name: CP Boundary Guard
+
+on:
+  pull_request:
+    branches: [cp]
+    paths:
+      - "frontend/app/**"
+      - "frontend/features/**"
+      - "frontend/core/localization/translations/**"
+      - "frontend/scripts/check-cp-boundaries.mjs"
+      - "frontend/scripts/cp-boundary-baseline.json"
+      - "frontend/tests/architecture/cp-boundary-guard.test.ts"
+      - "frontend/package.json"
+      - ".github/workflows/cp-boundary-guard.yml"
+  push:
+    branches: [cp]
+    paths:
+      - "frontend/app/**"
+      - "frontend/features/**"
+      - "frontend/core/localization/translations/**"
+      - "frontend/scripts/check-cp-boundaries.mjs"
+      - "frontend/scripts/cp-boundary-baseline.json"
+      - "frontend/tests/architecture/cp-boundary-guard.test.ts"
+      - "frontend/package.json"
+      - ".github/workflows/cp-boundary-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  boundary:
+    name: Frontend CP boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject unreviewed baseline changes
+        if: github.event_name == 'pull_request'
+        working-directory: .
+        run: git diff --exit-code "${{ github.event.pull_request.base.sha }}" -- frontend/scripts/cp-boundary-baseline.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run boundary tests
+        run: yarn test:ci --runTestsByPath tests/architecture/cp-boundary-guard.test.ts
+
+      - name: Run boundary guard
+        shell: bash
+        run: |
+          set -o pipefail
+          yarn check:cp-boundaries | tee cp-boundary-report.json
+
+      - name: Upload safe boundary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-cp-boundary-report
+          path: frontend/cp-boundary-report.json
+          if-no-files-found: warn

@@ -18,9 +18,13 @@ import { useOnboardingStatusQuery } from '../features/onboarding/data/repositori
 import { colors } from '../core/theme/colors';
 import { typography } from '../core/theme/typography';
 import { spacing } from '../core/theme/spacing';
+import { logError } from '../core/utils/errorHandler';
+import { useTranslation } from '../core/localization/useTranslation';
+import { resolveRegistrationStatusRoute } from '../features/registration/presentation/registrationStatusRouting';
 
 export default function Index() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading, currentUser, logout } = useAuth();
   
   // Fetch registration status only when user has no tenant and is not org admin
@@ -35,53 +39,28 @@ export default function Index() {
     currentUser?.tenantId || '',
     { enabled: !!currentUser?.tenantId, retry: false }
   );
+  const registrationRoute = regStatus ? resolveRegistrationStatusRoute(regStatus) : null;
 
   useEffect(() => {
-    console.log('========================================');
-    console.log('[Index] useEffect triggered', {
-      isLoading,
-      isLoadingRegStatus,
-      isLoadingOnboarding,
-      isAuthenticated,
-      hasCurrentUser: !!currentUser,
-      userRole: currentUser?.roles?.[0],
-      applicationStatus: currentUser?.applicationStatus,
-    });
-    console.log('========================================');
-
     // Wait for auth and registration status to be determined
     // Don't wait for onboarding status if user has applicationStatus (it's redundant)
     if (isLoading || isLoadingRegStatus) {
-      console.log('[Index] Still loading, waiting...');
       return;
     }
     
     // Only wait for onboarding status if we don't have applicationStatus
     if (!currentUser?.applicationStatus && isLoadingOnboarding) {
-      console.log('[Index] Waiting for onboarding status...');
       return;
     }
 
     // Redirect to login if not authenticated
     if (!isAuthenticated || !currentUser) {
-      console.log('[Index] Not authenticated, redirecting to login');
       router.replace('/login');
       return;
     }
 
-    console.log('[Index] Redirecting user based on context:', { 
-      isOrgAdmin: currentUser.isOrgAdmin, 
-      tenantId: currentUser.tenantId,
-      applicationStatus: currentUser.applicationStatus,
-      email: currentUser.email,
-      permissions: currentUser.permissions,
-      regStatus: regStatus,
-      onboardingComplete: onboardingStatus?.is_ready_to_go_live
-    });
-
     // Priority 1: Org Admin (Super Admin) always goes to super-admin
     if (currentUser.isOrgAdmin) {
-      console.log('[Index] User is Org Admin, redirecting to Super Admin dashboard');
       router.replace('/super-admin');
       return;
     }
@@ -90,92 +69,66 @@ export default function Index() {
     // Status pages and the approval choice screen need application_id, which
     // /auth/me does not provide. For no-tenant users, use registration status.
     if (currentUser.applicationStatus) {
-      console.log('[Index] Has applicationStatus:', currentUser.applicationStatus);
       switch (currentUser.applicationStatus) {
         case 'onboarding':
           if (currentUser.tenantId) {
-            console.log('[Index] Application status is onboarding, redirecting to wizard');
             router.replace(`/onboarding/setup-wizard?tenantId=${currentUser.tenantId}`);
             return;
           }
-          console.log('[Index] Onboarding status without tenantId, deferring to registration status');
           break;
         case 'active':
-          console.log('[Index] Application status is active, routing to appropriate dashboard');
           // Route to appropriate dashboard based on role
           const userRole = currentUser.roles?.[0]?.toLowerCase() || '';
-          console.log('[Index] User role:', userRole);
           
           if (userRole === 'doctor') {
-            console.log('[Index] Routing to doctor dashboard');
             router.replace('/doctor');
           } else if (userRole === 'therapist') {
-            console.log('[Index] Routing to therapist dashboard');
             router.replace('/therapist');
           } else if (['clinic owner', 'clinic_owner', 'clinic admin', 'clinic_admin', 'receptionist', 'tenant admin', 'tenant_admin'].includes(userRole)) {
-            console.log('[Index] Routing to clinic-admin dashboard');
             router.replace('/clinic-admin');
           } else {
             // Default to clinic-admin for unknown roles
-            console.log('[Index] Unknown role, defaulting to clinic-admin dashboard');
             router.replace('/clinic-admin');
           }
           return;
         case 'approved':
-          console.log('[Index] Application status is approved, deferring to registration status for applicationId');
           break;
         case 'pending_review':
-          console.log('[Index] Application status is pending_review, deferring to registration status for applicationId');
           break;
         case 'rejected':
-          console.log('[Index] Application status is rejected, deferring to registration status for applicationId');
           break;
         case 'draft':
-          console.log('[Index] Application status is draft, deferring to registration status for applicationId');
           break;
       }
     }
 
     // Priority 3: Fallback to tenant-based routing (for backward compatibility)
     if (currentUser.tenantId) {
-      console.log('[Index] Has tenantId, checking onboarding status');
-      console.log('[Index] onboardingStatus:', onboardingStatus);
-      console.log('[Index] isLoadingOnboarding:', isLoadingOnboarding);
-      
       // If onboarding status query failed or is still loading, don't make routing decisions yet
       if (isLoadingOnboarding) {
-        console.log('[Index] Still loading onboarding status, waiting...');
         return;
       }
       
       // User has a tenant - check if onboarding is complete
       if (onboardingStatus && !onboardingStatus.is_ready_to_go_live) {
-        console.log('[Index] User has tenant but onboarding incomplete, redirecting to setup wizard');
         router.replace(`/onboarding/setup-wizard?tenantId=${currentUser.tenantId}`);
       } else if (onboardingStatus && onboardingStatus.is_ready_to_go_live) {
-        console.log('[Index] User has tenantId and onboarding complete, routing to appropriate dashboard');
         // Route to appropriate dashboard based on role
         const userRole = currentUser.roles?.[0]?.toLowerCase() || '';
-        console.log('[Index] User role:', userRole);
         
         if (userRole === 'doctor') {
-          console.log('[Index] Routing to doctor dashboard');
           router.replace('/doctor');
         } else if (userRole === 'therapist') {
-          console.log('[Index] Routing to therapist dashboard');
           router.replace('/therapist');
         } else if (['clinic owner', 'clinic_owner', 'clinic admin', 'clinic_admin', 'receptionist', 'tenant admin', 'tenant_admin'].includes(userRole)) {
-          console.log('[Index] Routing to clinic-admin dashboard');
           router.replace('/clinic-admin');
         } else {
           // Default to clinic-admin for unknown roles
-          console.log('[Index] Unknown role, defaulting to clinic-admin dashboard');
           router.replace('/clinic-admin');
         }
       } else {
         // onboardingStatus is null/undefined (query failed)
         // Assume onboarding is not complete and route to wizard
-        console.log('[Index] Onboarding status unavailable (query failed), assuming onboarding incomplete');
         router.replace(`/onboarding/setup-wizard?tenantId=${currentUser.tenantId}`);
       }
       return;
@@ -183,40 +136,21 @@ export default function Index() {
 
     // Priority 4: Handle registration status routing (legacy flow)
     if (regStatus) {
-      console.log('[Index] Checking registration status:', regStatus);
-      
       if (regStatus.status === 'no_applications') {
         // No application found - show "No Clinic Assigned" message
         return;
       }
 
+      if (registrationRoute) {
+        router.replace(registrationRoute);
+        return;
+      }
+
       switch (regStatus.application_status?.toUpperCase()) {
-        case 'PENDING_REVIEW':
-          console.log('[Index] Redirecting to pending review');
-          router.replace(`/onboarding/pending-review?applicationId=${regStatus.application_id}`);
-          break;
-        case 'APPROVED':
-          console.log('[Index] Redirecting to choice screen');
-          router.replace(`/onboarding/choice?applicationId=${regStatus.application_id}`);
-          break;
-        case 'REJECTED':
-          console.log('[Index] Redirecting to rejected screen');
-          router.replace(`/onboarding/rejected?applicationId=${regStatus.application_id}`);
-          break;
-        case 'DRAFT':
-          console.log('[Index] Application is DRAFT - user already registered, redirecting to pending review');
-          // DRAFT status means validation issues, but user is already in system
-          // Can't change email or core details, so show pending review with support message
-          router.replace(`/onboarding/pending-review?applicationId=${regStatus.application_id}`);
-          break;
         case 'ACTIVE':
-          console.log('[Index] Application is active but no tenant_id - backend issue');
           // Application is active but tenant_id not assigned - this is a backend data issue
           // Show "No Clinic Assigned" message with more context
-          return;
         default:
-          // Show "No Clinic Assigned" for unknown status
-          console.log('[Index] Unknown application status:', regStatus.application_status);
           return;
       }
     }
@@ -229,33 +163,42 @@ export default function Index() {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={colors.primary.main} />
-        <Text style={styles.text}>Loading...</Text>
+        <Text style={styles.text}>{t('applicationStatus.loading')}</Text>
       </View>
     );
   }
 
   // If authenticated but no tenant and not org admin, show message
+  if (isAuthenticated && currentUser && !currentUser.isOrgAdmin && !currentUser.tenantId && registrationRoute) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={colors.primary.main} />
+        <Text style={styles.text}>{t('applicationStatus.loading')}</Text>
+      </View>
+    );
+  }
+
   if (isAuthenticated && currentUser && !currentUser.isOrgAdmin && !currentUser.tenantId) {
     return (
       <View style={styles.container}>
         <Ionicons name="alert-circle" size={64} color={colors.warning.main} />
-        <Text style={styles.title}>No Clinic Assigned</Text>
+        <Text style={styles.title}>{t('applicationStatus.noClinic.title')}</Text>
         <Text style={styles.text}>
-          Your account is not assigned to any clinic. Please contact your administrator to get access.
+          {t('applicationStatus.noClinic.description')}
         </Text>
-        <Text style={styles.email}>Logged in as: {currentUser.email}</Text>
+        <Text style={styles.email}>{t('applicationStatus.noClinic.loggedInAs', { email: currentUser.email })}</Text>
         <TouchableOpacity 
           style={styles.logoutButton} 
           onPress={async () => {
             try {
               await logout();
-            } catch (e) {
-              console.error('Logout error:', e);
+            } catch (error) {
+              logError('index.logout', error);
             }
           }}
         >
           <Ionicons name="log-out-outline" size={20} color={colors.error.main} />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('applicationStatus.actions.signOut')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -265,7 +208,7 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color={colors.primary.main} />
-      <Text style={styles.text}>Loading your dashboard...</Text>
+      <Text style={styles.text}>{t('applicationStatus.loadingDashboard')}</Text>
     </View>
   );
 }

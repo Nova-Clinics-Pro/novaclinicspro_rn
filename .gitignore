@@ -242,6 +242,10 @@ frontend/.metro-cache/
 *.md
 !CLAUDE.md
 frontend/docs/
+!frontend/docs/
+!frontend/docs/Onboarding/
+!frontend/docs/Onboarding/progressive-experience/
+!frontend/docs/Onboarding/progressive-experience/**
 .emergent/
 
 # Exception: track only the R5 Capability Platform spec phase directory

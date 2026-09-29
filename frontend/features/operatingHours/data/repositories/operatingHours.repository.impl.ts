@@ -18,6 +18,7 @@ import {
   ListOperatingHoursParams,
   PaginatedOperatingHoursResponse,
 } from '../models/operatingHours.dtos';
+import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
 // ============================================
 // QUERY KEYS
@@ -81,8 +82,11 @@ export const useCreateOperatingHourMutation = (tenantId: string) => {
 
   return useMutation<OperatingHourResponse, Error, OperatingHourCreate>({
     mutationFn: (payload) => createOperatingHourApi(tenantId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: operatingHoursKeys.lists() });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: operatingHoursKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
@@ -95,12 +99,15 @@ export const useUpdateOperatingHourMutation = (tenantId: string, operatingHourId
 
   return useMutation<OperatingHourResponse, Error, OperatingHourUpdate>({
     mutationFn: (payload) => updateOperatingHourApi(tenantId, operatingHourId, payload),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(
         operatingHoursKeys.detail(tenantId, operatingHourId),
         data
       );
-      queryClient.invalidateQueries({ queryKey: operatingHoursKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: operatingHoursKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
@@ -113,8 +120,11 @@ export const useDeleteOperatingHourMutation = (tenantId: string) => {
 
   return useMutation<void, Error, string>({
     mutationFn: (operatingHourId) => deleteOperatingHourApi(tenantId, operatingHourId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: operatingHoursKeys.lists() });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: operatingHoursKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };

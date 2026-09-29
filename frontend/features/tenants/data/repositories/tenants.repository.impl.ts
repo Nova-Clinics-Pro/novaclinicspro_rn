@@ -10,14 +10,20 @@ import {
   getCurrentTenantApi,
   createTenantApi,
   updateTenantApi,
+  updateCurrentTenantClinicProfileApi,
+  getCurrentTenantClinicProfileApi,
+  uploadCurrentTenantClinicLogoApi,
   deactivateTenantApi,
 } from '../datasources/tenants.api';
 import {
   OrgTenantResponse,
   OrgTenantCreate,
   OrgTenantUpdate,
+  TenantClinicProfileUpdate,
+  TenantClinicProfile,
   ListTenantsParams,
 } from '../models/tenants.dtos';
+import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
 // Query Keys
 export const tenantsKeys = {
@@ -71,6 +77,36 @@ export const useCurrentTenantQuery = (
     queryFn: () => getCurrentTenantApi(tenantId),
     enabled: !!tenantId,
     ...options,
+  });
+};
+
+/** Update only the signed-in tenant's clinic profile and refresh derived onboarding state. */
+export const useUpdateCurrentTenantClinicProfileMutation = (tenantId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<TenantClinicProfile, Error, TenantClinicProfileUpdate>({
+    mutationFn: (payload) => updateCurrentTenantClinicProfileApi(tenantId, payload),
+    onSuccess: async (tenant) => {
+      queryClient.setQueryData(['tenant-clinic-profile', tenantId], tenant);
+      await invalidateCanonicalOnboardingState(queryClient, tenantId);
+    },
+  });
+};
+
+export const useCurrentTenantClinicProfileQuery = (tenantId: string) => useQuery<TenantClinicProfile, Error>({
+  queryKey: ['tenant-clinic-profile', tenantId],
+  queryFn: () => getCurrentTenantClinicProfileApi(tenantId),
+  enabled: Boolean(tenantId),
+});
+
+export const useUploadCurrentTenantClinicLogoMutation = (tenantId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation<{ clinic_logo?: string | null }, Error, string>({
+    mutationFn: (clinicLogo) => uploadCurrentTenantClinicLogoApi(tenantId, clinicLogo),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tenant-clinic-profile', tenantId] });
+      await invalidateCanonicalOnboardingState(queryClient, tenantId);
+    },
   });
 };
 

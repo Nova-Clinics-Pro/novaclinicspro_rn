@@ -17,7 +17,14 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
   const theme = useClinicTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background.default }]}>
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={message}
+      accessibilityLiveRegion="polite"
+      accessibilityState={{ busy: true }}
+      style={[styles.container, { backgroundColor: theme.colors.background.default }]}
+    >
       <ActivityIndicator size="large" color={theme.colors.primary.default} />
       <Text style={[
         styles.message, 

@@ -1,10 +1,10 @@
 /**
  * DemoStatusBanner Component
- * Shows sample clinic and commercial trial countdown actions
+ * Legacy compatibility component for Ready-to-Start guidance.
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { useTranslation } from '../../../../core/localization/useTranslation';
@@ -17,6 +17,10 @@ interface DemoStatusBannerProps {
   onExtendDemo?: () => void;
   onTransitionToLive?: () => void;
   canExtendDemo?: boolean;
+  isExtendPending?: boolean;
+  isTransitionPending?: boolean;
+  isExtendDisabled?: boolean;
+  isTransitionDisabled?: boolean;
 }
 
 export const DemoStatusBanner: React.FC<DemoStatusBannerProps> = ({
@@ -27,6 +31,10 @@ export const DemoStatusBanner: React.FC<DemoStatusBannerProps> = ({
   onExtendDemo,
   onTransitionToLive,
   canExtendDemo = true,
+  isExtendPending = false,
+  isTransitionPending = false,
+  isExtendDisabled = false,
+  isTransitionDisabled = false,
 }) => {
   const theme = useClinicTheme();
   const { t } = useTranslation();
@@ -39,7 +47,7 @@ export const DemoStatusBanner: React.FC<DemoStatusBannerProps> = ({
       const demoEnd = new Date(demoExpiresAt).getTime();
       const trialEnd = new Date(trialExpiresAt).getTime();
 
-      // Demo countdown
+      // Legacy sample-access countdown retained for compatibility with existing DTOs.
       const demoDistance = demoEnd - now;
       if (demoDistance > 0) {
         const days = Math.floor(demoDistance / (1000 * 60 * 60 * 24));
@@ -95,8 +103,8 @@ export const DemoStatusBanner: React.FC<DemoStatusBannerProps> = ({
             backgroundColor: theme.colors.feedback.errorLight,
             padding: theme.spacing.md,
             marginBottom: theme.spacing.lg,
-            borderRadius: 8,
-            borderLeftWidth: 4,
+            borderRadius: theme.spacing.sm,
+            borderLeftWidth: theme.spacing.xs,
             borderLeftColor: theme.colors.feedback.error,
           },
         ]}
@@ -127,8 +135,8 @@ export const DemoStatusBanner: React.FC<DemoStatusBannerProps> = ({
           backgroundColor: theme.colors.surface.elevated,
           padding: theme.spacing.md,
           marginBottom: theme.spacing.lg,
-          borderRadius: 8,
-          borderLeftWidth: 4,
+          borderRadius: theme.spacing.sm,
+          borderLeftWidth: theme.spacing.xs,
           borderLeftColor: isDemoExpired ? getTrialColor() : getDemoColor(),
         },
       ]}
@@ -193,16 +201,24 @@ export const DemoStatusBanner: React.FC<DemoStatusBannerProps> = ({
                 borderColor: theme.colors.border.default,
                 borderWidth: 1,
                 padding: theme.spacing.sm,
-                borderRadius: 4,
+                borderRadius: theme.spacing.xs,
                 flex: 1,
                 alignItems: 'center',
+                opacity: isExtendPending || isExtendDisabled ? 0.7 : 1,
               },
             ]}
+            accessibilityLabel={t('onboarding.progressiveExperience.statusBanner.extendSampleAccess')}
+            accessibilityState={{ disabled: isExtendPending || isExtendDisabled }}
+            disabled={isExtendPending || isExtendDisabled}
             onPress={onExtendDemo}
           >
-            <Text style={[theme.typography.button, { color: theme.colors.text.primary }]}>
-              {t('onboarding.progressiveExperience.statusBanner.extendSampleAccess')}
-            </Text>
+            {isExtendPending ? (
+              <ActivityIndicator color={theme.colors.text.primary} />
+            ) : (
+              <Text style={[theme.typography.button, { color: theme.colors.text.primary }]}>
+                {t('onboarding.progressiveExperience.statusBanner.extendSampleAccess')}
+              </Text>
+            )}
           </TouchableOpacity>
         )}
 
@@ -213,16 +229,24 @@ export const DemoStatusBanner: React.FC<DemoStatusBannerProps> = ({
               {
                 backgroundColor: theme.colors.primary.default,
                 padding: theme.spacing.sm,
-                borderRadius: 4,
+                borderRadius: theme.spacing.xs,
                 flex: 1,
                 alignItems: 'center',
+                opacity: isTransitionPending || isTransitionDisabled ? 0.7 : 1,
               },
             ]}
+            accessibilityLabel={t('onboarding.progressiveExperience.statusBanner.readyToStart')}
+            accessibilityState={{ disabled: isTransitionPending || isTransitionDisabled }}
+            disabled={isTransitionPending || isTransitionDisabled}
             onPress={onTransitionToLive}
           >
-            <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
-              {isDemoExpired ? t('onboarding.progressiveExperience.statusBanner.choosePlan') : t('onboarding.progressiveExperience.statusBanner.readyToStart')}
-            </Text>
+            {isTransitionPending ? (
+              <ActivityIndicator color={theme.colors.text.onPrimary} />
+            ) : (
+              <Text style={[theme.typography.button, { color: theme.colors.text.onPrimary }]}>
+                {isDemoExpired ? t('onboarding.progressiveExperience.statusBanner.choosePlan') : t('onboarding.progressiveExperience.statusBanner.readyToStart')}
+              </Text>
+            )}
           </TouchableOpacity>
         )}
       </View>

@@ -25,7 +25,7 @@ import {
   useDeleteTreatmentMutation,
   useSearchTreatmentsQuery,
 } from '../../data/repositories/treatments.repository.impl';
-import { useTenantQuery } from '../../../tenants/data/repositories/tenants.repository.impl';
+import { useCurrentTenantQuery } from '../../../tenants/data/repositories/tenants.repository.impl';
 import { useFeatures, isAyurvedaClinic as checkIsAyurveda } from '../../../../core/hooks/useFeatures';
 import {
   TreatmentResponse,
@@ -37,6 +37,7 @@ import {
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
+import { MultiDayAppointmentsSetting } from '../../../capabilities/presentation/components/MultiDayAppointmentsSetting';
 
 // Minimum characters before triggering search
 const MIN_SEARCH_LENGTH = 3;
@@ -136,7 +137,7 @@ export const TreatmentsScreen: React.FC = () => {
   const features = useFeatures();
   
   // Fetch tenant data (keeping for backward compatibility, but features come from JWT now)
-  const { data: tenant } = useTenantQuery(tenantId, {
+  const { data: tenant } = useCurrentTenantQuery(tenantId, {
     enabled: !!tenantId,
   });
 
@@ -297,6 +298,7 @@ export const TreatmentsScreen: React.FC = () => {
       </View>
 
       {/* Stats / Filter */}
+      <MultiDayAppointmentsSetting />
       <View style={styles.statsRow}>
         <TouchableOpacity
           style={[styles.statCard, !showInactive && { backgroundColor: '#10B98120', borderColor: '#10B981', borderWidth: 1 }]}

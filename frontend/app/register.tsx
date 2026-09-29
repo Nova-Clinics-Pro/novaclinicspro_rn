@@ -21,35 +21,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { useClinicTheme } from '../core/theme/useClinicTheme';
 import { spacing } from '../core/theme/spacing';
-import { registerClinicOwnerApi } from '../features/registration/data/datasources/registration.api';
-import { ClinicOwnerRegistrationRequest, CLINIC_TYPES } from '../features/registration/data/models/registration.dtos';
+import { RegistrationSubmissionError } from '../features/registration/data/datasources/registration.api';
+import { CLINIC_TYPES } from '../features/registration/data/models/registration.dtos';
 import { supabase } from '../core/api/supabaseClient';
-
-// Simplified registration schema
-const registrationSchema = z.object({
-  // Step 1: Personal Info
-  full_name: z.string().min(2, 'Full name is required').max(255),
-  email: z.string().email('Valid email required'),
-  phone: z.string().min(10, 'Valid phone number required').max(20),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
-  // Step 2: Clinic Info
-  tenant_name: z.string().min(2, 'Clinic name is required').max(255),
-  clinic_type: z.string().min(1, 'Clinic type is required'),
-  // Step 3: Address
-  address_line1: z.string().min(2, 'Address is required'),
-  city: z.string().min(2, 'City is required'),
-  state: z.string().min(2, 'State is required'),
-  postal_code: z.string().min(4, 'Postal code is required'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
-
-type RegistrationFormData = z.infer<typeof registrationSchema>;
+import { logError } from '../core/utils/errorHandler';
+import { RegistrationErrorNotice } from '../features/registration/presentation/components/RegistrationErrorNotice';
+import { useRegisterClinicOwner } from '../features/registration/presentation/hooks/useRegisterClinicOwner';
+import {
+  isRegistrationFieldKey,
+  registrationFieldStep,
+  registrationFormSchema,
+  type RegistrationFormData,
+} from '../features/registration/domain/registrationValidation';
+import type { RegistrationRequest } from '../features/registration/domain/entities/registration.entity';
+import { useTranslation } from '../core/localization/useTranslation';
 
 const STEPS = [
   { title: 'Personal Info', icon: 'person' as const },
@@ -59,10 +46,14 @@ const STEPS = [
 
 export default function ClinicOwnerRegistrationScreen() {
   const theme = useClinicTheme();
+  const { t } = useTranslation();
   const router = useRouter();
+  const registrationMutation = useRegisterClinicOwner();
+  const localizeFieldError = (message?: string) =>
+    t(message ?? 'errors.auth.registration.validation.field_invalid');
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<RegistrationSubmissionError | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -71,8 +62,12 @@ export default function ClinicOwnerRegistrationScreen() {
     handleSubmit,
     formState: { errors },
     trigger,
+    setError: setFieldError,
+    clearErrors,
   } = useForm<RegistrationFormData>({
-    resolver: zodResolver(registrationSchema),
+    resolver: zodResolver(registrationFormSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       full_name: '',
       email: '',
@@ -116,10 +111,11 @@ export default function ClinicOwnerRegistrationScreen() {
   const onSubmit = async (data: RegistrationFormData) => {
     try {
       setIsLoading(true);
-      setError(null);
+      setSubmissionError(null);
+      clearErrors();
 
       // Build the request payload
-      const payload: ClinicOwnerRegistrationRequest = {
+      const payload: RegistrationRequest = {
         email: data.email,
         password: data.password,
         full_name: data.full_name,
@@ -152,13 +148,12 @@ export default function ClinicOwnerRegistrationScreen() {
         },
       };
 
-      const response = await registerClinicOwnerApi(payload);
+      const response = await registrationMutation.mutateAsync(payload);
 
       if (response.success) {
         // Sign out the user immediately after registration
         // This prevents session issues when redirecting
         await supabase.auth.signOut();
-        console.log('[Register] User signed out after registration');
 
         // Check if application was auto-approved
         const isAutoApproved = response.auto_approval_result?.eligible && 
@@ -166,7 +161,6 @@ export default function ClinicOwnerRegistrationScreen() {
         
         if (Platform.OS === 'web') {
           // Web: Use direct navigation instead of Alert
-          console.log('[Register] Web platform - redirecting to login');
           router.replace('/login');
         } else {
           // Mobile: Use Alert with callback
@@ -199,10 +193,29 @@ export default function ClinicOwnerRegistrationScreen() {
       } else {
         throw new Error(response.validation_errors?.[0] || 'Registration failed');
       }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || err.message || 'Registration failed. Please try again.';
-      setError(errorMsg);
-      Alert.alert('Error', errorMsg);
+    } catch (err: unknown) {
+      const registrationError =
+        err instanceof RegistrationSubmissionError
+          ? err
+          : new RegistrationSubmissionError('UNEXPECTED');
+      if (registrationError.validationIssues.length > 0) {
+        const firstFieldIssue = registrationError.validationIssues.find(
+          issue => isRegistrationFieldKey(issue.fieldKey)
+        );
+        registrationError.validationIssues.forEach(issue => {
+          if (isRegistrationFieldKey(issue.fieldKey)) {
+            setFieldError(issue.fieldKey, { type: 'server', message: `errors.auth.registration.validation.${issue.code}` });
+          }
+        });
+        if (firstFieldIssue && isRegistrationFieldKey(firstFieldIssue.fieldKey)) {
+          setCurrentStep(registrationFieldStep[firstFieldIssue.fieldKey]);
+        }
+        return;
+      }
+      if (!registrationError.recoverable) {
+        logError('registration.submit', registrationError);
+      }
+      setSubmissionError(registrationError);
     } finally {
       setIsLoading(false);
     }
@@ -295,7 +308,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.full_name && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.full_name.message}
+            {localizeFieldError(errors.full_name.message)}
           </Text>
         )}
       </View>
@@ -331,7 +344,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.email && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.email.message}
+            {localizeFieldError(errors.email.message)}
           </Text>
         )}
       </View>
@@ -366,7 +379,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.phone && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.phone.message}
+            {localizeFieldError(errors.phone.message)}
           </Text>
         )}
       </View>
@@ -415,7 +428,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.password && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.password.message}
+            {localizeFieldError(errors.password.message)}
           </Text>
         )}
       </View>
@@ -466,7 +479,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.confirmPassword && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.confirmPassword.message}
+            {localizeFieldError(errors.confirmPassword.message)}
           </Text>
         )}
       </View>
@@ -508,7 +521,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.tenant_name && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.tenant_name.message}
+            {localizeFieldError(errors.tenant_name.message)}
           </Text>
         )}
       </View>
@@ -567,7 +580,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.clinic_type && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.clinic_type.message}
+            {localizeFieldError(errors.clinic_type.message)}
           </Text>
         )}
       </View>
@@ -609,7 +622,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.address_line1 && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.address_line1.message}
+            {localizeFieldError(errors.address_line1.message)}
           </Text>
         )}
       </View>
@@ -643,7 +656,7 @@ export default function ClinicOwnerRegistrationScreen() {
         />
         {errors.city && (
           <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-            {errors.city.message}
+            {localizeFieldError(errors.city.message)}
           </Text>
         )}
       </View>
@@ -678,7 +691,7 @@ export default function ClinicOwnerRegistrationScreen() {
           />
           {errors.state && (
             <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-              {errors.state.message}
+            {localizeFieldError(errors.state.message)}
             </Text>
           )}
         </View>
@@ -712,7 +725,7 @@ export default function ClinicOwnerRegistrationScreen() {
           />
           {errors.postal_code && (
             <Text style={[styles.errorText, { color: theme.colors.feedback.error }]}>
-              {errors.postal_code.message}
+            {localizeFieldError(errors.postal_code.message)}
             </Text>
           )}
         </View>
@@ -754,6 +767,10 @@ export default function ClinicOwnerRegistrationScreen() {
             {currentStep === 1 && renderStep1()}
             {currentStep === 2 && renderStep2()}
           </View>
+
+          {submissionError ? (
+            <RegistrationErrorNotice error={submissionError} onSignIn={() => router.replace('/login')} />
+          ) : null}
 
           {/* Navigation Buttons */}
           <View style={styles.buttonContainer}>

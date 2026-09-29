@@ -19,20 +19,40 @@ import { queryClient } from '../../../core/api/queryClient';
 import { supabase } from '../../../core/api/supabaseClient';
 import { isLoggingOut } from '../../../core/api/authGuard';
 
+const mockRouterReplace = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: jest.fn(), push: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ replace: mockRouterReplace, push: jest.fn(), back: jest.fn() }),
 }));
-// useAuth.ts imports `InteractionManager` from the top-level `react-native`
-// package. Nothing else in this test's dependency chain needs real
+// Nothing else in this test's dependency chain needs real
 // react-native (useAuthStore, and its secureStorage dependency, are fully
 // mocked below), so a minimal mock is used here — a full `requireActual`
 // re-export would pull in native-only modules unavailable in this jest
 // environment (e.g. the DevMenu turbo module). This makes the deferred
 // post-logout navigation run synchronously instead of waiting on the real
-// interaction queue.
+// idle callback.
 jest.mock('react-native', () => ({
-  InteractionManager: { runAfterInteractions: (cb: () => void) => cb() },
+  // Expo SDK 57 initializes expo-modules-core while the test imports its
+  // dependencies. Its Platform bridge requires this minimal React Native
+  // Platform shape; the test's intentionally narrow native mock otherwise
+  // leaves Platform undefined before the logout assertions can run.
+  Platform: {
+    OS: 'ios',
+    select: (values: Record<string, unknown>) => values.ios ?? values.default,
+  },
 }));
+
+const requestIdleCallback = jest.fn((callback: IdleRequestCallback) => {
+  callback({
+    didTimeout: false,
+    timeRemaining: () => 50,
+  });
+  return 1;
+});
+
+Object.defineProperty(globalThis, 'requestIdleCallback', {
+  configurable: true,
+  value: requestIdleCallback,
+});
 jest.mock('../../../core/api/supabaseClient', () => ({
   supabase: { auth: { signOut: jest.fn(), signInWithPassword: jest.fn(), getSession: jest.fn(), refreshSession: jest.fn() } },
 }));
@@ -75,6 +95,7 @@ describe('Logout boundary (T-0.4 baseline, T-A.4 fix)', () => {
   beforeEach(() => {
     callOrder.length = 0;
     jest.clearAllMocks();
+    mockRouterReplace.mockClear();
     (supabase.auth.signOut as jest.Mock).mockImplementation(async () => {
       callOrder.push('supabaseSignOut');
     });
@@ -110,6 +131,7 @@ describe('Logout boundary (T-0.4 baseline, T-A.4 fix)', () => {
 
     await logoutPromise;
     expect(isLoggingOut()).toBe(false);
+    expect(mockRouterReplace).toHaveBeenCalledWith('/login');
   });
 
   it('BASELINE: logout empties the query cache, so a query cached before logout no longer exists to be (re)fetched afterward', async () => {

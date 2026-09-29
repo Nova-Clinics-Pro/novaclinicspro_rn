@@ -15,7 +15,7 @@ jest.mock('../../core/theme/useClinicTheme', () => ({
       text: { secondary: '#6B7280' },
       border: { subtle: '#F3F4F6' },
     },
-    spacing: { xs: 4 },
+    spacing: { xs: 4, sm: 8 },
     typography: {
       body2: { fontSize: 14 },
       h6: { fontSize: 16, fontWeight: '600' },
@@ -67,5 +67,19 @@ describe('ProgressBar Component', () => {
     });
 
     expect(fillView).toBeTruthy();
+  });
+
+  it('exposes progressbar semantics and textual meaning', () => {
+    const { getByRole } = render(
+      <ProgressBar
+        percentage={60}
+        showLabel={false}
+        accessibilityLabel="3 of 5 journey steps complete"
+      />
+    );
+
+    const progressbar = getByRole('progressbar');
+    expect(progressbar.props.accessibilityLabel).toBe('3 of 5 journey steps complete');
+    expect(progressbar.props.accessibilityValue).toEqual({ min: 0, max: 100, now: 60 });
   });
 });

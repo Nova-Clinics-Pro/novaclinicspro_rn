@@ -31,6 +31,7 @@ import {
   PaginatedStaffResponse,
   PaginatedLeaveResponse,
 } from '../models/staff.dtos';
+import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
 // ============================================
 // QUERY KEYS
@@ -100,8 +101,11 @@ export const useCreateStaffMutation = (tenantId: string) => {
 
   return useMutation<StaffResponse, Error, StaffCreate>({
     mutationFn: (payload) => createStaffApi(tenantId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffKeys.lists() });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: staffKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
@@ -114,9 +118,12 @@ export const useUpdateStaffMutation = (tenantId: string, staffId: string) => {
 
   return useMutation<StaffResponse, Error, StaffUpdate>({
     mutationFn: (payload) => updateStaffApi(tenantId, staffId, payload),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(staffKeys.detail(tenantId, staffId), data);
-      queryClient.invalidateQueries({ queryKey: staffKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: staffKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };
@@ -129,8 +136,11 @@ export const useDeleteStaffMutation = (tenantId: string) => {
 
   return useMutation<void, Error, string>({
     mutationFn: (staffId) => deleteStaffApi(tenantId, staffId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffKeys.lists() });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: staffKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
     },
   });
 };

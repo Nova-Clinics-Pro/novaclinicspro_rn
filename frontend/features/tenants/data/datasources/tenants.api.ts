@@ -8,6 +8,8 @@ import {
   OrgTenantResponse,
   OrgTenantCreate,
   OrgTenantUpdate,
+  TenantClinicProfileUpdate,
+  TenantClinicProfile,
   ListTenantsParams,
 } from '../models/tenants.dtos';
 
@@ -79,3 +81,27 @@ export const getCurrentTenantApi = async (
   );
   return response.data;
 };
+
+/** PATCH /api/v1/tenants/{tenant_id}/clinic-profile */
+export const updateCurrentTenantClinicProfileApi = async (
+  tenantId: string,
+  payload: TenantClinicProfileUpdate,
+): Promise<TenantClinicProfile> => {
+  const response = await axiosClient.patch<TenantClinicProfile>(
+    `/api/v1/tenants/${tenantId}/clinic-profile`,
+    payload,
+  );
+  return response.data;
+};
+
+export const getCurrentTenantClinicProfileApi = async (tenantId: string): Promise<TenantClinicProfile> =>
+  (await axiosClient.get<TenantClinicProfile>(`/api/v1/tenants/${tenantId}/clinic-profile`)).data;
+
+/** Upload branding media through the tenant-scoped profile API. */
+export const uploadCurrentTenantClinicLogoApi = async (
+  tenantId: string,
+  clinicLogo: string,
+): Promise<{ clinic_logo?: string | null }> =>
+  (await axiosClient.post<{ clinic_logo?: string | null }>(`/api/v1/tenants/${tenantId}/upload-logo`, {
+    clinic_logo: clinicLogo,
+  })).data;

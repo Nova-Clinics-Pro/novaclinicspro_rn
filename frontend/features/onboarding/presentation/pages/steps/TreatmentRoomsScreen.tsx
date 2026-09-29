@@ -19,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
 import { axiosClient } from '../../../../../core/api/axiosClient';
+import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
+import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
 
 interface Room {
   id: string;
@@ -44,12 +46,30 @@ export function TreatmentRoomsScreen({ tenantId, stepCode = 'treatment_rooms' }:
       capacity: '1',
     },
   ]);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const { setRooms: setRoomsDraft, getStepData } = useWizardStore();
 
   const submitStepMutation = useSubmitStepMutation(tenantId, stepCode);
 
   useEffect(() => {
     fetchRoomsData();
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!loading) {
+      const timeout = setTimeout(() => {
+        setRoomsDraft({
+          rooms: rooms.map((room) => ({
+            name: room.name,
+            room_type: room.room_type,
+            capacity: parseInt(room.capacity) || 1,
+          })),
+        });
+      }, 500);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [loading, rooms, setRoomsDraft]);
 
   const fetchRoomsData = async () => {
     try {
@@ -92,10 +112,36 @@ export function TreatmentRoomsScreen({ tenantId, stepCode = 'treatment_rooms' }:
         setRooms(existingRooms);
         console.log('[TreatmentRoomsScreen] Loaded existing rooms:', existingRooms.length);
       } else {
+        const draft = getStepData(stepCode) || getStepData('rooms_and_therapy_beds');
+        if (draft?.rooms && Array.isArray(draft.rooms)) {
+          const draftRooms = draft.rooms.map((room: any, index: number) => ({
+            id: String(index + 1),
+            name: room.name || '',
+            room_type: room.room_type || 'consultation',
+            capacity: String(room.capacity || 1),
+          }));
+          setRooms(draftRooms);
+          setDraftRestored(true);
+          return;
+        }
+
         console.log('[TreatmentRoomsScreen] No existing rooms, showing empty form');
       }
     } catch (error: any) {
       console.error('[TreatmentRoomsScreen] Error fetching rooms:', error);
+      const draft = getStepData(stepCode) || getStepData('rooms_and_therapy_beds');
+      if (draft?.rooms && Array.isArray(draft.rooms)) {
+        const draftRooms = draft.rooms.map((room: any, index: number) => ({
+          id: String(index + 1),
+          name: room.name || '',
+          room_type: room.room_type || 'consultation',
+          capacity: String(room.capacity || 1),
+        }));
+        setRooms(draftRooms);
+        setDraftRestored(true);
+        return;
+      }
+
       // If API fails, keep the default empty form
       console.log('[TreatmentRoomsScreen] Using default empty form');
     } finally {
@@ -104,6 +150,7 @@ export function TreatmentRoomsScreen({ tenantId, stepCode = 'treatment_rooms' }:
   };
 
   const addRoom = () => {
+    setDraftRestored(false);
     setRooms([
       ...rooms,
       {
@@ -120,10 +167,12 @@ export function TreatmentRoomsScreen({ tenantId, stepCode = 'treatment_rooms' }:
       Alert.alert('Error', 'At least one room is required');
       return;
     }
+    setDraftRestored(false);
     setRooms(rooms.filter((room) => room.id !== id));
   };
 
   const updateRoom = (id: string, field: keyof Room, value: string) => {
+    setDraftRestored(false);
     setRooms(rooms.map((room) => (room.id === id ? { ...room, [field]: value } : room)));
   };
 
@@ -163,6 +212,11 @@ export function TreatmentRoomsScreen({ tenantId, stepCode = 'treatment_rooms' }:
 
       console.log('[TreatmentRoomsScreen] Step completed successfully');
       console.log('[TreatmentRoomsScreen] Backend response:', JSON.stringify(result, null, 2));
+      setDraftRestored(false);
+      await clearStepDraftAndSync(stepCode);
+      if (stepCode !== 'rooms_and_therapy_beds') {
+        await clearStepDraftAndSync('rooms_and_therapy_beds');
+      }
 
       // Get next step from backend response
       const nextStep = result.next_step;
@@ -204,6 +258,8 @@ export function TreatmentRoomsScreen({ tenantId, stepCode = 'treatment_rooms' }:
       style={[styles.container, { backgroundColor: theme.colors.background.default }]}
       contentContainerStyle={{ padding: theme.spacing.lg }}
     >
+      {draftRestored && <RestoredDraftIndicator />}
+
       <View style={[styles.header, { marginBottom: theme.spacing.xl }]}>
         <Ionicons name="business" size={48} color={theme.colors.primary.default} />
         <Text

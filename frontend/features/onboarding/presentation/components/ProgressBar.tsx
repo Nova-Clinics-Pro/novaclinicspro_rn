@@ -1,88 +1,82 @@
 /**
  * ProgressBar Component
- * Displays setup progress with percentage
+ * Displays setup progress with percentage and accessible textual meaning.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { ClinicTheme, useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { useTranslation } from '../../../../core/localization/useTranslation';
 
 interface ProgressBarProps {
   percentage: number;
   showLabel?: boolean;
+  accessibilityLabel?: string;
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   percentage,
   showLabel = true,
+  accessibilityLabel,
 }) => {
   const theme = useClinicTheme();
   const { t } = useTranslation();
+  const styles = useMemo(
+    () => createStyles(theme, percentage),
+    [theme, percentage]
+  );
+  const defaultLabel = t('onboarding.progressiveExperience.flow.clinicPreparation');
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={accessibilityLabel ?? defaultLabel}
+      accessibilityValue={{ min: 0, max: 100, now: percentage }}
+    >
       {showLabel && (
-        <View
-          style={[styles.labelRow, { marginBottom: theme.spacing.xs }]}
-        >
-          <Text
-            style={[
-              theme.typography.body2,
-              { color: theme.colors.text.secondary },
-            ]}
-          >
-            {t('onboarding.progressiveExperience.flow.clinicPreparation')}
-          </Text>
-          <Text
-            style={[
-              theme.typography.h6,
-              { color: theme.colors.primary.default },
-            ]}
-          >
-            {percentage}%
-          </Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>{defaultLabel}</Text>
+          <Text style={styles.percentage}>{percentage}%</Text>
         </View>
       )}
-      <View
-        style={[
-          styles.track,
-          {
-            backgroundColor: theme.colors.border.subtle,
-            height: 8,
-            borderRadius: 4,
-          },
-        ]}
-      >
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${percentage}%`,
-              backgroundColor: theme.colors.primary.default,
-              height: 8,
-              borderRadius: 4,
-            },
-          ]}
-        />
+      <View style={styles.track}>
+        <View style={styles.fill} />
       </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  track: {
-    overflow: 'hidden',
-  },
-  fill: {
-    // Width set dynamically
-  },
-});
+const createStyles = (theme: ClinicTheme, percentage: number) =>
+  StyleSheet.create({
+    container: {
+      width: '100%',
+    },
+    labelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xs,
+    },
+    label: {
+      ...theme.typography.body2,
+      color: theme.colors.text.secondary,
+    },
+    percentage: {
+      ...theme.typography.h6,
+      color: theme.colors.primary.default,
+    },
+    track: {
+      overflow: 'hidden',
+      backgroundColor: theme.colors.border.subtle,
+      height: theme.spacing.sm,
+      borderRadius: theme.spacing.xs,
+    },
+    fill: {
+      width: `${percentage}%`,
+      backgroundColor: theme.colors.primary.default,
+      height: theme.spacing.sm,
+      borderRadius: theme.spacing.xs,
+    },
+  });

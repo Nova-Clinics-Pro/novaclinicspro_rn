@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
 import { axiosClient } from '../../../../../core/api/axiosClient';
+import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
+import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
 
 interface OperatingHoursScreenProps {
   tenantId: string;
@@ -33,10 +35,22 @@ export function OperatingHoursScreen({ tenantId, isWizardMode = false, onSuccess
   
   const [loading, setLoading] = useState(true);
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const { setOperatingHours, getStepData } = useWizardStore();
 
   useEffect(() => {
     fetchOperatingHours();
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!loading) {
+      const timeout = setTimeout(() => {
+        setOperatingHours({ schedule });
+      }, 500);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [loading, schedule, setOperatingHours]);
 
   const fetchOperatingHours = async () => {
     try {
@@ -47,9 +61,16 @@ export function OperatingHoursScreen({ tenantId, isWizardMode = false, onSuccess
       const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/operating-hours`);
       console.log('[OperatingHoursScreen] Operating hours response:', JSON.stringify(response.data, null, 2));
       
-      if (response.data && Array.isArray(response.data)) {
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
         setSchedule(response.data);
       } else {
+        const draft = getStepData('operating_hours');
+        if (draft?.schedule && Array.isArray(draft.schedule)) {
+          setSchedule(draft.schedule);
+          setDraftRestored(true);
+          return;
+        }
+
         // No operating hours set yet, show default schedule
         setSchedule(DAYS.map(day => ({
           day,
@@ -60,6 +81,13 @@ export function OperatingHoursScreen({ tenantId, isWizardMode = false, onSuccess
       }
     } catch (error: any) {
       console.error('[OperatingHoursScreen] Error fetching operating hours:', error);
+      const draft = getStepData('operating_hours');
+      if (draft?.schedule && Array.isArray(draft.schedule)) {
+        setSchedule(draft.schedule);
+        setDraftRestored(true);
+        return;
+      }
+
       // If API fails, show default schedule
       setSchedule(DAYS.map(day => ({
         day,
@@ -81,6 +109,8 @@ export function OperatingHoursScreen({ tenantId, isWizardMode = false, onSuccess
 
       console.log('[OperatingHoursScreen] Step completed successfully');
       console.log('[OperatingHoursScreen] Backend response:', JSON.stringify(result, null, 2));
+      setDraftRestored(false);
+      await clearStepDraftAndSync('operating_hours');
 
       // In wizard mode, call onSuccess callback instead of navigating
       if (isWizardMode && onSuccess) {
@@ -119,6 +149,8 @@ export function OperatingHoursScreen({ tenantId, isWizardMode = false, onSuccess
       style={[styles.container, { backgroundColor: theme.colors.background.default }]}
       contentContainerStyle={{ padding: theme.spacing.lg }}
     >
+      {draftRestored && <RestoredDraftIndicator />}
+
       <View style={[styles.header, { marginBottom: theme.spacing.lg }]}>
         <Ionicons name="time" size={48} color={theme.colors.primary.default} />
         <Text style={[theme.typography.h4, { color: theme.colors.text.primary, marginTop: theme.spacing.md }]}>

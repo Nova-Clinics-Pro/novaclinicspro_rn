@@ -11,16 +11,33 @@ import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 interface ErrorScreenProps {
   message: string;
   onRetry?: () => void;
+  onDismiss?: () => void;
+  title?: string;
+  retryLabel?: string;
+  dismissLabel?: string;
 }
 
-export const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry }) => {
+export const ErrorScreen: React.FC<ErrorScreenProps> = ({
+  message,
+  onRetry,
+  onDismiss,
+  title = 'Something went wrong',
+  retryLabel = 'Try Again',
+  dismissLabel = 'Close',
+}) => {
   const theme = useClinicTheme();
 
   return (
-    <View style={[styles.container, { 
-      backgroundColor: theme.colors.background.default,
-      padding: theme.spacing.xl 
-    }]}>
+    <View
+      accessible
+      accessibilityRole="alert"
+      accessibilityLabel={`${title}. ${message}`}
+      accessibilityLiveRegion="assertive"
+      style={[styles.container, {
+        backgroundColor: theme.colors.background.default,
+        padding: theme.spacing.xl,
+      }]}
+    >
       <Ionicons 
         name="alert-circle" 
         size={64} 
@@ -35,7 +52,7 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry }) =>
           marginBottom: theme.spacing.sm 
         }
       ]}>
-        Something went wrong
+        {title}
       </Text>
       <Text style={[
         styles.message, 
@@ -52,15 +69,30 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({ message, onRetry }) =>
           style={[styles.retryButton, { 
             backgroundColor: theme.colors.primary.default,
             paddingHorizontal: theme.spacing.lg,
-            paddingVertical: 12 
+            paddingVertical: theme.spacing.md,
+            borderRadius: theme.spacing.sm,
           }]}
           onPress={onRetry}
+          accessibilityRole="button"
+          accessibilityLabel={retryLabel}
         >
           <Text style={[
             theme.typography.button, 
             { color: theme.colors.text.onPrimary }
           ]}>
-            Try Again
+            {retryLabel}
+          </Text>
+        </TouchableOpacity>
+      )}
+      {onDismiss && (
+        <TouchableOpacity
+          style={[styles.dismissButton, { marginTop: theme.spacing.md }]}
+          onPress={onDismiss}
+          accessibilityRole="button"
+          accessibilityLabel={dismissLabel}
+        >
+          <Text style={[theme.typography.button, { color: theme.colors.primary.default }]}>
+            {dismissLabel}
           </Text>
         </TouchableOpacity>
       )}
@@ -81,6 +113,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   retryButton: {
-    borderRadius: 8,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  dismissButton: {
+    minHeight: 48,
+    justifyContent: 'center',
   },
 });

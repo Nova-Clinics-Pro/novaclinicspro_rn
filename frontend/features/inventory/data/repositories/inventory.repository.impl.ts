@@ -38,6 +38,7 @@ import {
   ListBatchesParams,
   ListAlertsParams,
 } from '../models/inventory.dtos';
+import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
 // ============================================
 // QUERY KEYS
@@ -133,13 +134,18 @@ export const useCreateInventoryItemMutation = (
   options?: UseMutationOptions<InventoryItemResponse, Error, InventoryCreateRequest>
 ) => {
   const queryClient = useQueryClient();
+  const { onSuccess: handleSuccess, ...mutationOptions } = options ?? {};
 
   return useMutation<InventoryItemResponse, Error, InventoryCreateRequest>({
     mutationFn: (payload) => createInventoryItemApi(tenantId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: inventoryKeys.lists() });
+    onSuccess: async (data, variables, context) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
+      await handleSuccess?.(data, variables, context);
     },
-    ...options,
+    ...mutationOptions,
   });
 };
 
@@ -152,14 +158,19 @@ export const useUpdateInventoryItemMutation = (
   options?: UseMutationOptions<InventoryItemResponse, Error, InventoryUpdateRequest>
 ) => {
   const queryClient = useQueryClient();
+  const { onSuccess: handleSuccess, ...mutationOptions } = options ?? {};
 
   return useMutation<InventoryItemResponse, Error, InventoryUpdateRequest>({
     mutationFn: (payload) => updateInventoryItemApi(tenantId, itemId, payload),
-    onSuccess: (data) => {
+    onSuccess: async (data, variables, context) => {
       queryClient.setQueryData(inventoryKeys.detail(tenantId, itemId), data);
-      queryClient.invalidateQueries({ queryKey: inventoryKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.lists() }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
+      await handleSuccess?.(data, variables, context);
     },
-    ...options,
+    ...mutationOptions,
   });
 };
 
@@ -172,17 +183,22 @@ export const useDeleteInventoryItemMutation = (
   options?: UseMutationOptions<void, Error, void>
 ) => {
   const queryClient = useQueryClient();
+  const { onSuccess: handleSuccess, ...mutationOptions } = options ?? {};
 
   return useMutation<void, Error, void>({
     mutationFn: () => deleteInventoryItemApi(tenantId, itemId),
-    onSuccess: () => {
+    onSuccess: async (data, variables, context) => {
       removeInventoryItemFromCachedLists(queryClient, itemId);
       queryClient.removeQueries({ queryKey: inventoryKeys.detail(tenantId, itemId) });
       queryClient.invalidateQueries({ queryKey: inventoryKeys.detail(tenantId, itemId) });
       queryClient.invalidateQueries({ queryKey: inventoryKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.all }),
+        invalidateCanonicalOnboardingState(queryClient, tenantId),
+      ]);
+      await handleSuccess?.(data, variables, context);
     },
-    ...options,
+    ...mutationOptions,
   });
 };
 

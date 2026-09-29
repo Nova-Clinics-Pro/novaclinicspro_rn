@@ -9,7 +9,7 @@ export interface OrgTenantCreate {
   name: string;
   clinic_type: string;
   email?: string | null;
-  phones?: Record<string, any> | null;
+  phones?: string[] | Record<string, any> | null;
   website_address?: string | null;
   clinic_logo?: string | null;
   clinic_registration?: string | null;
@@ -25,7 +25,7 @@ export interface OrgTenantUpdate {
   name?: string;
   clinic_type?: string;
   email?: string | null;
-  phones?: Record<string, any> | null;
+  phones?: string[] | Record<string, any> | null;
   website_address?: string | null;
   clinic_logo?: string | null;
   clinic_registration?: string | null;
@@ -36,6 +36,38 @@ export interface OrgTenantUpdate {
   currency?: string;
   address?: Record<string, any> | null;
   is_active?: boolean;
+}
+
+/** Tenant-scoped, purpose-limited clinic profile write contract. */
+export interface TenantClinicProfileUpdate {
+  name?: string;
+  email?: string | null;
+  phones?: string[] | null;
+  address?: {
+    street?: string | null;
+    city?: string | null;
+    state?: string | null;
+    pincode?: string | null;
+    country?: string | null;
+  } | null;
+  website_address?: string | null;
+  clinic_registration?: string | null;
+  clinic_pan?: string | null;
+  clinic_gst?: string | null;
+}
+
+export interface TenantClinicProfile {
+  id: string;
+  name: string;
+  clinic_type?: string;
+  email?: string | null;
+  phones?: string[] | null;
+  address?: { street?: string | null; city?: string | null; state?: string | null; pincode?: string | null; country?: string | null } | null;
+  website_address?: string | null;
+  clinic_logo?: string | null;
+  clinic_registration?: string | null;
+  clinic_pan?: string | null;
+  clinic_gst?: string | null;
 }
 
 export interface ListTenantsParams {

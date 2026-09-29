@@ -141,12 +141,28 @@ export interface StepValidationDTO {
   is_valid: boolean;
   issues: ValidationIssueDTO[];
   blocked_reason: string | null;
-  action_url_template: string;
-  entity_type: string;
-  icon: string;
-  category: string;
+  action_url_template: string | null;
+  entity_type: string | null;
+  icon: string | null;
+  category: string | null;
   visible: boolean;
   actionable: boolean;
+  revision?: string | null;
+  updated_at?: string | null;
+  template_version?: string | null;
+  capability_revision?: string | null;
+}
+
+export class OnboardingStatusDatasourceError extends Error {
+  constructor(
+    readonly kind: 'TENANT_MISMATCH' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'BACKEND_FAILURE',
+    readonly errorCode: string,
+    readonly messageToken: string,
+    readonly retryable: boolean
+  ) {
+    super(messageToken);
+    this.name = 'OnboardingStatusDatasourceError';
+  }
 }
 
 export interface ValidationIssueDTO {
@@ -161,6 +177,7 @@ export interface ValidationIssueDTO {
 export interface StepSubmitRequest {
   data: Record<string, any>;
   mark_complete?: boolean;
+  expected_revision?: string;
 }
 
 export interface StepSubmitResponse {
@@ -170,6 +187,51 @@ export interface StepSubmitResponse {
   validation_errors: StepValidationError[];
   next_step: string | null;
   message: string;
+  revision?: string | null;
+  template_version?: string | null;
+  capability_revision?: string | null;
+}
+
+export interface StepConflictResponseDTO {
+  error: {
+    error_code: 'onboarding.step_revision_conflict';
+    message_token: string;
+    conflict: {
+      classification: 'STALE_REVISION';
+      step_code: string;
+      current_revision: string;
+      template_version: string;
+      capability_revision: string;
+    };
+  };
+}
+
+export type StepSubmissionDatasourceFailureKind =
+  | 'STALE_REVISION'
+  | 'MALFORMED_CONFLICT'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'TENANT_MISMATCH'
+  | 'ORGANIZATION_MISMATCH'
+  | 'VALIDATION'
+  | 'UNSUPPORTED'
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'NETWORK'
+  | 'TIMEOUT'
+  | 'CANCELLED'
+  | 'BACKEND_FAILURE';
+
+export class StepSubmissionDatasourceError extends Error {
+  constructor(
+    readonly kind: StepSubmissionDatasourceFailureKind,
+    readonly errorCode: string,
+    readonly messageToken: string,
+    readonly retryable: boolean,
+    readonly conflict: StepConflictResponseDTO['error']['conflict'] | null = null
+  ) {
+    super(messageToken);
+    this.name = 'StepSubmissionDatasourceError';
+  }
 }
 
 export interface CreatedEntity {
@@ -208,4 +270,244 @@ export interface CompleteSetupResponse {
       next_full_billing_date: string;
     };
   };
+}
+
+// === Workspace Preparation (TG20 Version 1) ===
+export type WorkspacePreparationStateDTO =
+  | 'PENDING'
+  | 'PREPARING'
+  | 'PERSONALIZATION_AVAILABLE'
+  | 'RETRYABLE_FAILURE'
+  | 'TERMINAL_FAILURE';
+
+export interface WorkspacePreparationStartRequestDTO {
+  contract_version: 'workspace_preparation_v1';
+}
+
+export interface WorkspacePreparationRetryRequestDTO
+  extends WorkspacePreparationStartRequestDTO {
+  aggregate_version: number;
+}
+
+export interface WorkspacePreparationProgressDTO {
+  completed: number;
+  total: number;
+  indeterminate: boolean;
+}
+
+export interface WorkspacePreparationUnitDTO {
+  code: string;
+  outcome: string;
+  evidence_version: string;
+  attempt: number;
+  observed_at: string;
+  recorded_at: string;
+}
+
+export interface WorkspacePreparationResponseDTO {
+  contract_version: string;
+  run_id: string;
+  state: WorkspacePreparationStateDTO;
+  aggregate_version: number;
+  progress: WorkspacePreparationProgressDTO;
+  units: WorkspacePreparationUnitDTO[];
+  reason_code: string | null;
+  retry_allowed: boolean;
+  user_retry_count: number;
+  max_user_retries: number;
+  next_action: string;
+  refresh_after_seconds: number | null;
+  support_correlation_id: string;
+  updated_at: string;
+}
+
+export interface WorkspacePreparationErrorDTO {
+  error_code: string;
+  message_token: string;
+  retryable: boolean;
+}
+
+export class WorkspacePreparationDatasourceError extends Error {
+  constructor(
+    readonly errorCode: string,
+    readonly messageToken: string,
+    readonly retryable: boolean
+  ) {
+    super(messageToken);
+    this.name = 'WorkspacePreparationDatasourceError';
+  }
+}
+
+// === Journey Visibility (TG21 Version 1) ===
+export type JourneyVisibilityProgressDTO = 'INCOMPLETE' | 'COMPLETED';
+
+export interface JourneyVisibilityStepDTO {
+  step_id: string;
+  order: number;
+  visibility: 'VISIBLE';
+  progress: JourneyVisibilityProgressDTO;
+}
+
+export interface JourneyCorrectiveActionDTO {
+  kind: 'NAVIGATE';
+  target: string;
+  destination: string;
+  required_params: string[];
+  label_token: string;
+  availability: 'AVAILABLE' | 'UNAVAILABLE';
+  fallback_token: string;
+}
+
+export interface JourneyRequirementDTO {
+  requirement_id: string;
+  satisfied: boolean;
+  current_value: unknown;
+  required_value: unknown;
+  title_token: string | null;
+  help_token: string | null;
+  blocker_token: string | null;
+  corrective_action: JourneyCorrectiveActionDTO | null;
+}
+
+export interface JourneyResolvedStepDTO {
+  step_id: string;
+  order: number;
+  renderer_key: string | null;
+  applicable: boolean;
+  required: boolean;
+  state:
+    | 'NOT_STARTED'
+    | 'IN_PROGRESS'
+    | 'COMPLETE'
+    | 'BLOCKED'
+    | 'NOT_APPLICABLE';
+  title_token: string | null;
+  help_token: string | null;
+  requirements: JourneyRequirementDTO[];
+  blockers: JourneyRequirementDTO[];
+  corrective_actions: JourneyCorrectiveActionDTO[];
+  management_actions?: JourneyCorrectiveActionDTO[];
+  presentation: Record<string, unknown>;
+}
+
+export interface JourneyVisibilityResponseDTO {
+  contract_version: '1.0';
+  template_version: string;
+  capability_revision: string;
+  tenant_id: string;
+  projected_at: string;
+  projection_revision: string;
+  visible_steps: JourneyVisibilityStepDTO[];
+  resolved_steps: JourneyResolvedStepDTO[];
+}
+
+export class JourneyVisibilityDatasourceError extends Error {
+  constructor(
+    readonly errorCode: string,
+    readonly messageToken: string,
+    readonly retryable: boolean,
+    readonly httpStatus?: number
+  ) {
+    super(messageToken);
+    this.name = 'JourneyVisibilityDatasourceError';
+  }
+}
+
+// === Ready to Start (TG22 Version 1) ===
+export type ReadinessStateDTO =
+  | 'READY'
+  | 'NOT_READY'
+  | 'EVALUATING'
+  | 'UNKNOWN'
+  | 'UNAVAILABLE'
+  | 'STALE';
+
+export type ReadinessChecklistStatusDTO =
+  | 'COMPLETE'
+  | 'BLOCKED'
+  | 'ADVISORY'
+  | 'EVALUATING'
+  | 'UNKNOWN'
+  | 'UNAVAILABLE'
+  | 'STALE';
+
+export type ReadinessClassificationDTO = 'BLOCKER' | 'ADVISORY';
+export type ReadinessProviderOutcomeDTO = 'SATISFIED' | 'BLOCKER' | 'ADVISORY';
+export type ReadinessNextActionKindDTO =
+  | 'NAVIGATE'
+  | 'REFRESH'
+  | 'RETRY'
+  | 'CONTACT_SUPPORT';
+
+export interface ReadinessProjectionIdentityDTO {
+  readonly template_version: string;
+  readonly capability_revision: string;
+}
+
+export interface ReadinessIdentityDTO {
+  readonly readiness_contract_version: 'ready_to_start_v1';
+  readonly tenant_id: string;
+  readonly journey_projection_identity: ReadinessProjectionIdentityDTO;
+  readonly provider_set_revision: string;
+  readonly evidence_revision: string;
+}
+
+export interface ReadinessNextActionDTO {
+  readonly action_id: string;
+  readonly label_token: string;
+  readonly owner_id: string;
+  readonly kind: ReadinessNextActionKindDTO;
+  readonly authorization_requirement: string;
+  readonly target_id: string | null;
+}
+
+export interface ReadinessChecklistItemDTO {
+  readonly provider_id: string;
+  readonly item_id: string;
+  readonly item_version: string;
+  readonly title_token: string;
+  readonly explanation_token: string;
+  readonly status: ReadinessChecklistStatusDTO;
+  readonly classification: ReadinessClassificationDTO | null;
+  readonly evidence_timestamp: string;
+  readonly order: number;
+  readonly applicable: boolean;
+  readonly next_action: ReadinessNextActionDTO | null;
+}
+
+export interface ReadinessProviderDTO {
+  readonly provider_id: string;
+  readonly provider_version: string;
+  readonly provider_order: number;
+  readonly applicable: boolean;
+  readonly state: ReadinessStateDTO;
+  readonly outcome: ReadinessProviderOutcomeDTO;
+  readonly evidence_revision: string;
+  readonly observed_at: string;
+  readonly severity: string;
+  readonly explanation_token: string;
+  readonly next_action: ReadinessNextActionDTO | null;
+}
+
+export interface ReadyToStartResponseDTO {
+  readonly identity: ReadinessIdentityDTO;
+  readonly state: ReadinessStateDTO;
+  readonly providers: readonly ReadinessProviderDTO[];
+  readonly checklist: readonly ReadinessChecklistItemDTO[];
+  readonly blockers: readonly ReadinessChecklistItemDTO[];
+  readonly advisories: readonly ReadinessChecklistItemDTO[];
+  readonly evaluated_at: string;
+  readonly authorizes_handoff: boolean;
+}
+
+export class ReadyToStartDatasourceError extends Error {
+  constructor(
+    readonly errorCode: string,
+    readonly messageToken: string,
+    readonly retryable: boolean,
+    readonly httpStatus?: number
+  ) {
+    super(messageToken);
+    this.name = 'ReadyToStartDatasourceError';
+  }
 }

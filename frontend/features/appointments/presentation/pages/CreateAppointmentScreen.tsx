@@ -686,25 +686,8 @@ export const CreateAppointmentScreen: React.FC = () => {
   const tenantId = currentUser?.tenantId || '';
   const scrollRef = useRef<ScrollView>(null);
 
-  // Log params on mount to verify treatmentSheetId is received
-  useEffect(() => {
-    console.log('[CreateAppointmentScreen] Received params:', {
-      tab: params.tab,
-      treatmentSheetId: params.treatmentSheetId,
-      episodeId: params.episodeId,
-      caseSheetId: params.caseSheetId,
-      clientId: params.clientId,
-      clientName: params.clientName,
-      clientPhone: params.clientPhone,
-      durationDays: params.durationDays,
-      treatmentId: params.treatmentId,
-      treatmentName: params.treatmentName,
-    });
-  }, [params]);
-
   // Get feature configuration from JWT token
   const features = useFeatures();
-
   // Release 5 (R5) · T-F.2d (design.md §12, requirements.md N-10, FR-D2
   // narrowed): allow_multiday/enable_treatment_sheets are capability-
   // platform-derived as of T-F.2c (CapabilityResolutionService ->
@@ -712,27 +695,17 @@ export const CreateAppointmentScreen: React.FC = () => {
   // per-tenant value, so this no longer needs its own clinic-type
   // re-derivation on top (the former isTherapyClinic/tenant-clinic-type
   // fallback that lived here existed only to gate these two values).
+  // The normal clinic setting is persisted through the canonical capability
+  // service and projected by the backend in tenant features.  The generic
+  // Capability Platform endpoint is intentionally rollout-gated and is not a
+  // runtime dependency of appointment creation.
   const allowMultiDay = features.appointments.allow_multiday;
   const allowTherapySession = features.appointments.allow_multiday || features.treatment_sheets.enable_treatment_sheets;
-
-  console.log('[CreateAppointmentScreen] Feature check:', {
-    jwtFeatures: features,
-    allowMultiDay,
-    allowTherapySession,
-  });
 
   // ===== TOP-LEVEL STATE =====
   const [appointmentType, setAppointmentType] = useState<AppointmentType>('SINGLE');
   const [sessionType, setSessionType] = useState<SessionType>('DOCTOR');
 
-  useEffect(() => {
-    if (!allowMultiDay && appointmentType === 'MULTI') {
-      setAppointmentType('SINGLE');
-    }
-    if (!allowTherapySession && sessionType === 'THERAPY') {
-      setSessionType('DOCTOR');
-    }
-  }, [allowMultiDay, allowTherapySession, appointmentType, sessionType]);
   
   // Client (shared across all forms)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -903,6 +876,24 @@ export const CreateAppointmentScreen: React.FC = () => {
     100
   );
   const { data: treatmentsData, isLoading: isLoadingTreatments } = useTreatmentsListQuery(tenantId);
+  const eligibleMultiDayTreatmentIds = useMemo(() => {
+    const allowedTypes = new Set(features.appointments.multiday_appointment_types ?? []);
+    return new Set(
+      (treatmentsData?.items ?? [])
+        .filter(treatment => allowedTypes.has(treatment.category_code ?? treatment.code))
+        .map(treatment => treatment.id)
+    );
+  }, [features.appointments.multiday_appointment_types, treatmentsData?.items]);
+  const multiDayAvailable = allowMultiDay && eligibleMultiDayTreatmentIds.size > 0;
+
+  useEffect(() => {
+    if (!multiDayAvailable && appointmentType === 'MULTI') {
+      setAppointmentType('SINGLE');
+    }
+    if (!allowTherapySession && sessionType === 'THERAPY') {
+      setSessionType('DOCTOR');
+    }
+  }, [multiDayAvailable, allowTherapySession, appointmentType, sessionType]);
   
   // Staff queries - SEPARATE for doctors and therapists
   // CRITICAL FIX: Fetch doctors for DOCTOR mode and MULTI-DAY (doctor assignment)
@@ -1630,10 +1621,10 @@ export const CreateAppointmentScreen: React.FC = () => {
           keyboardDismissMode="interactive"
         >
             {/* Appointment Type - Only show if multi-day is available */}
-            {allowMultiDay && (
+            {multiDayAvailable && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Appointment Type</Text>
-                <TypeSelector value={appointmentType} onChange={handleAppointmentTypeChange} allowMultiDay={allowMultiDay} />
+                <TypeSelector value={appointmentType} onChange={handleAppointmentTypeChange} allowMultiDay={multiDayAvailable} />
               </View>
             )}
 
@@ -1749,7 +1740,7 @@ export const CreateAppointmentScreen: React.FC = () => {
             )}
 
             {/* ===== MULTI-DAY FORM ===== */}
-            {allowMultiDay && appointmentType === 'MULTI' && (
+            {multiDayAvailable && appointmentType === 'MULTI' && (
               <>
                 {/* Treatment (ABOVE duration) */}
                 <View style={styles.section}>
@@ -1951,7 +1942,7 @@ export const CreateAppointmentScreen: React.FC = () => {
             </View>
 
             {/* Number of Sessions (Multi-day only) */}
-            {allowMultiDay && appointmentType === 'MULTI' && (
+              {multiDayAvailable && appointmentType === 'MULTI' && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Number of Sessions</Text>
                 <View style={styles.sessionsRow}>

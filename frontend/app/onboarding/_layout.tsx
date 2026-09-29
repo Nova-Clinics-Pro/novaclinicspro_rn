@@ -29,7 +29,11 @@ export default function OnboardingLayout() {
       />
       <Stack.Screen 
         name="pending-review" 
-        options={{ title: 'Application Status' }} 
+        options={{ title: t('applicationStatus.pendingReview.title') }}
+      />
+      <Stack.Screen
+        name="draft"
+        options={{ title: t('applicationStatus.draft.title') }}
       />
       <Stack.Screen 
         name="setup-wizard" 
@@ -42,17 +46,21 @@ export default function OnboardingLayout() {
           headerShown: false, // Hide header since wizard has its own
         }} 
       />
+      <Stack.Screen
+        name="workspace-preparation"
+        options={{ title: t('onboarding.progressiveExperience.routes.workspacePreparation') }}
+      />
+      <Stack.Screen
+        name="commercial-retention"
+        options={{ title: t('onboarding.progressiveExperience.routes.commercialRetention') }}
+      />
       <Stack.Screen 
         name="step-detail" 
         options={{ title: t('onboarding.progressiveExperience.routes.reviewStep') }} 
       />
       <Stack.Screen 
         name="rejected" 
-        options={{ title: 'Application Rejected' }} 
-      />
-      <Stack.Screen 
-        name="improve" 
-        options={{ title: 'Improve Application' }} 
+        options={{ title: t('applicationStatus.rejected.title') }}
       />
     </Stack>
   );

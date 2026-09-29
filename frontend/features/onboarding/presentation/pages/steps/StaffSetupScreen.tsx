@@ -19,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
 import { axiosClient } from '../../../../../core/api/axiosClient';
+import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
+import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
 
 interface StaffMember {
   id: string;
@@ -48,12 +50,32 @@ export function StaffSetupScreen({ tenantId, stepCode = 'staff_setup' }: StaffSe
       email: '',
     },
   ]);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const { setStaff, getStepData } = useWizardStore();
 
   const submitStepMutation = useSubmitStepMutation(tenantId, stepCode);
 
   useEffect(() => {
     fetchStaffData();
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!loading) {
+      const timeout = setTimeout(() => {
+        setStaff({
+          staff_members: staffMembers.map((member) => ({
+            name: member.name,
+            role: member.role,
+            specialization: member.specialization || undefined,
+            phone: member.phone,
+            email: member.email,
+          })),
+        });
+      }, 500);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [loading, staffMembers, setStaff]);
 
   const fetchStaffData = async () => {
     try {
@@ -76,10 +98,40 @@ export function StaffSetupScreen({ tenantId, stepCode = 'staff_setup' }: StaffSe
         setStaffMembers(existingStaff);
         console.log('[StaffSetupScreen] Loaded existing staff:', existingStaff.length);
       } else {
+        const draft = getStepData(stepCode) || getStepData('staff_and_roles');
+        if (draft?.staff_members && Array.isArray(draft.staff_members)) {
+          const draftStaff = draft.staff_members.map((member: any, index: number) => ({
+            id: String(index + 1),
+            name: member.name || '',
+            role: member.role || 'doctor',
+            specialization: member.specialization || '',
+            phone: member.phone || '',
+            email: member.email || '',
+          }));
+          setStaffMembers(draftStaff);
+          setDraftRestored(true);
+          return;
+        }
+
         console.log('[StaffSetupScreen] No existing staff, showing empty form');
       }
     } catch (error: any) {
       console.error('[StaffSetupScreen] Error fetching staff:', error);
+      const draft = getStepData(stepCode) || getStepData('staff_and_roles');
+      if (draft?.staff_members && Array.isArray(draft.staff_members)) {
+        const draftStaff = draft.staff_members.map((member: any, index: number) => ({
+          id: String(index + 1),
+          name: member.name || '',
+          role: member.role || 'doctor',
+          specialization: member.specialization || '',
+          phone: member.phone || '',
+          email: member.email || '',
+        }));
+        setStaffMembers(draftStaff);
+        setDraftRestored(true);
+        return;
+      }
+
       // If API fails, keep the default empty form
       console.log('[StaffSetupScreen] Using default empty form');
     } finally {
@@ -88,6 +140,7 @@ export function StaffSetupScreen({ tenantId, stepCode = 'staff_setup' }: StaffSe
   };
 
   const addStaffMember = () => {
+    setDraftRestored(false);
     setStaffMembers([
       ...staffMembers,
       {
@@ -106,10 +159,12 @@ export function StaffSetupScreen({ tenantId, stepCode = 'staff_setup' }: StaffSe
       Alert.alert('Error', 'At least one staff member is required');
       return;
     }
+    setDraftRestored(false);
     setStaffMembers(staffMembers.filter((member) => member.id !== id));
   };
 
   const updateStaffMember = (id: string, field: keyof StaffMember, value: string) => {
+    setDraftRestored(false);
     setStaffMembers(
       staffMembers.map((member) =>
         member.id === id ? { ...member, [field]: value } : member
@@ -158,6 +213,11 @@ export function StaffSetupScreen({ tenantId, stepCode = 'staff_setup' }: StaffSe
 
       console.log('[StaffSetupScreen] Step completed successfully');
       console.log('[StaffSetupScreen] Backend response:', JSON.stringify(result, null, 2));
+      setDraftRestored(false);
+      await clearStepDraftAndSync(stepCode);
+      if (stepCode !== 'staff_and_roles') {
+        await clearStepDraftAndSync('staff_and_roles');
+      }
 
       // Get next step from backend response
       const nextStep = result.next_step;
@@ -190,6 +250,8 @@ export function StaffSetupScreen({ tenantId, stepCode = 'staff_setup' }: StaffSe
       style={[styles.container, { backgroundColor: theme.colors.background.default }]}
       contentContainerStyle={{ padding: theme.spacing.lg }}
     >
+      {draftRestored && <RestoredDraftIndicator />}
+
       <View style={[styles.header, { marginBottom: theme.spacing.xl }]}>
         <Ionicons name="people" size={48} color={theme.colors.primary.default} />
         <Text
