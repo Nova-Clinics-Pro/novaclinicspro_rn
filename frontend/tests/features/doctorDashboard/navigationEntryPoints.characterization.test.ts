@@ -32,6 +32,14 @@ import path from 'path';
 
 const read = (relativePath: string) => fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
 
+const workspaceRouteFiles = (directory: string, relativePath = ''): string[] =>
+  fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const nextRelativePath = path.join(relativePath, entry.name);
+    const nextPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return workspaceRouteFiles(nextPath, nextRelativePath);
+    return entry.name.includes('workspace') && entry.name.endsWith('.tsx') ? [nextRelativePath] : [];
+  });
+
 describe('Navigation entry points (R3B · T-0.1, baseline for AC-3/AC-4)', () => {
   describe('Entry point 1: start-consultation.tsx', () => {
     const source = read('../../../app/clinic-admin/appointments/[appointmentId]/start-consultation.tsx');
@@ -44,15 +52,15 @@ describe('Navigation entry points (R3B · T-0.1, baseline for AC-3/AC-4)', () =>
     });
   });
 
-  describe('CreateConsultationScreen: transitions via replace, not push (the one Reality-Check-confirmed correct precedent)', () => {
+  describe('CreateConsultationScreen: transitions via replace into the canonical workspace after Episode creation', () => {
     const source = read('../../../features/episodes/presentation/pages/CreateConsultationScreen.tsx');
 
-    it('uses router.replace() into the consultation route on successful create — Back skips the transient "create" step', () => {
-      expect(source).toContain('router.replace(consultationRoute(episode.id, appointmentId, clientId)');
+    it('uses router.replace() into the workspace route with explicit appointment context — Back skips the transient "create" step', () => {
+      expect(source).toContain("router.replace(episodeWorkspaceRoute(episode.id, appointmentId, clientId, 'doctor')");
     });
 
     it('does NOT use router.push() for this transition (today\'s one already-correct precedent, per design.md §2.1)', () => {
-      expect(source).not.toMatch(/router\.push\(consultationRoute/);
+      expect(source).not.toMatch(/router\.push\(episodeWorkspaceRoute/);
     });
   });
 
@@ -120,30 +128,26 @@ describe('Navigation entry points (R3B · T-0.1, baseline for AC-3/AC-4)', () =>
     });
 
     it('no second workspace route file exists anywhere in app/ (FR-COS-1 AC1 — one route only)', () => {
-      const glob = require('fast-glob');
-      const matches = glob.sync('app/**/*workspace*.tsx', {
-        cwd: require('path').resolve(__dirname, '../../..'),
-      });
+      const appDirectory = path.resolve(__dirname, '../../../app');
+      const matches = workspaceRouteFiles(appDirectory)
+        .filter((match) => match.startsWith(path.join('clinic-admin', 'episodes')))
+        .map((match) => path.join('app', match));
       expect(matches).toEqual(['app/clinic-admin/episodes/[episodeId]/workspace.tsx']);
     });
   });
 
-  describe('The dormant doctor-mode path (§3.2/§2.2 finding) has zero live callers today — locked in as a baseline for T-B.7', () => {
+  describe('R7 workspace entry handoff', () => {
     const callers = [
       read('../../../features/appointments/presentation/pages/AppointmentsListScreen.tsx'),
     ];
 
-    it('every current caller of the workspace.tsx route explicitly passes mode=admin (both known call sites)', () => {
-      const workspaceRouteCalls = callers[0].match(/\/workspace\?mode=\w+/g) ?? [];
-      expect(workspaceRouteCalls.length).toBeGreaterThanOrEqual(2);
-      workspaceRouteCalls.forEach((call) => {
-        expect(call).toContain('mode=admin');
-      });
+    it('appointment-list callers delegate to the canonical workspace builder with the appointment identity', () => {
+      expect(callers[0]).toContain('episodeWorkspaceRoute(appointment.episode_id, appointment.id, appointment.client_id, \'admin\')');
+      expect(callers[0]).toContain('episodeWorkspaceRoute(episodeId, item.id, item.client_id, \'admin\')');
     });
 
-    it('AppointmentsListScreen.tsx contains no call to the workspace route with mode=doctor or an omitted mode', () => {
-      expect(callers[0]).not.toMatch(/\/workspace\?mode=doctor/);
-      expect(callers[0]).not.toMatch(/\/workspace(?!\?mode=)/);
+    it('does not retain inline workspace URL construction that could omit appointmentId', () => {
+      expect(callers[0]).not.toMatch(/\/workspace\?mode=admin/);
     });
   });
 

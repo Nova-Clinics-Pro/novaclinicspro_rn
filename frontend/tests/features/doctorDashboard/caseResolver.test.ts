@@ -21,7 +21,7 @@ describe('Case Resolver', () => {
     jest.clearAllMocks();
   });
 
-  it('attaches an active episode and navigates to consultation', async () => {
+  it('attaches an active episode and navigates to the canonical workspace with explicit visit context', async () => {
     mockGet
       .mockResolvedValueOnce({ data: { episode_id: null } })
       .mockResolvedValueOnce({ data: { total: 1, items: [{ id: 'episode-1' }] } });
@@ -41,7 +41,7 @@ describe('Case Resolver', () => {
       { episode_id: 'episode-1' },
     );
     expect(router.push).toHaveBeenCalledWith(
-      '/clinic-admin/episodes/episode-1/consultation?appointmentId=appointment-1&clientId=client-1',
+      '/clinic-admin/episodes/episode-1/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor',
     );
   });
 
@@ -53,7 +53,7 @@ describe('Case Resolver', () => {
     expect(mockGet).toHaveBeenCalledTimes(1);
     expect(mockPost).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith(
-      '/clinic-admin/episodes/new-episode/consultation?appointmentId=appointment-1&clientId=client-1',
+      '/clinic-admin/episodes/new-episode/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor',
     );
   });
 
@@ -99,7 +99,7 @@ describe('Case Resolver', () => {
 
       expect(mockPost).not.toHaveBeenCalled();
       expect(router.push).toHaveBeenCalledWith(
-        '/clinic-admin/episodes/episode-1/consultation?appointmentId=appointment-1&clientId=client-1',
+        '/clinic-admin/episodes/episode-1/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor',
       );
     });
 

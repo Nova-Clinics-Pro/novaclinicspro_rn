@@ -1,6 +1,6 @@
 import type { Router } from 'expo-router';
 import { axiosClient } from '../../../core/api/axiosClient';
-import { consultationRoute, startConsultationRoute } from './consultationRoutes';
+import { episodeWorkspaceRoute, startConsultationRoute } from './consultationRoutes';
 
 export interface CaseResolverState {
   loadingAppointmentId: string | null;
@@ -20,7 +20,7 @@ export async function resolveCase(
   const linkedEpisodeId = appointmentResponse.data?.episode_id;
 
   if (linkedEpisodeId) {
-    router.push(consultationRoute(linkedEpisodeId, appointmentId, clientId) as any);
+    router.push(episodeWorkspaceRoute(linkedEpisodeId, appointmentId, clientId, 'doctor') as any);
     return;
   }
 
@@ -34,7 +34,7 @@ export async function resolveCase(
       `/api/v1/clinic/${tenantId}/appointments/${appointmentId}/attach-episode`,
       { episode_id: episode.id },
     );
-    router.push(consultationRoute(episode.id, appointmentId, clientId) as any);
+    router.push(episodeWorkspaceRoute(episode.id, appointmentId, clientId, 'doctor') as any);
     return;
   }
 

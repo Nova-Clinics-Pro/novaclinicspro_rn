@@ -9,7 +9,7 @@ import { createEpisodeApi } from '../../../features/episodes/data/datasources/ep
 import { transitionCasesheetStatusApi } from '../../../features/casesheets/data/datasources/casesheets.api';
 import { useEpisodeWorkspaceData } from '../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData';
 import { useConsultationCompletionQuery } from '../../../features/episodes/data/repositories/consultationCompletion.repository.impl';
-import { consultationRoute } from '../../../features/doctorDashboard/application/consultationRoutes';
+import { episodeWorkspaceRoute } from '../../../features/doctorDashboard/application/consultationRoutes';
 
 // This suite exercises the doctor consultation flow across the current
 // architecture's own screen boundary — CreateConsultationScreen (create) →
@@ -196,7 +196,9 @@ describe('doctor consultation flow integration', () => {
     fireEvent.press(getByText('Start Consultation'));
 
     await waitFor(() => expect(createEpisodeApi).toHaveBeenCalled());
-    expect(router.replace).toHaveBeenCalledWith(consultationRoute('episode-1', 'appointment-1', 'client-1'));
+    expect(router.replace).toHaveBeenCalledWith(
+      episodeWorkspaceRoute('episode-1', 'appointment-1', 'client-1', 'doctor'),
+    );
   });
 
   it('opens the doctor workspace with note-editing and prescription-writing enabled', () => {
