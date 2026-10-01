@@ -526,7 +526,11 @@ export default function DoctorDashboard() {
             actionLabel={isPermissionError ? t('common.goBack') : isAuthError ? 'Login' : t('common.retry')}
             onActionPress={() => {
               if (isPermissionError) {
-                router.back();
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/');
+                }
               } else if (isAuthError) {
                 router.replace('/login');
               } else {
