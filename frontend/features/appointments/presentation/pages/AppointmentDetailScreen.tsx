@@ -68,6 +68,11 @@ import {
   getStaffName,
 } from '../../domain/helpers';
 import { formatDate, formatTime } from '../../../../core/utils/dateTimeUtils';
+import { isCosV1Enabled, useFeatures } from '../../../../core/hooks/useFeatures';
+import {
+  episodeWorkspaceRoute,
+  startConsultationRoute,
+} from '../../../doctorDashboard/application/consultationRoutes';
 
 // ============================================
 // SECTION HEADER COMPONENT
@@ -152,6 +157,7 @@ interface VisitHistoryCardProps {
  */
 const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPress, t }) => {
   const router = useRouter();
+  const cosEnabled = isCosV1Enabled(useFeatures());
   const statusColor = getStatusColor(appointment.status);
   
   // Extract data from appointment
@@ -176,9 +182,14 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
       router.push(`/clinic-admin/clients/${clientId}/casesheets/${appointment.case_sheet_id}` as any);
     } else {
       // Add new case sheet
-      router.push(`/clinic-admin/clients/${clientId}/casesheets/new?appointmentId=${appointment.id}` as any);
+      const destination = cosEnabled
+        ? appointment.episode_id
+          ? episodeWorkspaceRoute(appointment.episode_id, appointment.id, clientId, 'doctor', 'case_sheet')
+          : startConsultationRoute(appointment.id, clientId)
+        : `/clinic-admin/clients/${clientId}/casesheets/new?appointmentId=${appointment.id}`;
+      router.push(destination as any);
     }
-  }, [hasCaseSheet, appointment, router]);
+  }, [cosEnabled, hasCaseSheet, appointment, router]);
 
   // Handler for Prescription action
   const handlePrescriptionPress = useCallback(() => {
@@ -188,9 +199,14 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
       router.push(`/clinic-admin/clients/${clientId}/prescriptions/${appointment.prescription_id}` as any);
     } else {
       // Add new prescription
-      router.push(`/clinic-admin/clients/${clientId}/prescriptions/new?appointmentId=${appointment.id}` as any);
+      const destination = cosEnabled
+        ? appointment.episode_id
+          ? episodeWorkspaceRoute(appointment.episode_id, appointment.id, clientId, 'doctor', 'prescription')
+          : startConsultationRoute(appointment.id, clientId)
+        : `/clinic-admin/clients/${clientId}/prescriptions/new?appointmentId=${appointment.id}`;
+      router.push(destination as any);
     }
-  }, [hasPrescription, appointment, router]);
+  }, [cosEnabled, hasPrescription, appointment, router]);
   
   // BUG FIX #4: Removed TouchableOpacity and navigation - previous visits are view-only
   return (

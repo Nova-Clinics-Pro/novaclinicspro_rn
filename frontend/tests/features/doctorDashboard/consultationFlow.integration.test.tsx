@@ -197,7 +197,7 @@ describe('doctor consultation flow integration', () => {
 
     await waitFor(() => expect(createEpisodeApi).toHaveBeenCalled());
     expect(router.replace).toHaveBeenCalledWith(
-      episodeWorkspaceRoute('episode-1', 'appointment-1', 'client-1', 'doctor'),
+      episodeWorkspaceRoute('episode-1', 'appointment-1', 'client-1', 'doctor', 'assessment'),
     );
   });
 

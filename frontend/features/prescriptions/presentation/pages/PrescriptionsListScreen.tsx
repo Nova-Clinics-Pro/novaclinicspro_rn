@@ -22,9 +22,11 @@ import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import {
   usePrescriptionsListQuery,
+} from '../../data/repositories/prescriptions.repository.impl';
+import {
   PrescriptionResponse,
   PrescriptionStatus,
-} from '../../index';
+} from '../../data/models/prescriptions.dtos';
 import { PrescriptionListItem } from '../components/PrescriptionListItem';
 import { EmptyPrescriptionsState } from '../components/EmptyPrescriptionsState';
 

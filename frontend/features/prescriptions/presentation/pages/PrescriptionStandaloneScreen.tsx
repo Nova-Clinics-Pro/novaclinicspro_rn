@@ -70,10 +70,9 @@ import {
   usePrescriptionDetailQuery,
   useCreatePrescriptionMutation,
   useUpdatePrescriptionMutation,
-  isEditable,
-} from '../../index';
+} from '../../data/repositories/prescriptions.repository.impl';
+import { isEditable, PrescriptionData } from '../../data/models/prescriptions.dtos';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
-import { PrescriptionData } from '../../data/models/prescriptions.dtos';
 import { PrescriptionStatusBadge } from '../components/PrescriptionStatusBadge';
 import { EmptyPrescriptionsState } from '../components/EmptyPrescriptionsState';
 import { PrescriptionEditingCore, PrescriptionAdviceFieldId } from '../components/PrescriptionEditingCore';

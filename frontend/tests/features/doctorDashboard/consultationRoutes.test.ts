@@ -17,6 +17,12 @@ describe('consultation route builders', () => {
     );
   });
 
+  it('carries an explicit COS workspace stage without changing the clinical identity', () => {
+    expect(episodeWorkspaceRoute('episode-1', 'appointment-1', 'client-1', 'doctor', 'prescription')).toBe(
+      '/clinic-admin/episodes/episode-1/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor&step=prescription',
+    );
+  });
+
   it('retains the legacy consultation deep-link builder and the pre-Episode start-consultation builder', () => {
     expect(consultationRoute('episode-1', 'appointment-1', 'client-1')).toBe(
       '/clinic-admin/episodes/episode-1/consultation?appointmentId=appointment-1&clientId=client-1',

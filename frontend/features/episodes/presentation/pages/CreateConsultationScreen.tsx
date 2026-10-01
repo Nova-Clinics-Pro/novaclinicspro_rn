@@ -17,16 +17,21 @@ import { formatDateTime, toISODateString } from '../../../../core/utils/dateTime
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { useAppointmentDetailQuery } from '../../../appointments/data/repositories/appointments.repository.impl';
 import { createEpisodeApi } from '../../data/datasources/episodes.api';
-import { episodeWorkspaceRoute } from '../../../doctorDashboard/application/consultationRoutes';
+import {
+  consultationRoute,
+  episodeWorkspaceRoute,
+} from '../../../doctorDashboard/application/consultationRoutes';
 
 interface CreateConsultationScreenProps {
   appointmentId: string;
   clientId: string;
+  destination?: 'consultation' | 'workspace';
 }
 
 export const CreateConsultationScreen: React.FC<CreateConsultationScreenProps> = ({
   appointmentId,
   clientId,
+  destination = 'workspace',
 }) => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -65,7 +70,10 @@ export const CreateConsultationScreen: React.FC<CreateConsultationScreenProps> =
         queryClient.invalidateQueries({ queryKey: ['client-episodes', tenantId, clientId] }),
         queryClient.invalidateQueries({ queryKey: ['staffDashboards'] }),
       ]);
-      router.replace(episodeWorkspaceRoute(episode.id, appointmentId, clientId, 'doctor') as any);
+      const nextRoute = destination === 'workspace'
+        ? episodeWorkspaceRoute(episode.id, appointmentId, clientId, 'doctor', 'assessment')
+        : consultationRoute(episode.id, appointmentId, clientId);
+      router.replace(nextRoute as any);
     } catch (error: any) {
       setApiError(error?.response?.data?.detail ?? error?.message ?? 'Failed to start consultation.');
     } finally {

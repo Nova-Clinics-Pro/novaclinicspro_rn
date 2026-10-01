@@ -3,6 +3,7 @@ import { render } from '@testing-library/react-native';
 import fs from 'fs';
 import path from 'path';
 import { useLocalSearchParams } from 'expo-router';
+import { useFeatures } from '../../../core/hooks/useFeatures';
 
 /**
  * Phase 4 (R4) · T-E.3b — the Prescription standalone routes
@@ -21,7 +22,24 @@ import { useLocalSearchParams } from 'expo-router';
  * screens, only on the routes' own deep-link surface.
  */
 
-jest.mock('expo-router', () => ({ useLocalSearchParams: jest.fn() }));
+jest.mock('expo-router', () => ({
+  useLocalSearchParams: jest.fn(),
+  useRouter: () => ({ back: jest.fn() }),
+  Redirect: ({ href }: { href: string }) => {
+    const { Text } = require('react-native');
+    return <Text testID="workspace-redirect">{href}</Text>;
+  },
+}));
+jest.mock('../../../core/hooks/useFeatures', () => ({
+  useFeatures: jest.fn(),
+  isCosV1Enabled: (features: { cos_v1_enabled?: boolean }) => Boolean(features.cos_v1_enabled),
+}));
+jest.mock('../../../features/episodes/presentation/components/InvalidWorkspaceState', () => ({
+  InvalidWorkspaceState: () => {
+    const { Text } = require('react-native');
+    return <Text testID="invalid-workspace-context">invalid</Text>;
+  },
+}));
 jest.mock('../../../features/prescriptions/presentation/pages/PrescriptionStandaloneScreen', () => ({
   PrescriptionStandaloneScreen: (props: any) => {
     const { Text } = require('react-native');
@@ -35,6 +53,7 @@ import NewPrescriptionRoute from '../../../app/clinic-admin/clients/[clientId]/p
 describe('Prescription standalone routes render the canonical core only (R4 · T-E.3b)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: false });
   });
 
   describe('edit.tsx', () => {
@@ -59,6 +78,25 @@ describe('Prescription standalone routes render the canonical core only (R4 · T
       const { getByTestId } = render(<NewPrescriptionRoute />);
       const props = JSON.parse(getByTestId('standalone-screen-props').props.children);
       expect(props.clientId).toBe('client-1');
+    });
+  });
+
+  describe('cos_v1 transition', () => {
+    it('redirects explicit Episode and Visit context into the Prescription workspace stage', () => {
+      (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: true });
+      (useLocalSearchParams as jest.Mock).mockReturnValue({
+        clientId: 'client-1', appointmentId: 'appointment-1', episodeId: 'episode-1',
+      });
+      const { getByTestId } = render(<NewPrescriptionRoute />);
+      expect(getByTestId('workspace-redirect').props.children).toBe(
+        '/clinic-admin/episodes/episode-1/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor&step=prescription',
+      );
+    });
+
+    it('fails safely rather than inferring missing Episode or Visit identity', () => {
+      (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: true });
+      (useLocalSearchParams as jest.Mock).mockReturnValue({ clientId: 'client-1' });
+      expect(render(<NewPrescriptionRoute />).getByTestId('invalid-workspace-context')).toBeTruthy();
     });
   });
 

@@ -147,10 +147,9 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
       );
       const { getByText } = render(<NextActionBar {...ctxProps} />);
       fireEvent.press(getByText('Do this'));
-      expect(router.push).toHaveBeenCalledWith({
-        pathname: '/clinic-admin/episodes/[episodeId]/consultation',
-        params: { episodeId: 'e1', appointmentId: 'a1', clientId: 'c1' },
-      });
+      expect(router.push).toHaveBeenCalledWith(
+        '/clinic-admin/episodes/e1/workspace?appointmentId=a1&clientId=c1&mode=doctor&step=prescription',
+      );
     });
 
     it('navigates complete_visit to the complete-consultation route', () => {
@@ -159,10 +158,9 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
       );
       const { getByText } = render(<NextActionBar {...ctxProps} />);
       fireEvent.press(getByText('Do this'));
-      expect(router.push).toHaveBeenCalledWith({
-        pathname: '/clinic-admin/episodes/[episodeId]/complete-consultation',
-        params: { episodeId: 'e1', appointmentId: 'a1', clientId: 'c1' },
-      });
+      expect(router.push).toHaveBeenCalledWith(
+        '/clinic-admin/episodes/e1/workspace?appointmentId=a1&clientId=c1&mode=doctor&step=completion',
+      );
     });
 
     it('renders a non-navigable explanatory state for a backend action with no existing frontend route (resolve_blocker)', () => {
@@ -325,10 +323,9 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
       const { getByText, getByTestId } = render(<NextActionBar {...ctxProps} />);
       fireEvent.press(getByText(/Something else/));
       fireEvent.press(getByTestId('alternative-record_prescription'));
-      expect(router.push).toHaveBeenCalledWith({
-        pathname: '/clinic-admin/episodes/[episodeId]/consultation',
-        params: { episodeId: 'e1', appointmentId: 'a1', clientId: 'c1' },
-      });
+      expect(router.push).toHaveBeenCalledWith(
+        '/clinic-admin/episodes/e1/workspace?appointmentId=a1&clientId=c1&mode=doctor&step=prescription',
+      );
       // Primary recommendation text is untouched by opening the menu.
       expect(getByText('Record assessment')).toBeTruthy();
     });

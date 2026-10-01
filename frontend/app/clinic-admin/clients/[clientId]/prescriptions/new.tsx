@@ -8,11 +8,30 @@
  * is removed — T-E.3's own parity audit confirmed no capability gap.
  */
 
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { PrescriptionStandaloneScreen } from '../../../../../features/prescriptions/presentation/pages/PrescriptionStandaloneScreen';
+import { isCosV1Enabled, useFeatures } from '../../../../../core/hooks/useFeatures';
+import { episodeWorkspaceRoute } from '../../../../../features/doctorDashboard/application/consultationRoutes';
+import { InvalidWorkspaceState } from '../../../../../features/episodes/presentation/components/InvalidWorkspaceState';
 
 export default function NewPrescriptionRoute() {
-  const { clientId, appointmentId } = useLocalSearchParams<{ clientId: string; appointmentId?: string }>();
+  const { clientId, appointmentId, episodeId } = useLocalSearchParams<{
+    clientId: string;
+    appointmentId?: string;
+    episodeId?: string;
+  }>();
+  const router = useRouter();
+
+  if (isCosV1Enabled(useFeatures())) {
+    if (!episodeId || !appointmentId || !clientId) {
+      return <InvalidWorkspaceState onBack={() => router.back()} />;
+    }
+    return (
+      <Redirect
+        href={episodeWorkspaceRoute(episodeId, appointmentId, clientId, 'doctor', 'prescription') as never}
+      />
+    );
+  }
 
   return <PrescriptionStandaloneScreen clientId={clientId} appointmentId={appointmentId} />;
 }

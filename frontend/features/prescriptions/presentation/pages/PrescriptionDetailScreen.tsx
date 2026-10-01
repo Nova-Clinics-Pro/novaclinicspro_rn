@@ -29,13 +29,15 @@ import {
   useDeletePrescriptionMutation,
   useSharePrescriptionMutation,
   usePrescriptionPrintMutation,
+} from '../../data/repositories/prescriptions.repository.impl';
+import {
   PrescriptionShareRequest,
   formatDateTime,
   formatMedication,
   isEditable,
   canShare,
   getAllowedTransitions,
-} from '../../index';
+} from '../../data/models/prescriptions.dtos';
 import { PrescriptionStatusBadge } from '../components/PrescriptionStatusBadge';
 import { PrescriptionShareModal } from '../components/PrescriptionShareModal';
 import { EmptyPrescriptionsState } from '../components/EmptyPrescriptionsState';

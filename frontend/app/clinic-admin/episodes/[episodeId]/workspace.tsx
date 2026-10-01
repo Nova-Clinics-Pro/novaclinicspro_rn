@@ -18,24 +18,41 @@ import { EpisodeWorkspaceScreen, WorkspaceTab } from '../../../../features/episo
 import { VisitCommandCenter } from '../../../../features/episodes/presentation/pages/VisitCommandCenter';
 import type { WorkspaceMode } from '../../../../features/episodes/presentation/config/episodeWorkspaceConfig';
 import { useFeatures, isCosV1Enabled } from '../../../../core/hooks/useFeatures';
+import type { CosWorkspaceStep } from '../../../../features/doctorDashboard/application/consultationRoutes';
 
 export default function EpisodeWorkspaceRoute() {
-  const { episodeId, mode, clientId, initialTab, appointmentId } = useLocalSearchParams<{
+  const { episodeId, mode, clientId, initialTab, appointmentId, step } = useLocalSearchParams<{
     episodeId: string;
     mode?: string;
     clientId?: string;
     initialTab?: string;
     appointmentId?: string;
+    step?: CosWorkspaceStep;
   }>();
 
   const features = useFeatures();
 
   if (isCosV1Enabled(features)) {
+    if (step === 'completion' && episodeId && appointmentId && clientId) {
+      // Completion remains backend-contract-owned. Load this exceptional
+      // workspace stage only when it is explicitly requested so the normal
+      // VisitCommandCenter route graph remains independent of it.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { CompleteConsultationScreen } = require('../../../../features/episodes/presentation/pages/CompleteConsultationScreen');
+      return (
+        <CompleteConsultationScreen
+          episodeId={episodeId}
+          appointmentId={appointmentId}
+          clientId={clientId}
+        />
+      );
+    }
     return (
       <VisitCommandCenter
         episodeId={episodeId ?? ''}
         appointmentId={appointmentId}
         clientId={clientId ?? ''}
+        initialStep={step}
       />
     );
   }

@@ -265,10 +265,9 @@ describe('WorkflowPills (T-FE-B.1, FR-MOB-2, FR-WFA-2)', () => {
         <WorkflowPills tenantId="t1" clientId="c1" episodeId="e1" appointmentId="a1" />,
       );
       fireEvent.press(getByTestId('blocked-stage-fix-prescription'));
-      expect(router.push).toHaveBeenCalledWith({
-        pathname: '/clinic-admin/episodes/[episodeId]/consultation',
-        params: { episodeId: 'e1', appointmentId: 'a1', clientId: 'c1' },
-      });
+      expect(router.push).toHaveBeenCalledWith(
+        '/clinic-admin/episodes/e1/workspace?appointmentId=a1&clientId=c1&mode=doctor&step=prescription',
+      );
     });
 
     it('shows no fix affordance for a blocked stage with no mapped action (e.g. consultation) — never fabricates a route', () => {

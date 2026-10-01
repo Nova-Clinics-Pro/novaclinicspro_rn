@@ -1,14 +1,34 @@
 // Route: /clinic-admin/episodes/{episodeId}/consultation?appointmentId={id}&clientId={id}
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import { ClinicalWorkspace } from '../../../../features/episodes/presentation/pages/ClinicalWorkspace';
-import { useFeatures, isFreshnessV1Enabled } from '../../../../core/hooks/useFeatures';
+import { useFeatures, isCosV1Enabled, isFreshnessV1Enabled } from '../../../../core/hooks/useFeatures';
+import {
+  CosWorkspaceStep,
+  episodeWorkspaceRoute,
+} from '../../../../features/doctorDashboard/application/consultationRoutes';
 
 export default function ConsultationRoute() {
-  const { episodeId, appointmentId, clientId } = useLocalSearchParams<{
+  const { episodeId, appointmentId, clientId, step } = useLocalSearchParams<{
     episodeId: string;
     appointmentId: string;
     clientId: string;
+    step?: CosWorkspaceStep;
   }>();
+  const features = useFeatures();
+
+  if (isCosV1Enabled(features)) {
+    return (
+      <Redirect
+        href={episodeWorkspaceRoute(
+          episodeId,
+          appointmentId,
+          clientId,
+          'doctor',
+          step ?? 'assessment',
+        ) as never}
+      />
+    );
+  }
   // T-A.5 (ADR-P1-01, FR-A2, AC-1, DoD "no temporary workarounds"): the
   // `key={episodeId:appointmentId}` forced-remount was replaced by
   // useConsultationWorkspace.ts's own internal reset-on-episode/appointment-
@@ -32,7 +52,7 @@ export default function ConsultationRoute() {
   // untouched — it now remounts ClinicalWorkspace (context + screen
   // together) when the flag is OFF, which preserves the exact same
   // observable behavior the pre-existing remount had.
-  const freshnessEnabled = isFreshnessV1Enabled(useFeatures());
+  const freshnessEnabled = isFreshnessV1Enabled(features);
   return (
     <ClinicalWorkspace
       key={freshnessEnabled ? undefined : `${episodeId}:${appointmentId}`}

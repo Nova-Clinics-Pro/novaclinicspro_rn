@@ -97,17 +97,21 @@ import { SchedulingModule } from '../components/ConsultationSections/SchedulingM
 import { TreatmentPlanModule } from '../components/ConsultationSections/TreatmentPlanModule';
 import { ClinicalTimeline } from '../components/ClinicalTimeline';
 import { SectionKey } from '../hooks/useConsultationWorkspace';
+import type { CosWorkspaceStep } from '../../../doctorDashboard/application/consultationRoutes';
+import { InvalidWorkspaceState } from '../components/InvalidWorkspaceState';
 
 export interface VisitCommandCenterProps {
   episodeId: string;
   appointmentId?: string;
   clientId: string;
+  initialStep?: CosWorkspaceStep;
 }
 
 export const VisitCommandCenter: React.FC<VisitCommandCenterProps> = ({
   episodeId,
   appointmentId,
   clientId,
+  initialStep,
 }) => {
   const router = useRouter();
   const { currentUser, selectedClinicId } = useAuth();
@@ -122,13 +126,20 @@ export const VisitCommandCenter: React.FC<VisitCommandCenterProps> = ({
   return (
     <WorkspaceProvider tenantId={tenantId} episodeId={episodeId} appointmentId={appointmentId} clientId={clientId}>
       <WorkspaceSaveStatusProvider>
-        <VisitCommandCenterShell />
+        <VisitCommandCenterShell initialStep={initialStep} />
       </WorkspaceSaveStatusProvider>
     </WorkspaceProvider>
   );
 };
 
-const VisitCommandCenterShell: React.FC = () => {
+const INITIAL_EXPANDED_SECTIONS: Partial<Record<CosWorkspaceStep, SectionKey[]>> = {
+  assessment: ['chiefComplaint', 'clinicalNotes'],
+  case_sheet: ['chiefComplaint', 'clinicalNotes'],
+  prescription: ['prescription'],
+  treatment_recommendation: ['treatmentRecommendation'],
+};
+
+const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep }> = ({ initialStep }) => {
   const router = useRouter();
   const { colors, spacing, typography, borderWidths, sizes } = useClinicTheme();
   const { t } = useTranslation();
@@ -141,7 +152,7 @@ const VisitCommandCenterShell: React.FC = () => {
   // pattern exactly -- CaseSheetModule itself owns all Case Sheet data/
   // save state; this shell owns only which sections are expanded.
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
-    new Set(['chiefComplaint']),
+    new Set(initialStep ? INITIAL_EXPANDED_SECTIONS[initialStep] ?? ['chiefComplaint'] : ['chiefComplaint']),
   );
   const toggleSection = (key: SectionKey) => {
     setExpandedSections((prev) => {
@@ -250,26 +261,6 @@ const VisitCommandCenterShell: React.FC = () => {
             (T-FE-E.1a). */}
         <ClinicalTimeline />
       </ScrollView>
-    </SafeAreaView>
-  );
-};
-
-const InvalidWorkspaceState: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const { colors, spacing, typography } = useClinicTheme();
-  const { t } = useTranslation();
-  return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background.default }]}>
-      <View style={[styles.center, { padding: spacing.md, gap: spacing.md }]}>
-        <Text style={[typography.h6, { color: colors.text.primary }]}>
-          {t('visitCommandCenter.invalidContext.title')}
-        </Text>
-        <Text style={[typography.body2, { color: colors.text.secondary, textAlign: 'center' }]}>
-          {t('visitCommandCenter.invalidContext.message')}
-        </Text>
-        <TouchableOpacity onPress={onBack} accessibilityRole="button">
-          <Text style={[typography.button, { color: colors.primary.default }]}>{t('common.back')}</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };

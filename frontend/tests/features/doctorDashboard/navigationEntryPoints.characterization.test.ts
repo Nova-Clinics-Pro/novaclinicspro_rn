@@ -44,11 +44,12 @@ describe('Navigation entry points (R3B · T-0.1, baseline for AC-3/AC-4)', () =>
   describe('Entry point 1: start-consultation.tsx', () => {
     const source = read('../../../app/clinic-admin/appointments/[appointmentId]/start-consultation.tsx');
 
-    it('renders CreateConsultationScreen with appointmentId/clientId from route params', () => {
+    it('preserves Episode resolution while selecting the flag-governed destination from route params', () => {
       expect(source).toContain("useLocalSearchParams<{");
       expect(source).toContain('appointmentId: string;');
       expect(source).toContain('clientId: string;');
-      expect(source).toContain('<CreateConsultationScreen appointmentId={appointmentId} clientId={clientId} />');
+      expect(source).toContain('<CreateConsultationScreen');
+      expect(source).toContain("destination={cosEnabled ? 'workspace' : 'consultation'}");
     });
   });
 
@@ -56,7 +57,9 @@ describe('Navigation entry points (R3B · T-0.1, baseline for AC-3/AC-4)', () =>
     const source = read('../../../features/episodes/presentation/pages/CreateConsultationScreen.tsx');
 
     it('uses router.replace() into the workspace route with explicit appointment context — Back skips the transient "create" step', () => {
-      expect(source).toContain("router.replace(episodeWorkspaceRoute(episode.id, appointmentId, clientId, 'doctor')");
+      expect(source).toContain('router.replace(nextRoute as any);');
+      expect(source).toContain("? episodeWorkspaceRoute(episode.id, appointmentId, clientId, 'doctor', 'assessment')");
+      expect(source).toContain(': consultationRoute(episode.id, appointmentId, clientId);');
     });
 
     it('does NOT use router.push() for this transition (today\'s one already-correct precedent, per design.md §2.1)', () => {
@@ -76,7 +79,7 @@ describe('Navigation entry points (R3B · T-0.1, baseline for AC-3/AC-4)', () =>
     });
 
     it('still carries the existing freshness-flag-gated remount key (T-A.6/RB-1) — untouched by this phase so far', () => {
-      expect(source).toContain('const freshnessEnabled = isFreshnessV1Enabled(useFeatures());');
+      expect(source).toContain('const freshnessEnabled = isFreshnessV1Enabled(features);');
       expect(source).toContain('key={freshnessEnabled ? undefined : `${episodeId}:${appointmentId}`}');
     });
   });

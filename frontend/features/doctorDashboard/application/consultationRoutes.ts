@@ -11,6 +11,13 @@ export function consultationRoute(episodeId: string, appointmentId: string, clie
   return `/clinic-admin/episodes/${episodeId}/consultation?appointmentId=${appointmentId}&clientId=${clientId}`;
 }
 
+export type CosWorkspaceStep =
+  | 'assessment'
+  | 'case_sheet'
+  | 'prescription'
+  | 'treatment_recommendation'
+  | 'completion';
+
 /**
  * Canonical Episode Workspace destination.
  *
@@ -22,9 +29,11 @@ export function episodeWorkspaceRoute(
   appointmentId: string,
   clientId: string,
   mode?: 'admin' | 'doctor',
+  step?: CosWorkspaceStep,
 ): string {
   const params = new URLSearchParams({ appointmentId, clientId });
   if (mode) params.set('mode', mode);
+  if (step) params.set('step', step);
   return `/clinic-admin/episodes/${episodeId}/workspace?${params.toString()}`;
 }
 
