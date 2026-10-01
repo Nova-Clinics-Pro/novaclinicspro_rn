@@ -15,6 +15,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Platform,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
@@ -417,6 +418,16 @@ export default function DoctorDashboard() {
   ], [router]);
 
   const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm('Are you sure you want to logout?')) {
+        return;
+      }
+      void logout().catch(() => {
+        window.alert('Failed to logout. Please try again.');
+      });
+      return;
+    }
+
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
