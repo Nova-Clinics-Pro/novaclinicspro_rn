@@ -448,6 +448,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **AC:** (1) **no new workspace route** (FR-COS-1 AC1). (2) flag `cos_v1` **off ⇒ today's behavior exactly.** (3) reuses `WorkspaceProvider` ✅ — context scoping **not weakened.** (4) invalid context → explicit "cannot open workspace" (W30).
 **ET:** confirm `WorkspaceProvider`'s appointment-scoped visit lookup ✅ before reuse. **Tests:** unit · integration (flag on/off parity) · regression. **Rollback:** *Behavior* — flag off; **Compatibility:** legacy workspace untouched.
 **Reqs:** FR-COS-1, FR-VCC-1 · **Design:** §3 · **Principles:** P9
+**Status [Updated 2026-10-03]: COMPLETE.** `ALREADY_IMPLEMENTED`: original implementation commit `1b53f3fd` is in current branch ancestry; 36 focused tests passed and the presentation architecture is clean. No implementation change was required during reconciliation.
 
 ### T-FE-A.2 · Workspace data hook (application layer)
 **Repo:** FE · **Layer:** Application · **Blocked by:** T-FE-A.1, T-BE-A.2 · **Unblocks:** FE-C · **Size:** S
