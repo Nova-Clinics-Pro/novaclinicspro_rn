@@ -49,6 +49,7 @@
 **Repo:** BE · **Files:** trace doc · **Blocked by:** T--1.1 · **Unblocks:** BE-A, FE-C.1 · **∥** · **Size:** S
 **AC:** existence proven/disproven. If absent → **Engineering Truth Finding** with two options (model additively = scope decision · render "not recorded"). **FR-VCC-2 must not fabricate.** **No redesign.**
 **ET:** inspect `tenant_appointment` + appointment schemas. **Reqs:** FR-VCC-2, FR-WFA-1 · **ETX:** ETX-3
+**Status [Reconciled 2026-10-03]: COMPLETE — IMPLEMENTED_AND_RECONCILED.** Verification commit `916406e0b1ae44095b3531f8287dca8d567837be`; authoritative evidence: `R7-APPOINTMENT-PURPOSE-VERIFICATION.md`, `R7-GROUP--1-CLOSURE.md`, and `RTM-MASTER.md`. Frozen disposition: purpose/concern absent → `null`/`not_recorded`; no semantic substitution.
 
 ### T--1.4 · ETX-5 — `tenant_visits.treatment_plan` disposition ∥
 **Repo:** BE · **Objective:** decide final disposition of the **legacy narrative** free-text column ✅ (`treatment_plan: TEXT nullable`).
@@ -482,6 +483,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 ### T-FE-C.1 · "Why today" ∥
 **Repo:** FE · **Blocked by:** T-FE-A.2, T--1.3 · **Size:** S
 **AC:** purpose+concern rendered when present; absent → **"not recorded"**; **never inferred** ([ETX-3]). **Tests:** unit · empty-state. **Rollback:** *Behavior*. **Reqs:** FR-VCC-2
+**Status [Reconciled 2026-10-03]: COMPLETE — ALREADY_IMPLEMENTED.** Original implementation commit `e329ab5d5418a4af56180ea1c168c0c9506288f5`; `WHY_TODAY_BACKEND_TRUTH_CLEAN`. Focused acceptance evidence: `whyTodaySection.test.tsx` 8/8 PASS; governed aggregate regression `clinicalWorkspaceDataHook.test.tsx` 20/20 PASS.
 
 ### T-FE-C.2 · "What changed" (R7 scope) ∥
 **Repo:** FE · **Blocked by:** T-FE-A.2, T-BE-A.1, **T-BE-A.6** · **Size:** M
