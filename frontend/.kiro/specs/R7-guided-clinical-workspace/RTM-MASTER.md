@@ -865,3 +865,22 @@ The single longest pole is **T-FE-E.2** — it is the widest-scope remaining tas
 | OCC / If-Match | ✅ Ready (staged) | `T-BE-E.5` COMPLETE with a documented compatibility amendment (commit `93e9b8d`) — `If-Match` fully enforced when supplied, optional until `T-FE-E.5` ships; `T-FE-E.2` adopted `If-Match` immediately (commits `4fba2ec4`/`80fb96d0`), confirmed working end-to-end |
 
 **[Updated 2026-07-27, T-FE-E.2a closure] All 7 rows are ready, and `T-FE-E.2` is now COMPLETE.** `T-BE-D.4a` closed the two gaps this table's 2026-07-26 correction identified. The last remaining gap, `SessionInstructionsModule`'s author-once-apply-to-many (FR-TS-3's own AC), was closed by `T-FE-E.2a` (commit `7e2ce7f1`), which reused the already-working `bulk_update_treatment_sheet_rows_by_tenant` endpoint — no backend change was needed, contrary to this table's earlier belief that `T-BE-E.3` was unstarted.
+
+---
+
+## T-FE-E.5 Backend-Prerequisite Reconciliation [2026-10-03]
+
+This current reconciliation supersedes the stale Living Document blocker statements above without rewriting their historical audit evidence. Backend `reconciliation/r7-cos-dev-be` commit `d17c508bdb419a939711d508a51bf88c0a042021` (`R7 expose living document lineage and snapshots`) is present on the remote branch. The focused closure suite passed 63 / 0 / 0.
+
+| E.5 prerequisite | Status | Verified evidence |
+|---|---|---|
+| G.1 identity and immutable snapshots | SATISFIED | Complete; reused by read transport |
+| G.2 amendment lifecycle and permission enforcement | SATISFIED | Complete; canonical `casesheet.amend` / `prescription.amend` authority |
+| G.3 lifecycle documentation | SATISFIED | Complete |
+| ETX-1 permission classification | SATISFIED | Complete |
+| Case Sheet and Prescription lineage/version lists | SATISFIED | authoritative backend reads |
+| Immutable historical snapshot reads | SATISFIED | document-owned signed snapshots |
+| Current/superseded truth and historical-version prints | SATISFIED | backend lineage and snapshot print transport |
+| Tenant and document/version isolation | SATISFIED | closure security tests |
+
+T-FE-E.5 is **READY_TO_START**, not complete. It may consume authoritative Case Sheet and Prescription version lists, version number, current/superseded state, immutable signed snapshots, and historical-version print routes. It must not derive lineage or treat amended records as new Case Sheets or Prescriptions: each retains one stable document identity. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN and do not block this task's start.

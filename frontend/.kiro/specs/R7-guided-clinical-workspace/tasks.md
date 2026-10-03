@@ -617,9 +617,10 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **Completion evidence [Reconciled 2026-10-03]:** frontend commit `d5854bd465747dbdf2a25aaea07d706ac5b162dc` on `reconciliation/r7-cos-dev-fe`; classification `T_FE_E4_COMPLETE`; gate `E4_BILLING_STAGE_BACKEND_TRUTH_CLEAN`; 54 passed / 0 failed / 0 skipped. The Visit-scoped stage renders backend billing facts when effective `billing` is enabled, stays read-only absent effective `billing.invoicing` + `invoice.create`, reuses the invoice-create route with appointment context only, leaves Client/Visit authority to the backend, preserves generic invoice creation, and renders unbilled as warning-only. COS flag and C.2 regressions passed. T-FE-E.6 remains separate and is not a dependency of this task.
 
 ### T-FE-E.5 · Amendment surfaces + version rendering
-**Repo:** FE · **Blocked by:** T-BE-G.2 · **Size:** M
+**Repo:** FE · **Blocked by:** none · **Size:** M
 **AC:** amend action permission-gated; **superseded versions visibly marked**; prints identify the version; **no UI path mutates a signed version.**
 **Tests:** unit · integration. **Rollback:** *Behavior* — flag (⚠ **records persist**; see T-BE-G.1). **Reqs:** FR-LD-1/2 · **Principles:** P6
+**Status [Reconciled 2026-10-03]: READY_TO_START.** Backend prerequisites are complete: T-BE-G.1 identity/immutable-snapshot foundation, T-BE-G.2 amendment lifecycle and canonical permissions, T-BE-G.3 lifecycle documentation, and ETX-1. Backend commit `d17c508bdb419a939711d508a51bf88c0a042021` adds authoritative Case Sheet and Prescription lineage, immutable signed-snapshot, current/superseded, and historical-version print reads (63 passed / 0 failed / 0 skipped). The frontend consumes those facts and never derives lineage. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN but do not block task start. This entry does not mark T-FE-E.5 complete.
 
 ### T-FE-E.6 · Role/capability composition
 **Repo:** FE · **Layer:** Config · **Files:** `features/episodes/presentation/config/episodeWorkspaceConfig.ts` ✅
