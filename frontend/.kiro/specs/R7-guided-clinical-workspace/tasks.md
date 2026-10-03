@@ -469,6 +469,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **Repo:** FE · **Layer:** Presentation · **Blocked by:** T-FE-A.2, **T-BE-B.2**, T-BE-B.3 · **Unblocks:** FE-D · **Size:** M
 **AC:** 🟢completed 🟡current ⚪pending 🔵waiting-on-role (**owner named**) 🔴blocked ⚫n/a. **renders backend stages; assembles nothing.** never colour-alone (icon+text). grey only where useful.
 **Tests:** unit (each state) · architecture (no assembly) · a11y. **Rollback:** *Behavior* — flag. **Reqs:** FR-MOB-2, FR-WFA-2 · **Principles:** P2, P9
+**Status [Updated 2026-10-03]: COMPLETE.** `ALREADY_IMPLEMENTED` from commit `6e667d155b7c8caac6a28d50071ab828395519b8`; current evidence: 61 focused frontend tests PASS and 125 required backend dependency tests PASS. `WORKFLOW_PILLS_RENDER_ONLY_CLEAN`: backend stages render without frontend workflow assembly/derivation; localized icon+text and accessible semantic presentation verified. No production or test change was required. T-BE-B.2/T-BE-B.3 remain separately `DEPENDENCY_IMPLEMENTED_NOT_RECONCILED`.
 
 ### T-FE-B.2 · `NextActionBar` + deviation menu (render-only)
 **Repo:** FE · **Layer:** Presentation · **Blocked by:** T-FE-B.1 · **Unblocks:** FE-D · **Size:** M
