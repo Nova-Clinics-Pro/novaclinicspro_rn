@@ -96,6 +96,7 @@ import { SessionInstructionsModule } from '../components/ConsultationSections/Se
 import { SchedulingModule } from '../components/ConsultationSections/SchedulingModule';
 import { TreatmentPlanModule } from '../components/ConsultationSections/TreatmentPlanModule';
 import { ClinicalTimeline } from '../components/ClinicalTimeline';
+import { BillingStage } from '../components/ConsultationSections/BillingStage';
 import { SectionKey } from '../hooks/useConsultationWorkspace';
 import type { CosWorkspaceStep } from '../../../doctorDashboard/application/consultationRoutes';
 import { InvalidWorkspaceState } from '../components/InvalidWorkspaceState';
@@ -253,6 +254,7 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep }> = ({
         <TreatmentPlanModule />
         <SessionInstructionsModule />
         <SchedulingModule />
+        <BillingStage tenantId={episode.tenantId} clientId={patient.clientId} episodeId={episode.episodeId} appointmentId={visit.appointmentId} />
         {/* T-FE-C.4 (FR-VCC-1): reuses ClinicalTimeline unchanged -- no
             props needed, it reads tenant/episode/patient/visit identity
             from the same WorkspaceProvider this shell already wraps

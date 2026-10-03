@@ -1170,6 +1170,13 @@
   },
   "visitCommandCenter": {
     "treatmentPlanUnavailable": "उपचार योजना अभी इस वर्कस्पेस में उपलब्ध नहीं है।",
+    "billing": {
+      "title": "बिलिंग",
+      "invoiceCount": "इनवॉइस: {{count}}",
+      "outstanding": "बकाया: {{amount}}",
+      "unbilledWarning": "दी गई सेवाओं का अभी बिल नहीं बना है",
+      "createInvoice": "इनवॉइस बनाएँ"
+    },
     "workflowPills": {
       "title": "वर्कफ़्लो",
       "stage": {

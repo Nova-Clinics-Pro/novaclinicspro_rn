@@ -566,6 +566,13 @@
       "unresolved": "Unresolved",
       "unavailable": "Currently unavailable"
     },
+    "billing": {
+      "title": "Billing",
+      "invoiceCount": "Invoices: {{count}}",
+      "outstanding": "Outstanding: {{amount}}",
+      "unbilledWarning": "Services delivered are not yet billed",
+      "createInvoice": "Create invoice"
+    },
     "workflowPills": {
       "title": "Workflow",
       "stage": {

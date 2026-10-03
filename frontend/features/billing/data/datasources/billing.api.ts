@@ -16,6 +16,7 @@ import {
   PaymentListResponse,
   ListInvoicesParams,
   ListPaymentsParams,
+  VisitScopedInvoiceCreateRequest,
 } from '../models/billing.dtos';
 
 // ============================================
@@ -63,6 +64,11 @@ export const createInvoiceApi = async (
     `/api/v1/finance/${tenantId}/invoices`,
     payload
   );
+  return response.data;
+};
+
+export const createVisitScopedInvoiceApi = async (tenantId: string, payload: VisitScopedInvoiceCreateRequest): Promise<InvoiceResponse> => {
+  const response = await axiosClient.post(`/api/v1/finance/${tenantId}/invoices/visit-scoped`, payload);
   return response.data;
 };
 

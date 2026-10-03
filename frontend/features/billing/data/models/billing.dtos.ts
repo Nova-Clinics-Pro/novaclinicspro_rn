@@ -89,6 +89,11 @@ export interface InvoiceCreateRequest {
   lines?: InvoiceLineCreateRequest[];
 }
 
+/** R7 governed input: client and Visit ownership are backend-derived. */
+export interface VisitScopedInvoiceCreateRequest extends Omit<InvoiceCreateRequest, 'client_id' | 'visit_id' | 'appointment_id'> {
+  appointment_id: string;
+}
+
 /** Update invoice request */
 export interface InvoiceUpdateRequest {
   due_date?: string | null;

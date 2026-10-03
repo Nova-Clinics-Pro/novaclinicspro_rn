@@ -8,6 +8,7 @@ import {
   listInvoicesApi,
   getInvoiceApi,
   createInvoiceApi,
+  createVisitScopedInvoiceApi,
   updateInvoiceApi,
   listPaymentsForInvoiceApi,
   getPaymentApi,
@@ -15,6 +16,7 @@ import {
 } from '../datasources/billing.api';
 import {
   InvoiceCreateRequest,
+  VisitScopedInvoiceCreateRequest,
   InvoiceUpdateRequest,
   PaymentCreateRequest,
   InvoiceResponse,
@@ -100,6 +102,21 @@ export const useCreateInvoiceMutation = (
 
   return useMutation<InvoiceResponse, Error, InvoiceCreateRequest>({
     mutationFn: (payload) => createInvoiceApi(tenantId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+      queryClient.invalidateQueries({ queryKey: billingKeys.summary(tenantId) });
+    },
+    ...options,
+  });
+};
+
+export const useCreateVisitScopedInvoiceMutation = (
+  tenantId: string,
+  options?: UseMutationOptions<InvoiceResponse, Error, VisitScopedInvoiceCreateRequest>
+) => {
+  const queryClient = useQueryClient();
+  return useMutation<InvoiceResponse, Error, VisitScopedInvoiceCreateRequest>({
+    mutationFn: (payload) => createVisitScopedInvoiceApi(tenantId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
       queryClient.invalidateQueries({ queryKey: billingKeys.summary(tenantId) });
