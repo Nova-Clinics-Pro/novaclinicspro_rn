@@ -416,22 +416,24 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 
 ## BE Group G — Living Documents · Supersession · Compatibility · Rollback
 
-### T-BE-G.1 · Supersession representation [VP]
-**Repo:** BE · **Layer:** Infrastructure+Domain · **Objective:** version chain + superseded pointer + amendment metadata (author/reason/timestamp).
+### T-BE-G.1 · Supersession representation [VP — ownership clarified by Decision 13]
+**Repo:** BE · **Layer:** Infrastructure+Domain · **Objective:** domain-owned complete immutable signed-version representation plus content-free, strict-linear lineage (predecessor/successor, audit metadata, derived currentness). See `R7-OWNER-RATIFICATION.md` Decision 13; Case Sheet/Prescription/Plan only, not Treatment Sheet/session execution.
 **Blocked by:** T-0 gate, T--1.2 · **Unblocks:** T-BE-D.5, T-BE-G.2 · **Size:** **L**
 **AC:** (1) a `SIGNED` version is **never mutated.** (2) a superseded version is **retained**, renderable **exactly as signed**, visibly marked. (3) never deleted by ordinary editing. (4) additive schema.
 **ET:** verify `document_version` ✅ semantics before extending; **do not overload** an existing enum (ED-ARCH-002 lesson). **Tests:** unit · **migration up/down (disposable Postgres)** · integration (immutability of signed version). **Rollback:** **Migration — *pre-adoption:* drop additive structures; *post-adoption:* disable amendment via flag, RETAIN data, provide compatibility.** ⚠ **Data: amendment chains, signed versions, audit history PRESERVED — clinical history NEVER destroyed. No data rollback is claimed.**
 **Reqs:** FR-LD-1 · **Design:** §2.6 · **Decisions:** D2 · **Principles:** P6
 
-### T-BE-G.2 · Amendment service + permissions
+### T-BE-G.2 · Amendment service + permissions **[COMPLETE, 2026-10-03]**
 **Repo:** BE · **Layer:** Application · **Blocked by:** T-BE-G.1, T--1.2 · **Unblocks:** T-FE-E.5 · **Size:** M
 **AC:** amendment requires a distinct permission ([ETX-1]); rejection is **service-layer** (not UI hiding); follows draft/final/sign lifecycle.
 **Tests:** unit · integration (unpermitted amend rejected). **Rollback:** *Behavior*; **Data:** ⚠ preserved. **Reqs:** FR-LD-2 · **Design:** §2.6
+**Status [Updated 2026-10-03]: COMPLETE.** Decision 14's source-document lifecycle (`SIGNED → AMEND → DRAFT → FINAL → SIGN → SIGNED V(n+1)`) is implemented by backend commit `f6faf98081461ea1afdaba9662c014cd472cfdb0` on `reconciliation/r7-cos-dev-be`: Case Sheet and Prescription acceptance 30/30 each; final executable regression GREEN; architecture clean; four essential G2 tests tracked for CI; no G2 migration or remaining blocker. Closure included canonical writer enforcement, amend+sign composition, V2+ initial-sign and signed-history disposal protections, and the Prescription immutable-field ordering fix. `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remains separately OPEN as pre-release evidence debt (no impact on G2 implementation completion; release evidence affected).
 
 ### T-BE-G.3 · Close the `DocumentStatus` docstring contradiction
 **Repo:** BE · **Layer:** Docs · **Blocked by:** T-BE-G.1 · **Size:** S
 **AC:** docstring (*"FINAL: Locked… SIGNED: Immutable, terminal"* ✅) matches the ratified supersession model. **docs only — no behavior change.**
 **Tests:** n/a. **Rollback:** *Behavior* — revert docstring. **Reqs:** FR-LD-3 · **Design:** §2.6
+**Status [Updated 2026-10-03]: COMPLETE.** Backend commit `2edca9b5405ff84206c18bffeef31c961a3475c6` on `reconciliation/r7-cos-dev-be` resolves a `DOCSTRING_ONLY_CONTRADICTION`; 15 focused Living Document tests passed. Behavior, schema, and migrations remain unchanged.
 
 ---
 
