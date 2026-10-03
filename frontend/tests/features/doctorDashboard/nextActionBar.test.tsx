@@ -167,18 +167,19 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
       mockUseClinicalWorkflowQuery.mockReturnValue(
         queryResult({ data: resolution({ recommended_action: 'resolve_blocker', recommendation_reason: 'blocked' }) }),
       );
-      const { getByText, queryByText } = render(<NextActionBar {...ctxProps} />);
+      const { getByText, getByTestId } = render(<NextActionBar {...ctxProps} />);
       expect(getByText('Resolve blocker')).toBeTruthy();
       expect(getByText('Not yet available in this app')).toBeTruthy();
-      expect(queryByText('Do this')).toBeNull();
+      fireEvent.press(getByTestId('next-action-do-this-unavailable'));
+      expect(router.push).not.toHaveBeenCalled();
     });
 
     it('does not navigate for review_episode_disposition (no existing route)', () => {
       mockUseClinicalWorkflowQuery.mockReturnValue(
         queryResult({ data: resolution({ recommended_action: 'review_episode_disposition', recommendation_reason: 'visit_complete' }) }),
       );
-      const { queryByText } = render(<NextActionBar {...ctxProps} />);
-      expect(queryByText('Do this')).toBeNull();
+      const { getByTestId } = render(<NextActionBar {...ctxProps} />);
+      expect(getByTestId('next-action-do-this-unavailable')).toBeTruthy();
       expect(router.push).not.toHaveBeenCalled();
     });
   });
@@ -190,10 +191,10 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
           data: resolution({ recommended_action: null, waiting_role: 'billing.create', recommendation_reason: 'waiting_on_other_role' }),
         }),
       );
-      const { getByText, getByTestId, queryByText } = render(<NextActionBar {...ctxProps} />);
+      const { getByText, getByTestId } = render(<NextActionBar {...ctxProps} />);
       expect(getByTestId('next-action-waiting')).toBeTruthy();
       expect(getByText('Waiting on: billing.create')).toBeTruthy();
-      expect(queryByText('Do this')).toBeNull();
+      expect(getByTestId('next-action-do-this-unavailable')).toBeTruthy();
       expect(router.push).not.toHaveBeenCalled();
     });
   });
@@ -209,7 +210,7 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
       expect(getByTestId('next-action-blocked')).toBeTruthy();
       expect(getByText('Blocked')).toBeTruthy();
       expect(getByText('Scheduling is not currently permitted')).toBeTruthy();
-      expect(queryByText('Do this')).toBeNull();
+      expect(getByTestId('next-action-do-this-unavailable')).toBeTruthy();
       expect(queryByText('scheduling_denied')).toBeNull();
     });
   });
@@ -221,10 +222,10 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
           data: resolution({ recommended_action: null, recommendation_reason: 'unresolved_facts', unresolved_facts: ['permission_facts_unavailable'] }),
         }),
       );
-      const { getByTestId, getByText, queryByText } = render(<NextActionBar {...ctxProps} />);
+      const { getByTestId, getByText } = render(<NextActionBar {...ctxProps} />);
       expect(getByTestId('next-action-unresolved')).toBeTruthy();
       expect(getByText('Currently unavailable')).toBeTruthy();
-      expect(queryByText('Do this')).toBeNull();
+      expect(getByTestId('next-action-do-this-unavailable')).toBeTruthy();
     });
   });
 
@@ -237,6 +238,7 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
       expect(getByTestId('next-action-none')).toBeTruthy();
       expect(getByText('No recommendation right now')).toBeTruthy();
       expect(getByText('This episode is closed')).toBeTruthy();
+      expect(getByTestId('next-action-do-this-unavailable')).toBeTruthy();
       expect(queryByText('Coming Soon')).toBeNull();
     });
 
@@ -385,7 +387,7 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
      * render through the exact same, already-correct waiting branch —
      * no new frontend permission check is introduced or required here.
      */
-    it('a stage the requesting user cannot act on arrives as "waiting" and renders with content visible, no CTA', () => {
+    it('a stage the requesting user cannot act on arrives as "waiting" and renders content with a disabled CTA', () => {
       mockUseClinicalWorkflowQuery.mockReturnValue(
         queryResult({
           data: resolution({
@@ -395,12 +397,12 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
           }),
         }),
       );
-      const { getByTestId, getByText, queryByText } = render(<NextActionBar {...ctxProps} />);
+      const { getByTestId, getByText } = render(<NextActionBar {...ctxProps} />);
       expect(getByTestId('next-action-waiting')).toBeTruthy();
       // Content (the reason/context) stays visible even though no
       // action is available — never an empty region.
       expect(getByText('Waiting on: prescriptions.write')).toBeTruthy();
-      expect(queryByText('Do this')).toBeNull();
+      expect(getByTestId('next-action-do-this-unavailable')).toBeTruthy();
     });
 
     it('the deviation menu ("[Something else]") remains available even when the primary action is hidden for permission reasons', () => {
@@ -413,7 +415,7 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
       expect(getByText(/Something else/)).toBeTruthy();
     });
 
-    it('never renders an enabled [Do this] button when recommended_action is null, regardless of reason', () => {
+    it('renders only a disabled [Do this] button when recommended_action is null, regardless of reason', () => {
       const reasons = ['waiting_on_other_role', 'episode_closed', 'unresolved_facts'];
       reasons.forEach((recommendation_reason) => {
         mockUseClinicalWorkflowQuery.mockReturnValue(
@@ -426,8 +428,9 @@ describe('NextActionBar (T-FE-B.2, FR-REC-2, FR-COS-2, Decision 7)', () => {
             }),
           }),
         );
-        const { queryByText, unmount } = render(<NextActionBar {...ctxProps} />);
-        expect(queryByText('Do this')).toBeNull();
+        const { getByTestId, unmount } = render(<NextActionBar {...ctxProps} />);
+        fireEvent.press(getByTestId('next-action-do-this-unavailable'));
+        expect(router.push).not.toHaveBeenCalled();
         unmount();
       });
     });

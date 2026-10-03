@@ -475,6 +475,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **Repo:** FE · **Layer:** Presentation · **Blocked by:** T-FE-B.1 · **Unblocks:** FE-D · **Size:** M
 **AC:** renders `recommended_action · reason · blocking_factors · waiting_role`; `[Do this]` + **`[Something else ▾]` always present**; deviation ≤1 tap; **no forced sequencing**; **FE computes no recommendation.**
 **Tests:** unit · architecture · a11y. **Rollback:** *Behavior*. **Reqs:** FR-REC-2, FR-COS-2 · **Decisions:** D7 · **Principles:** P7
+**Status [Updated 2026-10-03]: COMPLETE.** Prior classification `PARTIALLY_IMPLEMENTED`; historical implementation `acfa730a00b76162d0491861d6186f6c0d897b6b`. `T_FE_B2_COMPLETE`: added the always-present disabled/non-navigating primary control when backend semantics lack an executable frontend target. `NEXT_ACTION_RENDER_ONLY_CLEAN`: backend owns recommendation and alternatives; frontend only localizes and maps authoritative action codes to existing navigation. 88 focused tests PASS; VisitCommandCenter 16/16 PASS; no new route or frontend workflow/recommendation/permission/readiness derivation.
 
 ## FE Group C — Visit Command Center regions
 

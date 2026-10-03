@@ -150,6 +150,7 @@ const RecommendationBody: React.FC<{
             {reasonLabel(data.recommendation_reason)}
           </Text>
         )}
+        <UnavailableDoThisButton />
         <DeviationMenu data={data} context={context} />
       </View>
     );
@@ -166,6 +167,7 @@ const RecommendationBody: React.FC<{
         >
           {t('visitCommandCenter.nextActionBar.unresolvedTitle')}
         </Text>
+        <UnavailableDoThisButton />
         <DeviationMenu data={data} context={context} />
       </View>
     );
@@ -182,6 +184,7 @@ const RecommendationBody: React.FC<{
             {reasonLabel(code)}
           </Text>
         ))}
+        <UnavailableDoThisButton />
         <DeviationMenu data={data} context={context} />
       </View>
     );
@@ -200,6 +203,7 @@ const RecommendationBody: React.FC<{
             {reasonLabel(data.recommendation_reason)}
           </Text>
         )}
+        <UnavailableDoThisButton />
         <DeviationMenu data={data} context={context} />
       </View>
     );
@@ -235,12 +239,15 @@ const RecommendationBody: React.FC<{
       {hasRoute ? (
         <DoThisButton label={actionLabel} onPress={handleDoThis} />
       ) : (
-        <Text
-          accessibilityRole="text"
-          style={[typography.caption, { color: colors.text.tertiary, marginBottom: spacing.sm }]}
-        >
-          {t('visitCommandCenter.nextActionBar.noRouteYet')}
-        </Text>
+        <>
+          <Text
+            accessibilityRole="text"
+            style={[typography.caption, { color: colors.text.tertiary, marginBottom: spacing.sm }]}
+          >
+            {t('visitCommandCenter.nextActionBar.noRouteYet')}
+          </Text>
+          <UnavailableDoThisButton />
+        </>
       )}
       <DeviationMenu data={data} context={context} />
     </View>
@@ -266,6 +273,34 @@ const DoThisButton: React.FC<{ label: string; onPress: () => void }> = ({ label,
       ]}
     >
       <Text style={[typography.button, { color: colors.primary.onPrimary }]} numberOfLines={2}>
+        {t('visitCommandCenter.nextActionBar.doThis')}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+const UnavailableDoThisButton: React.FC = () => {
+  const { colors, spacing, typography, radii, sizes } = useClinicTheme();
+  const { t } = useTranslation();
+  return (
+    <TouchableOpacity
+      disabled
+      testID="next-action-do-this-unavailable"
+      accessibilityRole="button"
+      accessibilityState={{ disabled: true }}
+      accessibilityLabel={t('visitCommandCenter.nextActionBar.doThis')}
+      style={[
+        styles.doThisButton,
+        {
+          minHeight: sizes.touchTarget,
+          paddingHorizontal: spacing.lg,
+          borderRadius: radii.medium,
+          backgroundColor: colors.background.muted,
+          marginTop: spacing.sm,
+        },
+      ]}
+    >
+      <Text style={[typography.button, { color: colors.text.disabled }]} numberOfLines={2}>
         {t('visitCommandCenter.nextActionBar.doThis')}
       </Text>
     </TouchableOpacity>
