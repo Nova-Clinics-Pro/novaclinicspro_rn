@@ -13,6 +13,10 @@ import {
   printCasesheetApi,
   getCasesheetContributionsApi,
   archiveCasesheetApi,
+  listCasesheetVersionsApi,
+  getCasesheetVersionApi,
+  printCasesheetVersionApi,
+  amendCasesheetApi,
 } from '../datasources/casesheets.api';
 import {
   CasesheetCreateRequest,
@@ -24,6 +28,7 @@ import {
   CasesheetContributionHistoryResponse,
   ListCasesheetsParams,
 } from '../models/casesheets.dtos';
+import { CasesheetSignedVersionSnapshot, LivingDocumentVersionListResponse } from '../../../livingDocuments/data/models/livingDocuments.dtos';
 
 // ============================================
 // QUERY KEYS
@@ -45,6 +50,8 @@ export const casesheetsKeys = {
    */
   contributionHistory: (tenantId: string, casesheetId: string, clientId: string, episodeId: string) =>
     [...casesheetsKeys.contributions(), tenantId, casesheetId, clientId, episodeId] as const,
+  versions: (tenantId: string, casesheetId: string) => [...casesheetsKeys.detail(tenantId, casesheetId), 'versions'] as const,
+  version: (tenantId: string, casesheetId: string, versionId: string) => [...casesheetsKeys.versions(tenantId, casesheetId), versionId] as const,
 };
 
 // ============================================
@@ -109,6 +116,20 @@ export const useCasesheetContributionHistoryQuery = (
   });
 };
 
+export const useCasesheetVersionsQuery = (tenantId: string, casesheetId: string) =>
+  useQuery<LivingDocumentVersionListResponse, Error>({
+    queryKey: casesheetsKeys.versions(tenantId, casesheetId),
+    queryFn: () => listCasesheetVersionsApi(tenantId, casesheetId),
+    enabled: !!tenantId && !!casesheetId,
+  });
+
+export const useCasesheetVersionQuery = (tenantId: string, casesheetId: string, versionId: string | null) =>
+  useQuery<CasesheetSignedVersionSnapshot, Error>({
+    queryKey: casesheetsKeys.version(tenantId, casesheetId, versionId ?? ''),
+    queryFn: () => getCasesheetVersionApi(tenantId, casesheetId, versionId!),
+    enabled: !!tenantId && !!casesheetId && !!versionId,
+  });
+
 // ============================================
 // MUTATION HOOKS
 // ============================================
@@ -150,6 +171,11 @@ export const useUpdateCasesheetMutation = (
       queryClient.setQueryData(casesheetsKeys.detail(tenantId, casesheetId), data);
       // Invalidate list queries
       queryClient.invalidateQueries({ queryKey: casesheetsKeys.lists() });
+      // A G.2 successor is appended only by a successful SIGN.  Refetch the
+      // backend-owned lineage; never promote/demote versions in the client.
+      if (data.status === 'SIGNED') {
+        queryClient.invalidateQueries({ queryKey: casesheetsKeys.versions(tenantId, casesheetId) });
+      }
     },
     ...options,
   });
@@ -172,6 +198,9 @@ export const useTransitionCasesheetStatusMutation = (
       queryClient.setQueryData(casesheetsKeys.detail(tenantId, casesheetId), data);
       // Invalidate list queries
       queryClient.invalidateQueries({ queryKey: casesheetsKeys.lists() });
+      if (data.status === 'SIGNED') {
+        queryClient.invalidateQueries({ queryKey: casesheetsKeys.versions(tenantId, casesheetId) });
+      }
     },
     ...options,
   });
@@ -188,6 +217,21 @@ export const usePrintCasesheetMutation = (
   return useMutation<CasesheetPrintResponse, Error, void>({
     mutationFn: () => printCasesheetApi(tenantId, casesheetId),
     ...options,
+  });
+};
+
+export const usePrintCasesheetVersionMutation = (tenantId: string, casesheetId: string) =>
+  useMutation<string, Error, string>({ mutationFn: (versionId) => printCasesheetVersionApi(tenantId, casesheetId, versionId) });
+
+export const useAmendCasesheetMutation = (tenantId: string, casesheetId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation<CasesheetResponse, Error, void>({
+    mutationFn: () => amendCasesheetApi(tenantId, casesheetId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(casesheetsKeys.detail(tenantId, casesheetId), data);
+      queryClient.invalidateQueries({ queryKey: casesheetsKeys.versions(tenantId, casesheetId) });
+      queryClient.invalidateQueries({ queryKey: casesheetsKeys.lists() });
+    },
   });
 };
 

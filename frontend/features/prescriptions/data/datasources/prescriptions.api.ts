@@ -17,6 +17,7 @@ import {
   ListPrescriptionsParams,
   PrescriptionPrintResponse,
 } from '../models/prescriptions.dtos';
+import { LivingDocumentVersionListResponse, PrescriptionSignedVersionSnapshot } from '../../../livingDocuments/data/models/livingDocuments.dtos';
 
 /**
  * List prescriptions (tenant-scoped, can filter by client)
@@ -127,3 +128,15 @@ export const getPrescriptionPrintApi = async (
   );
   return response.data;
 };
+
+export const listPrescriptionVersionsApi = async (tenantId: string, prescriptionId: string): Promise<LivingDocumentVersionListResponse> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions`)).data;
+
+export const getPrescriptionVersionApi = async (tenantId: string, prescriptionId: string, versionId: string): Promise<PrescriptionSignedVersionSnapshot> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions/${versionId}`)).data;
+
+export const printPrescriptionVersionApi = async (tenantId: string, prescriptionId: string, versionId: string): Promise<string> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions/${versionId}/print`, { responseType: 'text' })).data;
+
+export const amendPrescriptionApi = async (tenantId: string, prescriptionId: string): Promise<PrescriptionResponse> =>
+  (await axiosClient.post(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/amend`)).data;

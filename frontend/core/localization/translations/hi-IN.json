@@ -1278,6 +1278,18 @@
       }
     }
   },
+  "livingDocuments": {
+    "versionHistory": "संस्करण इतिहास",
+    "version": "संस्करण {{number}}",
+    "current": "वर्तमान",
+    "superseded": "प्रतिस्थापित",
+    "printVersion": "संस्करण प्रिंट करें",
+    "amend": "संशोधित करें",
+    "noSignedVersions": "अभी कोई हस्ताक्षरित संस्करण नहीं है।",
+    "historyError": "संस्करण इतिहास लोड नहीं हो सका।",
+    "historicalVersion": "ऐतिहासिक हस्ताक्षरित संस्करण",
+    "printError": "इस संस्करण को प्रिंट के लिए तैयार नहीं किया जा सका।"
+  },
   "clinicalTimeline": {
     "types": {
       "consultation": "परामर्श",

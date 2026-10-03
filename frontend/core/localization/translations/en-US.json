@@ -1552,6 +1552,18 @@
       }
     }
   },
+  "livingDocuments": {
+    "versionHistory": "Version history",
+    "version": "Version {{number}}",
+    "current": "CURRENT",
+    "superseded": "SUPERSEDED",
+    "printVersion": "Print version",
+    "amend": "Amend",
+    "noSignedVersions": "No signed versions yet.",
+    "historyError": "Unable to load version history.",
+    "historicalVersion": "Historical signed version",
+    "printError": "Unable to prepare this version for print."
+  },
   "clinicalTimeline": {
     "types": {
       "consultation": "Consultation",

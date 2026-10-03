@@ -17,6 +17,7 @@ import {
   CasesheetContributionHistoryResponse,
   ListCasesheetsParams,
 } from '../models/casesheets.dtos';
+import { CasesheetSignedVersionSnapshot, LivingDocumentVersionListResponse } from '../../../livingDocuments/data/models/livingDocuments.dtos';
 
 /**
  * List casesheets for a client
@@ -135,6 +136,19 @@ export const printCasesheetApi = async (
   );
   return response.data;
 };
+
+export const listCasesheetVersionsApi = async (tenantId: string, casesheetId: string): Promise<LivingDocumentVersionListResponse> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions`)).data;
+
+export const getCasesheetVersionApi = async (tenantId: string, casesheetId: string, versionId: string): Promise<CasesheetSignedVersionSnapshot> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions/${versionId}`)).data;
+
+/** HTML is authored and version-labelled by the backend; the frontend never modifies it. */
+export const printCasesheetVersionApi = async (tenantId: string, casesheetId: string, versionId: string): Promise<string> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions/${versionId}/print`, { responseType: 'text' })).data;
+
+export const amendCasesheetApi = async (tenantId: string, casesheetId: string): Promise<CasesheetResponse> =>
+  (await axiosClient.post(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/amend`)).data;
 
 /**
  * T-FE-E.1b (T-BE-E.1a, Decision 12). Get the append-only contribution

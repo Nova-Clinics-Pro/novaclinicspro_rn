@@ -764,7 +764,7 @@ DEFER TO R8                              = 1   (FR-RX-2)
 | Therapist execution | **READY** [Updated 2026-07-28] | Backend (`T-BE-E.4`/`E.4a`) + OCC (`T-BE-E.5`) complete and exposed; frontend (`T-FE-E.3`, commit `302bccbf`) composes assigned-session listing, read-only doctor instructions, start, complete-with-materials, and structured non-execution. Reported non-blocking gap: non-execution reason not durably re-displayable after a list refetch (backend list schema lacks the field) — see FR-TS-4's card |
 | Billing visibility | **READY** [Reconciled 2026-10-03] | Backend (`T-BE-F.1`/`F.1a`/`F.2`) and frontend (`T-FE-E.4`, `d5854bd465747dbdf2a25aaea07d706ac5b162dc`) complete; unbilled state remains warning-only |
 | Role-aware workflow | **NOT_STARTED** | `T-FE-E.6` not started — `episodeWorkspaceConfig.ts` untouched by any R7 commit; a real enforcement gap also found (see FR-RBAC-1's card) |
-| Living Documents | **NOT_STARTED** | Zero implementation — `T-BE-G.1/G.2/G.3`, `T-FE-E.5` all not started |
+| Living Documents | **READY** [Reconciled 2026-10-03] | Backend G.1/G.2/G.3 plus frontend T-FE-E.5 complete; signed-history safety, stable-identity amendment, and backend-authoritative lineage/version print are composed. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN. |
 | Legacy-route transition | **NOT_STARTED** | `T-FE-F.1/F.2/F.3` not started — the three named legacy routes contain zero references to `cos_v1`/`VisitCommandCenter` |
 | Mobile/presentation polish | **DEFERRED** | `T-FE-G.1` judged optional-at-task-level (`MVP-RELEASE-FREEZE.md`); core mobile AC already satisfied by per-task work (T-FE-C.7 etc.) |
 | Release validation | **NOT_STARTED** | Group Z (`T-Z.1`-`T-Z.9`) — zero tasks started; the release gate itself has not run once |
@@ -793,7 +793,7 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 | 12 | View Clinical History | ✅ | — |
 | 13 | View billing state | ❌ | T-FE-E.4 |
 | 14 | Render role-appropriate actions | ❌ | T-FE-E.6 |
-| 15 | Amend signed clinical documents safely | ❌ | T-BE-G.1, T-BE-G.2, T-BE-G.3, T-FE-E.5 |
+| 15 | Amend signed clinical documents safely | ✅ | T-BE-G.1/G.2/G.3 and T-FE-E.5 complete; stable-ID G.2 amendment and immutable signed-history presentation |
 | 16 | Preserve legacy route compatibility | ❌ | T-FE-F.1, T-FE-F.2, T-FE-F.3 |
 | 17 | Pass release/E2E validation | ❌ | T-Z.1 … T-Z.9 |
 
@@ -819,7 +819,7 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 | T-FE-E.2 | FR-RX-1, FR-TR-1, FR-TP-1, FR-TS-1/2/3, FR-SCH-1 | T-0.2/T-0.4/T-0.7 (done), T-BE-D.4 (done), T-BE-E.2 (done), T-BE-E.3 (done, `9497f13`) | **COMPLETE — [Updated 2026-07-27, T-FE-E.2a closure]** Prescription/Recommendation/Session-Instructions (single + bulk apply)/Scheduling/Treatment-Plan all composed (commits `4fba2ec4`, `80fb96d0`, `c69f7ef` [backend], `bfe31956`, `7e2ce7f1`). The sole remaining gap, author-once-apply-to-many (FR-TS-3's own Adoption requirement), was closed by the narrow amendment task `T-FE-E.2a`, reusing the already-complete backend bulk endpoint. Note: `FR-TS-1` itself stays Partially Complete at the requirement level — its card also names `T-FE-E.3` (therapist execution composition, not started, out of `T-FE-E.2`'s own scope) — but every AC item this task's own frozen card names is satisfied. |
 | T-FE-E.3 | FR-TS-4/5 | T-0.7 (done), T-BE-E.4 (done) | **COMPLETE — [Updated 2026-07-28]** Assigned-session listing, doctor instructions (read-only), start, complete-with-materials all pre-existed via `TherapistDashboardScreen`; structured non-execution now added (commit `302bccbf`). One reported, non-blocking gap: non-execution reason not durably re-displayed after a list refetch (backend list schema gap). |
 | T-FE-E.4 | FR-BILL-1/2 | T-BE-F.1 (done), T-BE-F.1a (done, `e2ee6600001b407aef98f48232cd5eace2526f46`) | **COMPLETE — `d5854bd465747dbdf2a25aaea07d706ac5b162dc`; 54 passed / 0 failed / 0 skipped; `E4_BILLING_STAGE_BACKEND_TRUTH_CLEAN`** |
-| T-FE-E.5 | FR-LD-1/2 | T-BE-G.2 | Blocked on T-BE-G.2 |
+| T-FE-E.5 | FR-LD-1/2 | T-BE-G.2 (complete) | **COMPLETE — [Reconciled 2026-10-03]** Backend prerequisite `d17c508bdb419a939711d508a51bf88c0a042021`; COS version history renders backend lineage/current/superseded truth, immutable snapshots, permission-gated stable-ID G.2 amendment, version-specific print, and successor-SIGN backend refetch. Focused 6/0; module/flag 46/0; targeted COS 111/0. |
 | T-FE-E.6 | FR-RBAC-1, FR-WFA-2 | T--1.2 (done), T-FE-D.1 (done) | **READY_TO_START** |
 | T-FE-F.1 | FR-LEG-1/2 | T-FE-D.1 (done) | **READY_TO_START** |
 | T-FE-F.2 | FR-CR-1, FR-LEG-2 | T-0.8 (done), T-BE-F.3 (done) | **READY_TO_START** |
@@ -883,4 +883,4 @@ This current reconciliation supersedes the stale Living Document blocker stateme
 | Current/superseded truth and historical-version prints | SATISFIED | backend lineage and snapshot print transport |
 | Tenant and document/version isolation | SATISFIED | closure security tests |
 
-T-FE-E.5 is **READY_TO_START**, not complete. It may consume authoritative Case Sheet and Prescription version lists, version number, current/superseded state, immutable signed snapshots, and historical-version print routes. It must not derive lineage or treat amended records as new Case Sheets or Prescriptions: each retains one stable document identity. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN and do not block this task's start.
+T-FE-E.5 is **COMPLETE [Reconciled 2026-10-03]**. It consumes authoritative Case Sheet and Prescription version lists, version number, current/superseded state, immutable signed snapshots, and historical-version print routes; it does not derive lineage or treat amendments as new Case Sheets or Prescriptions. Focused E.5 acceptance passed 6 / 0 / 0; critical module/flag regressions 46 / 0; targeted COS regressions 111 / 0. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN and are not closed by E.5.

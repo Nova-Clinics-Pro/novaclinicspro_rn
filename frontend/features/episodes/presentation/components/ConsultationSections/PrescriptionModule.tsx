@@ -49,6 +49,7 @@ import { useReportSaveStatus } from '../../context/WorkspaceSaveStatusContext';
 import { SectionKey, SectionProgress, SectionProgressStatus, SectionSaveStatus } from '../../hooks/useConsultationWorkspace';
 import { PrescriptionEditingCore } from '../../../../prescriptions/presentation/components/PrescriptionEditingCore';
 import { renderSection } from './sectionRenderer';
+import { PrescriptionVersionPanel } from '../../../../prescriptions/presentation/components/PrescriptionVersionPanel';
 
 // R3B (T-B.4, ADR-R3B-05): fixed set — reproduces PrescriptionSection's own
 // pre-T-B.4 advice-field behavior bit-for-bit (T-0.3 baseline). The
@@ -73,9 +74,10 @@ function computePrescriptionStatus(prescriptionId: string | null, prescriptionNo
 export interface PrescriptionModuleProps {
   expandedSections: Set<SectionKey>;
   onToggleSection: (key: SectionKey) => void;
+  permissions?: string[];
 }
 
-export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expandedSections, onToggleSection }) => {
+export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expandedSections, onToggleSection, permissions = [] }) => {
   const queryClient = useQueryClient();
   const { colors, spacing, typography } = useClinicTheme();
   const features = useFeatures();
@@ -88,6 +90,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
   const [isPrescriptionSaving, setIsPrescriptionSaving] = useState(false);
   const [prescriptionSaveError, setPrescriptionSaveError] = useState<string | null>(null);
   const [prescriptionNotRequired, setPrescriptionNotRequired] = useState(false);
+  const [prescriptionStatus, setPrescriptionStatus] = useState<string | null>(null);
   const prescriptionIdRef = useRef<string | null>(null);
   const prescriptionDataRef = useRef<PrescriptionData>(EMPTY_PRESCRIPTION_DATA);
   const prescriptionDirtyRef = useRef(false);
@@ -120,6 +123,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
     setPrescriptionData(EMPTY_PRESCRIPTION_DATA);
     prescriptionDataRef.current = EMPTY_PRESCRIPTION_DATA;
     setPrescriptionNotRequired(false);
+    setPrescriptionStatus(null);
     setPrescriptionSaveError(null);
     prescriptionDirtyRef.current = false;
   }, [tenantId, appointmentId, episodeId]);
@@ -140,6 +144,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
       const loaded = first.prescription_data ?? EMPTY_PRESCRIPTION_DATA;
       setPrescriptionData(loaded);
       prescriptionDataRef.current = loaded;
+      setPrescriptionStatus(first.status);
     }
     // No prescription found (empty items, or the query errored) — start
     // fresh, matching the prior direct-call's catch-all behavior exactly.
@@ -174,6 +179,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
   });
 
   const savePrescription = useCallback(async (): Promise<void> => {
+    if (prescriptionStatus === 'SIGNED') return;
     setIsPrescriptionSaving(true);
     setPrescriptionSaveError(null);
     setSectionSaveStatus('saving');
@@ -202,7 +208,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
     } finally {
       setIsPrescriptionSaving(false);
     }
-  }, [tenantId, resolvedClientId, appointmentId, episodeId, queryClient, setSectionSaveStatus, features, createMutation, updateMutation]);
+  }, [tenantId, resolvedClientId, appointmentId, episodeId, queryClient, setSectionSaveStatus, features, createMutation, updateMutation, prescriptionStatus]);
 
   const markPrescriptionNotRequired = useCallback(() => {
     setPrescriptionNotRequired(true);
@@ -229,6 +235,11 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
     () => ({ status: computePrescriptionStatus(prescriptionId, prescriptionNotRequired), saveStatus }),
     [prescriptionId, prescriptionNotRequired, saveStatus],
   );
+
+  const signedSource = prescriptionStatus === 'SIGNED';
+  if (signedSource && prescriptionId) {
+    return <PrescriptionVersionPanel tenantId={tenantId} prescriptionId={prescriptionId} signed canAmend={permissions.includes('prescription.amend')} onAmended={() => prescriptionByAppointmentQuery.refetch()} />;
+  }
 
   return (
     <>
@@ -267,6 +278,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
           }
         />,
       )}
+      {prescriptionId && <PrescriptionVersionPanel tenantId={tenantId} prescriptionId={prescriptionId} signed={false} canAmend={false} onAmended={() => prescriptionByAppointmentQuery.refetch()} />}
     </>
   );
 };

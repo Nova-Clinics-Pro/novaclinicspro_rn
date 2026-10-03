@@ -69,6 +69,7 @@ import { ClinicalNotesSection } from '../../../../casesheets/presentation/compon
 import { CaseSheetExtensionsSection } from '../../../../casesheets/presentation/components/CaseSheetExtensionsSection';
 import { renderSection } from './sectionRenderer';
 import { CaseSheetContributionHistory } from './CaseSheetContributionHistory';
+import { CaseSheetVersionPanel } from '../../../../casesheets/presentation/components/CaseSheetVersionPanel';
 
 // R3B (T-B.1, ADR-R3B-05): fixed set, no add/remove — reproduces
 // AyurvedicAssessmentSection's own pre-T-B.1 behavior bit-for-bit (T-0.2
@@ -157,10 +158,11 @@ export interface CaseSheetModuleHandle {
 export interface CaseSheetModuleProps {
   expandedSections: Set<SectionKey>;
   onToggleSection: (key: SectionKey) => void;
+  permissions?: string[];
 }
 
 export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModuleProps>(
-  ({ expandedSections, onToggleSection }, ref) => {
+  ({ expandedSections, onToggleSection, permissions = [] }, ref) => {
     const queryClient = useQueryClient();
     const features = useFeatures();
     const {
@@ -423,6 +425,11 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
       return result;
     }, [activeSections, casesheetData, saveStatuses]);
 
+    const signedSource = remoteCasesheet?.status === 'SIGNED';
+    if (signedSource && casesheetId) {
+      return <CaseSheetVersionPanel tenantId={tenantId} casesheetId={casesheetId} signed canAmend={permissions.includes('casesheet.amend')} onAmended={refetchEpisode} />;
+    }
+
     return (
       <>
         {renderSection(
@@ -470,6 +477,7 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
             semantics), never editable, never merged into the draft
             above. */}
         <CaseSheetContributionHistory />
+        {casesheetId && <CaseSheetVersionPanel tenantId={tenantId} casesheetId={casesheetId} signed={false} canAmend={false} onAmended={refetchEpisode} />}
       </>
     );
   },

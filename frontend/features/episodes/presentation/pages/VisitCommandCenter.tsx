@@ -127,7 +127,7 @@ export const VisitCommandCenter: React.FC<VisitCommandCenterProps> = ({
   return (
     <WorkspaceProvider tenantId={tenantId} episodeId={episodeId} appointmentId={appointmentId} clientId={clientId}>
       <WorkspaceSaveStatusProvider>
-        <VisitCommandCenterShell initialStep={initialStep} />
+        <VisitCommandCenterShell initialStep={initialStep} permissions={currentUser?.permissions ?? []} />
       </WorkspaceSaveStatusProvider>
     </WorkspaceProvider>
   );
@@ -140,7 +140,7 @@ const INITIAL_EXPANDED_SECTIONS: Partial<Record<CosWorkspaceStep, SectionKey[]>>
   treatment_recommendation: ['treatmentRecommendation'],
 };
 
-const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep }> = ({ initialStep }) => {
+const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permissions: string[] }> = ({ initialStep, permissions }) => {
   const router = useRouter();
   const { colors, spacing, typography, borderWidths, sizes } = useClinicTheme();
   const { t } = useTranslation();
@@ -244,8 +244,8 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep }> = ({
           episodeId={episode.episodeId}
           appointmentId={visit.appointmentId}
         />
-        <CaseSheetModule ref={caseSheetRef} expandedSections={expandedSections} onToggleSection={toggleSection} />
-        <PrescriptionModule expandedSections={expandedSections} onToggleSection={toggleSection} />
+        <CaseSheetModule ref={caseSheetRef} expandedSections={expandedSections} onToggleSection={toggleSection} permissions={permissions} />
+        <PrescriptionModule expandedSections={expandedSections} onToggleSection={toggleSection} permissions={permissions} />
         <TreatmentRecommendationModule
           expandedSections={expandedSections}
           onToggleSection={toggleSection}
