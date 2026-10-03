@@ -454,6 +454,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **Repo:** FE · **Layer:** Application · **Blocked by:** T-FE-A.1, T-BE-A.2 · **Unblocks:** FE-C · **Size:** S
 **AC:** canonical query key + invalidation; **presentation never touches a datasource** (AC-2); reuses verified freshness discipline ✅ (no forced remounts).
 **Tests:** unit · architecture · integration (invalidation). **Rollback:** *Behavior*. **Reqs:** FR-COS-1 · **Design:** §3
+**Status [Updated 2026-10-03]: COMPLETE.** Production implementation is `ALREADY_IMPLEMENTED` from commit `1d799ba2`; current reconciliation added focused canonical-key invalidation evidence. Query key/invalidation, presentation datasource isolation, and freshness/no-forced-remount checks PASS; 23 focused tests PASS; `APPLICATION_ARCHITECTURE_CLEAN`.
 
 ### T-FE-A.3 · Feature flag `cos_v1` ∥
 **Repo:** FE (+BE mirror) · **Layer:** Core · **Files:** `core/hooks/useFeatures.ts` ✅ (+ `app/core/config.py` ✅ if a BE gate is needed)

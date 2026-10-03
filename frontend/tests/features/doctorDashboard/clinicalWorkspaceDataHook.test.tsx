@@ -205,6 +205,20 @@ describe('useClinicalWorkspaceQuery', () => {
     expect(mockGetClinicalWorkspaceApi).toHaveBeenNthCalledWith(2, 'tenant-1', 'client-2', 'episode-1', 'appointment-2');
   });
 
+  it('refetches the active workspace query when its canonical key is invalidated', async () => {
+    const { result } = renderHook(
+      () => useClinicalWorkspaceQuery('tenant-1', 'client-1', 'episode-1', 'appointment-1'),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    await queryClient.invalidateQueries({
+      queryKey: clinicalWorkspaceKeys.detail('tenant-1', 'client-1', 'episode-1', 'appointment-1'),
+    });
+
+    await waitFor(() => expect(mockGetClinicalWorkspaceApi).toHaveBeenCalledTimes(2));
+  });
+
   it('preserves absent/unavailable/not_applicable/recorded recording states distinctly, unmapped', async () => {
     const { result } = renderHook(
       () => useClinicalWorkspaceQuery('tenant-1', 'client-1', 'episode-1', 'appointment-1'),
