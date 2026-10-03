@@ -417,11 +417,11 @@
 **Business Objective:** Workspace shows consultation charges/clinical services/therapy charges/medicines/consumables/procedures/invoice+payment status/outstanding; doctors read-only, admin/front-desk full access where permitted.
 **Priority:** MVP Mandatory
 **Design:** §2.5 · **Decision:** D6 · **ET refs:** verified spine `TenantClinicalService.visit_id` (`nullable=False`) → `TenantInvoiceLine.clinical_service_id` → invoice → payment · **Owner Ratification:** Decision 6
-**Backend:** Tasks: T-BE-F.1 · Status: **Complete**
-**Frontend:** Tasks: T-FE-E.4 · Status: **Not Started**
+**Backend:** Tasks: T-BE-F.1 (**Complete** read contract), T-BE-F.1a (**Ready to Start** governed action contract)
+**Frontend:** Tasks: T-FE-E.4 · Status: **Blocked by T-BE-F.1a**
 **Implementation Evidence:** `i_finance_repository.py`, `sqlalchemy_repositories.py` — commit `efe2344`
 **Tests:** `test_finance_repository_visit_scope.py`, `test_billing_clinical_service_boundary.py`
-**Traceability:** FR-BILL-1 → design.md §2.5 → T-BE-F.1 (done) + T-FE-E.4 (not started) → `i_finance_repository.py` → 2 test files → `efe2344` → Partially Complete
+**Traceability:** FR-BILL-1 → design.md §2.5 → T-BE-F.1 (done, read) + T-BE-F.1a (not started, governed action) → T-FE-E.4 (blocked) → `i_finance_repository.py` → 2 test files → `efe2344` → Partially Complete
 **Release Classification:** BLOCKING MVP
 **Remarks:** None beyond the missing frontend stage.
 
@@ -429,11 +429,11 @@
 **Business Objective:** Unbilled services produce a visible warning; clinical completion succeeds; billing never blocks by default.
 **Priority:** MVP Mandatory
 **Design:** §2.5 · **Decision:** D6 · **ET refs:** none · **Owner Ratification:** Decision 6
-**Backend:** Tasks: T-BE-F.2 · Status: **Complete**
-**Frontend:** Tasks: T-FE-E.4 · Status: **Not Started**
+**Backend:** Tasks: T-BE-F.2 · Status: **Complete**; T-BE-F.1a must preserve its warning-only invariant
+**Frontend:** Tasks: T-FE-E.4 · Status: **Blocked by T-BE-F.1a**
 **Implementation Evidence:** none needed — commit `f57d93b`'s own message states no production code changed; existing behavior was already correct
 **Tests:** `test_billing_completion_never_blocks.py`
-**Traceability:** FR-BILL-2 → design.md §2.5 → T-BE-F.2 (done, verification-only) + T-FE-E.4 (not started) → n/a → `test_billing_completion_never_blocks.py` → `f57d93b` → Partially Complete
+**Traceability:** FR-BILL-2 → design.md §2.5 → T-BE-F.2 (done, verification-only) + T-BE-F.1a (not started, preserves non-blocking) → T-FE-E.4 (blocked) → n/a → `test_billing_completion_never_blocks.py` → `f57d93b` → Partially Complete
 **Release Classification:** BLOCKING MVP
 **Remarks:** A genuinely pleasant finding — the requirement was already true before R7 touched anything; the task existed to *prove* it, and did, cheaply (no code change).
 
@@ -569,11 +569,11 @@
 **Business Objective:** `episodeWorkspaceConfigByRole` extends 2→5 roles as config; any role holding permission may act — backend enforces, UI hiding is polish only.
 **Priority:** MVP Mandatory
 **Design:** §3 · **ET refs:** ETX-1 (permission codes) · **Owner Ratification:** —
-**Backend:** Tasks: none directly (permission enforcement pre-exists) · Status: N/A
+**Backend:** Tasks: T-BE-F.1a (invoice capability/permission enforcement) · Status: **Ready to Start**
 **Frontend:** Tasks: T-FE-E.6 · Status: **Not Started**
 **Implementation Evidence:** `episodeWorkspaceConfig.ts` exists pre-R7, has not been touched by any R7 commit
 **Tests:** none R7-specific
-**Traceability:** FR-RBAC-1 → design.md §3 → T-FE-E.6 → `episodeWorkspaceConfig.ts` (unmodified) → none → n/a → Not Started
+**Traceability:** FR-RBAC-1 → design.md §3 → T-FE-E.6 (not started) + T-BE-F.1a (not started; canonical invoice permissions enforced server-side) → `episodeWorkspaceConfig.ts` (unmodified) → none → n/a → Not Started
 **Release Classification:** BLOCKING MVP
 **Remarks:** ETX-1's own trace doc found a real, unaddressed enforcement gap directly relevant to this requirement: `casesheet.sign`/`prescription.sign` permission codes are seeded but bypassed by hardcoded `"DOCTOR" not in roles` checks in the routers — meaning even where role checks exist today, at least two are not actually backend-enforced via the permission system this requirement's own AC(3) requires ("backend enforces; UI hiding is presentation polish only").
 
@@ -818,7 +818,7 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 |---|---|---|---|
 | T-FE-E.2 | FR-RX-1, FR-TR-1, FR-TP-1, FR-TS-1/2/3, FR-SCH-1 | T-0.2/T-0.4/T-0.7 (done), T-BE-D.4 (done), T-BE-E.2 (done), T-BE-E.3 (done, `9497f13`) | **COMPLETE — [Updated 2026-07-27, T-FE-E.2a closure]** Prescription/Recommendation/Session-Instructions (single + bulk apply)/Scheduling/Treatment-Plan all composed (commits `4fba2ec4`, `80fb96d0`, `c69f7ef` [backend], `bfe31956`, `7e2ce7f1`). The sole remaining gap, author-once-apply-to-many (FR-TS-3's own Adoption requirement), was closed by the narrow amendment task `T-FE-E.2a`, reusing the already-complete backend bulk endpoint. Note: `FR-TS-1` itself stays Partially Complete at the requirement level — its card also names `T-FE-E.3` (therapist execution composition, not started, out of `T-FE-E.2`'s own scope) — but every AC item this task's own frozen card names is satisfied. |
 | T-FE-E.3 | FR-TS-4/5 | T-0.7 (done), T-BE-E.4 (done) | **COMPLETE — [Updated 2026-07-28]** Assigned-session listing, doctor instructions (read-only), start, complete-with-materials all pre-existed via `TherapistDashboardScreen`; structured non-execution now added (commit `302bccbf`). One reported, non-blocking gap: non-execution reason not durably re-displayed after a list refetch (backend list schema gap). |
-| T-FE-E.4 | FR-BILL-1/2 | T-BE-F.1 (done) | **READY_TO_START** |
+| T-FE-E.4 | FR-BILL-1/2 | T-BE-F.1 (done), T-BE-F.1a (not started) | **BLOCKED — T-BE-F.1a** |
 | T-FE-E.5 | FR-LD-1/2 | T-BE-G.2 | Blocked on T-BE-G.2 |
 | T-FE-E.6 | FR-RBAC-1, FR-WFA-2 | T--1.2 (done), T-FE-D.1 (done) | **READY_TO_START** |
 | T-FE-F.1 | FR-LEG-1/2 | T-FE-D.1 (done) | **READY_TO_START** |

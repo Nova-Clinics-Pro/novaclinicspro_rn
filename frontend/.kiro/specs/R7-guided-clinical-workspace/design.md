@@ -157,7 +157,7 @@ Registered on the UoW alongside existing repos (convention ✅). `tenant_` prefi
 ### 2.5 Billing visibility
 **Implements:** FR-BILL-1, FR-BILL-2 · **Decision:** D6
 
-Additive **read** contract composing the **verified existing spine**: `TenantClinicalService.visit_id` (`nullable=False` ✅) → `TenantInvoiceLine.clinical_service_id` ✅ → invoice → payment. **No new billing write path in R7.** Capability-gated. Completion returns a **warning** for unbilled services (FR-BILL-2); **no hard block is hard-coded** — any blocking tenant policy is explicit configuration **[VP]**, not R7 code.
+`T-BE-F.1` is the additive **read** contract composing the verified existing spine: `TenantClinicalService.visit_id` (`nullable=False` ✅) → `TenantInvoiceLine.clinical_service_id` ✅ → invoice → payment. F.1 itself adds no billing write path. The separately ratified `T-BE-F.1a` governs use of the existing invoice-create path from R7: frontend provides `appointment_id` only; backend resolves authenticated tenant → appointment → client → active Visit, validates all relationships and any clinical-service attribution, and enforces effective `billing.invoicing` **and** the applicable canonical `invoice.*` permission. `T-FE-E.4` composes the resulting billing presentation/affordance; `T-FE-E.6` retains broader role/capability composition. Completion returns a **warning** for unbilled services (FR-BILL-2); it is never a frontend hard block, and backend completion readiness remains authoritative. See `R7-BILLING-ACTIONABILITY-RATIFICATION.md`.
 
 ### 2.6 Living documents
 **Implements:** FR-LD-1, FR-LD-2, FR-LD-3 · **Decision:** D2 · **Principle:** P6

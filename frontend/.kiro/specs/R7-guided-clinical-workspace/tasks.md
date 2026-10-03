@@ -126,7 +126,8 @@ The minimum backend work required to unblock T-0.8/T-0.9 is exactly the tasks al
 | **T-BE-A.1** | Workspace facts snapshot (read model) | T-BE-A.2, T-BE-B.2 |
 | **T-BE-B.1** | `clinical_workflow_resolver` — pure domain | T-BE-B.2 |
 | **T-BE-B.2** | `clinical_workflow_service` + contract | **T-0.9**, T-FE-B.1, T-FE-D.1 |
-| **T-BE-F.1** | Billing visibility read contract | T-FE-E.4 |
+| **T-BE-F.1** | Billing visibility read contract | T-BE-F.1a, T-FE-E.4 |
+| **T-BE-F.1a** | Governed Visit-scoped invoice action contract | T-FE-E.4 |
 | **T-BE-F.2** | Completion readiness — billing warning, never block | T-BE-F.3 |
 | **T-BE-F.3** | Backend owns consultation summary + completion readiness | **T-0.8**, T-FE-F.2 |
 
@@ -399,9 +400,14 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 
 ### T-BE-F.1 · Billing visibility read contract ∥
 **Repo:** BE · **Layer:** Application+Router · **Objective:** compose the **verified existing spine** — `TenantClinicalService.visit_id`(`nullable=False` ✅) → `TenantInvoiceLine.clinical_service_id` ✅ → invoice → payment.
-**Blocked by:** T-0 gate, T--1.2 · **Unblocks:** T-FE-E.4 · **∥ with:** BE-C, BE-D, BE-E · **Size:** M
+**Blocked by:** T-0 gate, T--1.2 · **Unblocks:** T-BE-F.1a, T-FE-E.4 · **∥ with:** BE-C, BE-D, BE-E · **Size:** M
 **AC:** returns consultation charges · clinical services · therapy/session charges · medicines · consumables · procedures · invoice status · payment status · outstanding. **read-only; no new billing write path in R7.** capability-gated.
 **Tests:** unit · contract · integration. **Rollback:** *Behavior* — additive read. **Reqs:** FR-BILL-1 · **Design:** §2.5 · **Decisions:** D6 · **Principles:** P8
+
+### T-BE-F.1a · Governed Visit-scoped invoice action contract
+**Repo:** BE · **Layer:** Application+Router+RBAC · **Status:** READY_TO_START · **Blocked by:** T-BE-F.1, T--1.2 · **Unblocks:** T-FE-E.4 · **Size:** M
+**AC:** (1) R7 invoice creation accepts `appointment_id` as context only. (2) Backend resolves authenticated tenant → appointment → client → active Visit and validates tenant/client/appointment/Visit ownership. (3) Clinical-service references, where present, belong to that tenant and resolved Visit. (4) Backend requires effective `billing.invoicing` **and** `invoice.create`; frontend is never the authorization boundary. (5) Default seeded grants: Admin and Receptionist/Front Desk receive `invoice.create`/`invoice.update`/`invoice.collect_payment`; Doctor receives none by default. (6) Cross-tenant/IDOR and invalid context are atomically rejected. (7) Reuses compatible generic billing behavior; no competing invoice-create route.
+**Tests:** unit · integration · security/IDOR · seed-composition. **Rollback:** *Behavior* — disable the new governed workspace invocation; retain existing compatible generic billing flow. **Reqs:** FR-BILL-1, FR-BILL-2, FR-CR-1, FR-RBAC-1, FR-WFA-2 · **Design:** §2.5 · **Decisions:** D6, D9 · **Principles:** P1, P2, P8 · **Owner decision:** `R7-BILLING-ACTIONABILITY-RATIFICATION.md`
 
 ### T-BE-F.2 · Completion readiness — billing warning, never block
 **Repo:** BE · **Layer:** Application · **Blocked by:** T-BE-F.1, T-BE-B.2 · **Unblocks:** T-BE-F.3 · **Size:** S
@@ -605,7 +611,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **Status: COMPLETE.** Engineering Truth (re-verified against current source, not prior reports) found that assigned-session listing (`useTherapistSessionsQuery` → `get_therapist_sessions`, server-side scoped to the caller, no client-side therapist filtering), read-only doctor instructions, Start Session (`useStartSessionMutation` → `start_treatment_session`, `If-Match` required), and Complete Session (`useCompleteSheetRowMutation` → `complete_treatment_sheet_row`, idempotent via payload-hash, full retry/conflict state machine) were **already composed** by a pre-existing `TherapistDashboardScreen` — none of this predates R7 by coincidence, but none of it was built by this task either. The one genuinely missing piece was **structured non-execution** (`T-BE-E.4a`): zero frontend presence anywhere in the repo, confirmed by grep. Implemented: `SessionNonExecutionModal.tsx` (governed reason selector — `PATIENT_NO_SHOW`/`PATIENT_CANCELLED`/`CLINIC_CANCELLED`/`CLINICAL_HOLD`/`OTHER`, `OTHER` requires free text, no raw code ever shown), `recordSessionNonExecutionApi`/`useRecordSessionNonExecutionMutation` (new, following the exact `completeSheetRowApi` pattern), and `TherapistDashboardScreen.tsx` wiring (Record Non-Execution action, gated on `status !== 'COMPLETED'` — the one server-verified restriction; composed-label display rendering schedule state / "execution did not occur" / reason as three separate lines, sourced only from the record endpoint's own response — never a `MISSED` status). Doctor-authored fields (`treatment_name`/`medicines_text`/`instructions_text`) are never sent in the non-execution payload (verified by architecture test). Stable identity (`TreatmentSheetRow.id`, i.e. `row_id`) used throughout, never `day_number`/`session_date`/array position. 18 new tests (`sessionNonExecutionModal.test.tsx`, 8; `therapistExecutionArchitecture.test.ts`, 10), all passing; full frontend suite 1088 tests, 1079 passing (9 pre-existing unrelated failures — `workspaceHeader.test.tsx`, `therapistDashboard.property.test.ts`/`TherapistSessionCard.test.ts`/`therapistDashboard.entity.test.ts` [case-sensitivity], `staffDashboards.api.test.ts` [stale URL assertion on the untouched `completeSheetRowApi`], `wizard.store.test.ts`/`StepCard.test.tsx` [unrelated AsyncStorage/zustand issue] — none touch this task's files, confirmed via isolated re-runs and a `git stash`/`stash pop` round-trip proving the diff is purely additive). **One reported, non-blocking gap:** `TherapistSessionItem` (the `get_therapist_sessions` list schema) carries no `non_execution_reason_code`/`non_execution_reason_text` field, and non-execution does not mutate row `status` server-side — so the composed label is genuinely shown immediately after the action but cannot survive the list's next auto-refetch (pre-existing 30s interval / focus refetch). This is a backend contract gap, reported not worked around; tracked as follow-up debt, not a blocker for this card's own frozen AC. Commit `302bccbf`.
 
 ### T-FE-E.4 · Compose billing stage ∥
-**Repo:** FE · **Blocked by:** T-BE-F.1 · **Size:** M
+**Repo:** FE · **Status:** BLOCKED — governed invoice action prerequisite · **Blocked by:** T-BE-F.1, T-BE-F.1a · **Size:** M
 **AC:** doctor **read-only**; admin/front-desk actionable; unbilled → **warning at completion, never a block**; capability-gated. **Tests:** unit (per role) · integration. **Rollback:** *Behavior*. **Reqs:** FR-BILL-1/2 · **Decisions:** D6
 
 ### T-FE-E.5 · Amendment surfaces + version rendering
