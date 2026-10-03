@@ -33,3 +33,11 @@ Unbilled services remain a visible **warning only**. Billing facts, capability, 
 `T-BE-F.1a` owns the server-side invoice-create contract, context resolution/validation, clinical-service attribution, capability-and-permission enforcement, ratified seed grants, tenant isolation, atomic rejection, and executable evidence. After it completes, `T-FE-E.4` owns billing-stage presentation, permission-driven affordance, governed navigation, and warning rendering—not RBAC policy or authorization. `T-FE-E.6` retains its broader role/capability composition ownership.
 
 **Traceability:** FR-BILL-1, FR-BILL-2, FR-CR-1, FR-RBAC-1, FR-WFA-2 · Design §2.5 · Decisions D6/D9 · Principles P1/P2/P8.
+
+## Implementation reconciliation (2026-10-03)
+
+The prerequisite ratified above is now implemented by backend commit `e2ee6600001b407aef98f48232cd5eace2526f46` on `reconciliation/r7-cos-dev-be`. Its completion gate is `VISIT_SCOPED_INVOICE_ACTION_CLEAN`, with 88 passed / 0 failed / 0 skipped. Migration `20261003_000001` follows `20261002_000003` with one Alembic head. `ET-MIG-001` remains OPEN; this completion does not claim a clean empty-database replay.
+
+Accordingly, `T-FE-E.4` is **READY_TO_START**, not implemented or complete. Its scope remains billing-stage presentation, resolved-permission affordance, governed navigation, and warning rendering. It must preserve the ratified contract: billing visibility follows effective `billing`; invoice action requires effective `billing.invoicing` plus `invoice.create`; authorization and tenant/Visit resolution stay backend-owned; Doctor is read-only by default; Admin and Receptionist / Front Desk receive the ratified default grants; the frontend never role-infers; and unbilled state remains a warning, never a frontend completion block. `T-FE-E.6` remains a separate broader composition task, not a newly introduced E.4 dependency.
+
+The backend completion also includes the narrow `ED-R7-DB-001` repair: ORM metadata corrected the `TenantTreatmentMaterialUsage.deleted_by_staff_id` foreign-key target from `org_staff.id` to `tenant_staff.id`. It is not a migration and does not change the R7 billing contract.
