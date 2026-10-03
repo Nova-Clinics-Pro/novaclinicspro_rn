@@ -461,6 +461,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **Blocked by:** T-0 gate · **Unblocks:** T-FE-A.1 · **Size:** S
 **AC:** mirrors the verified mechanism exactly (`isFreshnessV1Enabled`/`isClinicalSpineV1Enabled` ✅; `freshness_v1_enabled`/`clinical_spine_v1_enabled` ✅). **one umbrella flag**; reuse existing route flags.
 **Tests:** flag-switch. **Rollback:** *Behavior* — flag off ⇒ **no data effect.** **Reqs:** FR-FLAG-1 · **Principles:** AC-6
+**Status [Updated 2026-10-03]: COMPLETE.** `ALREADY_IMPLEMENTED` from commit `3df98d04`; current verification: 50 focused tests PASS. `cos_v1` is the single umbrella flag: OFF preserves the legacy workspace; ON selects `VisitCommandCenter` on the same route. `FEATURE_FLAG_ARCHITECTURE_CLEAN`; no production or test change was required.
 
 ## FE Group B — Workflow rendering
 
