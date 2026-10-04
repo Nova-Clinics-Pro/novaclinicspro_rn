@@ -313,13 +313,13 @@
 **Business Objective:** Four distinct operations never conflated: clinical-intent change → new version; schedule-logistics change → no new version; unexecuted-session-instruction edit → session-level only; execution-record correction → audit-controlled.
 **Priority:** MVP Mandatory
 **Design:** §2.3, §2.6 · **Decision:** —, D2 · **ET refs:** none · **Owner Ratification:** —
-**Backend:** Tasks: T-BE-D.5 · Status: **Not Started**
+**Backend:** Tasks: T-BE-D.5 · Status: **Complete [2026-10-04]**
 **Frontend:** Tasks: none directly · Status: N/A
 **Implementation Evidence:** none
 **Tests:** none
-**Traceability:** FR-TP-3 → design.md §2.3/§2.6 → T-BE-D.5 (blocked on T-BE-G.1, also not started) → — → — → Not Started
+**Traceability:** FR-TP-3 → design.md §2.3/§2.6 → T-BE-D.5 → governed amendment/lineage/replacement/scheduling transport → isolated local PostgreSQL acceptance (18 passed) + affected regression suite (141 passed) → Complete
 **Release Classification:** BLOCKING MVP
-**Remarks:** Doubly blocked — `T-BE-D.5` itself needs `T-BE-G.1` (supersession representation) to exist first, and neither has started.
+**Remarks:** Complete in backend commit `067427a2`. Clinical-intent amendment creates a new immutable Plan version in G1 lineage; `document_version` and `superseded_by_plan_id` are projections. Scheduling, future-instruction editing, and execution correction remain non-versioning operational/session concerns. D5-OD-1…15 record the frozen ownership and safety boundary. ET-MIG-001 and G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB remain open independently.
 
 ---
 
@@ -808,7 +808,7 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 ### Mandatory backend tasks remaining (4)
 | Task | Realizes | Blocked by | Ready? |
 |---|---|---|---|
-| T-BE-D.5 | FR-TP-3 (Plan versioning/supersession) | T-BE-G.1 | Blocked on T-BE-G.1 |
+| T-BE-D.5 | FR-TP-3 (Plan versioning/supersession) | T-BE-G.1 | **Complete [2026-10-04]** — D5-OD-1…15; isolated-local PostgreSQL acceptance and regression evidence recorded in FR-TP-3 |
 | T-BE-G.1 | FR-LD-1 (supersession representation) | — (T--1.2 already done) | **READY_TO_START** |
 | T-BE-G.2 | FR-LD-2 (amendment permissions) | T-BE-G.1 | Blocked on T-BE-G.1 |
 | T-BE-G.3 | FR-LD-3 (docstring fix) | T-BE-G.1 | Blocked on T-BE-G.1 |
@@ -835,7 +835,7 @@ T-FE-G.1 (mobile polish, judged optional by `MVP-RELEASE-FREEZE.md`), T-FE-G.2 (
 ```
 T-BE-G.1 ──► T-BE-G.2 ──► T-FE-E.5
     │
-    └──► T-BE-D.5 (Plan versioning)
+    └──► T-BE-D.5 (Plan versioning) **COMPLETE [2026-10-04]**
 
 T-FE-E.2 ──► T-FE-F.3
     │

@@ -345,6 +345,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **AC:** (12) clinical amendment versioned/superseded. (13) **schedule-only → NO new Plan version.** (a/b/c/d) four operations distinct: intent · logistics · unexecuted-instruction edit · execution correction. Amendment preserves executed sessions; defines effect on future unexecuted ones.
 **Tests:** unit (each op) · integration · regression. **Rollback:** *Behavior* — flag; **Data:** ⚠ **amendment chains + superseded versions PRESERVED — never destroyed.**
 **Reqs:** FR-TP-3, FR-LD-1 · **Design:** §2.3, §2.6 · **Principles:** P6
+**Status [Updated 2026-10-04]: COMPLETE.** Backend commit `067427a2` implements governed clinical-intent amendment as a new Plan/version in the existing Living Document lineage; `document_version` and `superseded_by_plan_id` are projections only. Future unstarted rows become `SUPERSEDED` with required provenance; in-progress and historical rows remain predecessor-owned. Replacement scheduling is separate, optional, N:M audit data, never rebinding. Executable evidence: 18 isolated-local PostgreSQL acceptance scenarios (including real START-vs-SUPERSESSION concurrency, atomic rollback, cross-tenant isolation, permissions, FREE/BASIC CORE composition) and 141 affected regressions. D5-OD-1…15 are ratified in `R7-OWNER-RATIFICATION.md`. ET-MIG-001 and G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB remain open and are not D.5 closure blockers.
 
 ## BE Group E — Sessions · Scheduling · Content · Execution
 

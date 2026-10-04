@@ -433,3 +433,23 @@ R7 uses **only** the verified Prescription document lifecycle (`DRAFT → FINAL 
 **(1) R7 now requires an additive migration.** Verified this task: **no Treatment Plan entity exists.** The only `*plan*` models are `org_subscription_plan` / `subscription_plan_capability` (billing — unrelated); `app/domain/treatment_plan/` contains only a `SyncResult` dataclass. Ratifying the Plan as *first-class persisted and versioned* therefore requires **a new table + versioning** — an **additive migration in R7**. Earlier feasibility stated *"no schema change in the core design"*; **that is now superseded.** Backend size rises accordingly.
 
 **(2) Naming collision to resolve in requirements — `tenant_visits.treatment_plan` is a TEXT column.** Verified: `treatment_plan: Mapped[str | None]` → `TEXT`, nullable. Today "treatment plan" exists **only as free text on the Visit** — which is precisely the pre-entity representation the ratification replaces. Requirements must decide its disposition (retain as legacy visit note · migrate · deprecate) and must ensure implementers never confuse the free-text column with the new entity. **Non-blocking for freeze; blocking for the Treatment Plan requirements.**
+
+---
+
+## D5-OD-1 … D5-OD-15 — Treatment Plan amendment/supersession contract · **RATIFIED** *(2026-10-04)*
+
+1. **D5-OD-1:** Clinical-intent amendment creates a new Treatment Plan row/version; it never mutates the predecessor's clinical intent.
+2. **D5-OD-2:** One Living Document identity represents the enduring Treatment Plan clinical-intent series.
+3. **D5-OD-3:** Generic G1 lineage is the sole authoritative supersession/currentness authority for that series.
+4. **D5-OD-4:** `document_version` and `superseded_by_plan_id` are synchronized projections, never independent lineage authority.
+5. **D5-OD-5:** Executed and completed historical sessions remain owned by their predecessor Plan; in-progress sessions remain predecessor-owned and may complete.
+6. **D5-OD-6:** Future not-started predecessor rows become `SUPERSEDED` with provenance; `SUPERSEDED` is neither `CANCELLED` nor `COMPLETED`.
+7. **D5-OD-7:** Amendment never silently rebinds a session from predecessor to successor.
+8. **D5-OD-8:** Replacement relations are optional N:M audit relations, not ownership transfer or automatic scheduling.
+9. **D5-OD-9:** Replacement scheduling remains a separate operational action; amendment does not copy logistics as authoritative scheduling truth.
+10. **D5-OD-10:** Schedule-only/logistics changes create no Treatment Plan version.
+11. **D5-OD-11:** Future unexecuted instruction editing remains a session/instruction concern and creates no Treatment Plan version.
+12. **D5-OD-12:** Execution correction remains a session/execution concern and creates no Treatment Plan version.
+13. **D5-OD-13:** Concurrent START and supersession have exactly one winner: a committed start preserves `IN_PROGRESS`; a committed supersession rejects a later start.
+14. **D5-OD-14:** Runtime authorization is permission-driven: `treatment_plan.amend` governs clinical amendment and `treatment_order.schedule` governs scheduling/replacement logistics; subscription availability and seeded role grant remain separate.
+15. **D5-OD-15:** Amendment/supersession does not reassign billing history: billing stays attached to its actual Visit/session, and no successor Plan or replacement relation transfers it.
