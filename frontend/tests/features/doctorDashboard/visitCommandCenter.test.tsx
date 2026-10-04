@@ -339,7 +339,7 @@ describe('VisitCommandCenter (T-FE-A.1)', () => {
     // NextActionBar's own "no recommendation" state — legitimate,
     // backend-driven text, not fabrication. What must still never appear
     // is a warning or completion-readiness claim the frontend invented.
-    expect(getByText('No recommendation right now')).toBeTruthy();
+    expect(await findByText('No recommendation right now')).toBeTruthy();
     expect(queryByText(/warning/i)).toBeNull();
     expect(queryByText(/ready to complete/i)).toBeNull();
   });
