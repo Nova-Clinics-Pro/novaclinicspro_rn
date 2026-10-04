@@ -118,12 +118,12 @@
 **Priority:** MVP Mandatory
 **Design:** §2.1 · **Decision:** D9 · **ET refs:** ETX-1 (permission codes, resolved by trace doc) · **Owner Ratification:** —
 **Backend:** Tasks: T-BE-B.1/B.2 (contract carries the fields) · Status: **Complete**
-**Frontend:** Tasks: T-FE-E.6 (role composition consuming it) · Status: **Not Started**
+**Frontend:** Tasks: T-FE-E.6 (role/capability composition consuming it) · Status: **Complete** [Reconciled 2026-10-04]
 **Implementation Evidence:** `clinical_workflow_resolver.py` (`blocking_factors`/`waiting_role` fields)
 **Tests:** BE resolver/service tests
-**Traceability:** FR-WFA-2 → design.md §2.1 → T-BE-B.1/B.2 (done) + T-FE-E.6 (not started) → contract fields present, unconsumed → Partially Complete
+**Traceability:** FR-WFA-2 → design.md §2.1 → T-BE-B.1/B.2 (done) + T-FE-E.6 (complete) → backend workflow facts rendered without local authority → Complete
 **Release Classification:** BLOCKING MVP
-**Remarks:** Backend contract exists; nothing on the frontend reads `waiting_role`/`blocking_factors` yet since T-FE-E.6 hasn't started.
+**Remarks:** `NextActionBar` renders backend `waiting_role`/`blocking_factors`; E.6 adds backend capability-loss rendering without local policy derivation.
 
 ---
 
@@ -570,12 +570,12 @@
 **Priority:** MVP Mandatory
 **Design:** §3 · **ET refs:** ETX-1 (permission codes) · **Owner Ratification:** —
 **Backend:** Tasks: T-BE-F.1a (invoice capability/permission enforcement) · Status: **Complete** (`e2ee6600001b407aef98f48232cd5eace2526f46`)
-**Frontend:** Tasks: T-FE-E.6 · Status: **Not Started**
-**Implementation Evidence:** `episodeWorkspaceConfig.ts` exists pre-R7, has not been touched by any R7 commit
-**Tests:** none R7-specific
-**Traceability:** FR-RBAC-1 → design.md §3 → T-FE-E.6 (not started) + T-BE-F.1a (done; canonical invoice permissions enforced server-side) → `episodeWorkspaceConfig.ts` (unmodified) → backend commit `e2ee6600001b407aef98f48232cd5eace2526f46` → Partially Complete
-**Release Classification:** BLOCKING MVP
-**Remarks:** ETX-1's own trace doc found a real, unaddressed enforcement gap directly relevant to this requirement: `casesheet.sign`/`prescription.sign` permission codes are seeded but bypassed by hardcoded `"DOCTOR" not in roles` checks in the routers — meaning even where role checks exist today, at least two are not actually backend-enforced via the permission system this requirement's own AC(3) requires ("backend enforces; UI hiding is presentation polish only").
+**Frontend:** Tasks: T-FE-E.6 · Status: **Complete** [Reconciled 2026-10-04]
+**Implementation Evidence:** five-role presentation config, one `VisitCommandCenter`, localized rendering of the backend capability-loss contract and `waiting_role`; no role-derived clinical action policy.
+**Tests:** focused E.6 acceptance 24/0; required capability/workflow/module/flag regression selection 188/0
+**Traceability:** FR-RBAC-1 → design.md §3 → T-FE-E.6 (complete) + T-BE-F.1a (done; canonical invoice permissions enforced server-side) → COS shell/config and backend-owned action gates → Complete
+**Release Classification:** READY FOR MVP
+**Remarks:** Unknown/custom and multi-role presentation are neutral; permissions, effective capabilities, backend workflow facts, and backend mutation enforcement remain authoritative.
 
 ---
 
@@ -632,7 +632,7 @@ None found among the 44. Every requirement maps to at least one task (backend an
 
 ## Validation Report 3 — Requirements with Tasks but No Implementation
 
-**[Recomputed 2026-07-27 — this list was stale.]** 15 requirements have at least one associated task with zero implementation evidence (Status: Not Started on that side): FR-COS-2 (T-Z.1, the general architecture proof, has not run), FR-LD-1, FR-LD-2, FR-LD-3, FR-TP-3, FR-TS-3, FR-TS-4 (frontend half only — backend complete), FR-TS-5 (frontend half only), FR-SCH-1 (frontend half only), FR-SCH-2 (frontend half only), FR-LEG-2, plus the not-started *half* of FR-CS-6 (amendment-reason), FR-RX-1, FR-TR-1, FR-TP-1, FR-TS-1, FR-TS-2, FR-BILL-1, FR-BILL-2, FR-CR-1 (legacy-route half), FR-MOB-1 (T-FE-G.1 polish half — judged optional), FR-LEG-1, FR-RBAC-1. **Removed from this list, now fully implemented on both sides:** FR-VCC-1, FR-WFA-1, FR-WFA-2 (WFA-2's own T-FE-E.6 remains not started — kept above), FR-CS-1, FR-CS-5, FR-REC-1, FR-REC-2, FR-MOB-2, FR-HIST-1, FR-HIST-2.
+**[Reconciled 2026-10-04 for T-FE-E.6 only.]** FR-RBAC-1 and FR-WFA-2 are removed from this stale list: their frontend E.6 composition is now complete. All other entries retain their prior audit status. **Removed from this list, now fully implemented on both sides:** FR-VCC-1, FR-WFA-1, FR-WFA-2, FR-RBAC-1, FR-CS-1, FR-CS-5, FR-REC-1, FR-REC-2, FR-MOB-2, FR-HIST-1, FR-HIST-2.
 
 ## Validation Report 4 — Implementation with No Requirement
 
@@ -644,7 +644,7 @@ None found. Every requirement card above whose Backend or Frontend status is "Co
 
 ## Validation Report 6 — Tasks Completed but Requirement Still Partially Satisfied
 
-**[Recomputed 2026-07-27 — this list was stale.]** 13 requirements fall in this category — task(s) marked complete on one side (usually backend) while the requirement's overall AC remains only partially satisfied because the other side (usually frontend, or in FR-COS-2's case a cross-cutting proof) hasn't started: FR-COS-2 (T-Z.1 architecture proof), FR-WFA-2 (T-FE-E.6), FR-CS-6 (amendment-reason half, T-BE-G.2), FR-RX-1, FR-TR-1, FR-TP-1, FR-TS-1, FR-TS-2, FR-BILL-1, FR-BILL-2, FR-CR-1 (legacy-route half, T-FE-F.2), FR-MOB-1 (T-FE-G.1, judged optional), FR-LEG-1 (T-FE-F.1-F.3). **Removed from this list, now fully implemented on both sides:** FR-VCC-1, FR-WFA-1, FR-CS-1, FR-REC-1. This category remains real evidence of "backend substantially ahead of frontend" — see §Current Remaining Work below for the fresh count and critical path.
+**[Reconciled 2026-10-04 for T-FE-E.6 only.]** FR-WFA-2 is removed from this stale list because its frontend E.6 composition is complete. All other entries retain their prior audit status. **Removed from this list, now fully implemented on both sides:** FR-VCC-1, FR-WFA-1, FR-WFA-2, FR-RBAC-1, FR-CS-1, FR-REC-1. This category remains real evidence of "backend substantially ahead of frontend" — see §Current Remaining Work below for the fresh count and critical path.
 
 ## Validation Report 7 — Duplicate Requirements
 
@@ -763,7 +763,7 @@ DEFER TO R8                              = 1   (FR-RX-2)
 | Doctor Session instructions | **READY** [Updated 2026-07-27] | Backend (`T-BE-E.3`) COMPLETE (commit `9497f13`); frontend composes single-session authoring AND author-once-apply-to-many multi-select bulk apply (`SessionInstructionsModule`, stable-id-bound, OCC-adopted on the single-row path, atomic bulk apply via the existing endpoint, commits `80fb96d0`/`7e2ce7f1`, `T-FE-E.2a`) |
 | Therapist execution | **READY** [Updated 2026-07-28] | Backend (`T-BE-E.4`/`E.4a`) + OCC (`T-BE-E.5`) complete and exposed; frontend (`T-FE-E.3`, commit `302bccbf`) composes assigned-session listing, read-only doctor instructions, start, complete-with-materials, and structured non-execution. Reported non-blocking gap: non-execution reason not durably re-displayable after a list refetch (backend list schema lacks the field) — see FR-TS-4's card |
 | Billing visibility | **READY** [Reconciled 2026-10-03] | Backend (`T-BE-F.1`/`F.1a`/`F.2`) and frontend (`T-FE-E.4`, `d5854bd465747dbdf2a25aaea07d706ac5b162dc`) complete; unbilled state remains warning-only |
-| Role-aware workflow | **NOT_STARTED** | `T-FE-E.6` not started — `episodeWorkspaceConfig.ts` untouched by any R7 commit; a real enforcement gap also found (see FR-RBAC-1's card) |
+| Role-aware workflow | **READY** [Reconciled 2026-10-04] | `T-FE-E.6` complete: five-role presentation composition, backend-owned workflow/capability semantics, and permission-driven actions |
 | Living Documents | **READY** [Reconciled 2026-10-03] | Backend G.1/G.2/G.3 plus frontend T-FE-E.5 complete; signed-history safety, stable-identity amendment, and backend-authoritative lineage/version print are composed. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN. |
 | Legacy-route transition | **NOT_STARTED** | `T-FE-F.1/F.2/F.3` not started — the three named legacy routes contain zero references to `cos_v1`/`VisitCommandCenter` |
 | Mobile/presentation polish | **DEFERRED** | `T-FE-G.1` judged optional-at-task-level (`MVP-RELEASE-FREEZE.md`); core mobile AC already satisfied by per-task work (T-FE-C.7 etc.) |
@@ -792,7 +792,7 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 | 11 | Record Session execution/non-execution | ✅ [Updated 2026-07-28] | — (`T-FE-E.3` composed the full lifecycle, commit `302bccbf`) |
 | 12 | View Clinical History | ✅ | — |
 | 13 | View billing state | ❌ | T-FE-E.4 |
-| 14 | Render role-appropriate actions | ❌ | T-FE-E.6 |
+| 14 | Render role-appropriate actions | ✅ | T-FE-E.6 |
 | 15 | Amend signed clinical documents safely | ✅ | T-BE-G.1/G.2/G.3 and T-FE-E.5 complete; stable-ID G.2 amendment and immutable signed-history presentation |
 | 16 | Preserve legacy route compatibility | ❌ | T-FE-F.1, T-FE-F.2, T-FE-F.3 |
 | 17 | Pass release/E2E validation | ❌ | T-Z.1 … T-Z.9 |
@@ -820,7 +820,7 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 | T-FE-E.3 | FR-TS-4/5 | T-0.7 (done), T-BE-E.4 (done) | **COMPLETE — [Updated 2026-07-28]** Assigned-session listing, doctor instructions (read-only), start, complete-with-materials all pre-existed via `TherapistDashboardScreen`; structured non-execution now added (commit `302bccbf`). One reported, non-blocking gap: non-execution reason not durably re-displayed after a list refetch (backend list schema gap). |
 | T-FE-E.4 | FR-BILL-1/2 | T-BE-F.1 (done), T-BE-F.1a (done, `e2ee6600001b407aef98f48232cd5eace2526f46`) | **COMPLETE — `d5854bd465747dbdf2a25aaea07d706ac5b162dc`; 54 passed / 0 failed / 0 skipped; `E4_BILLING_STAGE_BACKEND_TRUTH_CLEAN`** |
 | T-FE-E.5 | FR-LD-1/2 | T-BE-G.2 (complete) | **COMPLETE — [Reconciled 2026-10-03]** Backend prerequisite `d17c508bdb419a939711d508a51bf88c0a042021`; COS version history renders backend lineage/current/superseded truth, immutable snapshots, permission-gated stable-ID G.2 amendment, version-specific print, and successor-SIGN backend refetch. Focused 6/0; module/flag 46/0; targeted COS 111/0. |
-| T-FE-E.6 | FR-RBAC-1, FR-WFA-2 | T--1.2 (done), T-FE-D.1 (done) | **READY_TO_START** |
+| T-FE-E.6 | FR-RBAC-1, FR-WFA-2 | T--1.2 (done), T-FE-D.1 (done) | **COMPLETE — [Reconciled 2026-10-04]** Five-role presentation config, one COS screen, backend-owned workflow/capability-loss rendering; focused 24/0, required regressions 188/0 |
 | T-FE-F.1 | FR-LEG-1/2 | T-FE-D.1 (done) | **READY_TO_START** |
 | T-FE-F.2 | FR-CR-1, FR-LEG-2 | T-0.8 (done), T-BE-F.3 (done) | **READY_TO_START** |
 | T-FE-F.3 | FR-LEG-2, FR-CS-1 | T-FE-E.1 (done), T-FE-E.2 | Blocked on T-FE-E.2 |

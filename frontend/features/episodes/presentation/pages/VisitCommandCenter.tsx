@@ -97,6 +97,8 @@ import { SchedulingModule } from '../components/ConsultationSections/SchedulingM
 import { TreatmentPlanModule } from '../components/ConsultationSections/TreatmentPlanModule';
 import { ClinicalTimeline } from '../components/ClinicalTimeline';
 import { BillingStage } from '../components/ConsultationSections/BillingStage';
+import { CapabilityLossPanel } from '../components/CapabilityLossPanel';
+import { resolveCosPresentationConfig } from '../config/episodeWorkspaceConfig';
 import { SectionKey } from '../hooks/useConsultationWorkspace';
 import type { CosWorkspaceStep } from '../../../doctorDashboard/application/consultationRoutes';
 import { InvalidWorkspaceState } from '../components/InvalidWorkspaceState';
@@ -127,7 +129,7 @@ export const VisitCommandCenter: React.FC<VisitCommandCenterProps> = ({
   return (
     <WorkspaceProvider tenantId={tenantId} episodeId={episodeId} appointmentId={appointmentId} clientId={clientId}>
       <WorkspaceSaveStatusProvider>
-        <VisitCommandCenterShell initialStep={initialStep} permissions={currentUser?.permissions ?? []} />
+        <VisitCommandCenterShell initialStep={initialStep} permissions={currentUser?.permissions ?? []} roles={currentUser?.roles ?? []} />
       </WorkspaceSaveStatusProvider>
     </WorkspaceProvider>
   );
@@ -140,10 +142,11 @@ const INITIAL_EXPANDED_SECTIONS: Partial<Record<CosWorkspaceStep, SectionKey[]>>
   treatment_recommendation: ['treatmentRecommendation'],
 };
 
-const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permissions: string[] }> = ({ initialStep, permissions }) => {
+const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permissions: string[]; roles: string[] }> = ({ initialStep, permissions, roles }) => {
   const router = useRouter();
   const { colors, spacing, typography, borderWidths, sizes } = useClinicTheme();
   const { t } = useTranslation();
+  const rolePresentation = resolveCosPresentationConfig(roles);
   const patient = usePatientContext();
   const episode = useEpisodeContext();
   const visit = useVisitContext();
@@ -193,7 +196,7 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permis
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background.default }]}>
+    <SafeAreaView testID="visit-command-center" accessibilityLabel={rolePresentation.config?.labelKey ?? 'workspace'} style={[styles.safe, { backgroundColor: colors.background.default }]}>
       <View
         style={[
           styles.header,
@@ -244,6 +247,7 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permis
           episodeId={episode.episodeId}
           appointmentId={visit.appointmentId}
         />
+        <CapabilityLossPanel tenantId={episode.tenantId} clientId={patient.clientId} episodeId={episode.episodeId} appointmentId={visit.appointmentId} />
         <CaseSheetModule ref={caseSheetRef} expandedSections={expandedSections} onToggleSection={toggleSection} permissions={permissions} />
         <PrescriptionModule expandedSections={expandedSections} onToggleSection={toggleSection} permissions={permissions} />
         <TreatmentRecommendationModule

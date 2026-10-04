@@ -1204,6 +1204,14 @@
       "optional": "वैकल्पिक",
       "fixAffordance": "इसे ठीक करें"
     },
+    "capabilityLoss": {
+      "title": "क्षमता स्थिति",
+      "capability_unavailable_for_new_work": "नया कार्य फ़िलहाल उपलब्ध नहीं है",
+      "active_care_continuation_allowed": "सक्रिय देखभाल जारी रखी जा सकती है",
+      "capability_unavailable_for_expansion": "नई या विस्तारित देखभाल फ़िलहाल उपलब्ध नहीं है",
+      "historical_read_allowed": "ऐतिहासिक रिकॉर्ड उपलब्ध रहेंगे",
+      "waitingOwner": "प्रतीक्षारत: {{permission}}"
+    },
     "nextActionBar": {
       "title": "अगला कदम",
       "doThis": "यह करें",

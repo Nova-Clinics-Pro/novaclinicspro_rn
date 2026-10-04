@@ -600,6 +600,14 @@
       "optional": "Optional",
       "fixAffordance": "Fix this"
     },
+    "capabilityLoss": {
+      "title": "Capability status",
+      "capability_unavailable_for_new_work": "New work is currently unavailable",
+      "active_care_continuation_allowed": "Active care can continue",
+      "capability_unavailable_for_expansion": "New or expanded care is currently unavailable",
+      "historical_read_allowed": "Historical records remain available",
+      "waitingOwner": "Waiting on: {{permission}}"
+    },
     "nextActionBar": {
       "title": "Next action",
       "doThis": "Do this",
