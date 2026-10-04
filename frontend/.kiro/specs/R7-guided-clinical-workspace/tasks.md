@@ -637,15 +637,18 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 ### T-FE-F.1 · Route adapters: start-consultation · consultation ∥
 **Repo:** FE · **Blocked by:** T-FE-D.1 · **Size:** M
 **AC:** params preserved; deep links land on the correct stage; flag-gated. **Tests:** redirect + deep-link. **Rollback:** *Compatibility* — flag off ⇒ original routes intact (never deleted). **Reqs:** FR-LEG-1/2 · **Design:** §2.10
+**Status [Reconciled 2026-10-04]: COMPLETE.** `start-consultation` retains the canonical Episode-resolution wrapper and selects `workspace` only when `cos_v1` is ON; `consultation` redirects ON to the requested workspace step with episode, appointment, and client identity preserved, while OFF renders the retained `ClinicalWorkspace`. Focused route evidence: 47 passed / 0 failed across adapter, Case Sheet/Prescription flag-switch, route-builder, and VisitCommandCenter regressions.
 
 ### T-FE-F.2 · Route adapter: complete-consultation
 **Repo:** FE · **Blocked by:** **T-0.8**, T-BE-F.3 · **Size:** M
 **AC:** composed **only after** summary/readiness are backend-owned (ED-DEP-2 gate). **Tests:** redirect · integration. **Rollback:** *Compatibility* — flag off. **Reqs:** FR-LEG-2, FR-CR-1 · **Debt:** ED-DEP-2
+**Status [Reconciled 2026-10-04]: COMPLETE.** With `cos_v1` ON, `complete-consultation` redirects exactly once to the backend-readiness workspace completion stage with all route identity preserved; OFF retains `CompleteConsultationScreen`. The adapter has no clinical policy or completion-readiness derivation. Focused route evidence: 47 passed / 0 failed.
 
 ### T-FE-F.3 · Standalone casesheet/prescription create-edit redirects ∥
 **Repo:** FE · **Blocked by:** T-FE-E.1, T-FE-E.2 · **Size:** M
 **AC:** reuse **existing** flags ✅ (`caseSheetRouteFlagSwitch`, `prescriptionRouteFlagSwitch`); standalone "new case sheet per visit" **redirects to the Episode's sheet** (correctness fix, FR-CS-1); **read/list retained.**
 **Tests:** flag-switch · redirect. **Rollback:** *Compatibility* — flag off. **Reqs:** FR-LEG-2, FR-CS-1
+**Status [Reconciled 2026-10-04]: COMPLETE.** All four client-scoped standalone create/edit adapters redirect ON only when explicit Episode, Visit, and client identity are present, to the Case Sheet or Prescription workspace stage; missing identity fails safely rather than being inferred. OFF retains the canonical standalone screens and list/read callers. Focused route evidence: 47 passed / 0 failed.
 
 ## FE Group G — Mobile · Accessibility
 

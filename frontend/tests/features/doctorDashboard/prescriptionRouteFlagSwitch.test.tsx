@@ -98,6 +98,17 @@ describe('Prescription standalone routes render the canonical core only (R4 · T
       (useLocalSearchParams as jest.Mock).mockReturnValue({ clientId: 'client-1' });
       expect(render(<NewPrescriptionRoute />).getByTestId('invalid-workspace-context')).toBeTruthy();
     });
+
+    it('redirects edit with explicit Episode and Visit context to the same Prescription workspace stage', () => {
+      (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: true });
+      (useLocalSearchParams as jest.Mock).mockReturnValue({
+        clientId: 'client-1', prescriptionId: 'rx-1', appointmentId: 'appointment-1', episodeId: 'episode-1',
+      });
+      const { getByTestId } = render(<EditPrescriptionRoute />);
+      expect(getByTestId('workspace-redirect').props.children).toBe(
+        '/clinic-admin/episodes/episode-1/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor&step=prescription',
+      );
+    });
   });
 
   describe('MIG-1: every known client-scoped caller of these two routes is unchanged (no dangling deep link, no caller needed updating)', () => {

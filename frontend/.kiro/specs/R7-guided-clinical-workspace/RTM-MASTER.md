@@ -470,12 +470,12 @@
 **Priority:** MVP Mandatory
 **Design:** §2.1 · **Decision:** D9 · **ET refs:** verified violation — completion was derived across ~10 frontend modules (ED-ARCH-006/B) plus `deriveSummary` (ED-ARCH-004) · **Owner Ratification:** Decision 9
 **Backend:** Tasks: T-BE-F.3 · Status: **Complete**
-**Frontend:** Tasks: T-0.8 (consumes it), T-FE-F.2 (route adapter) · Status: **Partially Complete** — T-0.8 consumes the contract; T-FE-F.2 (the completion-route redirect) not started
+**Frontend:** Tasks: T-0.8 (consumes it), T-FE-F.2 (route adapter) · Status: **Complete [Reconciled 2026-10-04]** — T-0.8 consumes the contract and T-FE-F.2 flag-gates the completion-route redirect.
 **Implementation Evidence:** `consultation_completion_service.py`, `_resolver.py`, `consultation_completion_router.py` — commits `c9630e8`, `7fe1991`; `CompleteConsultationScreen.tsx` — commit `cd48984d`
 **Tests:** 3+ backend test files, 3 frontend test files
-**Traceability:** FR-CR-1 → design.md §2.1 → T-BE-F.3/T-0.8 (done) + T-FE-F.2 (not started) → 4 files → 6+ tests → `c9630e8`/`7fe1991`/`cd48984d` → Partially Complete
-**Release Classification:** BLOCKING MVP
-**Remarks:** Genuinely well-covered on the core answer and its consumption in the completion screen; only the legacy-route redirect piece remains.
+**Traceability:** FR-CR-1 → design.md §2.1 → T-BE-F.3/T-0.8/T-FE-F.2 (done) → backend contract + `CompleteConsultationScreen.tsx` + completion adapter → focused 47/0 adapter/flag regression → Complete
+**Release Classification:** READY FOR MVP
+**Remarks:** The ON path redirects to the workspace completion stage only; the OFF path retains `CompleteConsultationScreen`. No frontend completion-readiness policy was added.
 
 ---
 
@@ -530,24 +530,24 @@
 **Priority:** MVP Mandatory
 **Design:** §2.10 · **ET refs:** none · **Owner Ratification:** —
 **Backend:** Tasks: none · Status: N/A
-**Frontend:** Tasks: (structural — enforced by not deleting anything); full staged model needs T-FE-F.1-F.3 · Status: **Partially Complete**
-**Implementation Evidence:** confirmed via repository audit — zero screens removed anywhere in the R7 branch
-**Tests:** n/a (a negative/structural claim)
-**Traceability:** FR-LEG-1 → design.md §2.10 → (no deletion, confirmed) + T-FE-F.1-F.3 (not started) → — → — → Partially Complete
-**Release Classification:** BLOCKING MVP
-**Remarks:** The "don't delete" half is trivially and verifiably true; the "reach Redirect stage" half needs Group F, not started.
+**Frontend:** Tasks: T-FE-F.1-F.3 · Status: **Complete [Reconciled 2026-10-04]**
+**Implementation Evidence:** zero screens removed; all Group F routes are flag-gated adapters, retaining canonical legacy screens when OFF.
+**Tests:** focused adapter/flag-switch/deep-link regression, 47 passed / 0 failed
+**Traceability:** FR-LEG-1 → design.md §2.10 → no deletion + T-FE-F.1-F.3 complete → adapter/flag-switch tests → Complete
+**Release Classification:** READY FOR MVP
+**Remarks:** R7 reaches Redirect only; no legacy screen was deleted.
 
 ### FR-LEG-2 — Redirects
 **Business Objective:** `start-consultation`/`consultation`/`complete-consultation` route to workspace stages via adapters; standalone case-sheet/prescription entry points redirect to the Episode's own sheet.
 **Priority:** MVP Mandatory
 **Design:** §2.10 · **ET refs:** none · **Owner Ratification:** —
 **Backend:** Tasks: none · Status: N/A
-**Frontend:** Tasks: T-FE-F.1, T-FE-F.2, T-FE-F.3 · Status: **Not Started**
-**Implementation Evidence:** confirmed via repository audit — the three named legacy routes (`start-consultation.tsx`, `complete-consultation.tsx`, `consultation.tsx`) exist but contain zero references to `cos_v1`/`VisitCommandCenter`
-**Tests:** none
-**Traceability:** FR-LEG-2 → design.md §2.10 → T-FE-F.1-F.3 → — → — → Not Started
-**Release Classification:** BLOCKING MVP
-**Remarks:** None.
+**Frontend:** Tasks: T-FE-F.1, T-FE-F.2, T-FE-F.3 · Status: **Complete [Reconciled 2026-10-04]**
+**Implementation Evidence:** start/consultation/completion routes and all four client-scoped Case Sheet/Prescription create/edit routes gate `cos_v1`; ON preserves explicit identity in the canonical workspace destination and OFF retains legacy/canonical standalone paths.
+**Tests:** focused adapter, deep-link, flag-switch, route-builder, and VisitCommandCenter regression: 47 passed / 0 failed
+**Traceability:** FR-LEG-2 → design.md §2.10 → T-FE-F.1-F.3 complete → route adapter evidence → Complete
+**Release Classification:** READY FOR MVP
+**Remarks:** Missing Episode/Visit context fails safely; adapters introduce no clinical workflow authority.
 
 ---
 
@@ -765,7 +765,7 @@ DEFER TO R8                              = 1   (FR-RX-2)
 | Billing visibility | **READY** [Reconciled 2026-10-03] | Backend (`T-BE-F.1`/`F.1a`/`F.2`) and frontend (`T-FE-E.4`, `d5854bd465747dbdf2a25aaea07d706ac5b162dc`) complete; unbilled state remains warning-only |
 | Role-aware workflow | **READY** [Reconciled 2026-10-04] | `T-FE-E.6` complete: five-role presentation composition, backend-owned workflow/capability semantics, and permission-driven actions |
 | Living Documents | **READY** [Reconciled 2026-10-03] | Backend G.1/G.2/G.3 plus frontend T-FE-E.5 complete; signed-history safety, stable-identity amendment, and backend-authoritative lineage/version print are composed. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN. |
-| Legacy-route transition | **NOT_STARTED** | `T-FE-F.1/F.2/F.3` not started — the three named legacy routes contain zero references to `cos_v1`/`VisitCommandCenter` |
+| Legacy-route transition | **READY** | `T-FE-F.1/F.2/F.3` complete — flag-gated adapters preserve identity ON and legacy/canonical paths OFF; focused evidence 47/0 |
 | Mobile/presentation polish | **DEFERRED** | `T-FE-G.1` judged optional-at-task-level (`MVP-RELEASE-FREEZE.md`); core mobile AC already satisfied by per-task work (T-FE-C.7 etc.) |
 | Release validation | **NOT_STARTED** | Group Z (`T-Z.1`-`T-Z.9`) — zero tasks started; the release gate itself has not run once |
 
@@ -779,7 +779,7 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 
 | # | Item | Status | Blocking task(s) |
 |---|---|---|---|
-| 1 | Enter workspace from all intended routes | ❌ | T-FE-F.1, T-FE-F.2, T-FE-F.3 |
+| 1 | Enter workspace from all intended routes | ✅ | — |
 | 2 | See patient/Visit briefing and safety context | ✅ | — |
 | 3 | See backend-owned workflow and next action | ✅ | — |
 | 4 | Open and update the one Episode Case Sheet | ✅ | — |
@@ -794,7 +794,7 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 | 13 | View billing state | ❌ | T-FE-E.4 |
 | 14 | Render role-appropriate actions | ✅ | T-FE-E.6 |
 | 15 | Amend signed clinical documents safely | ✅ | T-BE-G.1/G.2/G.3 and T-FE-E.5 complete; stable-ID G.2 amendment and immutable signed-history presentation |
-| 16 | Preserve legacy route compatibility | ❌ | T-FE-F.1, T-FE-F.2, T-FE-F.3 |
+| 16 | Preserve legacy route compatibility | ✅ | — |
 | 17 | Pass release/E2E validation | ❌ | T-Z.1 … T-Z.9 |
 
 **[Updated 2026-07-28, T-FE-E.3 closure] 11 of 17 fully satisfied, 0 partially satisfied.** `T-BE-D.4a` (commit `c69f7ef`) exposed the Treatment Plan public contract, closing item 8 in full and item 10's remaining proposal-preview half. `T-FE-E.2a` (commit `7e2ce7f1`) closed item 9 in full. `T-FE-E.3` (commit `302bccbf`) closes item 11 — a pre-existing `TherapistDashboardScreen` already composed start/complete; the genuinely missing piece, structured non-execution, is now built. Clinical History, Doctor Session instructions, and Therapist execution being complete does not generalize to the rest of the Doctor Module — 6 of 17 completion-boundary items remain unmet (routes 1/16, Billing 13, RBAC 14, Living Documents 15, Release validation 17).
@@ -821,9 +821,9 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 | T-FE-E.4 | FR-BILL-1/2 | T-BE-F.1 (done), T-BE-F.1a (done, `e2ee6600001b407aef98f48232cd5eace2526f46`) | **COMPLETE — `d5854bd465747dbdf2a25aaea07d706ac5b162dc`; 54 passed / 0 failed / 0 skipped; `E4_BILLING_STAGE_BACKEND_TRUTH_CLEAN`** |
 | T-FE-E.5 | FR-LD-1/2 | T-BE-G.2 (complete) | **COMPLETE — [Reconciled 2026-10-03]** Backend prerequisite `d17c508bdb419a939711d508a51bf88c0a042021`; COS version history renders backend lineage/current/superseded truth, immutable snapshots, permission-gated stable-ID G.2 amendment, version-specific print, and successor-SIGN backend refetch. Focused 6/0; module/flag 46/0; targeted COS 111/0. |
 | T-FE-E.6 | FR-RBAC-1, FR-WFA-2 | T--1.2 (done), T-FE-D.1 (done) | **COMPLETE — [Reconciled 2026-10-04]** Five-role presentation config, one COS screen, backend-owned workflow/capability-loss rendering; focused 24/0, required regressions 188/0. Closure remediation: React Query loading-state assertion changed to `findByText`; exact combined focused command passed 24/0 three consecutive times, individual suites 8/0 and 16/0. |
-| T-FE-F.1 | FR-LEG-1/2 | T-FE-D.1 (done) | **READY_TO_START** |
-| T-FE-F.2 | FR-CR-1, FR-LEG-2 | T-0.8 (done), T-BE-F.3 (done) | **READY_TO_START** |
-| T-FE-F.3 | FR-LEG-2, FR-CS-1 | T-FE-E.1 (done), T-FE-E.2 | Blocked on T-FE-E.2 |
+| T-FE-F.1 | FR-LEG-1/2 | T-FE-D.1 (done) | **COMPLETE [2026-10-04]** |
+| T-FE-F.2 | FR-CR-1, FR-LEG-2 | T-0.8 (done), T-BE-F.3 (done) | **COMPLETE [2026-10-04]** |
+| T-FE-F.3 | FR-LEG-2, FR-CS-1 | T-FE-E.1/E.2 (done) | **COMPLETE [2026-10-04]** |
 
 ### Release-validation tasks remaining (9)
 T-Z.1 … T-Z.9, all blocked by "all" prior tasks per the dependency map — cannot begin in earnest until the mandatory backend/frontend work above lands, though T-Z.1 (architecture proof) and T-Z.5 (performance sanity) could run incrementally today against what already exists.
