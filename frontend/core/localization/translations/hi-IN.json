@@ -1169,7 +1169,56 @@
     }
   },
   "visitCommandCenter": {
+    "title": "विज़िट कमांड सेंटर",
     "treatmentPlanUnavailable": "उपचार योजना अभी इस वर्कस्पेस में उपलब्ध नहीं है।",
+    "invalidContext": {
+      "title": "वर्कस्पेस नहीं खोला जा सकता",
+      "message": "इस एपिसोड के लिए कोई सक्रिय अपॉइंटमेंट नहीं है।"
+    },
+    "whyToday": {
+      "title": "आज क्यों",
+      "purpose": "उद्देश्य",
+      "patientConcern": "रोगी की चिंता",
+      "notRecorded": "दर्ज नहीं किया गया",
+      "unavailable": "फ़िलहाल अनुपलब्ध"
+    },
+    "whatChanged": {
+      "title": "क्या बदला",
+      "previousVisitDate": "पिछली विज़िट की तारीख",
+      "previousVisitSummary": "पिछली विज़िट का सारांश",
+      "activeSessions": "सक्रिय सत्र",
+      "completedSessions": "पूर्ण सत्र",
+      "pendingReview": "समीक्षा लंबित",
+      "pendingReviewYes": "लंबित",
+      "pendingReviewNo": "कोई लंबित नहीं",
+      "prescription": "प्रिस्क्रिप्शन",
+      "episode": "एपिसोड",
+      "episodeActive": "सक्रिय",
+      "episodeClosed": "बंद",
+      "billing": "बिलिंग",
+      "absent": "कोई दर्ज नहीं",
+      "notRecorded": "दर्ज नहीं किया गया",
+      "notApplicable": "लागू नहीं",
+      "unresolved": "अनिर्णीत",
+      "unavailable": "फ़िलहाल अनुपलब्ध"
+    },
+    "beforeYouAct": {
+      "title": "कार्य करने से पहले",
+      "pendingReview": "समीक्षा लंबित",
+      "pendingReviewYes": "लंबित",
+      "pendingReviewNo": "कोई लंबित नहीं",
+      "prescription": "प्रिस्क्रिप्शन",
+      "episode": "एपिसोड",
+      "episodeActive": "सक्रिय",
+      "episodeClosed": "बंद",
+      "sessionProgress": "सत्र की प्रगति",
+      "sessionProgressValue": "{{active}} सक्रिय · {{completed}} पूर्ण",
+      "absent": "कोई दर्ज नहीं",
+      "notRecorded": "दर्ज नहीं किया गया",
+      "notApplicable": "लागू नहीं",
+      "unresolved": "अनिर्णीत",
+      "unavailable": "फ़िलहाल अनुपलब्ध"
+    },
     "billing": {
       "title": "बिलिंग",
       "invoiceCount": "इनवॉइस: {{count}}",

@@ -51,8 +51,8 @@
  * carries only tenant/client/episode/appointment identity), so absence
  * is already, structurally, backend-driven.
  */
-import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { ActivityIndicator, LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
@@ -92,6 +92,25 @@ const STATE_ICON: Record<PillTone, keyof typeof Ionicons.glyphMap> = {
   muted: 'remove-circle-outline',
 };
 
+/**
+ * Imperatively reveal a measured current pill once. Kept as a small
+ * production helper so the same guard is used by both the data-resolution
+ * effect and the layout callback.
+ */
+export const scrollToCurrentWorkflowPill = (
+  scrollView: Pick<ScrollView, 'scrollTo'> | null,
+  pillOffsets: Record<string, number>,
+  lastScrolledCurrentCode: { current: string | null },
+  currentStageCode: string | undefined,
+  horizontalPadding: number,
+) => {
+  if (!currentStageCode || lastScrolledCurrentCode.current === currentStageCode) return;
+  const offset = pillOffsets[currentStageCode];
+  if (offset === undefined) return;
+  scrollView?.scrollTo({ x: Math.max(0, offset - horizontalPadding), animated: true });
+  lastScrolledCurrentCode.current = currentStageCode;
+};
+
 export const WorkflowPills: React.FC<WorkflowPillsProps> = ({
   tenantId,
   clientId,
@@ -106,6 +125,23 @@ export const WorkflowPills: React.FC<WorkflowPillsProps> = ({
     episodeId,
     appointmentId,
   );
+  // Hooks must remain unconditional across the query's initial loading
+  // render and its resolved-data render. The actual offset is still only
+  // used once a current stage has been rendered and measured below.
+  const scrollRef = useRef<ScrollView>(null);
+  const pillOffsets = useRef<Record<string, number>>({});
+  const lastScrolledCurrentCode = useRef<string | null>(null);
+  const currentStageCode = data?.stages.find((stage) => stage.state === 'current')?.code;
+
+  useEffect(() => {
+    scrollToCurrentWorkflowPill(
+      scrollRef.current,
+      pillOffsets.current,
+      lastScrolledCurrentCode,
+      currentStageCode,
+      spacing.md,
+    );
+  }, [currentStageCode, spacing.md]);
 
   const cardStyle = [
     styles.card,
@@ -166,6 +202,18 @@ export const WorkflowPills: React.FC<WorkflowPillsProps> = ({
   // them — never reordered, never limited to only the top recommendation.
   const blockedStages = renderableStages.filter((stage) => stage.state === 'blocked');
   const context: NextActionContext = { episodeId, appointmentId, clientId };
+  const currentStage = renderableStages.find((stage) => stage.state === 'current');
+  const registerPillLayout = (code: string) => (event: LayoutChangeEvent) => {
+    const offset = event.nativeEvent.layout.x;
+    pillOffsets.current[code] = offset;
+    scrollToCurrentWorkflowPill(
+      scrollRef.current,
+      pillOffsets.current,
+      lastScrolledCurrentCode,
+      currentStage?.code === code ? code : undefined,
+      spacing.md,
+    );
+  };
 
   return (
     <View style={cardStyle} testID="workflow-pills-section">
@@ -179,13 +227,15 @@ export const WorkflowPills: React.FC<WorkflowPillsProps> = ({
       ) : (
         <>
           <ScrollView
+            ref={scrollRef}
+            testID="workflow-pill-rail"
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: spacing.sm }}
             accessibilityRole="tablist"
           >
             {renderableStages.map((stage) => (
-              <WorkflowPill key={stage.code} stage={stage} />
+              <WorkflowPill key={stage.code} stage={stage} onLayout={registerPillLayout(stage.code)} />
             ))}
           </ScrollView>
           {blockedStages.length > 0 && (
@@ -265,7 +315,7 @@ const BlockedStageDetail: React.FC<{ stage: WorkflowStage; context: NextActionCo
   );
 };
 
-const WorkflowPill: React.FC<{ stage: WorkflowStage }> = ({ stage }) => {
+const WorkflowPill: React.FC<{ stage: WorkflowStage; onLayout: (event: LayoutChangeEvent) => void }> = ({ stage, onLayout }) => {
   const { colors, spacing, typography, radii, borderWidths, sizes } = useClinicTheme();
   const { t } = useTranslation();
 
@@ -312,6 +362,8 @@ const WorkflowPill: React.FC<{ stage: WorkflowStage }> = ({ stage }) => {
       testID={`workflow-pill-${stage.code}`}
       accessibilityRole="text"
       accessibilityLabel={a11yLabel}
+      accessibilityState={{ selected: isCurrent }}
+      onLayout={onLayout}
       style={[
         styles.pill,
         {

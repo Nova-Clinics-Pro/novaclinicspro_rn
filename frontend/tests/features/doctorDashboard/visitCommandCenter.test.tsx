@@ -333,7 +333,7 @@ describe('VisitCommandCenter (T-FE-A.1)', () => {
     await findByText('Before you act');
     await findByText('Workflow');
     await findByText('Next action');
-    expect(getByText('Send a Treatment Recommendation before a Treatment Plan can be created.')).toBeTruthy();
+    expect(await findByText('Send a Treatment Recommendation before a Treatment Plan can be created.')).toBeTruthy();
     // The empty workflow resolution mock (no recommended_action, no
     // waiting_role, no blocking_factors, no unresolved_facts) renders
     // NextActionBar's own "no recommendation" state — legitimate,
@@ -344,18 +344,34 @@ describe('VisitCommandCenter (T-FE-A.1)', () => {
     expect(queryByText(/ready to complete/i)).toBeNull();
   });
 
-  it('places WorkflowPills and NextActionBar immediately after the briefing regions, per design.md §3 region order', async () => {
-    const { findByText, toJSON } = renderWithProviders(
+  it('keeps briefing and workflow in the clinical scroll surface while rendering one persistent governed NextActionBar outside it', async () => {
+    const { findByText, getByTestId, toJSON } = renderWithProviders(
       <VisitCommandCenter episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
     );
     await findByText('Next action');
     const serialized = JSON.stringify(toJSON());
-    // BriefingRegions -> WorkflowPills -> NextActionBar -> active-stage
-    // body (not yet inlined) — verified via serialized render-tree text
-    // order, not just presence.
+    // The persistent action footer is a legitimate G.1 structural change:
+    // briefing/workflow remain in the scroll surface while the one existing
+    // action surface remains available outside it.
     expect(serialized.indexOf('"Before you act"')).toBeLessThan(serialized.indexOf('"Workflow"'));
-    expect(serialized.indexOf('"Workflow"')).toBeLessThan(serialized.indexOf('"Next action"'));
-    expect(serialized.indexOf('"Next action"')).toBeLessThan(serialized.indexOf('"Send a Treatment Recommendation before a Treatment Plan can be created."'));
+    expect(getByTestId('persistent-next-action')).toBeTruthy();
+    expect(getByTestId('next-action-bar')).toBeTruthy();
+  });
+
+  it('keeps the one governed NextActionBar persistently available outside the mobile clinical scroll surface', async () => {
+    const { findByText, getByTestId } = renderWithProviders(
+      <VisitCommandCenter episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
+    );
+    await findByText('Next action');
+    expect(getByTestId('visit-command-center-scroll')).toBeTruthy();
+    expect(getByTestId('persistent-next-action')).toBeTruthy();
+  });
+
+  it('gives the icon-only Back control a localized accessible name and preserves the theme touch target', async () => {
+    const { findByLabelText } = renderWithProviders(
+      <VisitCommandCenter episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
+    );
+    expect(await findByLabelText('Back')).toBeTruthy();
   });
 
   describe('CaseSheetModule composition (T-FE-E.1a, FR-CS-1)', () => {
@@ -368,14 +384,15 @@ describe('VisitCommandCenter (T-FE-A.1)', () => {
       expect(getAllByText('Chief Complaint')).toHaveLength(1);
     });
 
-    it('places CaseSheetModule in the active-stage body, after NextActionBar and before the remaining placeholder — per design.md §3 region order', async () => {
-      const { findByText, toJSON } = renderWithProviders(
+    it('keeps CaseSheetModule in the active-stage body while the one governed NextActionBar remains persistent outside the clinical scroll surface', async () => {
+      const { findByText, getByTestId, toJSON } = renderWithProviders(
         <VisitCommandCenter episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
       );
       await findByText('Chief Complaint');
       const serialized = JSON.stringify(toJSON());
-      expect(serialized.indexOf('"Next action"')).toBeLessThan(serialized.indexOf('"Chief Complaint"'));
       expect(serialized.indexOf('"Chief Complaint"')).toBeLessThan(serialized.indexOf('"Send a Treatment Recommendation before a Treatment Plan can be created."'));
+      expect(getByTestId('persistent-next-action')).toBeTruthy();
+      expect(getByTestId('next-action-bar')).toBeTruthy();
     });
 
     it('does not reorder the existing Why Today / What Changed / Before You Act / Workflow / Next Action regions', async () => {

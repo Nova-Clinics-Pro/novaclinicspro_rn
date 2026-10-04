@@ -16,7 +16,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
-import { WorkflowPills } from '../../../features/episodes/presentation/components/WorkflowPills';
+import { WorkflowPills, scrollToCurrentWorkflowPill } from '../../../features/episodes/presentation/components/WorkflowPills';
 import { useClinicalWorkflowQuery } from '../../../features/episodes/data/repositories/clinicalWorkflow.repository.impl';
 import { WorkflowStage, ClinicalWorkflowResolutionResponse } from '../../../features/episodes/data/models/clinicalWorkflow.dtos';
 
@@ -206,6 +206,40 @@ describe('WorkflowPills (T-FE-B.1, FR-MOB-2, FR-WFA-2)', () => {
     const { getByLabelText } = render(<WorkflowPills tenantId="t1" clientId="c1" episodeId="e1" appointmentId="a1" />);
     expect(getByLabelText(/Billing, Waiting, Waiting on: billing\.create/)).toBeTruthy();
   });
+
+  it('marks the backend-current stage selected accessibly and keeps the pill rail horizontally scrollable', () => {
+    mockUseClinicalWorkflowQuery.mockReturnValue(
+      queryResult({ data: resolution([stage({ code: 'consultation', state: 'current' })]) }),
+    );
+    const { getByTestId } = render(<WorkflowPills tenantId="t1" clientId="c1" episodeId="e1" appointmentId="a1" />);
+    expect(getByTestId('workflow-pill-consultation').props.accessibilityState).toEqual({ selected: true });
+    expect(getByTestId('workflow-pill-rail').props.horizontal).toBe(true);
+  });
+
+  it('scrolls the measured current pill into view exactly once', () => {
+    const scrollTo = jest.fn();
+    const lastScrolledCurrentCode = { current: null as string | null };
+    const pillOffsets = { consultation: 96 };
+
+    scrollToCurrentWorkflowPill(
+      { scrollTo } as Parameters<typeof scrollToCurrentWorkflowPill>[0],
+      pillOffsets,
+      lastScrolledCurrentCode,
+      'consultation',
+      16,
+    );
+    scrollToCurrentWorkflowPill(
+      { scrollTo } as Parameters<typeof scrollToCurrentWorkflowPill>[0],
+      pillOffsets,
+      lastScrolledCurrentCode,
+      'consultation',
+      16,
+    );
+
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenCalledWith({ x: 80, animated: true });
+  });
+
 
   describe('blocked stage reason + fix affordance (T-FE-D.1, W18 — never a dead end)', () => {
     it('renders the localized blocking reason for a blocked stage', () => {

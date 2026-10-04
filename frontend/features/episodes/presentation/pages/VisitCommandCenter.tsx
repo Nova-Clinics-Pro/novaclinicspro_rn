@@ -206,6 +206,7 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permis
         <TouchableOpacity
           onPress={() => router.back()}
           accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
           style={[styles.iconButton, { minHeight: sizes.touchTarget, minWidth: sizes.touchTarget }]}
         >
           <Ionicons name="arrow-back" size={sizes.iconMedium} color={colors.text.primary} />
@@ -216,7 +217,10 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permis
         </View>
         <View style={[styles.iconButton, { minHeight: sizes.touchTarget, minWidth: sizes.touchTarget }]} />
       </View>
-      <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl }}>
+      <ScrollView
+        testID="visit-command-center-scroll"
+        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl }}
+      >
         <WhyTodaySection
           tenantId={episode.tenantId}
           clientId={patient.clientId}
@@ -236,12 +240,6 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permis
           appointmentId={visit.appointmentId}
         />
         <WorkflowPills
-          tenantId={episode.tenantId}
-          clientId={patient.clientId}
-          episodeId={episode.episodeId}
-          appointmentId={visit.appointmentId}
-        />
-        <NextActionBar
           tenantId={episode.tenantId}
           clientId={patient.clientId}
           episodeId={episode.episodeId}
@@ -267,6 +265,9 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permis
             (T-FE-E.1a). */}
         <ClinicalTimeline />
       </ScrollView>
+      <View testID="persistent-next-action" style={[styles.persistentNextAction, { backgroundColor: colors.background.default, padding: spacing.md }]}>
+        <NextActionBar tenantId={episode.tenantId} clientId={patient.clientId} episodeId={episode.episodeId} appointmentId={visit.appointmentId} />
+      </View>
     </SafeAreaView>
   );
 };
@@ -285,4 +286,5 @@ const styles = StyleSheet.create({
   headerTitles: { flex: 1, alignItems: 'center' },
   iconButton: { alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  persistentNextAction: { width: '100%' },
 });

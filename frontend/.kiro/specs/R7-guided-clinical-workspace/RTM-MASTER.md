@@ -502,12 +502,12 @@
 **Priority:** MVP Mandatory
 **Design:** — (WIREFRAMES W0-m) · **Decision:** D8 · **ET refs:** none · **Owner Ratification:** —
 **Backend:** Tasks: none · Status: N/A
-**Frontend:** Tasks: T-FE-A.1 (shell), T-FE-G.1 (pill rail/sticky-action polish) · Status: **Partially Complete**
+**Frontend:** Tasks: T-FE-A.1 (shell), T-FE-G.1 (pill rail/sticky-action polish) · Status: **Complete [Reconciled 2026-10-04]**
 **Implementation Evidence:** `VisitCommandCenter.tsx` — commit `1b53f3fd`
 **Tests:** shell tests only
-**Traceability:** FR-MOB-1 → WIREFRAMES W0-m → T-FE-A.1 (done) + T-FE-G.1 (not started) → `VisitCommandCenter.tsx` → shell tests → `1b53f3fd` → Partially Complete
+**Traceability:** FR-MOB-1 → WIREFRAMES W0-m → T-FE-A.1 + T-FE-G.1 (complete) → `VisitCommandCenter.tsx` / `WorkflowPills.tsx` → Package 2 regression (120 passed / 0 failed / 0 skipped) → Complete
 **Release Classification:** BLOCKING MVP
-**Remarks:** The shell exists and is flag-gated/render-only correctly, but the sticky-next-action and horizontal pill-rail behaviors this requirement specifically names are part of `T-FE-G.1`, judged optional-for-MVP at the task level in `MVP-RELEASE-FREEZE.md` — meaning this requirement can realistically ship with a documented gap rather than being a hard blocker, but is recorded as BLOCKING here per the ground rule of never softening a requirement's own frozen AC without an explicit owner decision to do so.
+**Remarks:** Historical reconciliation noted `T-FE-G.1` as optional-for-MVP. It is now complete: one governed persistent Next Action, horizontal current-pill rail, measured one-time auto-scroll, and mobile touch-token evidence are verified. `cos_v1` remains reversible; this does not constitute release approval.
 
 ### FR-MOB-2 — Workflow pills
 **Business Objective:** 6 pill states (completed/current/pending/waiting-on-role/blocked/not-applicable), blue always names owner, accessible (icon+text, never colour alone).
@@ -519,7 +519,7 @@
 **Tests:** unit (each state) · architecture (no assembly) · a11y
 **Traceability:** FR-MOB-2 → (no design.md section cited) → T-FE-B.1 (done) → `WorkflowPills.tsx` → tests above → `6e667d15` → Complete
 **Release Classification:** READY FOR MVP **[Corrected 2026-07-27]**
-**Remarks:** This card was stale — see the document header's Reconciliation finding. All 6 pill states render icon+text, never colour-alone.
+**Remarks:** This card was stale — see the document header's Reconciliation finding. All 6 pill states render icon+text, never colour-alone. **[Reconciled 2026-10-04]** T-FE-G.2 additionally verifies selected state, localized icon-only Back, existing touch targets, and full `visitCommandCenter` `en-US`/`hi-IN` translation parity (Package 2 regression: 120 passed / 0 failed / 0 skipped).
 
 ---
 
@@ -766,7 +766,7 @@ DEFER TO R8                              = 1   (FR-RX-2)
 | Role-aware workflow | **READY** [Reconciled 2026-10-04] | `T-FE-E.6` complete: five-role presentation composition, backend-owned workflow/capability semantics, and permission-driven actions |
 | Living Documents | **READY** [Reconciled 2026-10-03] | Backend G.1/G.2/G.3 plus frontend T-FE-E.5 complete; signed-history safety, stable-identity amendment, and backend-authoritative lineage/version print are composed. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN. |
 | Legacy-route transition | **READY** | `T-FE-F.1/F.2/F.3` complete — flag-gated adapters preserve identity ON and legacy/canonical paths OFF; focused evidence 47/0 |
-| Mobile/presentation polish | **DEFERRED** | `T-FE-G.1` judged optional-at-task-level (`MVP-RELEASE-FREEZE.md`); core mobile AC already satisfied by per-task work (T-FE-C.7 etc.) |
+| Mobile/presentation polish | **READY** [Reconciled 2026-10-04] | `T-FE-G.1/G.2` complete: persistent governed Next Action, one-time active-pill auto-scroll, accessibility/localization parity, and focused Package 2 regression 120/0/0 |
 | Release validation | **NOT_STARTED** | Group Z (`T-Z.1`-`T-Z.9`) — zero tasks started; the release gate itself has not run once |
 
 ---

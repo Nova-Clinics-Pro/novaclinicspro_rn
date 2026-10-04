@@ -656,10 +656,12 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **Repo:** FE · **Blocked by:** T-FE-C.1..C.3, T-FE-B.2 · **Size:** M
 **AC:** sticky next action; horizontal pill rail with **active auto-scrolled into view**; one primary task; minimal scrolling; ≥44pt; **no dot-only pills.**
 **Tests:** unit · responsive · a11y. **Rollback:** *Behavior*. **Reqs:** FR-MOB-1
+**Status [Reconciled 2026-10-04]: COMPLETE.** Package 2 keeps exactly one backend-governed `NextActionBar` persistent outside the Command Center clinical scroll surface, retains the horizontal pill rail, and scrolls a measured current pill into view once. The loading-to-resolved hook-order remount defect was corrected by making auto-scroll hooks unconditional; no workflow authority moved into the frontend. Focused Package 2 regression: 120 passed / 0 failed / 0 skipped, including WorkflowPills, VisitCommandCenter, NextActionBar, responsive/token, route-adapter, feature-flag, accessibility, and localization evidence.
 
 ### T-FE-G.2 · Accessibility & localization ∥
 **Repo:** FE · **Blocked by:** T-FE-G.1 · **Size:** M
 **AC:** **status never colour-alone** (icon+text); labels/roles/hit targets; **all text via localization keys** ✅ (backend sends keys, never English — AC-4). **Tests:** a11y · localization. **Rollback:** *Behavior*. **Reqs:** FR-MOB-1/2
+**Status [Reconciled 2026-10-04]: COMPLETE.** Workflow state remains icon-plus-localized-text with selected accessibility state; the icon-only Back control uses localized `common.back` and the existing touch-target token. Complete `visitCommandCenter` translation parity is now verified for `en-US` and `hi-IN`; no separate localization system or hard-coded user-facing Package 2 strings were introduced. Focused Package 2 regression: 120 passed / 0 failed / 0 skipped.
 
 ---
 
