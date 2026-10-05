@@ -767,7 +767,7 @@ DEFER TO R8                              = 1   (FR-RX-2)
 | Living Documents | **READY** [Reconciled 2026-10-03] | Backend G.1/G.2/G.3 plus frontend T-FE-E.5 complete; signed-history safety, stable-identity amendment, and backend-authoritative lineage/version print are composed. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN. |
 | Legacy-route transition | **READY** | `T-FE-F.1/F.2/F.3` complete — flag-gated adapters preserve identity ON and legacy/canonical paths OFF; focused evidence 47/0 |
 | Mobile/presentation polish | **READY** [Reconciled 2026-10-04] | `T-FE-G.1/G.2` complete: persistent governed Next Action, one-time active-pill auto-scroll, accessibility/localization parity, and focused Package 2 regression 120/0/0 |
-| Release validation | **IN_PROGRESS** [Z2 reconciled 2026-10-05] | `T-Z.2` complete: full frontend Jest regression passed and full backend pytest regression passed on verified isolated local PostgreSQL targets (2475 passed, 19 skipped, 0 failed). `T-Z.1`, `T-Z.3`-`T-Z.9`, and the release gate remain unstarted. |
+| Release validation | **BLOCKED** [reconciled 2026-10-05] | `T-Z.1`, `T-Z.2`, `T-Z.3`, `T-Z.7`, and `T-Z.9` are complete. Z4 is blocked by D5's intentional fail-closed downgrade; Z5 lacks a query-count/timing baseline harness; Z6 lacks zero-usage instrumentation. Therefore Z8 closure is blocked and release approval cannot be claimed. |
 
 ---
 
@@ -825,8 +825,8 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 | T-FE-F.2 | FR-CR-1, FR-LEG-2 | T-0.8 (done), T-BE-F.3 (done) | **COMPLETE [2026-10-04]** |
 | T-FE-F.3 | FR-LEG-2, FR-CS-1 | T-FE-E.1/E.2 (done) | **COMPLETE [2026-10-04]** |
 
-### Release-validation tasks remaining (8)
-`T-Z.2` is **COMPLETE [2026-10-05]**: the frontend command `npx jest --ci --runInBand --no-watchman --silent` passed, and the backend command `venv/bin/pytest -q --no-cov` passed with 2475 passed, 19 skipped, 0 failed after `TEST_DATABASE_URL`/`DATABASE_URL` were explicitly bound to verified local-only `novaclinics_r7_test` and destructive F.1a acceptance used separate local-only `F1A_TEST_DATABASE_URL=novaclinics_f1a_test`. The earlier backend run that resolved a Supabase host is invalid Z2 evidence and excluded. `T-Z.1`, `T-Z.3` … `T-Z.9` remain; their release-gate work has not run.
+### Release-validation status
+`T-Z.1` architecture: **COMPLETE** (162 backend + 79 frontend assertions). `T-Z.2` full regression: **COMPLETE** (frontend full Jest PASS; backend 2475 passed, 19 skipped, 0 failed on isolated local PostgreSQL). `T-Z.3` DP-15: **COMPLETE** (138 backend + 114 frontend assertions). `T-Z.7` R8 handoff and `T-Z.9` history hierarchy are **COMPLETE**; their evidence is in `R7-R8-HANDOFF.md` and the focused 155-backend/103-frontend history suites. `T-Z.4` is **BLOCKED** because migration `20261004_000001` refuses D5 downgrade to protect clinical history, while frozen Z4 still requires clean pre-adoption drop proof. `T-Z.5` is **BLOCKED** pending a query-count/timing baseline harness, and `T-Z.6` is **BLOCKED** pending zero-usage instrumentation. Accordingly `T-Z.8` final release closure is **BLOCKED**; no release approval is implied.
 
 ### Optional/deferred tasks (2)
 T-FE-G.1 (mobile polish, judged optional by `MVP-RELEASE-FREEZE.md`), T-FE-G.2 (depends on G.1).

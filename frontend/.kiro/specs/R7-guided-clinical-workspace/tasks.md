@@ -670,6 +670,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 ### T-Z.1 · Architecture proof ∥
 **Repo:** both · **Blocked by:** all · **Size:** M
 **AC:** layer audit clean (**no new ED-ARCH-001 instances**); resolver imports no infrastructure; **no FE clinical derivation**; contract carries no presentation fields. **Tests:** architecture suite. **Reqs:** FR-COS-2, FR-REC-1 · **Principles:** AC-1..AC-5
+**Status:** **COMPLETE [2026-10-05]** — backend architecture suite: 162 passed; frontend presentation-boundary/clinical-derivation suite: 79 passed. The checks cover resolver isolation, router/service/repository direction, semantics-only contracts, and presentation without direct datasource/axios or clinical derivation.
 
 ### T-Z.2 · Full regression vs baseline
 **Repo:** both · **Blocked by:** all · **Size:** M
@@ -680,33 +681,40 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 ### T-Z.3 · DP-15 proof (one clinical answer)
 **Repo:** both · **Blocked by:** T-Z.1 · **Size:** M
 **AC:** for each clinical question (can-complete · next-action · treatment-complete · rx-finalized · casesheet-ready) **exactly one** backend authority answers; **no FE path can produce a different answer.** **Tests:** architecture + integration. **Principles:** P3
+**Status:** **COMPLETE [2026-10-05]** — 138 backend resolver/service/route assertions and 114 frontend rendering assertions passed. Completion readiness, next action, treatment lifecycle, prescription document status, and Episode Case Sheet resolution remain backend-owned; frontend paths render repository-fed semantics without alternate derivation.
 
 ### T-Z.4 · **Rollback validation** (all four kinds, explicitly)
 **Repo:** both · **Blocked by:** T-Z.2 · **Size:** M
 **AC:** (1) **Behavior:** `cos_v1` off ⇒ today's behavior, **no data effect.** (2) **Compatibility:** every legacy route still functional. (3) **Migration — pre-adoption:** `tenant_treatment_plan` + supersession structures drop cleanly (disposable Postgres). (4) **Migration — post-adoption:** behavior disabled via flag, **data retained**, compatibility provided. (5) ⚠ **Data: NO rollback destroys clinical history** — amendment chains, signed versions, contributions, audit history preserved and **verified present after rollback.**
 **Tests:** migration up/down · flag-off parity · **post-adoption rollback drill.**
+**Status:** **BLOCKED [2026-10-05]** — valid isolated PostgreSQL probe reached D5 downgrade and failed closed with `RuntimeError: R7 D.5 clinical supersession history is not safely downgradeable`. This preserves clinical history, but the frozen pre-adoption acceptance item requires Treatment Plan and supersession structures to drop cleanly. No waiver or migration change was made. `ET-MIG-001` remains separately OPEN.
 
 ### T-Z.5 · Performance sanity ∥
 **Repo:** both · **Blocked by:** T-Z.2 · **Size:** S
 **AC:** the aggregate read does not regress workspace open vs baseline; no N+1 from fact assembly. **Tests:** query-count/timing on a disposable environment.
+**Status:** **BLOCKED [2026-10-05]** — no established workspace aggregate query-count/timing harness, recorded baseline, or frozen threshold exists in the repositories. No performance result was fabricated.
 
 ### T-Z.6 · Legacy deprecation readiness (**no removal**)
 **Repo:** FE · **Blocked by:** T-FE-F.1..F.3 · **Size:** S
 **AC:** zero-usage instrumentation in place; **removal explicitly deferred** to a separately-approved task with the full §17 checklist. **no screen deleted in R7.** **Reqs:** FR-LEG-1
+**Status:** **BLOCKED [2026-10-05]** — retained flag-gated legacy adapters and no-screen-removal route tests pass, but the required zero-usage instrumentation is absent. Redirect compatibility is not substituted for instrumentation.
 
 ### T-Z.7 · R8 handoff package ∥
 **Repo:** docs · **Blocked by:** T-Z.3 · **Size:** M
 **AC:** R8 inputs complete — measurements (on R6 concepts) · attachments · adapters · trends · **Clinical Advice** · **copy-forward + reconciliation** · **allergy/medication modelling (F-2 prerequisite)** · dispensing fulfilment. **Reqs:** FR-RX-2 + `[R8]` markers
+**Status:** **COMPLETE [2026-10-05]** — handoff inputs are consolidated in `R7-R8-HANDOFF.md`, retaining the ratified R8 boundary and source documents. R7-boundary checks (77 frontend assertions) confirm no measurements, attachments, safety modelling, reconciliation, or dispensing lifecycle leaked into the COS surfaces.
 
 ### T-Z.8 · R7 closure + architecture/workflow proof doc
 **Repo:** docs · **Blocked by:** T-Z.1..T-Z.7 · **Size:** M
 **AC:** every requirement → evidence; every owner decision → implementation; rollback verified; retrospective recorded (R6 precedent).
+**Status:** **BLOCKED [2026-10-05]** — prerequisite Z4 rollback validation is blocked; Z5 performance sanity and Z6 zero-usage instrumentation are also blocked. Final release closure must not be accepted while those frozen cards remain unsatisfied.
 
 ### T-Z.9 · History hierarchy proof *[amendment, v1.1, 2026-07-18 — FR-HIST-1/2]*
 **Repo:** both · **Blocked by:** T-BE-A.5, T-FE-C.7 · **∥ with:** other Z tasks once its own dependency chain clears · **Size:** M
 **AC:** (1) **no duplicate Session representation** — the same therapy encounter never appears twice. (2) **no frontend history classification** — architecture scan clean on `useClinicalTimelineData.ts`/`ClinicalTimeline.tsx`. (3) **completed counts match backend execution truth** — regression test confirms parity with `treatment_sheet_row.status`/`completed_at`, not the retired scheduled-row formula. (4) consultations and therapy encounters remain visually and semantically distinct — a11y-audited, not colour-alone. (5) Plan groups are accessible and mobile-safe (extends T-Z.1's architecture proof and T-Z.2's regression scope to this surface specifically).
 **Tests:** architecture · regression · a11y · mobile. **Rollback:** *Behavior*.
 **Reqs:** FR-HIST-1, FR-HIST-2 · **Decisions:** D10
+**Status:** **COMPLETE [2026-10-05]** — backend history contract/classifier/audit suite: 155 passed; frontend hierarchy/architecture/a11y/mobile suite: 103 passed. The tests prove one Session representation, backend-only classification/association/counts, execution-truth completed counts, accessible consultation-versus-therapy distinction, and mobile-safe Plan grouping.
 
 ---
 
