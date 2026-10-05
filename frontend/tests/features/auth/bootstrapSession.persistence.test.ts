@@ -59,7 +59,7 @@ describe('persisted auth bootstrap', () => {
     );
   });
 
-  it('restores the persisted session before /auth/me is evaluated', async () => {
+  it('checks Supabase before restoring persisted tokens, then evaluates /auth/me', async () => {
     (secureStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
       if (key === 'supabase_access_token') return 'persisted-access-token';
       if (key === 'supabase_refresh_token') return 'persisted-refresh-token';
@@ -72,9 +72,9 @@ describe('persisted auth bootstrap', () => {
     const result = await new BootstrapSessionUseCase(authRepository).execute();
 
     expect(
-      (supabase.auth.setSession as jest.Mock).mock.invocationCallOrder[0]
-    ).toBeLessThan(
       (supabase.auth.getSession as jest.Mock).mock.invocationCallOrder[0]
+    ).toBeLessThan(
+      (supabase.auth.setSession as jest.Mock).mock.invocationCallOrder[0]
     );
     expect(authRepository.getCurrentUser).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ authenticated: true, session: user });

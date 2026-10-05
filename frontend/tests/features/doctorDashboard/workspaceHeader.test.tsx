@@ -14,6 +14,7 @@ import { sendToSchedulingApi, createTreatmentRecommendationApi } from '../../../
 import { createClinicalServiceApi } from '../../../features/clinicalServices/data/datasources/clinicalServices.api';
 import { axiosClient } from '../../../core/api/axiosClient';
 import { summarizeSaveStatuses } from '../../../features/episodes/presentation/components/WorkspaceHeader';
+import { prescriptionsKeys } from '../../../features/prescriptions/data/repositories/prescriptions.repository.impl';
 
 /**
  * R3A · T-D.1 (optional, design §23 Q3, ADR-R3A-03) — WorkspaceHeader's own
@@ -171,12 +172,13 @@ describe('WorkspaceHeader (R3A · T-D.1, ADR-R3A-03)', () => {
 
   it('shows the error tone when any one module reports a save failure, even while others are idle', async () => {
     (updatePrescriptionApi as jest.Mock).mockRejectedValue(new Error('network down'));
-    (axiosClient.get as jest.Mock).mockResolvedValue({
-      data: { items: [{ id: 'rx-1', prescription_data: { medications: [] } }] },
-    });
+    queryClient.setQueryData(
+      prescriptionsKeys.byAppointment('tenant-1', 'episode-1', 'appointment-1'),
+      { items: [{ id: 'rx-1', prescription_data: { medications: [] } }] },
+    );
     const { getByText, getByPlaceholderText, getByTestId } = renderWorkspace();
     fireEvent.press(getByText('Prescription'));
-    await waitFor(() => expect(useEpisodeWorkspaceData).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
     fireEvent.press(getByText('Add Medication'));
     fireEvent.changeText(getByPlaceholderText('name'), 'Ibuprofen');
 

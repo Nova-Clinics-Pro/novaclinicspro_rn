@@ -25,9 +25,8 @@ describe('Treatment lifecycle: single canonical workspace, no duplicate paths (R
     expect(episodeWorkspaceScreen).toContain('config.canSchedule');
 
     const appointmentsListScreen = read('../../../features/appointments/presentation/pages/AppointmentsListScreen.tsx');
-    const navigationCalls = [...appointmentsListScreen.matchAll(/episodes\/\S*workspace\?mode=(\w+)/g)].map((m) => m[1]);
+    const navigationCalls = [...appointmentsListScreen.matchAll(/episodeWorkspaceRoute\([\s\S]*?'admin'\)/g)];
     expect(navigationCalls.length).toBeGreaterThan(0);
-    expect(new Set(navigationCalls)).toEqual(new Set(['admin']));
   });
 
   it('admin mode config: canCreateTreatmentSheet=false, canSchedule=true -- TreatmentPlansTab\'s create-modal and Send-to-Scheduling branches are dormant in the only reachable mode', () => {

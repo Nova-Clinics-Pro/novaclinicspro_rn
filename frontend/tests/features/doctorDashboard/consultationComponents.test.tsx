@@ -247,7 +247,7 @@ describe('consultation components', () => {
       expect(createEpisodeApi).not.toHaveBeenCalled();
     });
 
-    it('creates an episode and navigates to consultation', async () => {
+    it('creates an episode and navigates to the COS assessment workspace', async () => {
       (createEpisodeApi as jest.Mock).mockResolvedValue({ id: 'episode-1' });
       const { getByText, getByPlaceholderText } = renderWithQueryClient(
         <CreateConsultationScreen appointmentId="appointment-1" clientId="client-1" />,
@@ -258,7 +258,7 @@ describe('consultation components', () => {
 
       await waitFor(() => expect(createEpisodeApi).toHaveBeenCalled());
       expect(router.replace).toHaveBeenCalledWith(
-        '/clinic-admin/episodes/episode-1/consultation?appointmentId=appointment-1&clientId=client-1',
+        '/clinic-admin/episodes/episode-1/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor&step=assessment',
       );
     });
 

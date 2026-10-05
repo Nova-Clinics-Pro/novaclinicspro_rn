@@ -54,6 +54,7 @@ const buildProjection = (tenantId: string, stepIds: string[]) => ({
           fallbackToken: 'onboarding.actions.unavailable',
         }]
       : [],
+    managementActions: [],
     presentation: {},
   })),
 });

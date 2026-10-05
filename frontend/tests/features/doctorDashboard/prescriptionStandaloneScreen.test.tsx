@@ -32,8 +32,7 @@ jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
 jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
   useAuth: jest.fn(),
 }));
-jest.mock('../../../features/prescriptions/index', () => ({
-  isEditable: (status: string) => status === 'DRAFT',
+jest.mock('../../../features/prescriptions/data/repositories/prescriptions.repository.impl', () => ({
   usePrescriptionDetailQuery: jest.fn(),
   useCreatePrescriptionMutation: jest.fn(),
   useUpdatePrescriptionMutation: jest.fn(),

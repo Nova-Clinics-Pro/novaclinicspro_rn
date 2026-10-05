@@ -26,10 +26,16 @@ describe('API request activity tracker', () => {
   it('records only unhandled network or server failures for root presentation', () => {
     const request = beginApiRequest({});
     completeApiRequest(request, { response: { status: 503 } });
-    expect(getUnhandledTransportFailure()).toEqual({ key: 'api-request-1:1' });
+    expect(getUnhandledTransportFailure()).toEqual({
+      key: 'api-request-1:1',
+      error: { response: { status: 503 } },
+    });
 
     const clientError = beginApiRequest({});
     completeApiRequest(clientError, { response: { status: 400 } });
-    expect(getUnhandledTransportFailure()).toEqual({ key: 'api-request-1:1' });
+    expect(getUnhandledTransportFailure()).toEqual({
+      key: 'api-request-1:1',
+      error: { response: { status: 503 } },
+    });
   });
 });

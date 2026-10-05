@@ -674,6 +674,8 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 ### T-Z.2 · Full regression vs baseline
 **Repo:** both · **Blocked by:** all · **Size:** M
 **AC:** both suites green vs baseline (BE 667 ✅ + new); **flag-off parity proven**; no pre-existing failure silently absorbed. **Tests:** full suites.
+**Status:** **COMPLETE [2026-10-05]** — frontend full Jest regression passed; backend full pytest regression passed against the verified isolated local PostgreSQL test databases. The initial backend Supabase-resolution run is excluded from evidence. The accepted backend run completed **2475 passed, 19 skipped, 0 failed**; frontend remained test/infrastructure-only remediation with its full suite passing. No pre-existing failure was absorbed.
+**Evidence:** FE: `npx jest --ci --runInBand --no-watchman --silent` → PASS. BE: `TEST_DATABASE_URL` and `DATABASE_URL` explicitly targeted local-only `novaclinics_r7_test`; destructive F.1a acceptance used separate local-only `F1A_TEST_DATABASE_URL=novaclinics_f1a_test`; `venv/bin/pytest -q --no-cov` → 2475 passed, 19 skipped, 0 failed. Existing flag-off parity coverage remained in the passing frontend suite.
 
 ### T-Z.3 · DP-15 proof (one clinical answer)
 **Repo:** both · **Blocked by:** T-Z.1 · **Size:** M

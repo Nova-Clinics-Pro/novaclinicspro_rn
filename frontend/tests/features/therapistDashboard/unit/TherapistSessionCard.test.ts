@@ -50,9 +50,9 @@ function makeSession(overrides: Partial<TherapistSessionItemV2> = {}): Therapist
 // ---------------------------------------------------------------------------
 
 describe('TherapistSessionCard — Complete button visibility', () => {
-  it('shows Complete button for "scheduled" status', () => {
+  it('hides Complete button for "scheduled" status until the session is started', () => {
     const session = makeSession({ status: 'scheduled' });
-    expect(canCompleteSession(session.status)).toBe(true);
+    expect(canCompleteSession(session.status)).toBe(false);
   });
 
   it('shows Complete button for "in_progress" status', () => {

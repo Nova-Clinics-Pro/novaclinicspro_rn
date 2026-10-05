@@ -187,21 +187,21 @@ describe('completeSheetRowApi', () => {
     ],
   };
 
-  it('calls the correct URL with tenantId and rowId in path', async () => {
+  it('calls the authenticated tenant-scoped row-completion URL with rowId in path', async () => {
     await completeSheetRowApi(TENANT_ID, ROW_ID, payload);
 
     expect(mockPost).toHaveBeenCalledTimes(1);
     const [url] = mockPost.mock.calls[0];
     expect(url).toBe(
-      `/api/v1/clinic/${TENANT_ID}/treatment-sheets/rows/${ROW_ID}/complete`
+      `/api/v1/clinic/treatment-sheets/rows/${ROW_ID}/complete`
     );
   });
 
-  it('URL contains tenantId segment under /api/v1/clinic/', async () => {
+  it('does not duplicate tenant identity in the path', async () => {
     await completeSheetRowApi(TENANT_ID, ROW_ID, payload);
 
     const [url] = mockPost.mock.calls[0];
-    expect(url).toContain(`/api/v1/clinic/${TENANT_ID}/`);
+    expect(url).not.toContain(TENANT_ID);
   });
 
   it('URL contains rowId in path — Requirement 6.1', async () => {

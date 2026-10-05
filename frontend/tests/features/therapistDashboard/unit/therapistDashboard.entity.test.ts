@@ -22,8 +22,8 @@ describe('canCompleteSession', () => {
       expect(canCompleteSession('in_progress')).toBe(true);
     });
 
-    it('returns true for "scheduled"', () => {
-      expect(canCompleteSession('scheduled')).toBe(true);
+    it('returns true for uppercase "IN_PROGRESS"', () => {
+      expect(canCompleteSession('IN_PROGRESS')).toBe(true);
     });
   });
 
@@ -62,11 +62,11 @@ describe('canCompleteSession', () => {
       expect(canCompleteSession('some_random_status')).toBe(false);
     });
 
-    it('returns false for uppercase "IN_PROGRESS" (case-sensitive)', () => {
-      expect(canCompleteSession('IN_PROGRESS')).toBe(false);
+    it('returns false for "scheduled" until it is started', () => {
+      expect(canCompleteSession('scheduled')).toBe(false);
     });
 
-    it('returns false for uppercase "SCHEDULED" (case-sensitive)', () => {
+    it('returns false for uppercase "SCHEDULED"', () => {
       expect(canCompleteSession('SCHEDULED')).toBe(false);
     });
   });
@@ -138,7 +138,7 @@ describe('isTerminalStatus', () => {
 
 describe('canCompleteSession and isTerminalStatus relationship', () => {
   const terminalStatuses = ['completed', 'cancelled', 'no_show'];
-  const completableStatuses = ['in_progress', 'scheduled'];
+  const completableStatuses = ['in_progress'];
   const otherStatuses = ['pending', 'confirmed', 'unknown', ''];
 
   it('terminal statuses are never completable', () => {

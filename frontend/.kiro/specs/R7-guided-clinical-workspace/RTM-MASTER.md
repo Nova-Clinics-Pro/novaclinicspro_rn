@@ -767,7 +767,7 @@ DEFER TO R8                              = 1   (FR-RX-2)
 | Living Documents | **READY** [Reconciled 2026-10-03] | Backend G.1/G.2/G.3 plus frontend T-FE-E.5 complete; signed-history safety, stable-identity amendment, and backend-authoritative lineage/version print are composed. `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain OPEN. |
 | Legacy-route transition | **READY** | `T-FE-F.1/F.2/F.3` complete — flag-gated adapters preserve identity ON and legacy/canonical paths OFF; focused evidence 47/0 |
 | Mobile/presentation polish | **READY** [Reconciled 2026-10-04] | `T-FE-G.1/G.2` complete: persistent governed Next Action, one-time active-pill auto-scroll, accessibility/localization parity, and focused Package 2 regression 120/0/0 |
-| Release validation | **NOT_STARTED** | Group Z (`T-Z.1`-`T-Z.9`) — zero tasks started; the release gate itself has not run once |
+| Release validation | **IN_PROGRESS** [Z2 reconciled 2026-10-05] | `T-Z.2` complete: full frontend Jest regression passed and full backend pytest regression passed on verified isolated local PostgreSQL targets (2475 passed, 19 skipped, 0 failed). `T-Z.1`, `T-Z.3`-`T-Z.9`, and the release gate remain unstarted. |
 
 ---
 
@@ -825,8 +825,8 @@ Of the 17 completion-boundary items (see the governing prompt's own definition),
 | T-FE-F.2 | FR-CR-1, FR-LEG-2 | T-0.8 (done), T-BE-F.3 (done) | **COMPLETE [2026-10-04]** |
 | T-FE-F.3 | FR-LEG-2, FR-CS-1 | T-FE-E.1/E.2 (done) | **COMPLETE [2026-10-04]** |
 
-### Release-validation tasks remaining (9)
-T-Z.1 … T-Z.9, all blocked by "all" prior tasks per the dependency map — cannot begin in earnest until the mandatory backend/frontend work above lands, though T-Z.1 (architecture proof) and T-Z.5 (performance sanity) could run incrementally today against what already exists.
+### Release-validation tasks remaining (8)
+`T-Z.2` is **COMPLETE [2026-10-05]**: the frontend command `npx jest --ci --runInBand --no-watchman --silent` passed, and the backend command `venv/bin/pytest -q --no-cov` passed with 2475 passed, 19 skipped, 0 failed after `TEST_DATABASE_URL`/`DATABASE_URL` were explicitly bound to verified local-only `novaclinics_r7_test` and destructive F.1a acceptance used separate local-only `F1A_TEST_DATABASE_URL=novaclinics_f1a_test`. The earlier backend run that resolved a Supabase host is invalid Z2 evidence and excluded. `T-Z.1`, `T-Z.3` … `T-Z.9` remain; their release-gate work has not run.
 
 ### Optional/deferred tasks (2)
 T-FE-G.1 (mobile polish, judged optional by `MVP-RELEASE-FREEZE.md`), T-FE-G.2 (depends on G.1).

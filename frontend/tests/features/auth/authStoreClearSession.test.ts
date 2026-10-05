@@ -21,6 +21,7 @@ jest.mock('../../../core/utils/secureStorage', () => ({
 jest.mock('../../../core/api/supabaseClient', () => ({
   supabase: {
     auth: {
+      getSession: jest.fn(),
       setSession: jest.fn(),
     },
   },
@@ -71,7 +72,11 @@ describe('auth.store clearSession (T-A.4)', () => {
       if (key === 'supabase_refresh_token') return 'refresh-token';
       return null;
     });
-    (supabase.auth.setSession as jest.Mock).mockResolvedValue({ error: null });
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({ data: { session: null }, error: null });
+    (supabase.auth.setSession as jest.Mock).mockResolvedValue({
+      data: { session: { access_token: 'access-token', refresh_token: 'refresh-token' } },
+      error: null,
+    });
 
     await useAuthStore.getState().initializeFromStorage();
 
