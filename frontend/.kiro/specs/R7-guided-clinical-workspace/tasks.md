@@ -707,7 +707,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 ### T-Z.8 · R7 closure + architecture/workflow proof doc
 **Repo:** docs · **Blocked by:** T-Z.1..T-Z.7 · **Size:** M
 **AC:** every requirement → evidence; every owner decision → implementation; rollback verified; retrospective recorded (R6 precedent).
-**Status:** **BLOCKED [2026-10-05]** — Z4, Z5, and Z6 acceptance evidence is complete, but the frozen merge/release criteria still require owner release approval. No owner approval was supplied or inferred in this engineering run; `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain openly recorded for Package 4.
+**Status:** **BLOCKED_PENDING_OWNER_RELEASE_APPROVAL [2026-10-05]** — Package 4 closed the two technical release debts: fresh local PostgreSQL replay reached `20261004_000001` through historical `1d51109d8e2d`; and dedicated local PostgreSQL 14 database `novaclinics_g1_concurrency_test` at schema `20261004_000001` ran four independent-`AsyncSession` races (Case Sheet and Prescription generic successor append plus real amendment-sign boundary). Each race produced one winner and one rejected competitor; database truth retained one successor and one terminal version, no branch/merge/orphan/partial write, and immutable prior history with a complete winner snapshot. Frozen owner release approval remains required and has not been inferred.
 
 ### T-Z.9 · History hierarchy proof *[amendment, v1.1, 2026-07-18 — FR-HIST-1/2]*
 **Repo:** both · **Blocked by:** T-BE-A.5, T-FE-C.7 · **∥ with:** other Z tasks once its own dependency chain clears · **Size:** M
