@@ -33,6 +33,12 @@ jest.mock('../../../features/episodes/presentation/pages/CompleteConsultationScr
     return <Text testID="legacy-completion-props">{JSON.stringify(props)}</Text>;
   },
 }));
+jest.mock('../../../core/observability/legacyRouteUsage', () => ({
+  LegacyRouteUsage: ({ route }: { route: string }) => {
+    const { Text } = require('react-native');
+    return <Text testID="legacy-route-usage">{route}</Text>;
+  },
+}));
 
 import StartConsultationRoute from '../../../app/clinic-admin/appointments/[appointmentId]/start-consultation';
 import ConsultationRoute from '../../../app/clinic-admin/episodes/[episodeId]/consultation';
@@ -48,10 +54,11 @@ describe('COS legacy route adapters (T-FE-F.1 / T-FE-F.2)', () => {
 
   it('F.1 sends start-consultation to the existing Episode-resolution screen with COS destination ON, preserving appointment/client identity', () => {
     (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: true });
-    const { getByTestId } = render(<StartConsultationRoute />);
+    const { getByTestId, queryByTestId } = render(<StartConsultationRoute />);
     expect(JSON.parse(getByTestId('start-consultation-props').props.children)).toEqual({
       appointmentId: 'appointment-1', clientId: 'client-1', destination: 'workspace',
     });
+    expect(queryByTestId('legacy-route-usage')).toBeNull();
   });
 
   it('F.1 redirects the consultation deep link to its requested workspace stage ON without dropping clinical identity', () => {
@@ -69,6 +76,7 @@ describe('COS legacy route adapters (T-FE-F.1 / T-FE-F.2)', () => {
     (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: false });
     const start = render(<StartConsultationRoute />);
     expect(JSON.parse(start.getByTestId('start-consultation-props').props.children).destination).toBe('consultation');
+    expect(start.getByTestId('legacy-route-usage').props.children).toBe('appointment.start_consultation');
     const consultation = render(<ConsultationRoute />);
     expect(JSON.parse(consultation.getByTestId('legacy-consultation-props').props.children)).toEqual({
       episodeId: 'episode-1', appointmentId: 'appointment-1', clientId: 'client-1',
@@ -77,10 +85,11 @@ describe('COS legacy route adapters (T-FE-F.1 / T-FE-F.2)', () => {
 
   it('F.2 redirects complete-consultation to the completion workspace stage ON with all context retained', () => {
     (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: true });
-    const { getByTestId } = render(<CompleteConsultationRoute />);
+    const { getByTestId, queryByTestId } = render(<CompleteConsultationRoute />);
     expect(getByTestId('workspace-redirect').props.children).toBe(
       '/clinic-admin/episodes/episode-1/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor&step=completion',
     );
+    expect(queryByTestId('legacy-route-usage')).toBeNull();
   });
 
   it('F.2 preserves the legacy completion screen OFF', () => {
@@ -89,5 +98,6 @@ describe('COS legacy route adapters (T-FE-F.1 / T-FE-F.2)', () => {
     expect(JSON.parse(getByTestId('legacy-completion-props').props.children)).toEqual({
       episodeId: 'episode-1', appointmentId: 'appointment-1', clientId: 'client-1',
     });
+    expect(getByTestId('legacy-route-usage').props.children).toBe('episode.complete_consultation');
   });
 });

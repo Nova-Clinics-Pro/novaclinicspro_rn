@@ -19,6 +19,7 @@ import { VisitCommandCenter } from '../../../../features/episodes/presentation/p
 import type { WorkspaceMode } from '../../../../features/episodes/presentation/config/episodeWorkspaceConfig';
 import { useFeatures, isCosV1Enabled } from '../../../../core/hooks/useFeatures';
 import type { CosWorkspaceStep } from '../../../../features/doctorDashboard/application/consultationRoutes';
+import { LegacyRouteUsage } from '../../../../core/observability/legacyRouteUsage';
 
 export default function EpisodeWorkspaceRoute() {
   const { episodeId, mode, clientId, initialTab, appointmentId, step } = useLocalSearchParams<{
@@ -66,11 +67,14 @@ export default function EpisodeWorkspaceRoute() {
     : 'prescriptions';
 
   return (
-    <EpisodeWorkspaceScreen
-      mode={resolvedMode}
-      episodeId={episodeId ?? ''}
-      clientId={clientId ?? ''}
-      initialTab={resolvedTab}
-    />
+    <>
+      <LegacyRouteUsage route="episode.workspace" />
+      <EpisodeWorkspaceScreen
+        mode={resolvedMode}
+        episodeId={episodeId ?? ''}
+        clientId={clientId ?? ''}
+        initialTab={resolvedTab}
+      />
+    </>
   );
 }

@@ -13,6 +13,7 @@ import { CasesheetStandaloneScreen } from '../../../../../../features/casesheets
 import { isCosV1Enabled, useFeatures } from '../../../../../../core/hooks/useFeatures';
 import { episodeWorkspaceRoute } from '../../../../../../features/doctorDashboard/application/consultationRoutes';
 import { InvalidWorkspaceState } from '../../../../../../features/episodes/presentation/components/InvalidWorkspaceState';
+import { LegacyRouteUsage } from '../../../../../../core/observability/legacyRouteUsage';
 
 export default function EditCasesheetRoute() {
   const { clientId, casesheetId, episodeId, appointmentId } = useLocalSearchParams<{
@@ -34,5 +35,8 @@ export default function EditCasesheetRoute() {
     );
   }
 
-  return <CasesheetStandaloneScreen clientId={clientId} casesheetId={casesheetId} />;
+  return <>
+    <LegacyRouteUsage route="casesheet.edit" />
+    <CasesheetStandaloneScreen clientId={clientId} casesheetId={casesheetId} />
+  </>;
 }

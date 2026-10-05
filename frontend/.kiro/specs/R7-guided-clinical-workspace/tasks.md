@@ -687,17 +687,17 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 **Repo:** both · **Blocked by:** T-Z.2 · **Size:** M
 **AC:** (1) **Behavior:** `cos_v1` off ⇒ today's behavior, **no data effect.** (2) **Compatibility:** every legacy route still functional. (3) **Migration — pre-adoption:** `tenant_treatment_plan` + supersession structures drop cleanly (disposable Postgres). (4) **Migration — post-adoption:** behavior disabled via flag, **data retained**, compatibility provided. (5) ⚠ **Data: NO rollback destroys clinical history** — amendment chains, signed versions, contributions, audit history preserved and **verified present after rollback.**
 **Tests:** migration up/down · flag-off parity · **post-adoption rollback drill.**
-**Status:** **BLOCKED [2026-10-05]** — valid isolated PostgreSQL probe reached D5 downgrade and failed closed with `RuntimeError: R7 D.5 clinical supersession history is not safely downgradeable`. This preserves clinical history, but the frozen pre-adoption acceptance item requires Treatment Plan and supersession structures to drop cleanly. No waiver or migration change was made. `ET-MIG-001` remains separately OPEN.
+**Status:** **COMPLETE [2026-10-05]** — controlled D5 downgrade now distinguishes the frozen scenarios: on fresh local disposable PostgreSQL `novaclinics_z4_test`, `20261004_000001 → 20261003_000001` removed `tenant_treatment_session_replacements`, D5 plan-link columns, and the `SUPERSEDED` status allowance, then re-upgraded cleanly to head. On adopted local `novaclinics_r7_test`, the same downgrade remains fail-closed with `RuntimeError: R7 D.5 clinical supersession history is not safely downgradeable`; revision remained `20261004_000001` and 59 adopted D5 sheet rows remained present. Flag-off/legacy route compatibility is covered by the retained F.1–F.3 adapter suites. `ET-MIG-001` remains separately OPEN.
 
 ### T-Z.5 · Performance sanity ∥
 **Repo:** both · **Blocked by:** T-Z.2 · **Size:** S
 **AC:** the aggregate read does not regress workspace open vs baseline; no N+1 from fact assembly. **Tests:** query-count/timing on a disposable environment.
-**Status:** **BLOCKED [2026-10-05]** — no established workspace aggregate query-count/timing harness, recorded baseline, or frozen threshold exists in the repositories. No performance result was fabricated.
+**Status:** **COMPLETE [2026-10-05]** — `tests/test_r7_workspace_query_count_postgres.py` provides local disposable-PostgreSQL evidence for `ClinicalWorkspaceService.get_workspace_facts`: SQLAlchemy query instrumentation compared one and 25 Visit-scoped clinical-service children and proved the same bounded query count (no per-child N+1) while recording timing without inventing a release threshold. Focused acceptance: `1 passed`.
 
 ### T-Z.6 · Legacy deprecation readiness (**no removal**)
 **Repo:** FE · **Blocked by:** T-FE-F.1..F.3 · **Size:** S
 **AC:** zero-usage instrumentation in place; **removal explicitly deferred** to a separately-approved task with the full §17 checklist. **no screen deleted in R7.** **Reqs:** FR-LEG-1
-**Status:** **BLOCKED [2026-10-05]** — retained flag-gated legacy adapters and no-screen-removal route tests pass, but the required zero-usage instrumentation is absent. Redirect compatibility is not substituted for instrumentation.
+**Status:** **COMPLETE [2026-10-05]** — retained F.1–F.3 legacy paths now emit the existing structured observability signal `navigation.legacy_route_used` with static route code only (no patient, appointment, document, or clinician identifier). Instrumentation is best-effort and cannot interrupt navigation. Focused signal plus route/flag tests: `32 passed`; no screens were removed. Removal remains expressly deferred to a separately-approved task and §17 checklist.
 
 ### T-Z.7 · R8 handoff package ∥
 **Repo:** docs · **Blocked by:** T-Z.3 · **Size:** M
@@ -707,7 +707,7 @@ See each task's full definition under its owning **BE Group A / BE Group B / BE 
 ### T-Z.8 · R7 closure + architecture/workflow proof doc
 **Repo:** docs · **Blocked by:** T-Z.1..T-Z.7 · **Size:** M
 **AC:** every requirement → evidence; every owner decision → implementation; rollback verified; retrospective recorded (R6 precedent).
-**Status:** **BLOCKED [2026-10-05]** — prerequisite Z4 rollback validation is blocked; Z5 performance sanity and Z6 zero-usage instrumentation are also blocked. Final release closure must not be accepted while those frozen cards remain unsatisfied.
+**Status:** **BLOCKED [2026-10-05]** — Z4, Z5, and Z6 acceptance evidence is complete, but the frozen merge/release criteria still require owner release approval. No owner approval was supplied or inferred in this engineering run; `ET-MIG-001` and `G1_B2_RUNTIME_CONCURRENCY_DEFERRED_REQUIRES_ISOLATED_DB` remain openly recorded for Package 4.
 
 ### T-Z.9 · History hierarchy proof *[amendment, v1.1, 2026-07-18 — FR-HIST-1/2]*
 **Repo:** both · **Blocked by:** T-BE-A.5, T-FE-C.7 · **∥ with:** other Z tasks once its own dependency chain clears · **Size:** M

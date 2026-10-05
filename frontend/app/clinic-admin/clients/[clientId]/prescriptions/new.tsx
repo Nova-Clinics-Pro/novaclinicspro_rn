@@ -13,6 +13,7 @@ import { PrescriptionStandaloneScreen } from '../../../../../features/prescripti
 import { isCosV1Enabled, useFeatures } from '../../../../../core/hooks/useFeatures';
 import { episodeWorkspaceRoute } from '../../../../../features/doctorDashboard/application/consultationRoutes';
 import { InvalidWorkspaceState } from '../../../../../features/episodes/presentation/components/InvalidWorkspaceState';
+import { LegacyRouteUsage } from '../../../../../core/observability/legacyRouteUsage';
 
 export default function NewPrescriptionRoute() {
   const { clientId, appointmentId, episodeId } = useLocalSearchParams<{
@@ -33,5 +34,8 @@ export default function NewPrescriptionRoute() {
     );
   }
 
-  return <PrescriptionStandaloneScreen clientId={clientId} appointmentId={appointmentId} />;
+  return <>
+    <LegacyRouteUsage route="prescription.new" />
+    <PrescriptionStandaloneScreen clientId={clientId} appointmentId={appointmentId} />
+  </>;
 }

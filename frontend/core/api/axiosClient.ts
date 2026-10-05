@@ -97,10 +97,15 @@ function hasAuthorizationHeader(config?: AxiosRequestConfig): boolean {
  * Exported so it is independently testable (NFR-5).
  */
 export interface ObservabilityEvent {
-  event: 'api.server_error' | 'api.auth_boundary_anomaly' | 'api.request_timeout';
+  event:
+    | 'api.server_error'
+    | 'api.auth_boundary_anomaly'
+    | 'api.request_timeout'
+    | 'navigation.legacy_route_used';
   url?: string;
   method?: string;
   status?: number;
+  route?: string;
   message: string;
   timestamp: string;
 }
