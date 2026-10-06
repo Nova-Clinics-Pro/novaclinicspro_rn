@@ -27,6 +27,7 @@ import {
   useTreatmentDetailQuery,
   useUpdateTreatmentMutation,
 } from '../../../../features/treatments/data/repositories/treatments.repository.impl';
+import { useCurrentTenantQuery } from '../../../../features/tenants/data/repositories/tenants.repository.impl';
 import { useFeatures, isAyurvedaClinic as checkIsAyurveda } from '../../../../core/hooks/useFeatures';
 import { 
   formatPrice, 
@@ -49,6 +50,10 @@ export default function TreatmentDetailScreen() {
 
   const treatmentQuery = useTreatmentDetailQuery(tenantId, treatmentId || '', {
     enabled: !!tenantId && !!treatmentId,
+  });
+
+  useCurrentTenantQuery(tenantId, {
+    enabled: !!tenantId,
   });
 
   // Get feature configuration from JWT token
