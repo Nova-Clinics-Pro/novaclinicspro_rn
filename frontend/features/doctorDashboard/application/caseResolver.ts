@@ -1,4 +1,4 @@
-import type { Router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { axiosClient } from '../../../core/api/axiosClient';
 import { episodeWorkspaceRoute, startConsultationRoute } from './consultationRoutes';
 
@@ -11,7 +11,7 @@ export async function resolveCase(
   tenantId: string,
   appointmentId: string,
   clientId: string,
-  router: Pick<Router, 'push'>,
+  router: Pick<ReturnType<typeof useRouter>, 'push'>,
 ): Promise<void> {
   const appointmentResponse = await axiosClient.get(
     `/api/v1/clinic/${tenantId}/appointments/${appointmentId}`,
@@ -45,7 +45,7 @@ export async function startConsultationWithGuard(params: {
   tenantId: string;
   appointmentId: string;
   clientId: string;
-  router: Pick<Router, 'push'>;
+  router: Pick<ReturnType<typeof useRouter>, 'push'>;
   loadingAppointmentId: string | null;
   setState: (state: CaseResolverState | ((prev: CaseResolverState) => CaseResolverState)) => void;
 }): Promise<void> {

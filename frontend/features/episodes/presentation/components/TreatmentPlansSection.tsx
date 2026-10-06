@@ -132,7 +132,7 @@ export const TreatmentPlansSection: React.FC<TreatmentPlansSectionProps> = ({
           </Text>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: theme.colors.primary.default }]}
-            onPress={refetchSheets}
+            onPress={() => refetchSheets()}
             activeOpacity={0.7}
           >
             <Text style={[styles.retryButtonText, { color: theme.colors.background.default }]}>

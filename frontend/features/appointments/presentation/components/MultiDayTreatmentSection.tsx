@@ -113,9 +113,9 @@ export const MultiDayTreatmentSection: React.FC<MultiDayTreatmentSectionProps> =
 
   // Get treatment plan from previous row (if available)
   const previousRow = treatmentSheet.rows?.find((row: TreatmentSheetRowResponse) => 
-    row.day_number === currentRow.day_number - 1
+    row.day_number === (currentRow?.day_number ?? 0) - 1
   );
-  const treatmentPlan = previousRow?.treatment_description || currentRow.treatment_description;
+  const treatmentPlan = previousRow?.treatment_description || currentRow?.treatment_description;
 
   // Get treatment series name
   const treatmentName = (treatmentSheet as any).proposal?.name || 'Multi-Day Treatment';
