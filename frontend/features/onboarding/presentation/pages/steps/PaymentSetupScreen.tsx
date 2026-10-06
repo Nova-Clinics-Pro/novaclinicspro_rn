@@ -8,8 +8,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIn
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
-import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
-import { axiosClient } from '../../../../../core/api/axiosClient';
+import { usePaymentMethodsQuery, useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
 import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
 import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
 import { DraftRevisionEvidence, StepConflictError } from '../../../domain/entities/step-revision.entity';
@@ -34,10 +33,24 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
   const restoredSnapshotRef = useRef<string | null>(null);
 
   const submitStepMutation = useSubmitStepMutation(tenantId, 'payment_setup');
+  const paymentMethodsQuery = usePaymentMethodsQuery(tenantId);
 
   useEffect(() => {
-    fetchPaymentMethods();
-  }, [tenantId]);
+    if (!paymentMethodsQuery.isLoading && paymentMethodsQuery.data) {
+      const { paymentMethods, hasServerPaymentMethods } = paymentMethodsQuery.data;
+      setSelectedMethods(paymentMethods);
+      initialSnapshotRef.current = JSON.stringify({ selectedMethods: paymentMethods });
+      if (!hasServerPaymentMethods) {
+        const zustandData = getStepData('payment_setup');
+        if (Array.isArray(zustandData?.payment_methods)) {
+          setSelectedMethods(zustandData.payment_methods);
+          restoredSnapshotRef.current = JSON.stringify({ selectedMethods: zustandData.payment_methods });
+          setDraftRestored(true);
+        }
+      }
+      setLoading(false);
+    }
+  }, [paymentMethodsQuery.isLoading, paymentMethodsQuery.data, getStepData]);
 
   // Save to Zustand whenever form data changes
   useEffect(() => {
@@ -58,65 +71,6 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
     }
   }, [selectedMethods, loading, setPaymentMethods, draftRestored, draftBaseEvidence]);
 
-  const fetchPaymentMethods = async () => {
-    try {
-      setLoading(true);
-      console.log('[PaymentSetupScreen] Fetching payment methods for tenant:', tenantId);
-      
-      // Track loaded values to set snapshot correctly
-      let loadedMethods = ['cash'];
-      let hasServerPaymentMethods = false;
-      
-      // Try to fetch existing payment methods from tenant settings
-      try {
-        const response = await axiosClient.get(`/api/v1/tenants/${tenantId}`);
-        console.log('[PaymentSetupScreen] Tenant response:', JSON.stringify(response.data, null, 2));
-        
-        if (response.data.payment_methods && Array.isArray(response.data.payment_methods)) {
-          loadedMethods = response.data.payment_methods;
-          hasServerPaymentMethods = true;
-          setSelectedMethods(loadedMethods);
-          console.log('[PaymentSetupScreen] Loaded existing payment methods:', loadedMethods);
-        } else {
-          console.log('[PaymentSetupScreen] No existing payment methods, using default: cash');
-          setSelectedMethods(loadedMethods);
-        }
-      } catch (error: any) {
-        console.error('[PaymentSetupScreen] Error fetching tenant data:', error);
-        // Try alternative endpoint for payment settings
-        try {
-          const settingsResponse = await axiosClient.get(`/api/v1/clinic/${tenantId}/settings`);
-          if (settingsResponse.data.payment_methods) {
-            loadedMethods = settingsResponse.data.payment_methods;
-            hasServerPaymentMethods = true;
-            setSelectedMethods(loadedMethods);
-            console.log('[PaymentSetupScreen] Loaded payment methods from settings');
-          }
-        } catch (settingsError) {
-          console.log('[PaymentSetupScreen] Using default payment methods');
-          setSelectedMethods(loadedMethods);
-        }
-      }
-      
-      // Set initial snapshot with actual loaded values
-      initialSnapshotRef.current = JSON.stringify({ selectedMethods: loadedMethods });
-
-      if (!hasServerPaymentMethods) {
-        const zustandData = getStepData('payment_setup');
-        if (zustandData?.payment_methods && Array.isArray(zustandData.payment_methods)) {
-          console.log('[PaymentSetupScreen] Restoring payment methods draft');
-          setSelectedMethods(zustandData.payment_methods);
-          const restoredSnapshot = JSON.stringify({ selectedMethods: zustandData.payment_methods });
-          restoredSnapshotRef.current = restoredSnapshot;
-          setDraftRestored(true);
-        }
-      }
-    } catch (error: any) {
-      console.error('[PaymentSetupScreen] Error in fetchPaymentMethods:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const paymentMethods = [
     { id: 'cash', label: 'Cash', icon: 'cash' },

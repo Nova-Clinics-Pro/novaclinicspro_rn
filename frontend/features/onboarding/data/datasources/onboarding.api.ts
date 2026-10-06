@@ -44,6 +44,31 @@ import {
   OwnershipStatusResult,
 } from '../../domain/clinic-entry';
 
+export interface PaymentMethodsSourceResult {
+  paymentMethods: string[];
+  hasServerPaymentMethods: boolean;
+}
+
+export const getPaymentMethodsApi = async (tenantId: string): Promise<PaymentMethodsSourceResult> => {
+  try {
+    const { data } = await axiosClient.get(`/api/v1/tenants/${tenantId}`);
+    if (Array.isArray(data.payment_methods)) {
+      return { paymentMethods: data.payment_methods, hasServerPaymentMethods: true };
+    }
+    return { paymentMethods: ['cash'], hasServerPaymentMethods: false };
+  } catch {
+    try {
+      const { data } = await axiosClient.get(`/api/v1/clinic/${tenantId}/settings`);
+      if (Array.isArray(data.payment_methods)) {
+        return { paymentMethods: data.payment_methods, hasServerPaymentMethods: true };
+      }
+    } catch {
+      // Preserve the established default when neither legacy endpoint responds.
+    }
+    return { paymentMethods: ['cash'], hasServerPaymentMethods: false };
+  }
+};
+
 const throwClinicEntryError = (error: any): never => {
   const body = error?.response?.data?.detail?.error ?? error?.response?.data?.detail ?? {};
   throw new ClinicEntryTransportError(
