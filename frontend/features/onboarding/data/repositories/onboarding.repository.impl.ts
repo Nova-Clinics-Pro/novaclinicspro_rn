@@ -37,6 +37,9 @@ import {
   getJourneyVisibilityApi,
   getReadyToStartApi,
   getPaymentMethodsApi,
+  getBillingSettingsApi,
+  saveBillingSettingsApi,
+  type BillingSettingsInput,
 } from '../datasources/onboarding.api';
 import {
   ApplicationDetailResponse,
@@ -167,6 +170,18 @@ export const usePaymentMethodsQuery = (tenantId: string) =>
     queryKey: [...onboardingKeys.all, 'payment-methods', tenantId],
     queryFn: () => getPaymentMethodsApi(tenantId),
     enabled: !!tenantId,
+  });
+
+export const useBillingSettingsQuery = (tenantId: string) =>
+  useQuery({
+    queryKey: [...onboardingKeys.all, 'billing-settings', tenantId],
+    queryFn: () => getBillingSettingsApi(tenantId),
+    enabled: !!tenantId,
+  });
+
+export const useSaveBillingSettingsMutation = (tenantId: string) =>
+  useMutation({
+    mutationFn: (input: BillingSettingsInput) => saveBillingSettingsApi(tenantId, input),
   });
 
 const CAPABILITY_REVISION_V1 = /^cap-v1:[0-9a-f]{64}$/;
