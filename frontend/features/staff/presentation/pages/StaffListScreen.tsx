@@ -375,7 +375,7 @@ export const StaffListScreen: React.FC = () => {
             <View style={{ width: 24 }} />
           </View>
           <StaffForm
-            onSubmit={handleCreateStaff}
+            onSubmit={(data) => handleCreateStaff(data as StaffCreate)}
             onCancel={() => setShowAddModal(false)}
             isLoading={createMutation.isPending}
           />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ComponentProps } from 'react';
 import { Platform, StyleSheet, TextInput, ViewStyle } from 'react-native';
 import NativeDateTimePicker, {
   DateTimePickerEvent,
@@ -11,7 +11,7 @@ type PickerMode = 'date' | 'time';
 interface CrossPlatformDateTimePickerProps {
   value: Date;
   mode: PickerMode;
-  display?: 'default' | 'spinner' | 'calendar' | 'clock' | 'compact' | 'inline';
+  display?: ComponentProps<typeof NativeDateTimePicker>['display'];
   minimumDate?: Date;
   minuteInterval?: number;
   onChange: (event: DateTimePickerEvent, selectedDate?: Date) => void;
@@ -58,6 +58,7 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
   minuteInterval,
   onChange,
   style,
+  display,
   ...nativeProps
 }) => {
   if (Platform.OS !== 'web') {
@@ -68,6 +69,7 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
         minimumDate={minimumDate}
         minuteInterval={minuteInterval}
         onChange={onChange}
+        display={display as never}
         {...nativeProps}
       />
     );

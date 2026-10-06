@@ -92,7 +92,7 @@ export const CreateEpisodeSheet: React.FC = () => {
 
         {/* Episode Form */}
         <EpisodeForm
-          onSubmit={handleSubmit}
+          onSubmit={(values) => handleSubmit(values as Omit<EpisodeCreateRequest, 'client_id' | 'appointment_id'>)}
           onCancel={() => router.back()}
           isLoading={createMutation.isPending}
         />
