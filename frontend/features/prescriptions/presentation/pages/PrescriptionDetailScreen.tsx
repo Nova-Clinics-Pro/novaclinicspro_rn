@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   printButton: {
     backgroundColor: colors.grey[100],
     borderWidth: 1,
-    borderColor: colors.border.medium,
+    borderColor: colors.border.main,
   },
   printButtonText: {
     color: colors.text.primary,

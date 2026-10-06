@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     color: colors.common.white,
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.background.paper,
     alignItems: 'center',
     justifyContent: 'center',

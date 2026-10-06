@@ -1334,7 +1334,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   applyingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
