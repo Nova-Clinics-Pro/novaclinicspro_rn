@@ -18,7 +18,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
-import { axiosClient } from '../../../../../core/api/axiosClient';
+import { useOnboardingRoomsQuery } from '../../../../rooms/data/repositories/rooms.repository.impl';
+import type { OnboardingRoomSourceItem } from '../../../../rooms/data/models/rooms.dtos';
 import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
 import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
 
@@ -36,118 +37,83 @@ interface TreatmentRoomsScreenProps {
 
 export function TreatmentRoomsScreen({ tenantId, stepCode = 'treatment_rooms' }: TreatmentRoomsScreenProps) {
   const theme = useClinicTheme();
+  const roomsQuery = useOnboardingRoomsQuery(tenantId);
+
+  if (roomsQuery.isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary.default} />
+        <Text style={[theme.typography.body2, { color: theme.colors.text.secondary, marginTop: theme.spacing.md }]}>
+          Loading rooms data...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <TreatmentRoomsForm
+      key={`${tenantId}:${stepCode}`}
+      tenantId={tenantId}
+      stepCode={stepCode}
+      sourceRooms={roomsQuery.data}
+    />
+  );
+}
+
+interface TreatmentRoomsFormProps {
+  tenantId: string;
+  stepCode: string;
+  sourceRooms?: OnboardingRoomSourceItem[];
+}
+
+function TreatmentRoomsForm({ tenantId, stepCode, sourceRooms }: TreatmentRoomsFormProps) {
+  const theme = useClinicTheme();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [rooms, setRooms] = useState<Room[]>([
-    {
-      id: '1',
-      name: '',
-      room_type: 'consultation',
-      capacity: '1',
-    },
-  ]);
-  const [draftRestored, setDraftRestored] = useState(false);
   const { setRooms: setRoomsDraft, getStepData } = useWizardStore();
-
-  const submitStepMutation = useSubmitStepMutation(tenantId, stepCode);
-
-  useEffect(() => {
-    fetchRoomsData();
-  }, [tenantId]);
-
-  useEffect(() => {
-    if (!loading) {
-      const timeout = setTimeout(() => {
-        setRoomsDraft({
-          rooms: rooms.map((room) => ({
-            name: room.name,
-            room_type: room.room_type,
-            capacity: parseInt(room.capacity) || 1,
-          })),
-        });
-      }, 500);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [loading, rooms, setRoomsDraft]);
-
-  const fetchRoomsData = async () => {
-    try {
-      setLoading(true);
-      console.log('[TreatmentRoomsScreen] Fetching rooms for tenant:', tenantId);
-      
-      // Try multiple possible endpoints
-      let response;
-      try {
-        response = await axiosClient.get(`/api/v1/clinic/${tenantId}/rooms`);
-      } catch (error: any) {
-        // If rooms endpoint doesn't exist, try treatment-rooms
-        if (error.response?.status === 404) {
-          response = await axiosClient.get(`/api/v1/clinic/${tenantId}/treatment-rooms`);
-        } else {
-          throw error;
-        }
-      }
-      
-      console.log('[TreatmentRoomsScreen] Rooms response:', JSON.stringify(response.data, null, 2));
-      
-      // Handle both array response and paginated response
-      let roomsData = [];
-      if (Array.isArray(response.data)) {
-        roomsData = response.data;
-      } else if (response.data.items && Array.isArray(response.data.items)) {
-        roomsData = response.data.items;
-      } else if (response.data.data && Array.isArray(response.data.data)) {
-        roomsData = response.data.data;
-      }
-      
-      if (roomsData.length > 0) {
-        // Map existing rooms to form format
-        const existingRooms = roomsData.map((room: any) => ({
+  const draft = getStepData(stepCode) || getStepData('rooms_and_therapy_beds');
+  const hasSourceRooms = Boolean(sourceRooms?.length);
+  const [rooms, setRooms] = useState<Room[]>(() =>
+    hasSourceRooms
+      ? sourceRooms!.map((room) => ({
           id: room.id || Date.now().toString(),
           name: room.name || '',
           room_type: room.room_type || room.type || 'consultation',
           capacity: String(room.capacity || 1),
-        }));
-        setRooms(existingRooms);
-        console.log('[TreatmentRoomsScreen] Loaded existing rooms:', existingRooms.length);
-      } else {
-        const draft = getStepData(stepCode) || getStepData('rooms_and_therapy_beds');
-        if (draft?.rooms && Array.isArray(draft.rooms)) {
-          const draftRooms = draft.rooms.map((room: any, index: number) => ({
+        }))
+      : draft?.rooms && Array.isArray(draft.rooms)
+        ? draft.rooms.map((room: any, index: number) => ({
             id: String(index + 1),
             name: room.name || '',
             room_type: room.room_type || 'consultation',
             capacity: String(room.capacity || 1),
-          }));
-          setRooms(draftRooms);
-          setDraftRestored(true);
-          return;
-        }
+          }))
+        : [
+            {
+              id: '1',
+              name: '',
+              room_type: 'consultation',
+              capacity: '1',
+            },
+          ]
+  );
+  const [draftRestored, setDraftRestored] = useState(
+    !hasSourceRooms && Boolean(draft?.rooms && Array.isArray(draft.rooms))
+  );
+  const submitStepMutation = useSubmitStepMutation(tenantId, stepCode);
 
-        console.log('[TreatmentRoomsScreen] No existing rooms, showing empty form');
-      }
-    } catch (error: any) {
-      console.error('[TreatmentRoomsScreen] Error fetching rooms:', error);
-      const draft = getStepData(stepCode) || getStepData('rooms_and_therapy_beds');
-      if (draft?.rooms && Array.isArray(draft.rooms)) {
-        const draftRooms = draft.rooms.map((room: any, index: number) => ({
-          id: String(index + 1),
-          name: room.name || '',
-          room_type: room.room_type || 'consultation',
-          capacity: String(room.capacity || 1),
-        }));
-        setRooms(draftRooms);
-        setDraftRestored(true);
-        return;
-      }
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setRoomsDraft({
+        rooms: rooms.map((room) => ({
+          name: room.name,
+          room_type: room.room_type,
+          capacity: parseInt(room.capacity) || 1,
+        })),
+      });
+    }, 500);
 
-      // If API fails, keep the default empty form
-      console.log('[TreatmentRoomsScreen] Using default empty form');
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => clearTimeout(timeout);
+  }, [rooms, setRoomsDraft]);
 
   const addRoom = () => {
     setDraftRestored(false);
@@ -241,17 +207,6 @@ export function TreatmentRoomsScreen({ tenantId, stepCode = 'treatment_rooms' }:
       Alert.alert('Error', error.message || 'Failed to save rooms');
     }
   };
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary.default} />
-        <Text style={[theme.typography.body2, { color: theme.colors.text.secondary, marginTop: theme.spacing.md }]}>
-          Loading rooms data...
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <ScrollView
