@@ -85,6 +85,32 @@ export const listEpisodesApi = async (
 };
 
 /**
+ * Read the episode count for each client shown by a tenant-scoped dashboard.
+ *
+ * A failed count for one client must not hide the remaining dashboard cards;
+ * it is represented as zero, matching the dashboard's established behavior.
+ */
+export const getClientEpisodeCountsApi = async (
+  tenantId: string,
+  clientIds: string[]
+): Promise<Record<string, number>> => {
+  const counts: Record<string, number> = {};
+
+  await Promise.all(
+    clientIds.map(async (clientId) => {
+      try {
+        const response = await listEpisodesApi(tenantId, { client_id: clientId, limit: 1 });
+        counts[clientId] = response.total || 0;
+      } catch {
+        counts[clientId] = 0;
+      }
+    })
+  );
+
+  return counts;
+};
+
+/**
  * Get a single episode by ID
  * GET /api/v1/clinic/{tenant_id}/episodes/{id}
  */

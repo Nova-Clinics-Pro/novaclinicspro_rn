@@ -20,6 +20,7 @@ import {
   closeEpisodeApi,
   reopenEpisodeApi,
   attachEpisodeToAppointmentApi,
+  getClientEpisodeCountsApi,
   ListEpisodesParams,
 } from '../datasources/episodes.api';
 import {
@@ -47,6 +48,8 @@ export const episodesKeys = {
   },
   clientEpisodes: (tenantId: string, clientId: string, status?: EpisodeStatus) =>
     ['client-episodes', tenantId, clientId, status] as const,
+  clientEpisodeCounts: (tenantId: string, clientIds: string[]) =>
+    [...episodesKeys.all, 'client-counts', tenantId, clientIds] as const,
   details: () => [...episodesKeys.all, 'detail'] as const,
   detail: (tenantId: string, episodeId: string) =>
     ['episode', tenantId, episodeId] as const,
@@ -81,6 +84,30 @@ export const useEpisodesQuery = (
   return useQuery<EpisodesListResponse, Error>({
     queryKey: episodesKeys.list(tenantId, params),
     queryFn: () => listEpisodesApi(tenantId, params),
+    ...options,
+    enabled: finalEnabled,
+  });
+};
+
+/**
+ * Read client episode counts for dashboard appointment cards.
+ *
+ * The sorted, de-duplicated identifier list gives React Query a stable,
+ * tenant-scoped identity while preserving the existing five-minute cache.
+ */
+export const useClientEpisodeCountsQuery = (
+  tenantId: string,
+  clientIds: string[],
+  options?: Omit<UseQueryOptions<Record<string, number>, Error>, 'queryKey' | 'queryFn'>
+) => {
+  const normalizedClientIds = [...new Set(clientIds)].sort();
+  const defaultEnabled = !!tenantId && tenantId !== 'undefined' && normalizedClientIds.length > 0;
+  const finalEnabled = options?.enabled !== undefined ? options.enabled && defaultEnabled : defaultEnabled;
+
+  return useQuery<Record<string, number>, Error>({
+    queryKey: episodesKeys.clientEpisodeCounts(tenantId, normalizedClientIds),
+    queryFn: () => getClientEpisodeCountsApi(tenantId, normalizedClientIds),
+    staleTime: 5 * 60 * 1000,
     ...options,
     enabled: finalEnabled,
   });

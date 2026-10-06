@@ -31,7 +31,6 @@ import { useAuth } from '../features/auth/presentation/hooks/useAuth';
 import { t, ErrorTokens } from '../core/localization';
 import { useDoctorDashboardDate } from '../features/staffDashboards/presentation/hooks/useDashboardDate';
 import { filterAppointmentsByDate } from '../features/staffDashboards/domain/utils/filterAppointments';
-import { useQuery } from '@tanstack/react-query';
 import {
   useDoctorDashboardQuery,
   EmptyDashboardState,
@@ -52,6 +51,7 @@ import {
   mapBusiestDaysToBars,
   formatDuration,
 } from '../features/doctorDashboard';
+import { useClientEpisodeCountsQuery } from '../features/episodes';
 import { usePendingDocumentationQuery } from '../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import {
   getLifecycleStatusColor,
@@ -266,43 +266,7 @@ export default function DoctorDashboard() {
     return [...new Set(filteredAppointments.map(apt => apt.client_id))];
   }, [filteredAppointments]);
 
-  // Fetch episode counts for all unique clients
-  // Use axios client to benefit from automatic token handling and interceptors
-  const { data: episodeCountsData } = useQuery({
-    queryKey: ['episodeCounts', tenantId, uniqueClientIds],
-    queryFn: async () => {
-      console.log('[DoctorDashboard] Fetching episode counts for clients:', uniqueClientIds);
-      const counts: Record<string, number> = {};
-      
-      // Import axios client dynamically to avoid circular dependencies
-      const { axiosClient } = await import('../core/api/axiosClient');
-      
-      // Fetch episodes for each client using axios (has token interceptors)
-      await Promise.all(
-        uniqueClientIds.map(async (clientId) => {
-          try {
-            const url = `/api/v1/clinic/${tenantId}/episodes?client_id=${clientId}&limit=1`;
-            console.log('[DoctorDashboard] Fetching episodes for client:', clientId, 'URL:', url);
-            
-            const response = await axiosClient.get(url);
-            
-            console.log('[DoctorDashboard] Response status for client', clientId, ':', response.status);
-            console.log('[DoctorDashboard] Episode data for client', clientId, ':', response.data);
-            
-            counts[clientId] = response.data.total || 0;
-          } catch (error: any) {
-            console.error(`[DoctorDashboard] Error fetching episode count for client ${clientId}:`, error?.response?.status, error?.response?.data || error?.message);
-            counts[clientId] = 0;
-          }
-        })
-      );
-      
-      console.log('[DoctorDashboard] Final episode counts:', counts);
-      return counts;
-    },
-    enabled: !!tenantId && uniqueClientIds.length > 0,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
+  const { data: episodeCountsData } = useClientEpisodeCountsQuery(tenantId, uniqueClientIds);
 
   const episodeCountMap = useMemo(() => episodeCountsData ?? {}, [episodeCountsData]);
 
