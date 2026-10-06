@@ -156,7 +156,7 @@ export default function Index() {
     }
     // If no tenantId, not org admin, and no regStatus, show the "no tenant" state in render
     
-  }, [isAuthenticated, isLoading, isLoadingRegStatus, isLoadingOnboarding, currentUser, regStatus, onboardingStatus, router]);
+  }, [isAuthenticated, isLoading, isLoadingRegStatus, isLoadingOnboarding, currentUser, regStatus, onboardingStatus, registrationRoute, router]);
 
   // Show loading while determining auth and redirecting
   if (isLoading || isLoadingRegStatus || isLoadingOnboarding) {

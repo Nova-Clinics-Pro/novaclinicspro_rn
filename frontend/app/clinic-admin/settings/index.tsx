@@ -3,6 +3,6 @@
  * /clinic-admin/settings
  */
 
-import ClinicSettingsScreen from '../../../features/clinicSettings/presentation/pages/ClinicSettingsScreen';
+import { ClinicSettingsScreen } from '../../../features/clinicSettings/presentation/pages/ClinicSettingsScreen';
 
 export default ClinicSettingsScreen;

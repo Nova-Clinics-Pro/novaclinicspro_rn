@@ -20,7 +20,6 @@ import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import {
   useRoomDetailQuery,
   useUpdateRoomMutation,
-  useDeleteRoomMutation,
 } from '../../../../features/rooms/data/repositories/rooms.repository.impl';
 import { ROOM_TYPES, RoomType, getRoomTypeLabel } from '../../../../features/rooms/data/models/rooms.dtos';
 import { spacing } from '../../../../core/theme/spacing';
@@ -45,18 +44,6 @@ export default function RoomDetailScreen() {
   });
 
   const updateMutation = useUpdateRoomMutation(tenantId, roomId || '');
-  const deleteMutation = useDeleteRoomMutation(tenantId);
-
-  // Initialize form when data loads
-  React.useEffect(() => {
-    if (roomQuery.data) {
-      setFormData({
-        name: roomQuery.data.name,
-        capacity: roomQuery.data.capacity.toString(),
-        roomType: roomQuery.data.room_type,
-      });
-    }
-  }, [roomQuery.data]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -72,31 +59,9 @@ export default function RoomDetailScreen() {
       });
       setIsEditing(false);
       Alert.alert('Success', 'Room updated successfully');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to update room');
     }
-  };
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Room',
-      'Are you sure you want to delete this room?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync(roomId || '');
-              router.back();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete room');
-            }
-          },
-        },
-      ]
-    );
   };
 
   const handleToggleActive = async () => {
@@ -104,7 +69,7 @@ export default function RoomDetailScreen() {
     try {
       await updateMutation.mutateAsync({ is_active: newStatus });
       Alert.alert('Success', `Room ${newStatus ? 'activated' : 'deactivated'}`);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to update room status');
     }
   };
@@ -177,7 +142,14 @@ export default function RoomDetailScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Room Details</Text>
             {!isEditing && (
-              <TouchableOpacity onPress={() => setIsEditing(true)}>
+              <TouchableOpacity onPress={() => {
+                setFormData({
+                  name: room.name,
+                  capacity: room.capacity.toString(),
+                  roomType: room.room_type,
+                });
+                setIsEditing(true);
+              }}>
                 <Ionicons name="pencil" size={20} color="#2F6F4E" />
               </TouchableOpacity>
             )}

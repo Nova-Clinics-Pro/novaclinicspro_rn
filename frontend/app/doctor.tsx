@@ -7,7 +7,7 @@
  * - GET /api/v1/clinic/{tenant_id}/staff/me/dashboard/doctor - Today's appointments
  */
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,9 +21,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, Router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { DashboardHeader } from '../core/components/DashboardHeader';
-import { DateStrip, toISODateLocal } from '../core/components/DateStrip';
+import { DateStrip } from '../core/components/DateStrip';
 import { colors } from '../core/theme/colors';
 import { spacing } from '../core/theme/spacing';
 import { typography } from '../core/theme/typography';
@@ -34,10 +34,8 @@ import { filterAppointmentsByDate } from '../features/staffDashboards/domain/uti
 import { useQuery } from '@tanstack/react-query';
 import {
   useDoctorDashboardQuery,
-  DashboardQuickActions,
   EmptyDashboardState,
   OnLeaveBanner,
-  QuickAction,
 } from '../features/staffDashboards';
 import { AppointmentRow } from '../features/appointments/presentation/components/AppointmentRow';
 import { StaffFeedbackSection } from '../features/feedback';
@@ -306,7 +304,7 @@ export default function DoctorDashboard() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  const episodeCountMap = episodeCountsData || {};
+  const episodeCountMap = useMemo(() => episodeCountsData ?? {}, [episodeCountsData]);
 
   // Debug log episode counts
   React.useEffect(() => {
@@ -346,77 +344,6 @@ export default function DoctorDashboard() {
     };
   }, [kpiData]);
 
-  // Quick actions
-  const quickActions: QuickAction[] = useMemo(() => [
-    {
-      label: 'View Schedule',
-      icon: 'calendar-outline',
-      onPress: () => router.push('/clinic-admin/appointments'),
-      color: colors.primary.main,
-      variant: 'primary',
-    },
-    {
-      label: 'View Patients',
-      icon: 'people-outline',
-      onPress: () => router.push('/clinic-admin/clients'),
-      color: colors.success.main,
-    },
-    {
-      label: 'Start Session',
-      icon: 'play-circle-outline',
-      onPress: () => {
-        // T-D.2 (ADR-P1-04): delegates to the same canonical resolver as the
-        // per-appointment "Start Consultation" button (handleStartConsultation
-        // -> startConsultationWithGuard -> resolveCase), so every "Start" entry
-        // point yields one behavior. Previously this only showed an Alert with
-        // no confirm handler and never navigated (ED-004).
-        const nextAppointment = dashboardData?.appointments?.find(
-          (a) => ['scheduled', 'confirmed'].includes(a.status?.toLowerCase())
-        );
-        if (nextAppointment) {
-          handleStartConsultation(nextAppointment.id, nextAppointment.client_id);
-        } else {
-          Alert.alert('No Upcoming', 'No upcoming appointments to start.');
-        }
-      },
-      color: colors.info.main,
-    },
-  ], [dashboardData, router, handleStartConsultation]);
-
-  // Clinical documents quick actions
-  const clinicalActions: QuickAction[] = useMemo(() => [
-    {
-      label: 'Casesheets',
-      icon: 'document-text-outline',
-      onPress: () => {
-        Alert.alert(
-          'View Casesheets',
-          'Select a patient first to view their casesheets.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Go to Patients', onPress: () => router.push('/clinic-admin/clients') },
-          ]
-        );
-      },
-      color: colors.primary.main,
-    },
-    {
-      label: 'Prescriptions',
-      icon: 'medkit-outline',
-      onPress: () => {
-        Alert.alert(
-          'View Prescriptions',
-          'Select a patient first to view their prescriptions.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Go to Patients', onPress: () => router.push('/clinic-admin/clients') },
-          ]
-        );
-      },
-      color: colors.success.main,
-    },
-  ], [router]);
-
   const handleLogout = () => {
     if (Platform.OS === 'web') {
       if (!window.confirm('Are you sure you want to logout?')) {
@@ -439,7 +366,7 @@ export default function DoctorDashboard() {
           onPress: async () => {
             try {
               await logout();
-            } catch (err) {
+            } catch {
               Alert.alert('Error', 'Failed to logout. Please try again.');
             }
           },
@@ -543,7 +470,6 @@ export default function DoctorDashboard() {
     }
 
     // Success state
-    const appointments = dashboardData?.appointments || [];
     const onLeave = dashboardData?.on_leave_today;
 
     return (

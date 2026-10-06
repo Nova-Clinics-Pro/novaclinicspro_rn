@@ -5,6 +5,6 @@
  * Release 5 (R5) · T-E.3
  */
 
-import CapabilitiesSettingsScreen from '../../../features/capabilities/presentation/pages/CapabilitiesSettingsScreen';
+import { CapabilitiesSettingsScreen } from '../../../features/capabilities/presentation/pages/CapabilitiesSettingsScreen';
 
 export default CapabilitiesSettingsScreen;

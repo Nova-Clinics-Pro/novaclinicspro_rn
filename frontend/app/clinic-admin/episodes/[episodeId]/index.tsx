@@ -19,7 +19,6 @@ export default function EpisodeDetailPage() {
   // Fetch episode details to get client info
   const { data: episodeDetails } = useEpisodeDetailsQuery(tenantId, episodeId || '');
   const clientId = episodeDetails?.episode?.client_id || '';
-  const clientName = episodeDetails?.episode?.client_name || '';
 
   const handleNavigateToAppointment = (appointmentId: string) => {
     router.push(`/clinic-admin/appointments/${appointmentId}` as any);

@@ -73,7 +73,7 @@ export default function AddClinicScreen() {
           <Text style={styles.comingSoonTitle}>Coming Soon!</Text>
           <Text style={styles.comingSoonMessage}>
             The ability to add new clinics is under development.{'\n'}
-            We'll notify you when this feature becomes available.
+            We&apos;ll notify you when this feature becomes available.
           </Text>
           <View style={styles.formPreview}>
             <Text style={styles.formPreviewTitle}>Your submission preview:</Text>

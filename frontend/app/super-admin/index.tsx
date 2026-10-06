@@ -9,14 +9,13 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   Pressable,
   Alert,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { DashboardHeader } from '../../core/components/DashboardHeader';
 import { StatCard } from '../../core/components/StatCard';
 import { QuickActionButton } from '../../core/components/QuickActionButton';
@@ -28,7 +27,6 @@ import { formatInrCurrency } from '../../core/utils/currency';
 import { t, ErrorTokens } from '../../core/localization';
 
 export default function SuperAdminDashboard() {
-  const router = useRouter();
   const { logout, currentUser } = useAuth();
 
   const handleLogout = async () => {
@@ -38,7 +36,7 @@ export default function SuperAdminDashboard() {
       if (confirmed) {
         try {
           await logout();
-        } catch (error) {
+        } catch {
           window.alert('Logout failed. Please try again.');
         }
       }
@@ -54,7 +52,7 @@ export default function SuperAdminDashboard() {
             onPress: async () => {
               try {
                 await logout();
-              } catch (error) {
+              } catch {
                 Alert.alert(t('common.error'), t(ErrorTokens.auth.logoutFailed));
               }
             },

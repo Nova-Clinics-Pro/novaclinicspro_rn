@@ -26,9 +26,7 @@ import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import {
   useTreatmentDetailQuery,
   useUpdateTreatmentMutation,
-  useDeleteTreatmentMutation,
 } from '../../../../features/treatments/data/repositories/treatments.repository.impl';
-import { useCurrentTenantQuery } from '../../../../features/tenants/data/repositories/tenants.repository.impl';
 import { useFeatures, isAyurvedaClinic as checkIsAyurveda } from '../../../../core/hooks/useFeatures';
 import { 
   formatPrice, 
@@ -53,15 +51,10 @@ export default function TreatmentDetailScreen() {
     enabled: !!tenantId && !!treatmentId,
   });
 
-  const { data: tenant } = useCurrentTenantQuery(tenantId, {
-    enabled: !!tenantId,
-  });
-
   // Get feature configuration from JWT token
   const features = useFeatures();
 
   const updateMutation = useUpdateTreatmentMutation(tenantId, treatmentId || '');
-  const deleteMutation = useDeleteTreatmentMutation(tenantId);
 
   // Check if clinic is Ayurveda type using feature flags from JWT
   const isAyurvedaClinic = checkIsAyurveda(features);
@@ -72,32 +65,10 @@ export default function TreatmentDetailScreen() {
     try {
       await updateMutation.mutateAsync({ is_active: newStatus });
       Alert.alert('Success', `Treatment ${newStatus ? 'activated' : 'deactivated'}`);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to update status');
     }
   }, [treatmentQuery.data, updateMutation]);
-
-  const handleDelete = useCallback(() => {
-    Alert.alert(
-      'Delete Treatment',
-      'Are you sure you want to delete this treatment? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync(treatmentId || '');
-              router.back();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete treatment');
-            }
-          },
-        },
-      ]
-    );
-  }, [deleteMutation, treatmentId, router]);
 
   const handleEditSubmit = useCallback(async (data: TreatmentUpdate, hasChanges: boolean) => {
     // Issue #7: Don't call API if nothing changed
@@ -110,7 +81,7 @@ export default function TreatmentDetailScreen() {
       await updateMutation.mutateAsync(data);
       setIsEditing(false);
       Alert.alert('Success', 'Treatment updated successfully');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to update treatment');
     }
   }, [updateMutation]);
