@@ -10,6 +10,7 @@ import {
   createOperatingHourApi,
   updateOperatingHourApi,
   deleteOperatingHourApi,
+  listOnboardingOperatingHoursApi,
 } from '../datasources/operatingHours.api';
 import {
   OperatingHourCreate,
@@ -17,6 +18,7 @@ import {
   OperatingHourResponse,
   ListOperatingHoursParams,
   PaginatedOperatingHoursResponse,
+  OnboardingOperatingHoursSourceItem,
 } from '../models/operatingHours.dtos';
 import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
@@ -32,6 +34,8 @@ export const operatingHoursKeys = {
   details: () => [...operatingHoursKeys.all, 'detail'] as const,
   detail: (tenantId: string, id: string) =>
     [...operatingHoursKeys.details(), tenantId, id] as const,
+  onboarding: (tenantId: string) =>
+    [...operatingHoursKeys.all, 'onboarding', tenantId] as const,
 };
 
 // ============================================
@@ -53,6 +57,20 @@ export const useOperatingHoursListQuery = (
     ...options,
   });
 };
+
+/** Read onboarding hours while preserving its legacy one-request-per-mount policy. */
+export const useOnboardingOperatingHoursQuery = (tenantId: string) =>
+  useQuery<OnboardingOperatingHoursSourceItem[], Error>({
+    queryKey: operatingHoursKeys.onboarding(tenantId),
+    queryFn: () => listOnboardingOperatingHoursApi(tenantId),
+    enabled: !!tenantId,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
 /**
  * Hook to get a single operating hour entry

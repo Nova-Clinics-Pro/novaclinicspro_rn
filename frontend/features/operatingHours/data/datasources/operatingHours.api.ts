@@ -12,6 +12,7 @@ import {
   OperatingHourResponse,
   ListOperatingHoursParams,
   PaginatedOperatingHoursResponse,
+  OnboardingOperatingHoursSourceItem,
 } from '../models/operatingHours.dtos';
 
 /**
@@ -27,6 +28,19 @@ export const listOperatingHoursApi = async (
     { params }
   );
   return response.data;
+};
+
+/**
+ * Read the legacy named-day array used by onboarding.
+ * Successful non-array responses preserve onboarding's historical empty state.
+ */
+export const listOnboardingOperatingHoursApi = async (
+  tenantId: string
+): Promise<OnboardingOperatingHoursSourceItem[]> => {
+  const response = await axiosClient.get(
+    `/api/v1/clinic/${tenantId}/operating-hours`
+  );
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 /**
