@@ -18,7 +18,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
-import { axiosClient } from '../../../../../core/api/axiosClient';
+import { useOnboardingStaffQuery } from '../../../../staff/data/repositories/staff.repository.impl';
+import type { OnboardingStaffSourceItem } from '../../../../staff/data/models/staff.dtos';
 import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
 import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
 
@@ -38,106 +39,91 @@ interface StaffSetupScreenProps {
 
 export function StaffSetupScreen({ tenantId, stepCode = 'staff_setup' }: StaffSetupScreenProps) {
   const theme = useClinicTheme();
+  const staffQuery = useOnboardingStaffQuery(tenantId);
+
+  if (staffQuery.isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary.default} />
+        <Text style={[theme.typography.body2, { color: theme.colors.text.secondary, marginTop: theme.spacing.md }]}>
+          Loading staff data...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <StaffSetupForm
+      key={`${tenantId}:${stepCode}`}
+      tenantId={tenantId}
+      stepCode={stepCode}
+      sourceStaff={staffQuery.data}
+    />
+  );
+}
+
+interface StaffSetupFormProps {
+  tenantId: string;
+  stepCode: string;
+  sourceStaff?: OnboardingStaffSourceItem[];
+}
+
+function StaffSetupForm({ tenantId, stepCode, sourceStaff }: StaffSetupFormProps) {
+  const theme = useClinicTheme();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([
-    {
-      id: '1',
-      name: '',
-      role: 'doctor',
-      specialization: '',
-      phone: '',
-      email: '',
-    },
-  ]);
-  const [draftRestored, setDraftRestored] = useState(false);
   const { setStaff, getStepData } = useWizardStore();
-
-  const submitStepMutation = useSubmitStepMutation(tenantId, stepCode);
-
-  useEffect(() => {
-    fetchStaffData();
-  }, [tenantId]);
-
-  useEffect(() => {
-    if (!loading) {
-      const timeout = setTimeout(() => {
-        setStaff({
-          staff_members: staffMembers.map((member) => ({
-            name: member.name,
-            role: member.role,
-            specialization: member.specialization || undefined,
-            phone: member.phone,
-            email: member.email,
-          })),
-        });
-      }, 500);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [loading, staffMembers, setStaff]);
-
-  const fetchStaffData = async () => {
-    try {
-      setLoading(true);
-      console.log('[StaffSetupScreen] Fetching staff for tenant:', tenantId);
-      
-      const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/staff`);
-      console.log('[StaffSetupScreen] Staff response:', JSON.stringify(response.data, null, 2));
-      
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-        // Map existing staff to form format
-        const existingStaff = response.data.map((staff: any) => ({
+  const draft = getStepData(stepCode) || getStepData('staff_and_roles');
+  const hasSourceStaff = Boolean(sourceStaff?.length);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() =>
+    hasSourceStaff
+      ? sourceStaff!.map((staff) => ({
           id: staff.id || Date.now().toString(),
           name: staff.name || '',
           role: staff.role || 'doctor',
           specialization: staff.specialization || '',
           phone: staff.phone || '',
           email: staff.email || '',
-        }));
-        setStaffMembers(existingStaff);
-        console.log('[StaffSetupScreen] Loaded existing staff:', existingStaff.length);
-      } else {
-        const draft = getStepData(stepCode) || getStepData('staff_and_roles');
-        if (draft?.staff_members && Array.isArray(draft.staff_members)) {
-          const draftStaff = draft.staff_members.map((member: any, index: number) => ({
+        }))
+      : draft?.staff_members && Array.isArray(draft.staff_members)
+        ? draft.staff_members.map((member: any, index: number) => ({
             id: String(index + 1),
             name: member.name || '',
             role: member.role || 'doctor',
             specialization: member.specialization || '',
             phone: member.phone || '',
             email: member.email || '',
-          }));
-          setStaffMembers(draftStaff);
-          setDraftRestored(true);
-          return;
-        }
+          }))
+        : [
+            {
+              id: '1',
+              name: '',
+              role: 'doctor',
+              specialization: '',
+              phone: '',
+              email: '',
+            },
+          ]
+  );
+  const [draftRestored, setDraftRestored] = useState(
+    !hasSourceStaff && Boolean(draft?.staff_members && Array.isArray(draft.staff_members))
+  );
+  const submitStepMutation = useSubmitStepMutation(tenantId, stepCode);
 
-        console.log('[StaffSetupScreen] No existing staff, showing empty form');
-      }
-    } catch (error: any) {
-      console.error('[StaffSetupScreen] Error fetching staff:', error);
-      const draft = getStepData(stepCode) || getStepData('staff_and_roles');
-      if (draft?.staff_members && Array.isArray(draft.staff_members)) {
-        const draftStaff = draft.staff_members.map((member: any, index: number) => ({
-          id: String(index + 1),
-          name: member.name || '',
-          role: member.role || 'doctor',
-          specialization: member.specialization || '',
-          phone: member.phone || '',
-          email: member.email || '',
-        }));
-        setStaffMembers(draftStaff);
-        setDraftRestored(true);
-        return;
-      }
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setStaff({
+        staff_members: staffMembers.map((member) => ({
+          name: member.name,
+          role: member.role,
+          specialization: member.specialization || undefined,
+          phone: member.phone,
+          email: member.email,
+        })),
+      });
+    }, 500);
 
-      // If API fails, keep the default empty form
-      console.log('[StaffSetupScreen] Using default empty form');
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => clearTimeout(timeout);
+  }, [staffMembers, setStaff]);
 
   const addStaffMember = () => {
     setDraftRestored(false);
@@ -233,17 +219,6 @@ export function StaffSetupScreen({ tenantId, stepCode = 'staff_setup' }: StaffSe
       Alert.alert('Error', error.message || 'Failed to save staff members');
     }
   };
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary.default} />
-        <Text style={[theme.typography.body2, { color: theme.colors.text.secondary, marginTop: theme.spacing.md }]}>
-          Loading staff data...
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <ScrollView

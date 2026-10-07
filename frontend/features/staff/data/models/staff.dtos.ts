@@ -210,6 +210,16 @@ export interface PaginatedStaffResponse {
   limit: number;
 }
 
+/** Legacy staff shape consumed by the onboarding staff setup form. */
+export interface OnboardingStaffSourceItem {
+  id?: string | null;
+  name?: string | null;
+  role?: string | null;
+  specialization?: string | null;
+  phone?: string | null;
+  email?: string | null;
+}
+
 /** Paginated response for leaves */
 export interface PaginatedLeaveResponse {
   items: StaffLeaveResponse[];

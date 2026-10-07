@@ -18,6 +18,7 @@ import {
   ListStaffLeaveParams,
   PaginatedStaffResponse,
   PaginatedLeaveResponse,
+  OnboardingStaffSourceItem,
 } from '../models/staff.dtos';
 
 // ============================================
@@ -37,6 +38,17 @@ export const listStaffApi = async (
     { params }
   );
   return response.data;
+};
+
+/**
+ * Read the legacy array response used by the onboarding staff form.
+ * Successful non-array responses preserve the form's historical empty state.
+ */
+export const listOnboardingStaffApi = async (
+  tenantId: string
+): Promise<OnboardingStaffSourceItem[]> => {
+  const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/staff`);
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 /**
