@@ -157,11 +157,19 @@ export const createEpisodeApi = async (
   tenantId: string,
   request: EpisodeCreateRequest
 ): Promise<Episode> => {
-  const response = await axiosClient.post(
-    `/api/v1/clinic/${tenantId}/episodes`,
-    request
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(
+      `/api/v1/clinic/${tenantId}/episodes`,
+      request
+    );
+    return response.data;
+  } catch (error: any) {
+    const detail = error?.response?.data?.detail;
+    if (detail) {
+      throw new Error(detail);
+    }
+    throw error;
+  }
 };
 
 /**
