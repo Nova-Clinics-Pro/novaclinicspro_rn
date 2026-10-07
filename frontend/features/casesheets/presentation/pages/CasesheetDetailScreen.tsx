@@ -25,7 +25,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
@@ -44,10 +44,14 @@ import {
   getAllowedTransitions,
 } from '../../data/models/casesheets.dtos';
 import type { CasesheetStatus } from '../../data/models/casesheets.dtos';
-import { useCreateTreatmentSheetMutation } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
+import { useClientDetailQuery } from '../../../clients/data/repositories/clients.repository.impl';
+import { useEpisodeQuery } from '../../../episodes/data/repositories/episodes.repository.impl';
+import {
+  useCreateTreatmentSheetMutation,
+  useTreatmentSheetsByEpisodeQuery,
+} from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { CasesheetStatusBadge } from '../components/CasesheetStatusBadge';
 import { EmptyCasesheetsState } from '../components/EmptyCasesheetsState';
-import { useQueryClient } from '@tanstack/react-query';
 
 const DURATION_OPTIONS = [
   { days: 7, label: '7 Days' },
@@ -82,54 +86,18 @@ export const CasesheetDetailScreen: React.FC = () => {
   } = useCasesheetDetailQuery(tenantId, casesheetId);
 
   // Fetch client details to show name, age, gender, phone
-  const { data: client, isLoading: isClientLoading } = useQuery({
-    queryKey: ['client', tenantId, clientId],
-    queryFn: async () => {
-      const { axiosClient } = await import('../../../../core/api/axiosClient');
-      const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/clients/${clientId}`);
-      console.log('📋 Client data loaded:', {
-        full_name: response.data.full_name,
-        age: response.data.age,
-        age_type: typeof response.data.age,
-        age_is_null: response.data.age === null,
-        age_is_undefined: response.data.age === undefined,
-        gender: response.data.gender,
-        gender_type: typeof response.data.gender,
-        phone: response.data.phone,
-        raw: response.data
-      });
-      return response.data;
-    },
-    enabled: !!tenantId && !!clientId,
-  });
+  const { data: client } = useClientDetailQuery(tenantId, clientId);
 
   // Fetch episode details to show disease name in treatment sheet section
-  const { data: episode } = useQuery({
-    queryKey: ['episode', tenantId, casesheet?.episode_id],
-    queryFn: async () => {
-      const { axiosClient } = await import('../../../../core/api/axiosClient');
-      const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/episodes/${casesheet?.episode_id}`);
-      return response.data;
-    },
-    enabled: !!tenantId && !!casesheet?.episode_id,
-  });
+  useEpisodeQuery(tenantId, casesheet?.episode_id || '');
 
   // Fetch treatment sheets for this episode
   // Primary: Use casesheet.treatment_sheet_id if available
   // Fallback: Fetch by episode_id (always enabled as backend may not update treatment_sheet_id yet)
-  const { data: treatmentSheetsData } = useQuery({
-    queryKey: ['treatment-sheets-by-episode', tenantId, casesheet?.episode_id],
-    queryFn: async () => {
-      const { axiosClient } = await import('../../../../core/api/axiosClient');
-      const response = await axiosClient.get(
-        `/api/v1/clinic/${tenantId}/treatment-sheets`,
-        { params: { episode_id: casesheet?.episode_id } }
-      );
-      console.log('[CasesheetDetail] Treatment sheets by episode response:', response.data);
-      return response.data;
-    },
-    enabled: !!tenantId && !!casesheet?.episode_id,
-  });
+  const { data: treatmentSheetsData } = useTreatmentSheetsByEpisodeQuery(
+    tenantId,
+    casesheet?.episode_id || ''
+  );
 
   // Determine which treatment sheet to show:
   // 1. First priority: casesheet.treatment_sheet_id (direct link from backend)
