@@ -67,6 +67,7 @@ export class NotificationDeviceLifecycleService {
   private token: string | null = null;
   private disposeReceived: (() => void) | null = null;
   private disposeResponse: (() => void) | null = null;
+  private cleanupInFlight: Promise<void> | null = null;
 
   async initialize(identity: NotificationIdentity, onReceived: (item: ReceivedNotification) => void, onResponse: (item: NotificationResponse) => void): Promise<{ permissionStatus: PushPermissionStatus; token: string | null }> {
     if (this.identity && (this.identity.tenantId !== identity.tenantId || this.identity.userId !== identity.userId)) await this.cleanupForIdentity(this.identity);
@@ -151,13 +152,35 @@ export class NotificationDeviceLifecycleService {
   }
 
   async cleanupForIdentity(identity = this.identity): Promise<void> {
-    const token = this.token || await expoPushService.getPushToken();
+    if (this.cleanupInFlight) return this.cleanupInFlight;
+    this.cleanupInFlight = this.performCleanup(identity).finally(() => {
+      this.cleanupInFlight = null;
+    });
+    return this.cleanupInFlight;
+  }
+
+  private async performCleanup(identity: NotificationIdentity | null): Promise<void> {
     this.disposeListeners();
-    if (identity && token) {
-      try { await notificationRepository.unregisterDevice(identity.tenantId, token); } catch { /* best-effort */ }
-      try { await expoPushService.unregisterDevice(token, identity.userId); } catch { /* local cleanup is best-effort */ }
+    const retainedToken = this.token;
+    this.identity = null;
+    this.token = null;
+
+    let token = retainedToken;
+    if (!token) {
+      try {
+        token = await expoPushService.getPushToken();
+      } catch {
+        // A provider read failure must not prevent listener disposal or logout.
+        return;
+      }
     }
-    this.identity = null; this.token = null;
+
+    if (identity && token) {
+      await Promise.allSettled([
+        notificationRepository.unregisterDevice(identity.tenantId, token),
+        expoPushService.unregisterDevice(token, identity.userId),
+      ]);
+    }
   }
 }
 

@@ -162,4 +162,22 @@ describe('NotificationDeviceLifecycleService', () => {
 
     expect(mockUnregisterDevice).toHaveBeenCalledWith('ExponentPushToken[token-a]', 'user-a');
   });
+
+  it('shares in-flight cleanup so logout and unauthenticated observation cannot duplicate unregister work', async () => {
+    const service = new NotificationDeviceLifecycleService();
+    await service.initialize(identity, jest.fn(), jest.fn());
+    let releaseRemote!: () => void;
+    mockUnregisterRemoteDevice.mockImplementationOnce(
+      () => new Promise<void>(resolve => { releaseRemote = resolve; })
+    );
+
+    const first = service.cleanupForIdentity(identity);
+    const second = service.cleanupForIdentity(identity);
+    expect(mockUnregisterRemoteDevice).toHaveBeenCalledTimes(1);
+    expect(mockUnregisterDevice).toHaveBeenCalledTimes(1);
+
+    releaseRemote();
+    await first;
+    await second;
+  });
 });

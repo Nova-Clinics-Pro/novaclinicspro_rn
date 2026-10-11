@@ -65,8 +65,15 @@ jest.mock('../../../features/auth/application/auth-session.service', () => ({
   },
 }));
 
+jest.mock('../../../features/notifications/application/notification-device-lifecycle.service', () => ({
+  notificationDeviceLifecycleService: {
+    cleanupForIdentity: jest.fn().mockResolvedValue(undefined),
+    disposeListeners: jest.fn(),
+  },
+}));
+
 jest.mock('../../../features/auth/presentation/providers/auth.store', () => ({
-  useAuthStore: () => ({
+  useAuthStore: Object.assign(() => ({
     currentUser: null,
     isAuthenticated: true,
     isLoading: false,
@@ -75,6 +82,12 @@ jest.mock('../../../features/auth/presentation/providers/auth.store', () => ({
     setCurrentUser: jest.fn(),
     setSelectedClinic: jest.fn(),
     clearSession: mockClearSession,
+  }), {
+    getState: () => ({
+      currentUser: null,
+      selectedClinicId: null,
+      clearSession: mockClearSession,
+    }),
   }),
 }));
 

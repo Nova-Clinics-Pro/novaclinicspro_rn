@@ -5,13 +5,12 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { queryClient } from '../../../../core/api/queryClient';
 import { setLoggingOut } from '../../../../core/api/authGuard';
 import { logError } from '../../../../core/utils/errorHandler';
 import { useAuthStore } from '../providers/auth.store';
 import { authSessionService } from '../../application/auth-session.service';
+import { unifiedLogoutService } from '../../application/unified-logout.service';
 import { AuthUserSession, getLandingRoute } from '../../domain/entities/auth.entity';
-import { clearWizardDraftStorageForIdentity } from '../../../onboarding/presentation/stores/wizard.store';
 
 interface UseAuthReturn {
   currentUser: AuthUserSession | null;
@@ -27,6 +26,37 @@ interface UseAuthReturn {
   navigateToLanding: () => void;
 }
 
+function navigateBasedOnStatus(
+  router: { replace: (route: any) => void },
+  user: AuthUserSession
+): void {
+  if (user.isOrgAdmin) {
+    router.replace('/super-admin');
+    return;
+  }
+
+  switch (user.applicationStatus) {
+    case 'onboarding':
+      router.replace(user.tenantId ? `/onboarding/wizard-flow?tenantId=${user.tenantId}` : '/');
+      break;
+    case 'approved':
+    case 'pending_review':
+    case 'rejected':
+    case 'draft':
+      router.replace('/');
+      break;
+    case 'active': {
+      const userRole = user.roles?.[0]?.toLowerCase() || '';
+      if (userRole === 'doctor') router.replace('/doctor');
+      else if (userRole === 'therapist') router.replace('/therapist');
+      else router.replace('/clinic-admin');
+      break;
+    }
+    default:
+      router.replace('/');
+  }
+}
+
 export const useAuth = (): UseAuthReturn => {
   const router = useRouter();
   const {
@@ -35,7 +65,6 @@ export const useAuth = (): UseAuthReturn => {
     isLoading,
     selectedClinicId,
     setSelectedClinic,
-    clearSession,
   } = useAuthStore();
 
   /**
@@ -63,7 +92,7 @@ export const useAuth = (): UseAuthReturn => {
       setLoggingOut(false);
       try {
         const userSession = await authSessionService.login(email, password);
-        navigateBasedOnStatus(userSession);
+        navigateBasedOnStatus(router, userSession);
       } catch (error) {
         logError('auth.login', error);
         throw error;
@@ -72,76 +101,16 @@ export const useAuth = (): UseAuthReturn => {
     [router]
   );
 
-  /**
-   * Logout - clears ALL session state including selectedClinicId
-   *
-   * T-A.4 (FR-A5, ADR-P1-01, design.md §6.2): order is unauthenticated-flag
-   * -> cancel -> clear -> navigate, with the remote Supabase signOut call
-   * moved to best-effort AFTER local cleanup. Previously, signOut() was
-   * awaited FIRST, so a signOut failure (e.g. network drop) meant
-   * clearSession()/cancelQueries()/clear() were never reached at all —
-   * the user was left fully authenticated locally despite attempting to
-   * log out (see tests/features/auth/logoutBoundary.characterization.test.tsx's
-   * baseline for this gap, T-0.4). Local logout must not depend on a
-   * network call succeeding.
-   */
+  /** Presentation-compatible entry point for the canonical explicit-user logout command. */
   const logout = useCallback(async () => {
-    // Step 1 (synchronous, unconditional): flip the shared flag axiosClient's
-    // request interceptor checks, before anything else — closes the window
-    // where an in-flight or React-Query-untracked request could still be
-    // issued with a valid token during this transition.
-    setLoggingOut(true);
-    try {
-      const outgoingTenantId = selectedClinicId || currentUser?.tenantId || null;
-      const outgoingUserId = currentUser?.userId || currentUser?.id || null;
-
-      // Step 2: clear local session (includes selectedClinicId reset) before
-      // any asynchronous draft cleanup. clearSession() itself marks
-      // isAuthenticated:false synchronously as its first action, immediately
-      // disabling every authenticated query gate.
-      const clearSessionPromise = clearSession();
-
-      // Step 3: cancel any in-flight queries and wipe the cache. Without
-      // this, a screen that's still mounted during the navigation
-      // transition (e.g. one using useFocusEffect to call refetch()
-      // directly) can still fire a request — refetch() bypasses each
-      // query's `enabled` guard. Between this and the authGuard flag above,
-      // any such request goes out unauthenticated and is rejected by the
-      // backend with 401 "Authorization header required".
-      await queryClient.cancelQueries();
-      queryClient.clear();
-
-      if (outgoingUserId) {
-        await clearWizardDraftStorageForIdentity({
-          tenantId: outgoingTenantId,
-          userId: outgoingUserId,
-        });
-      }
-      await clearSessionPromise;
-
-      // Step 4: navigate after state updates settle so the root Stack stays
-      // mounted.
-      requestIdleCallback(() => {
+    return unifiedLogoutService.logout({
+      navigateToLogin: () => {
+        requestIdleCallback(() => {
         router.replace('/login');
-      });
-
-      // Best-effort remote signOut, AFTER local cleanup — its failure must
-      // not prevent local logout, which has already completed above.
-      try {
-        await authSessionService.signOutProviderBestEffort();
-      } catch (signOutError) {
-        logError('auth.logout.provider_signout', signOutError);
-      }
-    } catch (error) {
-      // A genuine failure in local cleanup itself (clearSession/cancelQueries/
-      // clear) — distinct from the signOut failure handled above, which is
-      // intentionally swallowed. Re-thrown so the UI can still surface it.
-      logError('auth.logout', error);
-      throw error;
-    } finally {
-      setLoggingOut(false);
-    }
-  }, [clearSession, currentUser, router, selectedClinicId]);
+        });
+      },
+    });
+  }, [router]);
 
   /**
    * Bootstrap session on app start
@@ -162,68 +131,6 @@ export const useAuth = (): UseAuthReturn => {
       throw error;
     }
   }, []);
-
-  /**
-   * Navigate based on user status and permissions
-   * Priority:
-   * 1. Super admin → /super-admin
-   * 2. Application status → onboarding flow or active
-   * 3. Fallback → /
-   */
-  const navigateBasedOnStatus = (user: AuthUserSession) => {
-    // Super admin always goes to super-admin dashboard
-    if (user.isOrgAdmin) {
-      router.replace('/super-admin');
-      return;
-    }
-
-    // Route based on application status
-    switch (user.applicationStatus) {
-      case 'onboarding':
-        if (user.tenantId) {
-          router.replace(`/onboarding/wizard-flow?tenantId=${user.tenantId}`);
-        } else {
-          router.replace('/');
-        }
-        break;
-        
-      case 'approved':
-        router.replace('/');
-        break;
-        
-      case 'active':
-        // Route to appropriate dashboard based on role
-        const userRole = user.roles?.[0]?.toLowerCase() || '';
-        
-        if (userRole === 'doctor') {
-          router.replace('/doctor');
-        } else if (userRole === 'therapist') {
-          router.replace('/therapist');
-        } else if (['clinic owner', 'clinic_owner', 'clinic admin', 'clinic_admin', 'receptionist', 'tenant admin', 'tenant_admin'].includes(userRole)) {
-          router.replace('/clinic-admin');
-        } else {
-          // Default to clinic-admin for unknown roles
-          router.replace('/clinic-admin');
-        }
-        break;
-        
-      case 'pending_review':
-        router.replace('/');
-        break;
-        
-      case 'rejected':
-        router.replace('/');
-        break;
-        
-      case 'draft':
-        router.replace('/');
-        break;
-        
-      default:
-        // No tenant or unknown status - fallback to index
-        router.replace('/');
-    }
-  };
 
   return {
     currentUser,
