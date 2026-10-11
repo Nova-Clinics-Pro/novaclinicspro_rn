@@ -183,7 +183,7 @@ describe('PrescriptionModule (R3A · T-B.2)', () => {
       await (fireEvent.press(utils.getByText('Save Prescription')) as unknown as Promise<void>)?.catch(() => {});
     });
 
-    expect(utils.getByText('rx failed')).toBeTruthy();
+    expect(utils.getByText('Save failed')).toBeTruthy();
     // Draft is preserved, not cleared, after the failed save.
     expect(utils.getByDisplayValue('Amoxicillin')).toBeTruthy();
   });
@@ -229,7 +229,7 @@ describe('PrescriptionModule (R3A · T-B.2)', () => {
         await (fireEvent.press(utils.getByText('Save Prescription')) as unknown as Promise<void>)?.catch(() => {});
       });
 
-      expect(utils.getByText('network down')).toBeTruthy();
+      expect(utils.getByText('Save failed')).toBeTruthy();
     });
   });
 

@@ -70,6 +70,7 @@ import { CaseSheetExtensionsSection } from '../../../../casesheets/presentation/
 import { renderSection } from './sectionRenderer';
 import { CaseSheetContributionHistory } from './CaseSheetContributionHistory';
 import { CaseSheetVersionPanel } from '../../../../casesheets/presentation/components/CaseSheetVersionPanel';
+import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
 
 // R3B (T-B.1, ADR-R3B-05): fixed set, no add/remove — reproduces
 // AyurvedicAssessmentSection's own pre-T-B.1 behavior bit-for-bit (T-0.2
@@ -312,9 +313,8 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
 
         setCasesheetSaveError(null);
         activeSections.forEach((k) => setSectionSaveStatus(k, 'saved'));
-      } catch (err: any) {
-        const msg = err?.response?.data?.detail ?? err?.message ?? 'Save failed';
-        setCasesheetSaveError(msg);
+      } catch (err: unknown) {
+        setCasesheetSaveError(toClinicalWorkspaceError(err, 'Save failed').message);
         activeSections.forEach((k) => setSectionSaveStatus(k, 'error'));
         throw err;
       } finally {

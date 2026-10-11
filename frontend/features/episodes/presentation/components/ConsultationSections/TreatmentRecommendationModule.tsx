@@ -58,6 +58,7 @@ import {
 } from '../../hooks/useConsultationWorkspace';
 import { TreatmentRecommendationSection } from './TreatmentRecommendationSection';
 import { renderSection } from './sectionRenderer';
+import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
 
 const DEFAULT_TREATMENT_DRAFT: TreatmentRecommendationDraft = {
   recommendedTherapy: '',
@@ -308,9 +309,8 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
       } else {
         refetchTreatmentSheet();
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? err?.message ?? 'Failed to send to scheduling';
-      setTreatmentSaveError(msg);
+    } catch (err: unknown) {
+      setTreatmentSaveError(toClinicalWorkspaceError(err, 'Failed to send to scheduling').message);
       throw err;
     } finally {
       setIsTreatmentSaving(false);

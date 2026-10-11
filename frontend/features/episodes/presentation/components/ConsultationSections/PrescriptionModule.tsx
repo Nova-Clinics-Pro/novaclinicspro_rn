@@ -50,6 +50,7 @@ import { SectionKey, SectionProgress, SectionProgressStatus, SectionSaveStatus }
 import { PrescriptionEditingCore } from '../../../../prescriptions/presentation/components/PrescriptionEditingCore';
 import { renderSection } from './sectionRenderer';
 import { PrescriptionVersionPanel } from '../../../../prescriptions/presentation/components/PrescriptionVersionPanel';
+import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
 
 // R3B (T-B.4, ADR-R3B-05): fixed set — reproduces PrescriptionSection's own
 // pre-T-B.4 advice-field behavior bit-for-bit (T-0.3 baseline). The
@@ -200,9 +201,8 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
       }
       prescriptionDirtyRef.current = false;
       setSectionSaveStatus('saved');
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? err?.message ?? 'Save failed';
-      setPrescriptionSaveError(msg);
+    } catch (err: unknown) {
+      setPrescriptionSaveError(toClinicalWorkspaceError(err, 'Save failed').message);
       setSectionSaveStatus('error');
       throw err;
     } finally {

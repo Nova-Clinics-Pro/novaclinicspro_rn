@@ -36,6 +36,7 @@ import {
   useCreateTreatmentPlanMutation,
   useTreatmentPlanByRecommendationQuery,
 } from '../../../../treatmentSheets/data/repositories/treatmentPlans.repository.impl';
+import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
 
 const PLAN_CREATE_PERMISSION = 'treatment_sheet.order';
 const INELIGIBLE_ORDER_STATES = new Set(['DRAFT', 'CANCELLED']);
@@ -206,7 +207,7 @@ export const TreatmentPlanModule: React.FC = () => {
       </View>
       {createMutation.isError && (
         <Text style={[typography.body2, { color: colors.feedback.error, marginBottom: spacing.sm }]}>
-          {(createMutation.error as any)?.response?.status === 404
+          {toClinicalWorkspaceError(createMutation.error, t('treatmentPlan.createFailed')).code === 'NOT_FOUND'
             ? t('treatmentPlan.recommendationIneligible')
             : t('treatmentPlan.createFailed')}
         </Text>

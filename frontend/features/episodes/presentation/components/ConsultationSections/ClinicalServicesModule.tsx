@@ -47,6 +47,7 @@ import { useReportSaveStatus } from '../../context/WorkspaceSaveStatusContext';
 import { SectionKey, SectionProgress, SectionProgressStatus, SectionSaveStatus } from '../../hooks/useConsultationWorkspace';
 import { ClinicalServiceDraft, ClinicalServicesSection } from './ClinicalServicesSection';
 import { renderSection } from './sectionRenderer';
+import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
 
 const EMPTY_DRAFT: ClinicalServiceDraft = { service_type: '', description: '' };
 
@@ -107,9 +108,8 @@ export const ClinicalServicesModule: React.FC<ClinicalServicesModuleProps> = ({ 
         queryClient.invalidateQueries({ queryKey: clinicalServicesKeys.lists() });
       }
       setSectionSaveStatus('saved');
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? err?.message ?? 'Save failed';
-      setRecordError(msg);
+    } catch (err: unknown) {
+      setRecordError(toClinicalWorkspaceError(err, 'Save failed').message);
       setSectionSaveStatus('error');
     } finally {
       setIsRecording(false);

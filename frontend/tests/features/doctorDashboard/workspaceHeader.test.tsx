@@ -62,6 +62,9 @@ jest.mock('../../../features/clinicalServices/data/datasources/clinicalServices.
 }));
 jest.mock('../../../core/api/axiosClient', () => ({
   axiosClient: { get: jest.fn(), post: jest.fn() },
+  normalizeError: (error: unknown) => ({
+    status: (error as { response?: { status?: number } })?.response?.status,
+  }),
 }));
 
 const episodeDetails = {

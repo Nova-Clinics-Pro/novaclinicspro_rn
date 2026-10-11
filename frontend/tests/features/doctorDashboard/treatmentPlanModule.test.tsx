@@ -8,6 +8,7 @@
  * controls are ever shown.
  */
 import React from 'react';
+import { AxiosError } from 'axios';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TreatmentPlanModule } from '../../../features/episodes/presentation/components/ConsultationSections/TreatmentPlanModule';
@@ -213,7 +214,9 @@ describe('TreatmentPlanModule (T-FE-E.2 closure, T-BE-D.4a)', () => {
   });
 
   it('maps a 404 (ineligible/not-found) creation response to the ineligible-recommendation message', async () => {
-    (createTreatmentPlanApi as jest.Mock).mockRejectedValue({ response: { status: 404 } });
+    (createTreatmentPlanApi as jest.Mock).mockRejectedValue(
+      new AxiosError('not found', undefined, undefined, undefined, { status: 404, data: {} } as any),
+    );
     const { findByText, getAllByText } = renderModule();
     fireEvent.press(await findByText('Create Treatment Plan'));
     await waitFor(() => expect(getAllByText('This Recommendation is not yet eligible for a Treatment Plan.').length).toBeGreaterThan(0));
