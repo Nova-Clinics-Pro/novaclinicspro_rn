@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { useRouter } from 'expo-router';
 import { PrescriptionStandaloneScreen } from '../../../features/prescriptions/presentation/pages/PrescriptionStandaloneScreen';
+import { PrescriptionOperationError } from '../../../features/prescriptions/domain/errors/prescriptionOperationError';
 import { useAuth } from '../../../features/auth/presentation/hooks/useAuth';
 import {
   usePrescriptionDetailQuery,
@@ -138,11 +139,11 @@ describe('PrescriptionStandaloneScreen (R3B · T-B.5)', () => {
       );
     });
 
-    it('reactively handles PRESCRIPTION_ALREADY_EXISTS on create (CreatePrescriptionScreen\'s own error-response pattern, not a proactive guard)', async () => {
+    it('reactively handles the semantic already-existing prescription outcome on create', async () => {
       const alertSpy = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
-      const mutateAsync = jest.fn().mockRejectedValue({
-        response: { data: { detail: { error: 'PRESCRIPTION_ALREADY_EXISTS', prescription_id: 'existing-rx-1', message: 'This visit already has a prescription.' } } },
-      });
+      const mutateAsync = jest.fn().mockRejectedValue(
+        new PrescriptionOperationError('ALREADY_EXISTS', 'existing-rx-1')
+      );
       (useCreatePrescriptionMutation as jest.Mock).mockReturnValue({ mutateAsync, isPending: false });
 
       const { getByPlaceholderText, getByText } = render(<PrescriptionStandaloneScreen clientId="client-1" />);

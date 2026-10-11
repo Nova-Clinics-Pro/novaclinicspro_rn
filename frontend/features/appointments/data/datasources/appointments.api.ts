@@ -375,11 +375,12 @@ export const validateAppointmentApi = async (
 export const generateTherapyPlanApi = async (
   payload: TherapyPlanRequest
 ): Promise<TherapyPlanResponse> => {
-  const response = await axiosClient.post(
-    `/api/v1/appointments/therapy-plan`,
-    payload
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(`/api/v1/appointments/therapy-plan`, payload);
+    return response.data;
+  } catch (error) {
+    throw normalizeAppointmentCreationError(error);
+  }
 };
 
 /**
@@ -402,13 +403,8 @@ export const bulkCreateAppointmentsApi = async (
       payload
     );
     return response.data;
-  } catch (err: any) {
-    // Surface count-mismatch 400 errors directly to the user
-    const detail = err?.response?.data?.detail || err?.response?.data?.message;
-    if (err?.response?.status === 400 && detail) {
-      throw new Error(detail);
-    }
-    throw err;
+  } catch (error) {
+    throw normalizeAppointmentCreationError(error);
   }
 };
 

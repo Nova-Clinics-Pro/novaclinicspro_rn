@@ -390,7 +390,7 @@ export const useValidateAppointmentMutation = () => {
  * Hook to generate therapy plan (preview)
  */
 export const useGenerateTherapyPlanMutation = () => {
-  return useMutation<TherapyPlanResponse, Error, TherapyPlanRequest>({
+  return useMutation<TherapyPlanResponse, AppointmentCreationError, TherapyPlanRequest>({
     mutationFn: (payload) => generateTherapyPlanApi(payload),
   });
 };
@@ -401,7 +401,7 @@ export const useGenerateTherapyPlanMutation = () => {
 export const useBulkCreateAppointmentsMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<BulkCreateResponse, Error, BulkCreateRequest>({
+  return useMutation<BulkCreateResponse, AppointmentCreationError, BulkCreateRequest>({
     mutationFn: (payload) => bulkCreateAppointmentsApi(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() });

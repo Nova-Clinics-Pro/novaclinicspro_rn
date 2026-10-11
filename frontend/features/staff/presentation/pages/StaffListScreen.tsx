@@ -154,14 +154,8 @@ export const StaffListScreen: React.FC = () => {
         await createMutation.mutateAsync(data);
         setShowAddModal(false);
         Alert.alert(t('common.success'), t('success.created'));
-      } catch (err: any) {
-        const message =
-          err?.response?.data?.error ||
-          err?.response?.data?.message ||
-          err?.response?.data?.detail ||
-          err?.message ||
-          t(ErrorTokens.staff.createFailed);
-        Alert.alert(t('common.error'), message);
+      } catch {
+        Alert.alert(t('common.error'), t(ErrorTokens.staff.createFailed));
       }
     },
     [createMutation]
@@ -181,14 +175,8 @@ export const StaffListScreen: React.FC = () => {
               try {
                 await deleteMutation.mutateAsync(staffId);
                 Alert.alert('Success', 'Staff member deleted');
-              } catch (err: any) {
-                const message =
-                  err?.response?.data?.error ||
-                  err?.response?.data?.message ||
-                  err?.response?.data?.detail ||
-                  err?.message ||
-                  'Failed to delete staff';
-                Alert.alert('Error', message);
+              } catch {
+                Alert.alert('Error', 'Failed to delete staff');
               }
             },
           },
@@ -298,7 +286,7 @@ export const StaffListScreen: React.FC = () => {
           <Ionicons name="alert-circle" size={64} color={colors.error.main} />
           <Text style={styles.errorTitle}>Could not load staff</Text>
           <Text style={styles.errorText}>
-            {error?.message || 'Please check your connection and try again'}
+            Please check your connection and try again
           </Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
             <Text style={styles.retryButtonText}>Retry</Text>

@@ -38,6 +38,7 @@ import type {
   ClinicFeedback,
 } from '../../data/models/feedback.dtos';
 import { formatFeedbackDate } from '../../domain/entities/feedback.entity';
+import { FeedbackFormError } from '../../domain/errors/feedbackFormError';
 
 // ==================== Form Schema ====================
 
@@ -169,9 +170,9 @@ export const FeedbackFormScreen: React.FC = () => {
 
   // Error state
   if (isError || !formData) {
-    const errorMessage = (error as any)?.response?.status === 404
+    const errorMessage = error instanceof FeedbackFormError && error.kind === 'INVALID_LINK'
       ? 'This feedback link is invalid or has expired.'
-      : (error as any)?.response?.status === 400
+      : error instanceof FeedbackFormError && error.kind === 'ALREADY_SUBMITTED'
       ? 'This feedback has already been submitted.'
       : 'Could not load the feedback form. Please try again later.';
 

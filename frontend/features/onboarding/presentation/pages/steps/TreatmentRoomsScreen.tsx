@@ -201,10 +201,9 @@ function TreatmentRoomsForm({ tenantId, stepCode, sourceRooms }: TreatmentRoomsF
         // Navigate to setup wizard which will fetch fresh status
         router.replace(`/onboarding/setup-wizard?tenantId=${tenantId}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('[TreatmentRoomsScreen] Submit error:', error);
-      console.error('[TreatmentRoomsScreen] Error response:', error.response?.data);
-      Alert.alert('Error', error.message || 'Failed to save rooms');
+      Alert.alert('Error', 'Failed to save rooms');
     }
   };
 

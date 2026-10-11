@@ -22,6 +22,7 @@ import { useCreatePrescriptionMutation } from '../../index';
 import { PrescriptionForm, PrescriptionFormData } from '../components/PrescriptionForm';
 import { useAppointmentDetailQuery } from '../../../appointments/data/repositories/appointments.repository.impl';
 import { useEpisodeQuery } from '../../../episodes/data/repositories/episodes.repository.impl';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 
 export const CreatePrescriptionScreen: React.FC = () => {
   const router = useRouter();
@@ -67,18 +68,17 @@ export const CreatePrescriptionScreen: React.FC = () => {
         pathname: '/clinic-admin/clients/[clientId]/prescriptions/[prescriptionId]' as any,
         params: { clientId, prescriptionId: result.id },
       });
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      if (detail?.error === 'PRESCRIPTION_ALREADY_EXISTS' && detail?.prescription_id) {
+    } catch (error) {
+      if (error instanceof PrescriptionOperationError && error.kind === 'ALREADY_EXISTS' && error.existingPrescriptionId) {
         Alert.alert(
           'Prescription Already Exists',
-          detail.message || 'This visit already has a prescription.',
+          'This visit already has a prescription.',
           [
             {
               text: 'View Prescription',
               onPress: () => router.replace({
                 pathname: '/clinic-admin/clients/[clientId]/prescriptions/[prescriptionId]' as any,
-                params: { clientId, prescriptionId: detail.prescription_id },
+                params: { clientId, prescriptionId: error.existingPrescriptionId },
               }),
             },
           ]
@@ -86,14 +86,14 @@ export const CreatePrescriptionScreen: React.FC = () => {
         return;
       }
       // Handle EPISODE_MISMATCH error
-      if (err.error_code === 'EPISODE_MISMATCH' || err.message?.includes('episode_id must match')) {
+      if (error instanceof PrescriptionOperationError && error.kind === 'EPISODE_MISMATCH') {
         Alert.alert(
           'Episode Mismatch',
           'Document episode must match appointment episode. Please try again.',
           [{ text: 'OK' }]
         );
       } else {
-        Alert.alert('Error', err.message || 'Failed to create prescription.');
+        Alert.alert('Error', 'Failed to create prescription.');
       }
     }
   }, [createMutation, clientId, appointmentId, episodeId, router]);

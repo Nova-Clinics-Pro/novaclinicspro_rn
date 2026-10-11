@@ -5,6 +5,7 @@
 
 import { axiosClient } from '../../../../core/api/axiosClient';
 import axios from 'axios';
+import { FeedbackFormError } from '../../domain/errors/feedbackFormError';
 import type {
   FeedbackFormData,
   FeedbackSubmitPayload,
@@ -26,11 +27,15 @@ const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
  * GET /api/v1/feedback/{token}
  */
 export async function getFeedbackFormApi(token: string): Promise<FeedbackFormData> {
-  // Use raw axios for public endpoint (no auth header)
-  const response = await axios.get<FeedbackFormData>(
-    `${API_BASE}/api/v1/feedback/${token}`
-  );
-  return response.data;
+  try {
+    const response = await axios.get<FeedbackFormData>(
+      `${API_BASE}/api/v1/feedback/${token}`
+    );
+    return response.data;
+  } catch (error) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    throw new FeedbackFormError(status === 404 ? 'INVALID_LINK' : status === 400 ? 'ALREADY_SUBMITTED' : 'LOAD_FAILED');
+  }
 }
 
 /**

@@ -776,9 +776,8 @@ export const PreviewAppointmentsScreen: React.FC = () => {
           console.log('[PreviewAppointments] Sessions loaded:', mappedSessions.length);
           console.log('[PreviewAppointments] Has conflicts:', response.has_conflicts);
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('[PreviewAppointments] Failed to generate therapy plan:', error);
-        console.error('[PreviewAppointments] Error response:', error?.response?.data);
       }
     };
 
@@ -1021,9 +1020,7 @@ export const PreviewAppointmentsScreen: React.FC = () => {
   // Determine if we can proceed
   const isLoading = generatePlanMutation.isPending;
   const hasError = generatePlanMutation.isError;
-  const errorMessage = generatePlanMutation.error?.message || 
-                       (generatePlanMutation.error as any)?.response?.data?.detail ||
-                       t('appointments.failedToGeneratePlan');
+  const errorMessage = t('appointments.failedToGeneratePlan');
   const canProceed = sessions.length > 0 && allConflictsResolved && !hasError;
 
   // ============================================
@@ -1283,9 +1280,9 @@ export const PreviewAppointmentsScreen: React.FC = () => {
           );
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[PreviewScreen] Bulk create failed:', err);
-      Alert.alert(t('common.error'), err.message || t('appointments.failedToCreate'));
+      Alert.alert(t('common.error'), t('appointments.failedToCreate'));
     } finally {
       setIsCreating(false);
     }

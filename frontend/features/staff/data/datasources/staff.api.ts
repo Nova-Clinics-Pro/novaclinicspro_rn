@@ -6,6 +6,7 @@
  */
 
 import { axiosClient } from '../../../../core/api/axiosClient';
+import { StaffOperationError, StaffOperationFailureKind } from '../../domain/errors/staffOperationError';
 import {
   StaffCreate,
   StaffUpdate,
@@ -20,6 +21,9 @@ import {
   PaginatedLeaveResponse,
   OnboardingStaffSourceItem,
 } from '../models/staff.dtos';
+
+const normalizeStaffOperationError = (kind: StaffOperationFailureKind): StaffOperationError =>
+  new StaffOperationError(kind);
 
 // ============================================
 // STAFF CRUD
@@ -59,10 +63,12 @@ export const getStaffApi = async (
   tenantId: string,
   staffId: string
 ): Promise<StaffResponse> => {
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/staff/${staffId}`
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/staff/${staffId}`);
+    return response.data;
+  } catch {
+    throw normalizeStaffOperationError('LOAD_FAILED');
+  }
 };
 
 /**
@@ -73,11 +79,12 @@ export const createStaffApi = async (
   tenantId: string,
   payload: StaffCreate
 ): Promise<StaffResponse> => {
-  const response = await axiosClient.post(
-    `/api/v1/clinic/${tenantId}/staff`,
-    payload
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(`/api/v1/clinic/${tenantId}/staff`, payload);
+    return response.data;
+  } catch {
+    throw normalizeStaffOperationError('SAVE_FAILED');
+  }
 };
 
 /**
@@ -89,11 +96,12 @@ export const updateStaffApi = async (
   staffId: string,
   payload: StaffUpdate
 ): Promise<StaffResponse> => {
-  const response = await axiosClient.patch(
-    `/api/v1/clinic/${tenantId}/staff/${staffId}`,
-    payload
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.patch(`/api/v1/clinic/${tenantId}/staff/${staffId}`, payload);
+    return response.data;
+  } catch {
+    throw normalizeStaffOperationError('SAVE_FAILED');
+  }
 };
 
 /**
@@ -104,9 +112,11 @@ export const deleteStaffApi = async (
   tenantId: string,
   staffId: string
 ): Promise<void> => {
-  await axiosClient.delete(
-    `/api/v1/clinic/${tenantId}/staff/${staffId}`
-  );
+  try {
+    await axiosClient.delete(`/api/v1/clinic/${tenantId}/staff/${staffId}`);
+  } catch {
+    throw normalizeStaffOperationError('DELETE_FAILED');
+  }
 };
 
 // ============================================
@@ -153,11 +163,12 @@ export const createStaffLeaveApi = async (
   staffId: string,
   payload: StaffLeaveCreate
 ): Promise<StaffLeaveResponse> => {
-  const response = await axiosClient.post(
-    `/api/v1/clinic/${tenantId}/staff/${staffId}/leave`,
-    payload
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(`/api/v1/clinic/${tenantId}/staff/${staffId}/leave`, payload);
+    return response.data;
+  } catch {
+    throw normalizeStaffOperationError('SAVE_FAILED');
+  }
 };
 
 /**
@@ -169,11 +180,12 @@ export const approveLeaveApi = async (
   leaveId: string,
   payload?: LeaveApproveRequest
 ): Promise<StaffLeaveResponse> => {
-  const response = await axiosClient.patch(
-    `/api/v1/clinic/${tenantId}/leave/${leaveId}/approve`,
-    payload || {}
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.patch(`/api/v1/clinic/${tenantId}/leave/${leaveId}/approve`, payload || {});
+    return response.data;
+  } catch {
+    throw normalizeStaffOperationError('SAVE_FAILED');
+  }
 };
 
 /**
@@ -185,11 +197,12 @@ export const rejectLeaveApi = async (
   leaveId: string,
   payload: LeaveRejectRequest
 ): Promise<StaffLeaveResponse> => {
-  const response = await axiosClient.patch(
-    `/api/v1/clinic/${tenantId}/leave/${leaveId}/reject`,
-    payload
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.patch(`/api/v1/clinic/${tenantId}/leave/${leaveId}/reject`, payload);
+    return response.data;
+  } catch {
+    throw normalizeStaffOperationError('SAVE_FAILED');
+  }
 };
 
 /**
