@@ -135,6 +135,29 @@ export const useTreatmentOrderQuery = (
   });
 
 /**
+ * Resolves a treatment order from an event handler while preserving the same
+ * canonical React Query cache identity as `useTreatmentOrderQuery`.
+ *
+ * The therapist's Start Session action needs the server-issued version before
+ * it can submit a row transition. The action is initiated from a callback, so
+ * a regular query hook cannot be called at that point without violating the
+ * Rules of Hooks.
+ */
+export const useTreatmentOrderOnDemand = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    (sheetId: string, tenantId: string) =>
+      queryClient.fetchQuery<TreatmentOrderResponse>({
+        queryKey: treatmentOrderKeys.detail(sheetId),
+        queryFn: () => getTreatmentOrderApi(sheetId, tenantId),
+        staleTime: 0,
+      }),
+    [queryClient]
+  );
+};
+
+/**
  * T-FE-E.2 closure (FR-SCH-1). Read-only: resolves a Treatment Plan's
  * scheduling intent into proposed session dates -- disabled until a
  * `planId` exists (a Plan must be created first). No local date

@@ -49,7 +49,7 @@ import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useUpdateAppointmentStatusMutation } from '../../../appointments/data/repositories/appointments.repository.impl';
 import {
   useStartSessionMutation,
-  useTreatmentOrderQuery,
+  useTreatmentOrderOnDemand,
 } from '../../../treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 
 // Domain / use cases
@@ -259,6 +259,7 @@ export const TherapistDashboardScreen: React.FC = () => {
 
   // ── Start session mutation (multi-day: SCHEDULED → IN_PROGRESS) ───────────
   const startSession = useStartSessionMutation(tenantId);
+  const fetchTreatmentOrder = useTreatmentOrderOnDemand();
   // Track which row is being started (to show per-card loading)
   const [startingRowId, setStartingRowId] = useState<string | null>(null);
   // Cache for order versions: sheetId → version
@@ -483,10 +484,7 @@ export const TherapistDashboardScreen: React.FC = () => {
       try {
         let version = orderVersionCache[sheetId];
         if (!version) {
-          const { getTreatmentOrderApi } = await import(
-            '../../../treatmentSheets/data/datasources/treatmentOrders.api'
-          );
-          const order = await getTreatmentOrderApi(sheetId, tenantId);
+          const order = await fetchTreatmentOrder(sheetId, tenantId);
           version = order.version;
           setOrderVersionCache((prev) => ({ ...prev, [sheetId]: version }));
         }
@@ -497,7 +495,7 @@ export const TherapistDashboardScreen: React.FC = () => {
         setStartingRowId(null);
       }
     },
-    [startSession, orderVersionCache, tenantId, updateStatusMutation, invalidateAfterCompletion]
+    [startSession, orderVersionCache, tenantId, fetchTreatmentOrder, updateStatusMutation, invalidateAfterCompletion]
   );
 
   // React to start session status changes
