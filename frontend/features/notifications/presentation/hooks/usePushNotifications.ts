@@ -3,28 +3,21 @@
  * React hook for managing push notifications with backend API integration
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import { AppState, AppStateStatus, Platform } from 'react-native';
-import * as Device from 'expo-device';
-import { expoPushService } from '../../data/datasources/expo-push.service';
+import { AppState, AppStateStatus } from 'react-native';
 import {
   PushPermissionStatus,
   ReceivedNotification,
   NotificationResponse,
 } from '../../data/datasources/push.service.interface';
 import {
-  registerDeviceApi,
-  unregisterDeviceApi,
-  getPreferencesApi,
-  updatePreferencesApi,
-  NotificationPreferencesDto,
-  UpdatePreferencesRequest,
-} from '../../data/datasources/push-notifications.api';
+  NotificationIdentity,
+  notificationDeviceLifecycleService,
+} from '../../application/notification-device-lifecycle.service';
 import {
   PushNotificationData,
   TherapistNotificationPreferences,
-  DEFAULT_NOTIFICATION_PREFERENCES,
   getNotificationDeepLink,
   shouldDeliverPushNotification,
   isInQuietHours,
@@ -53,78 +46,6 @@ interface UsePushNotificationsReturn {
 }
 
 /**
- * Map backend DTO to frontend preference format
- */
-function mapDtoToPreferences(dto: NotificationPreferencesDto): TherapistNotificationPreferences {
-  return {
-    staffId: dto.user_id,
-    tenantId: dto.tenant_id,
-    newAppointment: dto.appointment_new,
-    appointmentUpdates: dto.appointment_updated,
-    cancellationsNoShows: dto.appointment_cancelled || dto.appointment_no_show,
-    dailyScheduleSummary: dto.daily_schedule_summary,
-    criticalUpdates: dto.critical_updates,
-    leaveUpdates: dto.leave_updates,
-    scheduleSummaryTime: dto.schedule_summary_time,
-    enableMiddaySummary: dto.enable_midday_summary,
-    middaySummaryTime: dto.midday_summary_time,
-    quietHoursEnabled: dto.quiet_hours_enabled,
-    quietHoursStart: dto.quiet_hours_start,
-    quietHoursEnd: dto.quiet_hours_end,
-    updatedAt: dto.updated_at,
-  };
-}
-
-/**
- * Map frontend preferences to backend update request format
- */
-function mapPreferencesToUpdateRequest(
-  updates: Partial<TherapistNotificationPreferences>
-): UpdatePreferencesRequest {
-  const request: UpdatePreferencesRequest = {};
-
-  if (updates.newAppointment !== undefined) {
-    request.appointment_new = updates.newAppointment;
-  }
-  if (updates.appointmentUpdates !== undefined) {
-    request.appointment_updated = updates.appointmentUpdates;
-  }
-  if (updates.cancellationsNoShows !== undefined) {
-    request.appointment_cancelled = updates.cancellationsNoShows;
-    request.appointment_no_show = updates.cancellationsNoShows;
-  }
-  if (updates.dailyScheduleSummary !== undefined) {
-    request.daily_schedule_summary = updates.dailyScheduleSummary;
-  }
-  if (updates.criticalUpdates !== undefined) {
-    request.critical_updates = updates.criticalUpdates;
-  }
-  if (updates.leaveUpdates !== undefined) {
-    request.leave_updates = updates.leaveUpdates;
-  }
-  if (updates.scheduleSummaryTime !== undefined) {
-    request.schedule_summary_time = updates.scheduleSummaryTime;
-  }
-  if (updates.enableMiddaySummary !== undefined) {
-    request.enable_midday_summary = updates.enableMiddaySummary;
-  }
-  if (updates.middaySummaryTime !== undefined) {
-    request.midday_summary_time = updates.middaySummaryTime;
-  }
-  if (updates.quietHoursEnabled !== undefined) {
-    request.quiet_hours_enabled = updates.quietHoursEnabled;
-  }
-  if (updates.quietHoursStart !== undefined) {
-    request.quiet_hours_start = updates.quietHoursStart;
-  }
-  if (updates.quietHoursEnd !== undefined) {
-    request.quiet_hours_end = updates.quietHoursEnd;
-  }
-
-  return request;
-}
-
-/**
  * Hook for managing push notifications with backend integration
  */
 export const usePushNotifications = (): UsePushNotificationsReturn => {
@@ -140,41 +61,79 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
   const [error, setError] = useState<string | null>(null);
   
   const scheduleSummaryId = useRef<string | null>(null);
-  const deviceRegistered = useRef(false);
+  const identityRef = useRef<NotificationIdentity | null>(null);
 
   // Get tenant ID from auth context
   const tenantId = currentUser?.tenantId;
   const userId = currentUser?.userId;
+  const identity = useMemo(
+    () => tenantId && userId ? { tenantId, userId } : null,
+    [tenantId, userId]
+  );
+
+  const cancelScheduleSummary = useCallback(async () => {
+    if (scheduleSummaryId.current) {
+      await notificationDeviceLifecycleService.cancelScheduledNotification(scheduleSummaryId.current);
+      scheduleSummaryId.current = null;
+    }
+    await notificationDeviceLifecycleService.cancelAllScheduledNotifications();
+  }, []);
+
+  const scheduleScheduleSummary = useCallback(async (preferencesToSchedule = preferences) => {
+    if (!preferencesToSchedule?.dailyScheduleSummary) return;
+
+    await cancelScheduleSummary();
+    const [hour, minute] = preferencesToSchedule.scheduleSummaryTime.split(':').map(Number);
+    const morningId = await notificationDeviceLifecycleService.scheduleLocalNotification(
+      {
+        title: "Today's Schedule",
+        body: 'Tap to view your appointments for today',
+        data: { trigger: 'schedule_summary', summaryType: 'morning' } as any,
+        sound: true,
+        categoryIdentifier: 'schedule',
+      },
+      { type: 'daily', value: { hour, minute }, repeats: true }
+    );
+    scheduleSummaryId.current = morningId;
+
+    if (preferencesToSchedule.enableMiddaySummary) {
+      const [middayHour, middayMinute] = preferencesToSchedule.middaySummaryTime.split(':').map(Number);
+      await notificationDeviceLifecycleService.scheduleLocalNotification(
+        {
+          title: 'Afternoon Schedule Update',
+          body: 'Tap to view your remaining appointments',
+          data: { trigger: 'schedule_summary', summaryType: 'midday' } as any,
+          sound: true,
+          categoryIdentifier: 'schedule',
+        },
+        { type: 'daily', value: { hour: middayHour, minute: middayMinute }, repeats: true }
+      );
+    }
+  }, [cancelScheduleSummary, preferences]);
 
   /**
    * Fetch preferences from backend
    */
   const fetchPreferences = useCallback(async () => {
-    if (!tenantId) return null;
+    if (!identity) return null;
 
     try {
       setIsLoading(true);
-      const dto = await getPreferencesApi(tenantId);
-      const prefs = mapDtoToPreferences(dto);
+      const prefs = await notificationDeviceLifecycleService.getPreferences(identity);
       setPreferences(prefs);
       setError(null);
       return prefs;
     } catch (err: any) {
       console.error('Failed to fetch notification preferences:', err);
       // Use defaults if API fails
-      const defaultPrefs: TherapistNotificationPreferences = {
-        ...DEFAULT_NOTIFICATION_PREFERENCES,
-        staffId: userId || '',
-        tenantId: tenantId || '',
-        updatedAt: new Date().toISOString(),
-      };
+      const defaultPrefs = notificationDeviceLifecycleService.defaultPreferences(identity);
       setPreferences(defaultPrefs);
-      setError(err.message || 'Failed to load preferences');
+      setError('Failed to load preferences');
       return defaultPrefs;
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId, userId]);
+  }, [identity]);
 
   /**
    * Refresh preferences from backend
@@ -188,7 +147,7 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
    */
   const updatePreferences = useCallback(
     async (updates: Partial<TherapistNotificationPreferences>) => {
-      if (!tenantId || !preferences) return;
+      if (!identity || !preferences) return;
 
       // Optimistically update local state
       const previousPrefs = preferences;
@@ -201,16 +160,14 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
 
       try {
         setIsLoading(true);
-        const requestData = mapPreferencesToUpdateRequest(updates);
-        const dto = await updatePreferencesApi(tenantId, requestData);
-        const updatedPrefs = mapDtoToPreferences(dto);
+        const updatedPrefs = await notificationDeviceLifecycleService.updatePreferences(identity, updates);
         setPreferences(updatedPrefs);
         setError(null);
 
         // Re-schedule daily summary if time changed
         if (updates.scheduleSummaryTime || updates.dailyScheduleSummary !== undefined) {
           if (updatedPrefs.dailyScheduleSummary) {
-            await scheduleScheduleSummary();
+            await scheduleScheduleSummary(updatedPrefs);
           } else {
             await cancelScheduleSummary();
           }
@@ -219,52 +176,14 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
         console.error('Failed to update preferences:', err);
         // Revert to previous state on error
         setPreferences(previousPrefs);
-        setError(err.message || 'Failed to update preferences');
+        setError('Failed to update preferences');
         throw err;
       } finally {
         setIsLoading(false);
       }
     },
-    [tenantId, preferences]
+    [identity, preferences, scheduleScheduleSummary, cancelScheduleSummary]
   );
-
-  /**
-   * Register device with backend
-   */
-  const registerDevice = useCallback(async (token: string) => {
-    if (!tenantId || deviceRegistered.current) return;
-
-    try {
-      await registerDeviceApi(tenantId, {
-        push_token: token,
-        platform: Platform.OS as 'ios' | 'android' | 'web',
-        device_name: Device.deviceName || undefined,
-        device_model: Device.modelName || undefined,
-        app_version: '1.0.0',
-      });
-      deviceRegistered.current = true;
-      console.log('Device registered for push notifications');
-    } catch (err) {
-      console.error('Failed to register device:', err);
-      // Non-critical error, don't throw
-    }
-  }, [tenantId]);
-
-  /**
-   * Unregister device from backend
-   */
-  const unregisterDevice = useCallback(async (token: string) => {
-    if (!tenantId) return;
-
-    try {
-      await unregisterDeviceApi(tenantId, token);
-      deviceRegistered.current = false;
-      console.log('Device unregistered from push notifications');
-    } catch (err) {
-      console.error('Failed to unregister device:', err);
-      // Non-critical error, don't throw
-    }
-  }, [tenantId]);
 
   /**
    * Handle received notification
@@ -308,67 +227,51 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
    * Initialize push notifications
    */
   const initialize = useCallback(async () => {
-    if (isInitialized || !tenantId) return;
+    if (isInitialized || !identity) return;
 
     try {
       setIsLoading(true);
 
-      // Initialize the Expo push service
-      const status = await expoPushService.initialize();
+      const result = await notificationDeviceLifecycleService.initialize(
+        identity,
+        handleNotificationReceived,
+        handleNotificationResponse
+      );
+      identityRef.current = identity;
+      const { permissionStatus: status, token } = result;
       setPermissionStatus(status);
-
-      if (status === 'granted') {
-        // Get push token
-        const token = await expoPushService.getPushToken();
-        setPushToken(token);
-
-        // Register device with backend
-        if (token) {
-          await registerDevice(token);
-        }
-      }
+      setPushToken(token);
 
       // Fetch preferences from backend
       await fetchPreferences();
-
-      // Set up notification listeners
-      expoPushService.onNotificationReceived(handleNotificationReceived);
-      expoPushService.onNotificationResponse(handleNotificationResponse);
 
       setIsInitialized(true);
       setError(null);
     } catch (err: any) {
       console.error('Failed to initialize push notifications:', err);
-      setError(err.message || 'Failed to initialize notifications');
+      setError('Failed to initialize notifications');
     } finally {
       setIsLoading(false);
     }
-  }, [isInitialized, tenantId, registerDevice, fetchPreferences, handleNotificationReceived, handleNotificationResponse]);
+  }, [isInitialized, identity, fetchPreferences, handleNotificationReceived, handleNotificationResponse]);
 
   /**
    * Request permissions
    */
   const requestPermissions = useCallback(async (): Promise<PushPermissionStatus> => {
-    const status = await expoPushService.requestPermissions();
+    if (!identity) return permissionStatus;
+    const { permissionStatus: status, token } = await notificationDeviceLifecycleService.requestPermissions(identity);
     setPermissionStatus(status);
-
-    if (status === 'granted') {
-      const token = await expoPushService.getPushToken();
-      setPushToken(token);
-
-      if (token) {
-        await registerDevice(token);
-      }
-    }
+    setPushToken(token);
 
     return status;
-  }, [registerDevice]);
+  }, [identity, permissionStatus]);
 
   /**
    * Clear all notifications
    */
   const clearNotifications = useCallback(async () => {
-    await expoPushService.clearAllNotifications();
+    await notificationDeviceLifecycleService.clearNotifications();
     setRecentNotifications([]);
   }, []);
 
@@ -376,104 +279,39 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
    * Set badge count
    */
   const setBadgeCount = useCallback(async (count: number) => {
-    await expoPushService.setBadgeCount(count);
-  }, []);
-
-  /**
-   * Schedule daily schedule summary notification
-   */
-  const scheduleScheduleSummary = useCallback(async () => {
-    if (!preferences?.dailyScheduleSummary) return;
-
-    // Cancel existing if any
-    await cancelScheduleSummary();
-
-    const [hour, minute] = preferences.scheduleSummaryTime.split(':').map(Number);
-
-    // Schedule morning summary
-    const morningId = await expoPushService.scheduleLocalNotification(
-      {
-        title: "Today's Schedule",
-        body: 'Tap to view your appointments for today',
-        data: {
-          trigger: 'schedule_summary',
-          summaryType: 'morning',
-        } as any,
-        sound: true,
-        categoryIdentifier: 'schedule',
-      },
-      {
-        type: 'daily',
-        value: { hour, minute },
-        repeats: true,
-      }
-    );
-
-    scheduleSummaryId.current = morningId;
-
-    // Schedule midday summary if enabled
-    if (preferences.enableMiddaySummary) {
-      const [middayHour, middayMinute] = preferences.middaySummaryTime.split(':').map(Number);
-      
-      await expoPushService.scheduleLocalNotification(
-        {
-          title: 'Afternoon Schedule Update',
-          body: 'Tap to view your remaining appointments',
-          data: {
-            trigger: 'schedule_summary',
-            summaryType: 'midday',
-          } as any,
-          sound: true,
-          categoryIdentifier: 'schedule',
-        },
-        {
-          type: 'daily',
-          value: { hour: middayHour, minute: middayMinute },
-          repeats: true,
-        }
-      );
-    }
-  }, [preferences]);
-
-  /**
-   * Cancel schedule summary notifications
-   */
-  const cancelScheduleSummary = useCallback(async () => {
-    if (scheduleSummaryId.current) {
-      await expoPushService.cancelScheduledNotification(scheduleSummaryId.current);
-      scheduleSummaryId.current = null;
-    }
-    // Cancel all schedule category notifications
-    await expoPushService.cancelAllScheduledNotifications();
+    await notificationDeviceLifecycleService.setBadgeCount(count);
   }, []);
 
   // Initialize on mount when user is authenticated
   useEffect(() => {
     if (isAuthenticated && currentUser && tenantId && !isInitialized) {
-      initialize();
+      const initialization = Promise.resolve().then(initialize);
+      void initialization;
     }
   }, [isAuthenticated, currentUser, tenantId, isInitialized, initialize]);
 
-  // Clean up on logout - unregister device
+  // The hook observes authentication state; the lifecycle service owns cleanup.
   useEffect(() => {
     if (!isAuthenticated && isInitialized) {
-      // Unregister device from backend
-      if (pushToken) {
-        unregisterDevice(pushToken);
+      const registeredIdentity = identityRef.current;
+      if (registeredIdentity) {
+        void notificationDeviceLifecycleService.cleanupForIdentity(registeredIdentity);
       }
-      setIsInitialized(false);
-      setPushToken(null);
-      setPreferences(null);
-      deviceRegistered.current = false;
+      identityRef.current = null;
+      void Promise.resolve().then(() => {
+        setIsInitialized(false);
+        setPushToken(null);
+        setPreferences(null);
+      });
     }
-  }, [isAuthenticated, isInitialized, pushToken, unregisterDevice]);
+  }, [isAuthenticated, isInitialized]);
 
   // Handle app state changes (refresh on foreground)
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active' && isAuthenticated && isInitialized) {
         // Refresh badge count when app becomes active
-        expoPushService.getBadgeCount().then(count => {
+        notificationDeviceLifecycleService.getBadgeCount().then(count => {
           console.log('Badge count:', count);
         });
       }
@@ -482,6 +320,8 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => subscription.remove();
   }, [isAuthenticated, isInitialized]);
+
+  useEffect(() => () => notificationDeviceLifecycleService.disposeListeners(), []);
 
   return {
     permissionStatus,
