@@ -1,20 +1,26 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const source = (path: string) => readFileSync(resolve(__dirname, '../../../', path), 'utf8');
 
 describe('session restoration boundary', () => {
-  it('serializes storage restoration and persists the Supabase-issued session', () => {
+  it('keeps the store provider-free and assigns provider restoration to the session boundary', () => {
     const store = source('features/auth/presentation/providers/auth.store.ts');
-    expect(store).toContain('let storageBootstrap: Promise<void> | null');
-    expect(store).toContain('if (storageBootstrap) return storageBootstrap');
-    expect(store).toContain('const { data, error } = await supabase.auth.setSession');
-    expect(store).toContain('await get().setTokens(data.session.access_token, data.session.refresh_token)');
+    const coordinator = source('features/auth/application/auth-session.service.ts');
+    expect(store).not.toContain('supabase.auth');
+    expect(coordinator).toContain('supabaseAuthProvider.setSession');
+    expect(coordinator).toContain('supabaseAuthProvider.getSession');
   });
 
-  it('persists Supabase refresh and sign-in session events', () => {
+  it('keeps AuthProvider as lifecycle host without direct Supabase access', () => {
     const provider = source('core/providers/AuthProvider.tsx');
-    expect(provider).toContain('supabase.auth.onAuthStateChange');
-    expect(provider).toContain('setTokens(session.access_token, session.refresh_token)');
+    expect(provider).toContain('authSessionService.bootstrap');
+    expect(provider).toContain('authSessionService.subscribeToAuthState');
+    expect(provider).not.toContain('supabase.auth');
+  });
+
+  it('keeps presentation and domain free of Supabase Auth imports', () => {
+    expect(source('features/auth/presentation/hooks/useAuth.ts')).not.toContain('supabaseClient');
+    expect(existsSync(resolve(__dirname, '../../../features/auth/domain/usecases/bootstrap-session.usecase.ts'))).toBe(false);
   });
 });

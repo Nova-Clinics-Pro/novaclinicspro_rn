@@ -5,13 +5,11 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../../../core/api/supabaseClient';
 import { queryClient } from '../../../../core/api/queryClient';
 import { setLoggingOut } from '../../../../core/api/authGuard';
 import { logError } from '../../../../core/utils/errorHandler';
 import { useAuthStore } from '../providers/auth.store';
-import { authRepository } from '../../data/repositories/auth.repository.impl';
-import { BootstrapSessionUseCase } from '../../domain/usecases/bootstrap-session.usecase';
+import { authSessionService } from '../../application/auth-session.service';
 import { AuthUserSession, getLandingRoute } from '../../domain/entities/auth.entity';
 import { clearWizardDraftStorageForIdentity } from '../../../onboarding/presentation/stores/wizard.store';
 
@@ -36,8 +34,6 @@ export const useAuth = (): UseAuthReturn => {
     isAuthenticated,
     isLoading,
     selectedClinicId,
-    setTokens,
-    setCurrentUser,
     setSelectedClinic,
     clearSession,
   } = useAuthStore();
@@ -66,78 +62,14 @@ export const useAuth = (): UseAuthReturn => {
       // suppressed by it regardless.
       setLoggingOut(false);
       try {
-        // Sign in with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          // Map Supabase error codes to user-friendly messages
-          let friendlyMessage = error.message;
-          if (error.message.includes('Invalid login credentials')) {
-            friendlyMessage = 'Invalid email or password. Please check your credentials and try again.';
-          } else if (error.message.includes('Email not confirmed')) {
-            friendlyMessage = 'Please verify your email address before logging in.';
-          } else if (error.message.includes('Too many requests')) {
-            friendlyMessage = 'Too many login attempts. Please wait a few minutes and try again.';
-          }
-          throw new Error(friendlyMessage);
-        }
-
-        if (!data.session) {
-          throw new Error('No session returned from login');
-        }
-
-        // Store tokens
-        await setTokens(data.session.access_token, data.session.refresh_token);
-
-        // Fetch user context from backend — retry once on network drop
-        // (backend may return 200 but connection drops before body arrives)
-        const fetchUserWithRetry = async (): Promise<ReturnType<typeof authRepository.getCurrentUser>> => {
-          try {
-            return await authRepository.getCurrentUser();
-          } catch (firstErr: any) {
-            const isNetworkDrop = firstErr?.isAxiosError && !firstErr?.response;
-            if (isNetworkDrop) {
-              await new Promise(resolve => setTimeout(resolve, 800));
-              return await authRepository.getCurrentUser();
-            }
-            throw firstErr;
-          }
-        };
-
-        try {
-          const userSession = await fetchUserWithRetry();
-          setCurrentUser(userSession);
-
-          // Navigate based on status
-          navigateBasedOnStatus(userSession);
-        } catch (backendError: any) {
-          logError('auth.login.backend_context', backendError);
-          // If backend fails, sign out from Supabase to avoid inconsistent state
-          await supabase.auth.signOut();
-          await clearSession();
-          
-          // Provide meaningful error based on status code
-          if (backendError?.response?.status === 401) {
-            throw new Error('Your account is not authorized. Please contact support.');
-          } else if (backendError?.response?.status === 403) {
-            throw new Error('Access denied. Your account may be suspended.');
-          } else if (backendError?.response?.status === 404) {
-            throw new Error('User profile not found. Please contact support to set up your account.');
-          } else if (backendError?.isAxiosError && !backendError?.response) {
-            throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
-          } else {
-            throw new Error('Unable to load your profile. Please try again later.');
-          }
-        }
+        const userSession = await authSessionService.login(email, password);
+        navigateBasedOnStatus(userSession);
       } catch (error) {
         logError('auth.login', error);
         throw error;
       }
     },
-    [setTokens, setCurrentUser, clearSession, router]
+    [router]
   );
 
   /**
@@ -196,9 +128,9 @@ export const useAuth = (): UseAuthReturn => {
       // Best-effort remote signOut, AFTER local cleanup — its failure must
       // not prevent local logout, which has already completed above.
       try {
-        await supabase.auth.signOut();
+        await authSessionService.signOutProviderBestEffort();
       } catch (signOutError) {
-        logError('auth.logout.supabase_signout', signOutError);
+        logError('auth.logout.provider_signout', signOutError);
       }
     } catch (error) {
       // A genuine failure in local cleanup itself (clearSession/cancelQueries/
@@ -215,15 +147,8 @@ export const useAuth = (): UseAuthReturn => {
    * Bootstrap session on app start
    */
   const bootstrapSession = useCallback(async () => {
-    const useCase = new BootstrapSessionUseCase(authRepository);
-    const result = await useCase.execute();
-
-    if (result.authenticated && result.session) {
-      setCurrentUser(result.session);
-    }
-    
-    return result;
-  }, [setCurrentUser]);
+    return authSessionService.bootstrap();
+  }, []);
 
   /**
    * Refresh session to get updated JWT token with tenant_id
@@ -231,30 +156,12 @@ export const useAuth = (): UseAuthReturn => {
    */
   const refreshSession = useCallback(async () => {
     try {
-      // Refresh the Supabase session to get new JWT with tenant_id
-      const { data, error } = await supabase.auth.refreshSession();
-
-      if (error) {
-        logError('auth.refresh.token', error);
-        throw new Error('Failed to refresh session');
-      }
-
-      if (!data.session) {
-        throw new Error('No session returned from refresh');
-      }
-
-      // Store new tokens
-      await setTokens(data.session.access_token, data.session.refresh_token);
-
-      // Fetch updated user context from backend (now includes tenant_id)
-      const userSession = await authRepository.getCurrentUser();
-      setCurrentUser(userSession);
-      return userSession;
+      return await authSessionService.refresh();
     } catch (error) {
       logError('auth.refresh', error);
       throw error;
     }
-  }, [setTokens, setCurrentUser]);
+  }, []);
 
   /**
    * Navigate based on user status and permissions

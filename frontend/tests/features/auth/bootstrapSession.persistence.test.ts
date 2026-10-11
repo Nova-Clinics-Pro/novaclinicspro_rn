@@ -1,5 +1,5 @@
 import { authRepository } from '../../../features/auth/data/repositories/auth.repository.impl';
-import { BootstrapSessionUseCase } from '../../../features/auth/domain/usecases/bootstrap-session.usecase';
+import { authSessionService } from '../../../features/auth/application/auth-session.service';
 import { useAuthStore } from '../../../features/auth/presentation/providers/auth.store';
 import { supabase } from '../../../core/api/supabaseClient';
 import { secureStorage } from '../../../core/utils/secureStorage';
@@ -65,11 +65,10 @@ describe('persisted auth bootstrap', () => {
       if (key === 'supabase_refresh_token') return 'persisted-refresh-token';
       return null;
     });
-    const user = { userId: 'user-1', applicationStatus: 'onboarding' };
+    const user = { userId: 'user-1', applicationStatus: 'onboarding', ownedClinics: [], tenantId: null };
     (authRepository.getCurrentUser as jest.Mock).mockResolvedValue(user);
 
-    await useAuthStore.getState().initializeFromStorage();
-    const result = await new BootstrapSessionUseCase(authRepository).execute();
+    const result = await authSessionService.bootstrap();
 
     expect(
       (supabase.auth.getSession as jest.Mock).mock.invocationCallOrder[0]
@@ -83,8 +82,7 @@ describe('persisted auth bootstrap', () => {
   it('does not call /auth/me when storage contains no session', async () => {
     (secureStorage.getItem as jest.Mock).mockResolvedValue(null);
 
-    await useAuthStore.getState().initializeFromStorage();
-    const result = await new BootstrapSessionUseCase(authRepository).execute();
+    const result = await authSessionService.bootstrap();
 
     expect(authRepository.getCurrentUser).not.toHaveBeenCalled();
     expect(result.authenticated).toBe(false);

@@ -7,7 +7,6 @@
  * while those awaits were still pending.
  */
 import { useAuthStore } from '../../../features/auth/presentation/providers/auth.store';
-import { supabase } from '../../../core/api/supabaseClient';
 import { secureStorage } from '../../../core/utils/secureStorage';
 
 jest.mock('../../../core/utils/secureStorage', () => ({
@@ -15,15 +14,6 @@ jest.mock('../../../core/utils/secureStorage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn(),
     removeItem: jest.fn(),
-  },
-}));
-
-jest.mock('../../../core/api/supabaseClient', () => ({
-  supabase: {
-    auth: {
-      getSession: jest.fn(),
-      setSession: jest.fn(),
-    },
   },
 }));
 
@@ -65,25 +55,15 @@ describe('auth.store clearSession (T-A.4)', () => {
     expect(useAuthStore.getState().selectedClinicId).toBeNull();
   });
 
-  it('restores secure tokens into Supabase before bootstrap can determine authentication', async () => {
+  it('hydrates the persisted token projection without invoking a provider SDK', async () => {
     useAuthStore.setState({ isLoading: true });
     (secureStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
       if (key === 'supabase_access_token') return 'access-token';
       if (key === 'supabase_refresh_token') return 'refresh-token';
       return null;
     });
-    (supabase.auth.getSession as jest.Mock).mockResolvedValue({ data: { session: null }, error: null });
-    (supabase.auth.setSession as jest.Mock).mockResolvedValue({
-      data: { session: { access_token: 'access-token', refresh_token: 'refresh-token' } },
-      error: null,
-    });
-
     await useAuthStore.getState().initializeFromStorage();
 
-    expect(supabase.auth.setSession).toHaveBeenCalledWith({
-      access_token: 'access-token',
-      refresh_token: 'refresh-token',
-    });
     expect(useAuthStore.getState()).toMatchObject({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',

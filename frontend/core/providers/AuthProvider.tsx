@@ -6,39 +6,38 @@
 import React, { useEffect } from 'react';
 import { ThemeProvider } from '../theme/useClinicTheme';
 import { useAuthStore } from '../../features/auth/presentation/providers/auth.store';
-import { useAuth } from '../../features/auth/presentation/hooks/useAuth';
-import { supabase } from '../api/supabaseClient';
+import { authSessionService } from '../../features/auth/application/auth-session.service';
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
 const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { bootstrapSession } = useAuth();
-
   useEffect(() => {
-    // Initialize auth on app start
+    let disposed = false;
+    let unsubscribe: (() => void) | null = null;
+
+    // Bootstrap completes before the sole lifecycle subscription is installed,
+    // preventing an INITIAL_SESSION event from competing with startup /auth/me
+    // hydration.
     const initialize = async () => {
       try {
-        await useAuthStore.getState().initializeFromStorage();
-        await bootstrapSession();
+        await authSessionService.bootstrap();
       } finally {
         // AuthProvider owns bootstrap only.  The index route is the single
         // routing owner after the authoritative session context is terminal.
         useAuthStore.getState().completeBootstrap();
       }
+      if (!disposed) {
+        unsubscribe = authSessionService.subscribeToAuthState();
+      }
     };
 
-    initialize();
-  }, [bootstrapSession]);
-
-  useEffect(() => {
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        void useAuthStore.getState().setTokens(session.access_token, session.refresh_token);
-      }
-    });
-    return () => subscription.subscription.unsubscribe();
+    void initialize();
+    return () => {
+      disposed = true;
+      unsubscribe?.();
+    };
   }, []);
 
   return <>{children}</>;

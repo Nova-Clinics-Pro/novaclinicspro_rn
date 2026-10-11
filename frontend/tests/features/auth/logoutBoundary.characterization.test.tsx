@@ -16,7 +16,6 @@
  */
 import { act, renderHook } from '@testing-library/react-native';
 import { queryClient } from '../../../core/api/queryClient';
-import { supabase } from '../../../core/api/supabaseClient';
 import { isLoggingOut } from '../../../core/api/authGuard';
 
 const mockRouterReplace = jest.fn();
@@ -53,20 +52,18 @@ Object.defineProperty(globalThis, 'requestIdleCallback', {
   configurable: true,
   value: requestIdleCallback,
 });
-jest.mock('../../../core/api/supabaseClient', () => ({
-  supabase: { auth: { signOut: jest.fn(), signInWithPassword: jest.fn(), getSession: jest.fn(), refreshSession: jest.fn() } },
-}));
-jest.mock('../../../features/auth/data/repositories/auth.repository.impl', () => ({
-  authRepository: { getCurrentUser: jest.fn() },
-}));
-jest.mock('../../../features/auth/domain/usecases/bootstrap-session.usecase', () => ({
-  BootstrapSessionUseCase: jest.fn().mockImplementation(() => ({ execute: jest.fn() })),
-}));
-
 const callOrder: string[] = [];
 const mockClearSession = jest.fn(async () => {
   callOrder.push('clearSession');
 });
+jest.mock('../../../features/auth/application/auth-session.service', () => ({
+  authSessionService: {
+    signOutProviderBestEffort: jest.fn(),
+    login: jest.fn(),
+    bootstrap: jest.fn(),
+    refresh: jest.fn(),
+  },
+}));
 
 jest.mock('../../../features/auth/presentation/providers/auth.store', () => ({
   useAuthStore: () => ({
@@ -82,6 +79,7 @@ jest.mock('../../../features/auth/presentation/providers/auth.store', () => ({
 }));
 
 import { useAuth } from '../../../features/auth/presentation/hooks/useAuth';
+import { authSessionService } from '../../../features/auth/application/auth-session.service';
 
 describe('Logout boundary (T-0.4 baseline, T-A.4 fix)', () => {
   afterEach(() => {
@@ -96,7 +94,7 @@ describe('Logout boundary (T-0.4 baseline, T-A.4 fix)', () => {
     callOrder.length = 0;
     jest.clearAllMocks();
     mockRouterReplace.mockClear();
-    (supabase.auth.signOut as jest.Mock).mockImplementation(async () => {
+    (authSessionService.signOutProviderBestEffort as jest.Mock).mockImplementation(async () => {
       callOrder.push('supabaseSignOut');
     });
   });
@@ -159,7 +157,7 @@ describe('Logout boundary (T-0.4 baseline, T-A.4 fix)', () => {
     // reached at all, and logout() re-threw — leaving the user fully
     // authenticated locally despite attempting to log out. Local logout
     // must not depend on the remote signOut call succeeding.
-    (supabase.auth.signOut as jest.Mock).mockRejectedValue(new Error('network error'));
+    (authSessionService.signOutProviderBestEffort as jest.Mock).mockRejectedValue(new Error('network error'));
     const cancelSpy = jest.spyOn(queryClient, 'cancelQueries');
     const clearSpy = jest.spyOn(queryClient, 'clear');
 

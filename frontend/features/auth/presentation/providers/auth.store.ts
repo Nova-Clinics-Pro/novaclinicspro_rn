@@ -4,7 +4,6 @@
  */
 
 import { create } from 'zustand';
-import { supabase } from '../../../../core/api/supabaseClient';
 import { secureStorage } from '../../../../core/utils/secureStorage';
 import { AuthUserSession } from '../../domain/entities/auth.entity';
 import { logError } from '../../../../core/utils/errorHandler';
@@ -12,9 +11,6 @@ import { logError } from '../../../../core/utils/errorHandler';
 const ACCESS_TOKEN_KEY = 'supabase_access_token';
 const REFRESH_TOKEN_KEY = 'supabase_refresh_token';
 const SELECTED_CLINIC_KEY = 'selected_clinic_id';
-
-/** Prevent two app bootstrap paths from consuming the same refresh token. */
-let storageBootstrap: Promise<void> | null = null;
 
 interface AuthState {
   // State
@@ -129,53 +125,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  // Initialize from storage on app start
+  // Restore the persisted application projection. Provider session restoration
+  // is intentionally owned by AuthSessionService, not the store.
   initializeFromStorage: async () => {
-    if (storageBootstrap) return storageBootstrap;
-
-    storageBootstrap = (async () => {
-      try {
-      // Supabase is the runtime session authority.  If it already has a
-      // session, never replay the separately persisted refresh token.
+    try {
       const selectedClinicId = await secureStorage.getItem(SELECTED_CLINIC_KEY);
-      const { data: existing } = await supabase.auth.getSession();
-      if (existing.session) {
-        set({ selectedClinicId });
-        await get().setTokens(existing.session.access_token, existing.session.refresh_token);
-        return;
-      }
       const accessToken = await secureStorage.getItem(ACCESS_TOKEN_KEY);
       const refreshToken = await secureStorage.getItem(REFRESH_TOKEN_KEY);
-
-      if (accessToken && refreshToken) {
-        set({ accessToken, refreshToken, selectedClinicId });
-        const { data, error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        if (error) {
-          throw error;
-        }
-        if (!data.session) {
-          throw new Error('Supabase did not restore a session');
-        }
-        // setSession may rotate the refresh token.  Persist the exact
-        // authoritative result before /auth/me can make another request.
-        await get().setTokens(data.session.access_token, data.session.refresh_token);
-      }
+      set({ accessToken, refreshToken, selectedClinicId });
     } catch (error) {
-      // A consumed/reused refresh token is terminal. Remove it once rather
-      // than retrying the same token or leaving a future cold start poisoned.
       await get().clearSession();
-    } finally {
-      // Storage hydration is only the first half of bootstrap.  Keep the
-      // application routing gate closed until AuthProvider has also resolved
-      // the Supabase session and the authoritative /auth/me context.
-      }
-    })().finally(() => {
-      storageBootstrap = null;
-    });
-    return storageBootstrap;
+    }
   },
 
   completeBootstrap: () => set({ isLoading: false }),
