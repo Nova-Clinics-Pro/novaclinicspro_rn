@@ -11,6 +11,7 @@
  */
 
 import { axiosClient } from '../../../../core/api/axiosClient';
+import { normalizeTreatmentOperationError } from './treatmentOperationError';
 import {
   TreatmentOrderResponse,
   TreatmentOrdersListResponse,
@@ -149,12 +150,16 @@ export const scheduleRowApi = async (
   version: number,
   payload: ScheduleRowRequest
 ): Promise<TreatmentOrderResponse> => {
-  const response = await axiosClient.patch(
-    `/api/v1/treatment-sheets/${sheetId}/rows/${rowId}/schedule`,
-    payload,
-    { headers: ifMatch(version) }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.patch(
+      `/api/v1/treatment-sheets/${sheetId}/rows/${rowId}/schedule`,
+      payload,
+      { headers: ifMatch(version) }
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeTreatmentOperationError(error, 'Failed to schedule row.');
+  }
 };
 
 /**
@@ -167,12 +172,16 @@ export const bulkScheduleRowsApi = async (
   version: number,
   payload: BulkScheduleRequest
 ): Promise<TreatmentOrderResponse> => {
-  const response = await axiosClient.patch(
-    `/api/v1/treatment-sheets/${sheetId}/rows/bulk-schedule`,
-    payload,
-    { headers: ifMatch(version) }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.patch(
+      `/api/v1/treatment-sheets/${sheetId}/rows/bulk-schedule`,
+      payload,
+      { headers: ifMatch(version) }
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeTreatmentOperationError(error, 'Failed to schedule');
+  }
 };
 
 /** Denial reason recorded when a patient declines a recommendation. */
@@ -252,12 +261,16 @@ export const releaseTreatmentSheetApi = async (
   sheetId: string,
   version: number
 ): Promise<TreatmentOrderResponse> => {
-  const response = await axiosClient.post(
-    `/api/v1/treatment-sheets/${sheetId}/release`,
-    {},
-    { headers: ifMatch(version) }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(
+      `/api/v1/treatment-sheets/${sheetId}/release`,
+      {},
+      { headers: ifMatch(version) }
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeTreatmentOperationError(error, 'Failed to release treatment sheet.');
+  }
 };
 
 /** Phase 4 (R4) · T-D.4/T-E.6 (ADR-R4-07). One tenant_clinical_review_notes
@@ -284,11 +297,15 @@ export const addClinicalReviewNoteApi = async (
   sheetId: string,
   notesJson: Record<string, unknown>
 ): Promise<ClinicalReviewNoteResponse> => {
-  const response = await axiosClient.post(
-    `/api/v1/treatment-sheets/${sheetId}/clinical-review-notes`,
-    { notes_json: notesJson }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(
+      `/api/v1/treatment-sheets/${sheetId}/clinical-review-notes`,
+      { notes_json: notesJson }
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeTreatmentOperationError(error, 'Failed to save observation.');
+  }
 };
 
 /** Phase 4 (R4) · T-D.5 (ADR-R4-07). The five Clinical Review outcomes. */
@@ -311,12 +328,16 @@ export const recordClinicalReviewOutcomeApi = async (
   outcome: ClinicalReviewOutcome,
   notesJson: Record<string, unknown> = {}
 ): Promise<TreatmentOrderResponse> => {
-  const response = await axiosClient.post(
-    `/api/v1/treatment-sheets/${sheetId}/clinical-review-outcome`,
-    { outcome, notes_json: notesJson },
-    { headers: ifMatch(version) }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(
+      `/api/v1/treatment-sheets/${sheetId}/clinical-review-outcome`,
+      { outcome, notes_json: notesJson },
+      { headers: ifMatch(version) }
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeTreatmentOperationError(error, 'Failed to record outcome.');
+  }
 };
 
 /**

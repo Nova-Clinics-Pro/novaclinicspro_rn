@@ -56,6 +56,7 @@ import { TreatmentSheetDetailHeader } from './detail/TreatmentSheetDetailHeader'
 import { useTreatmentSheetHeaderData } from './detail/useTreatmentSheetHeaderData';
 import { useTreatmentSheetRows } from './detail/useTreatmentSheetRows';
 import { ScheduleRow } from './detail/types';
+import { treatmentErrorMessage } from '../../application/treatmentErrorPresentation';
 
 export const TreatmentSheetDetailScreen: React.FC = () => {
   const theme = useClinicTheme();
@@ -220,8 +221,8 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
     releaseMutation.mutate(
       { sheetId: treatmentSheetId, version: orderVersion },
       {
-        onError: (err: any) =>
-          Alert.alert('Error', err?.response?.data?.detail?.message || err.message || 'Failed to release treatment sheet.'),
+        onError: (error: unknown) =>
+          Alert.alert('Error', treatmentErrorMessage(error, 'Failed to release treatment sheet.')),
       }
     );
   }, [releaseMutation, treatmentSheetId, orderVersion]);
@@ -232,8 +233,8 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
     addClinicalReviewNoteMutation.mutate(
       { sheetId: treatmentSheetId, notesJson },
       {
-        onError: (err: any) =>
-          Alert.alert('Error', err?.response?.data?.detail?.message || err.message || 'Failed to save observation.'),
+        onError: (error: unknown) =>
+          Alert.alert('Error', treatmentErrorMessage(error, 'Failed to save observation.')),
       }
     );
   }, [addClinicalReviewNoteMutation, treatmentSheetId]);
@@ -245,8 +246,8 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
     recordClinicalReviewOutcomeMutation.mutate(
       { sheetId: treatmentSheetId, version: orderVersion, outcome, notesJson },
       {
-        onError: (err: any) =>
-          Alert.alert('Error', err?.response?.data?.detail?.message || err.message || 'Failed to record outcome.'),
+        onError: (error: unknown) =>
+          Alert.alert('Error', treatmentErrorMessage(error, 'Failed to record outcome.')),
       }
     );
   }, [recordClinicalReviewOutcomeMutation, treatmentSheetId, orderVersion]);

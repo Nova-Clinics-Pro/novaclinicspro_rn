@@ -26,6 +26,7 @@ import {
   getLifecycleStatusLabel,
 } from '../../../treatmentSheets/data/models/treatmentOrders.dtos';
 import { useCreateTreatmentSheetMutation } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
+import { treatmentErrorMessage } from '../../../treatmentSheets/application/treatmentErrorPresentation';
 import {
   SectionSkeleton,
   SectionError,
@@ -69,8 +70,8 @@ const CreateTreatmentSheetModal: React.FC<CreateModalProps> = ({
       const result = await createMutation.mutateAsync({ duration_days: days });
       onClose();
       onCreated(result.id);
-    } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.error ?? err.message ?? 'Failed to create treatment sheet.');
+    } catch (error: unknown) {
+      Alert.alert('Error', treatmentErrorMessage(error, 'Failed to create treatment sheet.'));
     }
   };
 

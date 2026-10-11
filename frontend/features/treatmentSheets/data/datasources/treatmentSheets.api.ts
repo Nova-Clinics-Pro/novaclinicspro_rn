@@ -9,6 +9,7 @@
 import { axiosClient } from '../../../../core/api/axiosClient';
 import { isAxiosError } from 'axios';
 import { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
+import { normalizeTreatmentOperationError } from './treatmentOperationError';
 import {
   TreatmentSheetCreateRequest,
   TreatmentSheetSimpleCreateRequest,
@@ -34,13 +35,8 @@ export const createTreatmentSheetApi = async (
       payload
     );
     return response.data;
-  } catch (err: any) {
-    // Surface count-mismatch 400 errors directly to the user
-    const detail = err?.response?.data?.detail || err?.response?.data?.message;
-    if (err?.response?.status === 400 && detail) {
-      throw new Error(detail);
-    }
-    throw err;
+  } catch (error) {
+    throw normalizeTreatmentOperationError(error, 'Failed to create treatment sheet.');
   }
 };
 

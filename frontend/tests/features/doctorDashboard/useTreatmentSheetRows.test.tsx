@@ -142,7 +142,7 @@ describe('useTreatmentSheetRows (R7 · T-0.7 characterization)', () => {
       await result.current.updateSingleRow(0);
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'network down');
+    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to update row.');
     expect(result.current.rowsData[0].isSaving).toBe(false);
     expect(refetch).not.toHaveBeenCalled();
   });
@@ -178,7 +178,7 @@ describe('useTreatmentSheetRows (R7 · T-0.7 characterization)', () => {
       await result.current.saveAllRows();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'version conflict');
+    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to save all rows.');
     expect(result.current.isSavingAll).toBe(false);
     expect(refetch).not.toHaveBeenCalled();
   });

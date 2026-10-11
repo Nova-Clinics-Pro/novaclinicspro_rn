@@ -39,6 +39,7 @@ import { StaffResponse } from '../../../staff/data/models/staff.dtos';
 import { useRoomsListQuery } from '../../../rooms/data/repositories/rooms.repository.impl';
 import { RoomResponse } from '../../../rooms/data/models/rooms.dtos';
 import { buildBulkScheduleAssignments } from '../utils/bulkScheduleAssignments';
+import { isTreatmentVersionConflict, treatmentErrorMessage } from '../../application/treatmentErrorPresentation';
 
 // ============================================
 // HELPERS
@@ -364,18 +365,15 @@ export const BulkSchedulePlanScreen: React.FC = () => {
             { text: 'OK', onPress: () => router.back() },
           ]);
         },
-        onError: (err: any) => {
-          const data = err?.response?.data;
-          const detail = data?.detail ?? data;
-          if (detail?.error === 'VERSION_CONFLICT') {
+        onError: (error: unknown) => {
+          if (isTreatmentVersionConflict(error)) {
             Alert.alert(
               'Plan Updated Elsewhere',
               'This plan was updated by someone else. Refreshing latest data.',
               [{ text: 'OK', onPress: () => { setInitialized(false); refetch(); } }]
             );
           } else {
-            const msg = typeof detail === 'string' ? detail : (detail?.message ?? err.message ?? 'Failed to schedule');
-            Alert.alert('Error', msg);
+            Alert.alert('Error', treatmentErrorMessage(error, 'Failed to schedule'));
           }
         },
       }

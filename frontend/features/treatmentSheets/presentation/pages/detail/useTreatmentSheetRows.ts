@@ -22,6 +22,7 @@ import {
   hasSavedRowContent,
 } from './helpers';
 import { RowFormData } from './types';
+import { treatmentErrorMessage } from '../../../application/treatmentErrorPresentation';
 
 interface Params {
   tenantId: string;
@@ -101,13 +102,13 @@ export const useTreatmentSheetRows = ({
       });
       Alert.alert('Success', `Day ${row.day_number} updated successfully.`);
       await refetch();
-    } catch (err: any) {
+    } catch (error: unknown) {
       setRowsData(prev => {
         const updated = [...prev];
         updated[index] = { ...updated[index], isSaving: false };
         return updated;
       });
-      Alert.alert('Error', err?.response?.data?.detail || err.message || 'Failed to update row.');
+      Alert.alert('Error', treatmentErrorMessage(error, 'Failed to update row.'));
     }
   }, [refetch, rowsData, updateRowMutation]);
 
@@ -123,8 +124,8 @@ export const useTreatmentSheetRows = ({
       setRowsData(prev => prev.map(row => ({ ...row, isEditing: false })));
       Alert.alert('Success', 'All treatment days saved successfully.');
       await refetch();
-    } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.detail || err.message || 'Failed to save all rows.');
+    } catch (error: unknown) {
+      Alert.alert('Error', treatmentErrorMessage(error, 'Failed to save all rows.'));
     } finally {
       setIsSavingAll(false);
     }
