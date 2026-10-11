@@ -2,9 +2,7 @@
  * Doctor Dashboard Screen
  * Role-specific dashboard for doctors with KPI metrics from backend API
  * 
- * API Integration:
- * - GET /api/v1/clinic/{tenant_id}/staff/{staff_id}/kpis - Doctor KPI metrics
- * - GET /api/v1/clinic/{tenant_id}/staff/me/dashboard/doctor - Today's appointments
+ * Data is supplied through the Doctor Dashboard feature query boundary.
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -22,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { DashboardHeader } from '../core/components/DashboardHeader';
 import { DateStrip } from '../core/components/DateStrip';
 import { colors } from '../core/theme/colors';
@@ -33,9 +32,15 @@ import { useDoctorDashboardDate } from '../features/staffDashboards/presentation
 import { filterAppointmentsByDate } from '../features/staffDashboards/domain/utils/filterAppointments';
 import {
   useDoctorDashboardQuery,
+  DashboardQuickActions,
   EmptyDashboardState,
   OnLeaveBanner,
+  type QuickAction,
 } from '../features/staffDashboards';
+import {
+  appointmentsKeys,
+  getAppointmentDetail,
+} from '../features/appointments';
 import { AppointmentRow } from '../features/appointments/presentation/components/AppointmentRow';
 import { StaffFeedbackSection } from '../features/feedback';
 import {
@@ -51,7 +56,12 @@ import {
   mapBusiestDaysToBars,
   formatDuration,
 } from '../features/doctorDashboard';
-import { useClientEpisodeCountsQuery } from '../features/episodes';
+import {
+  episodesKeys,
+  listEpisodes,
+  useAttachEpisodeMutation,
+  useClientEpisodeCountsQuery,
+} from '../features/episodes';
 import { usePendingDocumentationQuery } from '../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import {
   getLifecycleStatusColor,
@@ -61,6 +71,7 @@ import {
   CaseResolverState,
   startConsultationWithGuard,
 } from '../features/doctorDashboard/application/caseResolver';
+import { toDoctorDashboardError } from '../features/doctorDashboard/application/doctorDashboardError';
 
 // Phase 4 (R4) · T-E.1 (ADR-R4-02) — re-pointed to the backend's own
 // lifecycle_status_label/lifecycle_status (T-C.2); this widget's own
@@ -69,9 +80,11 @@ import {
 
 export default function DoctorDashboard() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { logout, currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
   const staffId = currentUser?.userId || ''; // Use user_id directly as staff_id
+  const attachEpisodeMutation = useAttachEpisodeMutation();
 
   // ============================================================
   // CASE RESOLVER STATE
@@ -80,6 +93,32 @@ export default function DoctorDashboard() {
     loadingAppointmentId: null,
     error: null,
   });
+
+  const caseResolverOperations = React.useMemo(
+    () => ({
+      getAppointment: (activeTenantId: string, appointmentId: string) =>
+        queryClient.fetchQuery({
+          queryKey: appointmentsKeys.detail(activeTenantId, appointmentId),
+          queryFn: () => getAppointmentDetail(activeTenantId, appointmentId),
+          staleTime: 0,
+        }),
+      listActiveEpisodes: (activeTenantId: string, clientId: string) => {
+        const params = { client_id: clientId, status: 'ACTIVE' as const, limit: 1 };
+        return queryClient.fetchQuery({
+          queryKey: episodesKeys.list(activeTenantId, params),
+          queryFn: () => listEpisodes(activeTenantId, params),
+          staleTime: 0,
+        });
+      },
+      attachEpisode: (activeTenantId: string, appointmentId: string, episodeId: string) =>
+        attachEpisodeMutation.mutateAsync({
+          tenantId: activeTenantId,
+          appointmentId,
+          episodeId,
+        }),
+    }),
+    [attachEpisodeMutation, queryClient],
+  );
 
   /**
    * Handles "Start Consultation" tap for a given appointment card.
@@ -92,11 +131,12 @@ export default function DoctorDashboard() {
         appointmentId,
         clientId,
         router,
+        operations: caseResolverOperations,
         loadingAppointmentId: resolverState.loadingAppointmentId,
         setState: setResolverState,
       });
     },
-    [resolverState.loadingAppointmentId, tenantId, router]
+    [caseResolverOperations, resolverState.loadingAppointmentId, tenantId, router]
   );
 
   // Shared date hook (reads/writes doctor-specific field in Zustand store)
@@ -308,6 +348,37 @@ export default function DoctorDashboard() {
     };
   }, [kpiData]);
 
+  const quickActions: QuickAction[] = useMemo(() => [
+    {
+      label: 'View Schedule',
+      icon: 'calendar-outline',
+      onPress: () => router.push('/clinic-admin/appointments'),
+      color: colors.primary.main,
+      variant: 'primary',
+    },
+    {
+      label: 'View Patients',
+      icon: 'people-outline',
+      onPress: () => router.push('/clinic-admin/clients'),
+      color: colors.success.main,
+    },
+    {
+      label: 'Start Session',
+      icon: 'play-circle-outline',
+      onPress: () => {
+        const nextAppointment = dashboardData?.appointments?.find(
+          (appointment) => ['scheduled', 'confirmed'].includes(appointment.status?.toLowerCase()),
+        );
+        if (nextAppointment) {
+          void handleStartConsultation(nextAppointment.id, nextAppointment.client_id);
+        } else {
+          Alert.alert('No Upcoming', 'No upcoming appointments to start.');
+        }
+      },
+      color: colors.info.main,
+    },
+  ], [dashboardData, handleStartConsultation, router]);
+
   const handleLogout = () => {
     if (Platform.OS === 'web') {
       if (!window.confirm('Are you sure you want to logout?')) {
@@ -339,39 +410,7 @@ export default function DoctorDashboard() {
     );
   };
 
-  // Get error message for KPI errors
-  const getKpiErrorMessage = (error: any): { title: string; message: string } => {
-    const status = error?.response?.status;
-    const detail = error?.response?.data?.detail || '';
-
-    switch (status) {
-      case 400:
-        return {
-          title: 'Invalid Request',
-          message: detail || 'Invalid period or date range. Please try again.',
-        };
-      case 401:
-        return {
-          title: 'Session Expired',
-          message: 'Please log in again to view your KPIs.',
-        };
-      case 403:
-        return {
-          title: 'Access Denied',
-          message: 'You do not have permission to view these KPIs.',
-        };
-      case 404:
-        return {
-          title: 'Not Found',
-          message: 'Staff profile not found. Please contact support.',
-        };
-      default:
-        return {
-          title: 'Error Loading KPIs',
-          message: 'Could not load your performance metrics. Please try again.',
-        };
-    }
-  };
+  const getKpiErrorMessage = (error: unknown) => toDoctorDashboardError(error);
 
   const renderContent = () => {
     // Loading state for dashboard
@@ -386,15 +425,9 @@ export default function DoctorDashboard() {
 
     // Error state for dashboard
     if (isDashboardError) {
-      const axiosError = dashboardError as any;
-      const status = axiosError?.response?.status;
-      const errorDetail = axiosError?.response?.data?.detail || '';
-      
-      const isPermissionError = status === 403 || 
-        errorDetail.toLowerCase().includes('permission') ||
-        errorDetail.toLowerCase().includes('forbidden');
-      
-      const isAuthError = status === 401;
+      const dashboardFailure = toDoctorDashboardError(dashboardError);
+      const isPermissionError = dashboardFailure.code === 'PERMISSION_DENIED';
+      const isAuthError = dashboardFailure.code === 'SESSION_EXPIRED';
       
       return (
         <View style={styles.section}>
@@ -444,6 +477,11 @@ export default function DoctorDashboard() {
             <OnLeaveBanner />
           </View>
         )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <DashboardQuickActions actions={quickActions} />
+        </View>
 
         {/* Date Selector */}
         <View style={styles.section}>

@@ -57,4 +57,5 @@ export {
   useReopenEpisodeMutation,
   useAttachEpisodeMutation,
   episodesKeys,
+  listEpisodes,
 } from './data/repositories/episodes.repository.impl';

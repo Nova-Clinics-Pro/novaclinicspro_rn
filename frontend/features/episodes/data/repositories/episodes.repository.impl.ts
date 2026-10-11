@@ -55,6 +55,16 @@ export const episodesKeys = {
     ['episode', tenantId, episodeId] as const,
 };
 
+/**
+ * Canonical tenant-scoped episode-list command for non-React orchestration.
+ * Query hooks below use the same repository operation so application code
+ * never needs to own episode transport details.
+ */
+export const listEpisodes = (
+  tenantId: string,
+  params?: ListEpisodesParams,
+): Promise<EpisodesListResponse> => listEpisodesApi(tenantId, params);
+
 // ============================================
 // QUERY HOOKS
 // ============================================
@@ -83,7 +93,7 @@ export const useEpisodesQuery = (
   
   return useQuery<EpisodesListResponse, Error>({
     queryKey: episodesKeys.list(tenantId, params),
-    queryFn: () => listEpisodesApi(tenantId, params),
+    queryFn: () => listEpisodes(tenantId, params),
     ...options,
     enabled: finalEnabled,
   });

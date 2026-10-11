@@ -70,6 +70,19 @@ export const appointmentsKeys = {
     [...appointmentsKeys.all, 'therapists', tenantId, params] as const,
 };
 
+/**
+ * Canonical tenant-scoped appointment-detail command.
+ *
+ * Non-React application orchestration uses this alongside
+ * `appointmentsKeys.detail`; presentation continues to use the query hook
+ * below. Keeping both paths here prevents application code from reaching into
+ * the datasource or central client directly.
+ */
+export const getAppointmentDetail = (
+  tenantId: string,
+  appointmentId: string,
+): Promise<AppointmentResponse> => getAppointmentApi(tenantId, appointmentId);
+
 // ============================================
 // QUERY HOOKS
 // ============================================
@@ -134,7 +147,7 @@ export const useAppointmentDetailQuery = (
 ) => {
   return useQuery<AppointmentResponse, Error>({
     queryKey: appointmentsKeys.detail(tenantId, appointmentId),
-    queryFn: () => getAppointmentApi(tenantId, appointmentId),
+    queryFn: () => getAppointmentDetail(tenantId, appointmentId),
     enabled: !!tenantId && !!appointmentId,
     ...options,
   });
