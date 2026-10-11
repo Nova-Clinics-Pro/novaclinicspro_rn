@@ -109,7 +109,7 @@ const firstMessage = (value: unknown): string | null => {
   return null;
 };
 
-const isSafeUserMessage = (message: string): boolean => !/(axioserror|typeerror|referenceerror|stack trace|\bundefined\b|\bnull\b|\bselect\b|\binsert\b|\bupdate\b|\bdelete\b|sql|traceback)/i.test(message);
+const isSafeUserMessage = (message: string): boolean => !/(axioserror|typeerror|referenceerror|stack trace|\bundefined\b|\bnull\b|sql|traceback)/i.test(message);
 
 const isSchedulingConflict = (message: string): boolean => /overlap|already has an appointment|conflicting/i.test(message);
 
