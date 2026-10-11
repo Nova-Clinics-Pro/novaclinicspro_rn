@@ -27,6 +27,9 @@ import {
   TreatmentSheetSyncResponse,
   TreatmentSheetPrintResponse,
 } from '../models/treatmentSheets.dtos';
+import { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
+
+export { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
 
 // ============================================
 // QUERY KEYS
@@ -223,13 +226,13 @@ export const useUpdateTreatmentSheetRowMutation = (
   treatmentSheetId: string,
   options?: UseMutationOptions<
     TreatmentSheetResponse,
-    Error,
+    SessionInstructionsError,
     { rowId: string; payload: TreatmentSheetRowUpdateRequest; expectedVersion?: number }
   >
 ) => {
   return useMutation<
     TreatmentSheetResponse,
-    Error,
+    SessionInstructionsError,
     { rowId: string; payload: TreatmentSheetRowUpdateRequest; expectedVersion?: number }
   >({
     mutationFn: ({ rowId, payload, expectedVersion }) => updateTreatmentSheetRowApi(rowId, payload, expectedVersion),
@@ -249,9 +252,9 @@ export const useUpdateTreatmentSheetRowMutation = (
 export const useUpdateAllTreatmentSheetRowsMutation = (
   tenantId: string,
   treatmentSheetId: string,
-  options?: UseMutationOptions<TreatmentSheetResponse, Error, Array<{ id: string } & TreatmentSheetRowUpdateRequest>>
+  options?: UseMutationOptions<TreatmentSheetResponse, SessionInstructionsError, Array<{ id: string } & TreatmentSheetRowUpdateRequest>>
 ) => {
-  return useMutation<TreatmentSheetResponse, Error, Array<{ id: string } & TreatmentSheetRowUpdateRequest>>({
+  return useMutation<TreatmentSheetResponse, SessionInstructionsError, Array<{ id: string } & TreatmentSheetRowUpdateRequest>>({
     mutationFn: (rows) => updateAllTreatmentSheetRowsApi(tenantId, treatmentSheetId, rows),
     ...options,
   });

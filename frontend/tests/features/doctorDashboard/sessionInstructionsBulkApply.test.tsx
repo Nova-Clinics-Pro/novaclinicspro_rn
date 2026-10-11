@@ -19,6 +19,7 @@ import {
   updateTreatmentSheetRowApi,
   updateAllTreatmentSheetRowsApi,
 } from '../../../features/treatmentSheets/data/datasources/treatmentSheets.api';
+import { SessionInstructionsError } from '../../../features/treatmentSheets/domain/errors/sessionInstructionsError';
 
 jest.mock('../../../core/hooks/useFeatures', () => ({
   useFeatures: () => ({ clinic_type: 'ayurveda' }),
@@ -296,7 +297,7 @@ describe('SessionInstructionsModule bulk-apply (T-FE-E.2a, FR-TS-3 Adoption requ
     });
 
     it('a validation failure (400) surfaces an error and produces no false success message', async () => {
-      (updateAllTreatmentSheetRowsApi as jest.Mock).mockRejectedValue({ response: { status: 400, data: { detail: 'Cannot edit completed row' } } });
+      (updateAllTreatmentSheetRowsApi as jest.Mock).mockRejectedValue(new SessionInstructionsError('VALIDATION_FAILED', 'Could not apply — one or more selected Sessions is not eligible.'));
       const { findByLabelText, findByText, getAllByDisplayValue, getByDisplayValue, queryByText } = renderModule();
       fireEvent.press(await findByLabelText('Select Day 1'));
       fireEvent.changeText(getAllByDisplayValue('')[0], 'Panchakarma');
@@ -306,7 +307,7 @@ describe('SessionInstructionsModule bulk-apply (T-FE-E.2a, FR-TS-3 Adoption requ
     });
 
     it('a permission failure (403) surfaces the permission-specific message', async () => {
-      (updateAllTreatmentSheetRowsApi as jest.Mock).mockRejectedValue({ response: { status: 403 } });
+      (updateAllTreatmentSheetRowsApi as jest.Mock).mockRejectedValue(new SessionInstructionsError('PERMISSION_DENIED', 'You do not have permission to apply Session instructions.'));
       const { findByLabelText, findByText, getAllByDisplayValue, getByDisplayValue } = renderModule();
       fireEvent.press(await findByLabelText('Select Day 1'));
       fireEvent.changeText(getAllByDisplayValue('')[0], 'Panchakarma');
@@ -315,7 +316,7 @@ describe('SessionInstructionsModule bulk-apply (T-FE-E.2a, FR-TS-3 Adoption requ
     });
 
     it('atomic failure never marks any Session as applied -- selection and draft are preserved for retry', async () => {
-      (updateAllTreatmentSheetRowsApi as jest.Mock).mockRejectedValue({ response: { status: 400 } });
+      (updateAllTreatmentSheetRowsApi as jest.Mock).mockRejectedValue(new SessionInstructionsError('VALIDATION_FAILED', 'Could not apply — one or more selected Sessions is not eligible.'));
       const { findByLabelText, findByText, getAllByDisplayValue, getByDisplayValue } = renderModule();
       fireEvent.press(await findByLabelText('Select Day 1'));
       fireEvent.changeText(getAllByDisplayValue('')[0], 'Panchakarma');

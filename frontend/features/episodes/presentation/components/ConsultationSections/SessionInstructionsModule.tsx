@@ -50,6 +50,7 @@ import { useTreatmentOrderQuery } from '../../../../treatmentSheets/data/reposit
 import {
   useUpdateTreatmentSheetRowMutation,
   useUpdateAllTreatmentSheetRowsMutation,
+  SessionInstructionsError,
 } from '../../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { TreatmentRowOrderResponse } from '../../../../treatmentSheets/data/models/treatmentOrders.dtos';
 
@@ -57,13 +58,6 @@ const KNOWN_ROW_STATUSES: ReadonlySet<string> = new Set(['PENDING', 'SCHEDULED',
 
 type BulkDraft = { treatment_description: string; medicines_given: string; instructions: string };
 const EMPTY_BULK_DRAFT: BulkDraft = { treatment_description: '', medicines_given: '', instructions: '' };
-
-function is409VersionConflict(err: any): number | null {
-  const detail = err?.response?.data?.detail;
-  if (err?.response?.data?.error === 'VERSION_CONFLICT') return err.response.data.current_version ?? null;
-  if (detail?.error === 'VERSION_CONFLICT') return detail.current_version ?? null;
-  return null;
-}
 
 /** Only COMPLETED Sessions are ineligible for content edits -- the exact,
  * verified backend rule (both `update_row` and `bulk_update` reject
@@ -125,12 +119,12 @@ export const SessionInstructionsModule: React.FC = () => {
         expectedVersion: orderQuery.data?.version,
       });
       await orderQuery.refetch();
-    } catch (err: any) {
-      if (err?.response?.status === 409) {
-        setConflict({ currentVersion: is409VersionConflict(err) });
+    } catch (error) {
+      if (error instanceof SessionInstructionsError && error.kind === 'VERSION_CONFLICT') {
+        setConflict({ currentVersion: error.currentVersion });
         return;
       }
-      setSaveError(err?.response?.data?.detail ?? err?.message ?? t('sessionInstructions.saveFailed'));
+      setSaveError(error instanceof SessionInstructionsError ? error.message : t('sessionInstructions.saveFailed'));
     }
   }, [selectedRow, draft, orderQuery, updateRowMutation, t]);
 
@@ -189,12 +183,11 @@ export const SessionInstructionsModule: React.FC = () => {
       // they've seen it, same as any other transient confirmation.
       setBulkConfirming(false);
       setBulkSuccess(true);
-    } catch (err: any) {
+    } catch (error) {
       setBulkConfirming(false);
-      const status = err?.response?.status;
-      if (status === 403) {
+      if (error instanceof SessionInstructionsError && error.kind === 'PERMISSION_DENIED') {
         setBulkError(t('sessionInstructions.bulk.applyFailedPermission'));
-      } else if (status === 400 || status === 422) {
+      } else if (error instanceof SessionInstructionsError && error.kind === 'VALIDATION_FAILED') {
         setBulkError(t('sessionInstructions.bulk.applyFailedValidation'));
       } else {
         setBulkError(t('sessionInstructions.bulk.applyFailedGeneral'));

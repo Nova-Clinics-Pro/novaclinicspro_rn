@@ -16,6 +16,7 @@ import { WorkspaceProvider } from '../../../features/episodes/presentation/conte
 import { useEpisodeWorkspaceData } from '../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData';
 import { getTreatmentOrderApi } from '../../../features/treatmentSheets/data/datasources/treatmentOrders.api';
 import { updateTreatmentSheetRowApi } from '../../../features/treatmentSheets/data/datasources/treatmentSheets.api';
+import { SessionInstructionsError } from '../../../features/treatmentSheets/domain/errors/sessionInstructionsError';
 
 jest.mock('../../../core/hooks/useFeatures', () => ({
   useFeatures: () => ({ clinic_type: 'ayurveda' }),
@@ -157,10 +158,8 @@ describe('SessionInstructionsModule (T-FE-E.2, FR-TS-3)', () => {
     );
   });
 
-  it('a 409 VERSION_CONFLICT response surfaces an explicit conflict state, never a silent overwrite or blind retry', async () => {
-    (updateTreatmentSheetRowApi as jest.Mock).mockRejectedValue({
-      response: { status: 409, data: { error: 'VERSION_CONFLICT', current_version: 5 } },
-    });
+  it('a normalized VERSION_CONFLICT surfaces an explicit conflict state, never a silent overwrite or blind retry', async () => {
+    (updateTreatmentSheetRowApi as jest.Mock).mockRejectedValue(new SessionInstructionsError('VERSION_CONFLICT', 'Session instructions changed on the server.', 5));
     const { findByText, getByDisplayValue, getByText } = renderModule();
     fireEvent.press(await findByText('Day 1'));
     fireEvent.changeText(getByDisplayValue('Abhyanga'), 'Conflicting edit');
@@ -173,9 +172,7 @@ describe('SessionInstructionsModule (T-FE-E.2, FR-TS-3)', () => {
   });
 
   it('reload-after-conflict clears the conflict state and re-fetches — never auto-resubmits the stale draft', async () => {
-    (updateTreatmentSheetRowApi as jest.Mock).mockRejectedValue({
-      response: { status: 409, data: { error: 'VERSION_CONFLICT', current_version: 5 } },
-    });
+    (updateTreatmentSheetRowApi as jest.Mock).mockRejectedValue(new SessionInstructionsError('VERSION_CONFLICT', 'Session instructions changed on the server.', 5));
     const { findByText, getByDisplayValue, getByText } = renderModule();
     fireEvent.press(await findByText('Day 1'));
     fireEvent.changeText(getByDisplayValue('Abhyanga'), 'Conflicting edit');

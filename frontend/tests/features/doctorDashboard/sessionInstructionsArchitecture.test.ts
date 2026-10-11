@@ -14,6 +14,7 @@ import path from 'path';
 const read = (relativePath: string) => fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
 
 const moduleSource = read('../../../features/episodes/presentation/components/ConsultationSections/SessionInstructionsModule.tsx');
+const executableModuleSource = moduleSource.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
 const repoSource = read('../../../features/treatmentSheets/data/repositories/treatmentSheets.repository.impl.ts');
 const datasourceSource = read('../../../features/treatmentSheets/data/datasources/treatmentSheets.api.ts');
 
@@ -22,6 +23,11 @@ describe('SessionInstructionsModule bulk-apply architecture (T-FE-E.2a)', () => 
     expect(moduleSource).not.toMatch(/axiosClient/);
     expect(moduleSource).not.toMatch(/from ['"].*treatmentSheets\.api['"]/);
     expect(moduleSource).not.toMatch(/from ['"].*treatmentOrders\.api['"]/);
+  });
+
+  it('consumes feature error semantics rather than HTTP/Axios response envelopes', () => {
+    expect(executableModuleSource).toMatch(/SessionInstructionsError/);
+    expect(executableModuleSource).not.toMatch(/AxiosError|isAxiosError|\berror\?*\.response|\berr\?*\.response|\.response\?*\.data|\.response\.data|response\.status/);
   });
 
   it('uses the existing canonical bulk hook -- does not construct a new bulk mutation or duplicate the endpoint', () => {

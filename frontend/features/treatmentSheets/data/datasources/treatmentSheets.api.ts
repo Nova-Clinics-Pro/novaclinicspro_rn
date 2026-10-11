@@ -7,6 +7,8 @@
  */
 
 import { axiosClient } from '../../../../core/api/axiosClient';
+import { isAxiosError } from 'axios';
+import { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
 import {
   TreatmentSheetCreateRequest,
   TreatmentSheetSimpleCreateRequest,
@@ -185,11 +187,15 @@ export const updateAllTreatmentSheetRowsApi = async (
   treatmentSheetId: string,
   rows: Array<{ id: string } & TreatmentSheetRowUpdateRequest>
 ): Promise<TreatmentSheetResponse> => {
-  const response = await axiosClient.patch(
-    `/api/v1/clinic/${tenantId}/treatment-sheets/${treatmentSheetId}/rows`,
-    { rows }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.patch(
+      `/api/v1/clinic/${tenantId}/treatment-sheets/${treatmentSheetId}/rows`,
+      { rows }
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeSessionInstructionsError(error);
+  }
 };
 
 /**
@@ -214,12 +220,59 @@ export const updateTreatmentSheetRowApi = async (
   payload: TreatmentSheetRowUpdateRequest,
   expectedVersion?: number
 ): Promise<TreatmentSheetResponse> => {
-  const response = await axiosClient.patch(
-    `/api/v1/clinic/treatment-sheets/rows/${rowId}`,
-    payload,
-    expectedVersion !== undefined ? { headers: { 'If-Match': String(expectedVersion) } } : undefined
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.patch(
+      `/api/v1/clinic/treatment-sheets/rows/${rowId}`,
+      payload,
+      expectedVersion !== undefined ? { headers: { 'If-Match': String(expectedVersion) } } : undefined
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeSessionInstructionsError(error);
+  }
+};
+
+type SessionInstructionsErrorEnvelope = {
+  error?: unknown;
+  detail?: unknown;
+  message?: unknown;
+  current_version?: unknown;
+};
+
+const safeMessage = (error: unknown): string => error instanceof Error && !/(axioserror|typeerror|referenceerror|stack trace|sql|traceback)/i.test(error.message)
+  ? error.message
+  : 'Could not save Session instructions.';
+
+const envelopeMessage = (envelope: SessionInstructionsErrorEnvelope | undefined): string | null => {
+  const candidate = envelope?.detail ?? envelope?.message ?? envelope?.error;
+  if (typeof candidate === 'string' && !/(stack trace|sql|traceback)/i.test(candidate)) return candidate;
+  if (candidate && typeof candidate === 'object') {
+    const nested = candidate as SessionInstructionsErrorEnvelope;
+    return envelopeMessage(nested);
+  }
+  return null;
+};
+
+/** Interprets row-write transport responses once for all Treatment Sheets consumers. */
+export const normalizeSessionInstructionsError = (error: unknown): SessionInstructionsError => {
+  if (error instanceof SessionInstructionsError) return error;
+  if (!isAxiosError(error)) return new SessionInstructionsError('SAVE_FAILED', safeMessage(error));
+
+  const status = error.response?.status;
+  const envelope = error.response?.data as SessionInstructionsErrorEnvelope | undefined;
+  const detail = envelope?.detail && typeof envelope.detail === 'object'
+    ? envelope.detail as SessionInstructionsErrorEnvelope
+    : undefined;
+  const code = envelope?.error ?? detail?.error;
+  const currentVersion = envelope?.current_version ?? detail?.current_version;
+  const version = typeof currentVersion === 'number' ? currentVersion : null;
+  const message = envelopeMessage(envelope) ?? safeMessage(error);
+
+  if (status === 409) return new SessionInstructionsError('VERSION_CONFLICT', 'Session instructions changed on the server.', version);
+  if (status === 403) return new SessionInstructionsError('PERMISSION_DENIED', 'You do not have permission to apply Session instructions.');
+  if (status === 400 || status === 422) return new SessionInstructionsError('VALIDATION_FAILED', 'Could not apply — one or more selected Sessions is not eligible.');
+  if (code === 'VERSION_CONFLICT') return new SessionInstructionsError('VERSION_CONFLICT', 'Session instructions changed on the server.', version);
+  return new SessionInstructionsError('SAVE_FAILED', message);
 };
 
 /**
