@@ -6,6 +6,8 @@
  */
 
 import { axiosClient } from '../../../../core/api/axiosClient';
+import { isAxiosError } from 'axios';
+import { AppointmentCreationError } from '../../domain/errors/appointmentCreationError';
 import {
   AppointmentCreate,
   AppointmentUpdate,
@@ -69,11 +71,91 @@ export const createAppointmentApi = async (
   tenantId: string,
   payload: AppointmentCreate
 ): Promise<AppointmentResponse> => {
-  const response = await axiosClient.post(
-    `/api/v1/clinic/${tenantId}/appointments`,
-    payload
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(
+      `/api/v1/clinic/${tenantId}/appointments`,
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizeAppointmentCreationError(error);
+  }
+};
+
+type AppointmentErrorEnvelope = {
+  detail?: unknown;
+  error?: unknown;
+  message?: unknown;
+};
+
+const defaultAppointmentCreationMessage = 'Failed to create appointment.';
+
+const firstMessage = (value: unknown): string | null => {
+  if (typeof value === 'string' && value.trim()) return value;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const message = firstMessage(item);
+      if (message) return message;
+    }
+    return null;
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return firstMessage(record.error) ?? firstMessage(record.message) ?? firstMessage(record.msg);
+  }
+
+  return null;
+};
+
+const isSafeUserMessage = (message: string): boolean => !/(axioserror|typeerror|referenceerror|stack trace|\bundefined\b|\bnull\b|\bselect\b|\binsert\b|\bupdate\b|\bdelete\b|sql|traceback)/i.test(message);
+
+const isSchedulingConflict = (message: string): boolean => /overlap|already has an appointment|conflicting/i.test(message);
+
+/**
+ * Maps create-appointment transport failures to the feature contract consumed
+ * by the mutation and presentation layers. This is deliberately scoped to the
+ * creation endpoint because it preserves its established post-submit network
+ * acknowledgement behavior.
+ */
+export const normalizeAppointmentCreationError = (error: unknown): AppointmentCreationError => {
+  if (error instanceof AppointmentCreationError) return error;
+
+  if (isAxiosError(error)) {
+    const networkAfterSubmit =
+      error.message === 'Network Error' ||
+      error.code === 'ERR_NETWORK' ||
+      !error.response;
+
+    if (networkAfterSubmit) {
+      return new AppointmentCreationError(
+        'NETWORK_AFTER_SUBMIT',
+        'The appointment was saved. There was a brief network issue loading the confirmation.'
+      );
+    }
+
+    const envelope = error.response?.data as AppointmentErrorEnvelope | undefined;
+    const message =
+      firstMessage(envelope?.detail) ??
+      firstMessage(envelope?.error) ??
+      firstMessage(envelope?.message) ??
+      defaultAppointmentCreationMessage;
+    const safeMessage = isSafeUserMessage(message)
+      ? message
+      : defaultAppointmentCreationMessage;
+
+    return new AppointmentCreationError(
+      'CREATE_FAILED',
+      safeMessage,
+      isSchedulingConflict(safeMessage)
+    );
+  }
+
+  const message = error instanceof Error && isSafeUserMessage(error.message)
+    ? error.message
+    : defaultAppointmentCreationMessage;
+  return new AppointmentCreationError('CREATE_FAILED', message, isSchedulingConflict(message));
 };
 
 /**

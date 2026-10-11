@@ -42,6 +42,9 @@ import {
   BulkCreateResponse,
   AvailableTherapist,
 } from '../models/appointments.dtos';
+import { AppointmentCreationError } from '../../domain/errors/appointmentCreationError';
+
+export { AppointmentCreationError } from '../../domain/errors/appointmentCreationError';
 
 // ============================================
 // QUERY KEYS
@@ -220,7 +223,7 @@ export const useEpisodeAppointmentsQuery = (
 export const useCreateAppointmentMutation = (tenantId: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation<AppointmentResponse, Error, AppointmentCreate>({
+  return useMutation<AppointmentResponse, AppointmentCreationError, AppointmentCreate>({
     mutationFn: (payload) => createAppointmentApi(tenantId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() });

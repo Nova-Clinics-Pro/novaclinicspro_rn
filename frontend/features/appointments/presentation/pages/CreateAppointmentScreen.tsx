@@ -47,6 +47,7 @@ import {
   useCreateAppointmentMutation,
   useAppointmentsByDateQuery,
   useValidateAppointmentMutation,
+  AppointmentCreationError,
 } from '../../data/repositories/appointments.repository.impl';
 import {
   AppointmentCreate,
@@ -772,7 +773,7 @@ export const CreateAppointmentScreen: React.FC = () => {
 
   // Resolve doctor_id from client's active treatment sheet, episode, or
   // casesheet (T-G.2: moved behind useOrderingDoctorQuery -- repository ->
-  // datasource -> axiosClient -- same fallback order/fields as before).
+  // datasource -> transport client -- same fallback order/fields as before).
   const orderingDoctorQuery = useOrderingDoctorQuery(tenantId, selectedClientId, appointmentType === 'MULTI');
 
   useEffect(() => {
@@ -1409,57 +1410,25 @@ export const CreateAppointmentScreen: React.FC = () => {
         Alert.alert('Success', 'Appointment created successfully');
         router.back();
       }
-    } catch (err: any) {
-      // Network Error after the server has already processed the request means
-      // the connection dropped before the response body arrived.
-      // The appointment was likely created — navigate back and let the list refresh.
-      // In React Native, err.request may be an XHR object or undefined; check all patterns.
-      const isNetworkError =
-        err?.message === 'Network Error' ||
-        err?.code === 'ERR_NETWORK' ||
-        (err?.isAxiosError && !err?.response);
-
-      if (isNetworkError) {
+    } catch (error) {
+      if (error instanceof AppointmentCreationError && error.kind === 'NETWORK_AFTER_SUBMIT') {
         // Don't log as error — this is expected when network drops after a successful POST
         console.log('[CreateAppointment] Network dropped after POST — appointment was saved');
         Alert.alert(
           'Appointment Created',
-          'The appointment was saved. There was a brief network issue loading the confirmation.',
+          error.message,
           [{ text: 'OK', onPress: () => router.back() }]
         );
         return;
       }
 
-      console.error('[CreateAppointment] Error creating appointment:', err);
-      
-      // Parse error response from backend
-      let errorMessage = t(ErrorTokens.appointments.createFailed);
-      
-      if (err.response?.data) {
-        const errorData = err.response.data;
-        
-        // Extract error message from various possible formats
-        if (errorData.detail) {
-          if (typeof errorData.detail === 'string') {
-            errorMessage = errorData.detail;
-          } else if (Array.isArray(errorData.detail)) {
-            errorMessage = errorData.detail[0] || errorMessage;
-          } else if (errorData.detail.error) {
-            errorMessage = errorData.detail.error;
-          }
-        } else if (errorData.error) {
-          errorMessage = errorData.error;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-        
-        // For overlap/conflict errors, show localized generic message
-        if (errorMessage.includes('overlap') || errorMessage.includes('already has an appointment') || errorMessage.includes('Conflicting')) {
-          errorMessage = t(ErrorTokens.appointments.conflictDetected);
-        }
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
+      console.error('[CreateAppointment] Error creating appointment:', error);
+      const appointmentError = error instanceof AppointmentCreationError
+        ? error
+        : new AppointmentCreationError('CREATE_FAILED', t(ErrorTokens.appointments.createFailed));
+      const errorMessage = appointmentError.isConflict
+        ? t(ErrorTokens.appointments.conflictDetected)
+        : appointmentError.message;
       
       Alert.alert(t('common.error') || 'Error', errorMessage);
     }
