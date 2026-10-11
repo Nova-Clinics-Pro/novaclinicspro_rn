@@ -63,10 +63,12 @@ export const getTreatmentSheetApi = async (
   treatmentSheetId: string,
   tenantId: string
 ): Promise<TreatmentSheetResponse> => {
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/treatment-sheets/${treatmentSheetId}`
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/treatment-sheets/${treatmentSheetId}`);
+    return response.data;
+  } catch (error) {
+    throw normalizeTreatmentOperationError(error, 'Could not load this treatment sheet. Please try again.');
+  }
 };
 
 /**

@@ -29,6 +29,7 @@ import {
   ListCasesheetsParams,
 } from '../models/casesheets.dtos';
 import { CasesheetSignedVersionSnapshot, LivingDocumentVersionListResponse } from '../../../livingDocuments/data/models/livingDocuments.dtos';
+import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
 
 // ============================================
 // QUERY KEYS
@@ -65,9 +66,9 @@ export const useCasesheetsListQuery = (
   tenantId: string,
   clientId: string,
   params?: ListCasesheetsParams,
-  options?: Omit<UseQueryOptions<CasesheetListResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<CasesheetListResponse, CasesheetOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<CasesheetListResponse, Error>({
+  return useQuery<CasesheetListResponse, CasesheetOperationError>({
     queryKey: casesheetsKeys.list(tenantId, clientId, params),
     queryFn: () => listCasesheetsApi(tenantId, clientId, params),
     enabled: !!tenantId && !!clientId,
@@ -82,9 +83,9 @@ export const useCasesheetsListQuery = (
 export const useCasesheetDetailQuery = (
   tenantId: string,
   casesheetId: string,
-  options?: Omit<UseQueryOptions<CasesheetResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<CasesheetResponse, CasesheetOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<CasesheetResponse, Error>({
+  return useQuery<CasesheetResponse, CasesheetOperationError>({
     queryKey: casesheetsKeys.detail(tenantId, casesheetId),
     queryFn: () => getCasesheetApi(tenantId, casesheetId),
     enabled: !!tenantId && !!casesheetId,

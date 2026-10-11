@@ -7,6 +7,8 @@
  */
 
 import { axiosClient } from '../../../../core/api/axiosClient';
+import { isAxiosError } from 'axios';
+import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
 import {
   CasesheetCreateRequest,
   CasesheetUpdateRequest,
@@ -28,11 +30,12 @@ export const listCasesheetsApi = async (
   clientId: string,
   params?: ListCasesheetsParams
 ): Promise<CasesheetListResponse> => {
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/clients/${clientId}/casesheets`,
-    { params }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/clients/${clientId}/casesheets`, { params });
+    return response.data;
+  } catch (error) {
+    throw normalizeCasesheetLoadError(error);
+  }
 };
 
 /**
@@ -69,10 +72,20 @@ export const getCasesheetApi = async (
   tenantId: string,
   casesheetId: string
 ): Promise<CasesheetResponse> => {
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/casesheets/${casesheetId}`
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}`);
+    return response.data;
+  } catch (error) {
+    throw normalizeCasesheetLoadError(error);
+  }
+};
+
+export const normalizeCasesheetLoadError = (error: unknown): CasesheetOperationError => {
+  if (isAxiosError(error)) {
+    if (error.response?.status === 401) return new CasesheetOperationError('AUTHENTICATION_REQUIRED');
+    if (error.response?.status === 403) return new CasesheetOperationError('PERMISSION_DENIED');
+  }
+  return new CasesheetOperationError('LOAD_FAILED');
 };
 
 /**

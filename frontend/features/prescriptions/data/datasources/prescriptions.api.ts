@@ -36,11 +36,12 @@ export const listPrescriptionsApi = async (
     from_date: undefined,
     to_date: undefined,
   };
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/prescriptions`,
-    { params: requestParams }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions`, { params: requestParams });
+    return response.data;
+  } catch (error) {
+    throw normalizePrescriptionLoadError(error);
+  }
 };
 
 /**

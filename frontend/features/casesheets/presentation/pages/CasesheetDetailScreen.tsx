@@ -32,6 +32,7 @@ import { typography } from '../../../../core/theme/typography';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
 import { buildCasesheetPrintHtml } from '../../../../core/clinicalPrint/adapters';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
 import {
   useCasesheetDetailQuery,
   useTransitionCasesheetStatusMutation,
@@ -453,7 +454,7 @@ export const CasesheetDetailScreen: React.FC = () => {
           variant="error"
           title="Unable to Load Casesheet"
           message={
-            error?.message?.includes('401')
+            error instanceof CasesheetOperationError && error.kind === 'AUTHENTICATION_REQUIRED'
               ? 'Authentication failed. Please try logging in again.'
               : 'Could not load this casesheet. Please try again.'
           }

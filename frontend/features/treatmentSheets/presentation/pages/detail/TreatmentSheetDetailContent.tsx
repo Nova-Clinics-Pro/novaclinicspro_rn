@@ -23,6 +23,7 @@ import { TreatmentScheduleSummary } from './TreatmentScheduleSummary';
 import { TreatmentSheetInfoCard } from './TreatmentSheetInfoCard';
 import { ClientEntity, HeaderEntity, RowFormData, ScheduleRow } from './types';
 import { TreatmentSheetResponse } from '../../../data/models/treatmentSheets.dtos';
+import { TreatmentOperationError } from '../../../domain/errors/treatmentOperationError';
 
 interface PermissionResult {
   allowed?: boolean;
@@ -170,7 +171,7 @@ export const TreatmentSheetDetailContent: React.FC<Props> = ({
       <EmptyTreatmentSheetState
         variant="error"
         title="Unable to Load Treatment Sheet"
-        message={error?.message?.includes('401') ? 'Authentication failed. Please try logging in again.' : 'Could not load this treatment sheet. Please try again.'}
+        message={error instanceof TreatmentOperationError && error.kind === 'AUTHENTICATION_REQUIRED' ? 'Authentication failed. Please try logging in again.' : 'Could not load this treatment sheet. Please try again.'}
         actionLabel="Retry"
         onActionPress={refetch}
       />

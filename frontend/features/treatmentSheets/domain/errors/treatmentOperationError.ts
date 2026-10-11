@@ -1,5 +1,6 @@
 /** Stable feature semantics for Treatment Plan and scheduling operations. */
 export type TreatmentOperationFailureKind =
+  | 'AUTHENTICATION_REQUIRED'
   | 'VERSION_CONFLICT'
   | 'PERMISSION_DENIED'
   | 'VALIDATION_FAILED'

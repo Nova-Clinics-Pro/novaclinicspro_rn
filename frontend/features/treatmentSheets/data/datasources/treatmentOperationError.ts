@@ -31,6 +31,7 @@ export const normalizeTreatmentOperationError = (
   const code = errorCode(envelope);
   const status = error.response?.status;
 
+  if (status === 401) return new TreatmentOperationError('AUTHENTICATION_REQUIRED', 'Authentication failed. Please try logging in again.');
   if (status === 409 || code === 'VERSION_CONFLICT') {
     return new TreatmentOperationError('VERSION_CONFLICT', 'This plan was updated elsewhere. Please review and try again.');
   }

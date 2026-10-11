@@ -28,6 +28,7 @@ import {
   TreatmentSheetPrintResponse,
 } from '../models/treatmentSheets.dtos';
 import { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
+import { TreatmentOperationError } from '../../domain/errors/treatmentOperationError';
 
 export { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
 
@@ -54,9 +55,9 @@ export const treatmentSheetsKeys = {
 export const useTreatmentSheetDetailQuery = (
   treatmentSheetId: string,
   tenantId: string,
-  options?: Omit<UseQueryOptions<TreatmentSheetResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<TreatmentSheetResponse, TreatmentOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<TreatmentSheetResponse, Error>({
+  return useQuery<TreatmentSheetResponse, TreatmentOperationError>({
     queryKey: treatmentSheetsKeys.detail(treatmentSheetId),
     queryFn: () => getTreatmentSheetApi(treatmentSheetId, tenantId),
     enabled: !!treatmentSheetId && !!tenantId,

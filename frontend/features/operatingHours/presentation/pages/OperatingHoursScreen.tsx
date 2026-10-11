@@ -45,7 +45,7 @@ import {
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
-import { normalizeError } from '../../../../core/api/axiosClient';
+import { OperatingHoursOperationError } from '../../domain/errors/operatingHoursOperationError';
 
 // ============================================
 // TIME PICKER MODAL
@@ -773,22 +773,15 @@ export const OperatingHoursScreen: React.FC = () => {
 
   // Sanitized error handler - no raw system errors shown to user
   const showUserFriendlyError = useCallback((error: unknown, action: string) => {
-    const normalized = normalizeError(error);
-    
-    // Map error codes to user-friendly messages
-    const userMessages: Record<string, string> = {
-      'CORS_ERROR': 'Unable to connect to server. Please check your connection and try again.',
-      'NETWORK_ERROR': 'Network error. Please check your internet connection.',
-      '401': 'Your session has expired. Please log in again.',
-      '403': 'You do not have permission to perform this action.',
-      '404': 'The requested resource was not found.',
-      '422': 'Invalid data provided. Please check your input.',
-      '500': 'Server error. Please try again later.',
-    };
-
-    const message = userMessages[normalized.code] || 
-                   userMessages[normalized.status?.toString() || ''] ||
-                   `Unable to ${action}. Please try again.`;
+    const message = error instanceof OperatingHoursOperationError
+      ? {
+          AUTHENTICATION_REQUIRED: 'Your session has expired. Please log in again.',
+          PERMISSION_DENIED: 'You do not have permission to perform this action.',
+          NOT_FOUND: 'The requested resource was not found.',
+          VALIDATION_FAILED: 'Invalid data provided. Please check your input.',
+          SAVE_FAILED: `Unable to ${action}. Please try again.`,
+        }[error.kind]
+      : `Unable to ${action}. Please try again.`;
 
     Alert.alert('Error', message);
   }, []);

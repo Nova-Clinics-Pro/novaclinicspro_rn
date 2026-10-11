@@ -20,6 +20,7 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 import {
   usePrescriptionsListQuery,
 } from '../../data/repositories/prescriptions.repository.impl';
@@ -170,7 +171,7 @@ export const PrescriptionsListScreen: React.FC<PrescriptionsListScreenProps> = (
           variant="error"
           title="Unable to Load Prescriptions"
           message={
-            error?.message?.includes('401')
+            error instanceof PrescriptionOperationError && error.kind === 'AUTHENTICATION_REQUIRED'
               ? 'Authentication failed. Please try logging in again.'
               : 'Could not load prescriptions. Pull down to retry.'
           }

@@ -6,6 +6,7 @@
  */
 
 import { axiosClient } from '../../../../core/api/axiosClient';
+import { normalizeRbacOperationError } from './rbacOperationError';
 import {
   // Tenant Roles
   TenantRoleCreate,
@@ -37,6 +38,26 @@ import {
   PaginatedRbacAuditResponse,
 } from '../models/rbac.dtos';
 
+const executeRbacRequest = async <T>(
+  request: () => Promise<{ data: T }>
+): Promise<T> => {
+  try {
+    return (await request()).data;
+  } catch (error) {
+    throw normalizeRbacOperationError(error);
+  }
+};
+
+const executeRbacVoidRequest = async (
+  request: () => Promise<unknown>
+): Promise<void> => {
+  try {
+    await request();
+  } catch (error) {
+    throw normalizeRbacOperationError(error);
+  }
+};
+
 // ============================================
 // TENANT ROLES API
 // ============================================
@@ -49,10 +70,9 @@ export const listTenantRolesApi = async (
   tenantId: string,
   params?: ListTenantRolesParams
 ): Promise<PaginatedTenantRolesResponse> => {
-  const response = await axiosClient.get(`/api/v1/rbac/${tenantId}/tenant-roles`, {
+  return executeRbacRequest(() => axiosClient.get(`/api/v1/rbac/${tenantId}/tenant-roles`, {
     params,
-  });
-  return response.data;
+  }));
 };
 
 /**
@@ -63,10 +83,9 @@ export const getTenantRoleApi = async (
   tenantId: string,
   roleId: string
 ): Promise<TenantRoleResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-roles/${roleId}`
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -77,11 +96,10 @@ export const createTenantRoleApi = async (
   tenantId: string,
   payload: TenantRoleCreate
 ): Promise<TenantRoleResponse> => {
-  const response = await axiosClient.post(
+  return executeRbacRequest(() => axiosClient.post(
     `/api/v1/rbac/${tenantId}/tenant-roles`,
     payload
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -93,11 +111,10 @@ export const updateTenantRoleApi = async (
   roleId: string,
   payload: TenantRoleUpdate
 ): Promise<TenantRoleResponse> => {
-  const response = await axiosClient.patch(
+  return executeRbacRequest(() => axiosClient.patch(
     `/api/v1/rbac/${tenantId}/tenant-roles/${roleId}`,
     payload
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -108,9 +125,9 @@ export const deleteTenantRoleApi = async (
   tenantId: string,
   roleId: string
 ): Promise<void> => {
-  await axiosClient.delete(
+  return executeRbacVoidRequest(() => axiosClient.delete(
     `/api/v1/rbac/${tenantId}/tenant-roles/${roleId}`
-  );
+  ));
 };
 
 // ============================================
@@ -125,11 +142,10 @@ export const listTenantPermissionsApi = async (
   tenantId: string,
   params?: ListTenantPermissionsParams
 ): Promise<PaginatedTenantPermissionsResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-permissions`,
     { params }
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -140,10 +156,9 @@ export const getTenantPermissionApi = async (
   tenantId: string,
   permissionId: string
 ): Promise<TenantPermissionResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-permissions/${permissionId}`
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -155,11 +170,10 @@ export const toggleTenantPermissionApi = async (
   permissionId: string,
   payload: TenantPermissionToggleActive
 ): Promise<TenantPermissionResponse> => {
-  const response = await axiosClient.patch(
+  return executeRbacRequest(() => axiosClient.patch(
     `/api/v1/rbac/${tenantId}/tenant-permissions/${permissionId}/toggle-active`,
     payload
-  );
-  return response.data;
+  ));
 };
 
 // ============================================
@@ -174,11 +188,10 @@ export const listTenantUsersApi = async (
   tenantId: string,
   params?: ListTenantUsersParams
 ): Promise<PaginatedTenantUsersResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-users`,
     { params }
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -189,10 +202,9 @@ export const getTenantUserApi = async (
   tenantId: string,
   tenantUserId: string
 ): Promise<TenantUserResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-users/${tenantUserId}`
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -203,11 +215,10 @@ export const createTenantUserApi = async (
   tenantId: string,
   payload: TenantUserCreate
 ): Promise<TenantUserResponse> => {
-  const response = await axiosClient.post(
+  return executeRbacRequest(() => axiosClient.post(
     `/api/v1/rbac/${tenantId}/tenant-users`,
     payload
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -219,11 +230,10 @@ export const updateTenantUserApi = async (
   tenantUserId: string,
   payload: TenantUserUpdate
 ): Promise<TenantUserResponse> => {
-  const response = await axiosClient.patch(
+  return executeRbacRequest(() => axiosClient.patch(
     `/api/v1/rbac/${tenantId}/tenant-users/${tenantUserId}`,
     payload
-  );
-  return response.data;
+  ));
 };
 
 // ============================================
@@ -238,11 +248,10 @@ export const listTenantUserRolesApi = async (
   tenantId: string,
   params?: ListTenantUserRolesParams
 ): Promise<PaginatedTenantUserRolesResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-user-roles`,
     { params }
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -253,10 +262,9 @@ export const getTenantUserRoleApi = async (
   tenantId: string,
   assignmentId: string
 ): Promise<TenantUserRoleResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-user-roles/${assignmentId}`
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -267,11 +275,10 @@ export const assignTenantUserRoleApi = async (
   tenantId: string,
   payload: TenantUserRoleAssign
 ): Promise<TenantUserRoleResponse> => {
-  const response = await axiosClient.post(
+  return executeRbacRequest(() => axiosClient.post(
     `/api/v1/rbac/${tenantId}/tenant-user-roles/assign`,
     payload
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -283,11 +290,10 @@ export const updateTenantUserRoleApi = async (
   assignmentId: string,
   payload: TenantUserRoleUpdate
 ): Promise<TenantUserRoleResponse> => {
-  const response = await axiosClient.patch(
+  return executeRbacRequest(() => axiosClient.patch(
     `/api/v1/rbac/${tenantId}/tenant-user-roles/${assignmentId}`,
     payload
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -299,10 +305,10 @@ export const removeTenantUserRoleApi = async (
   assignmentId: string,
   payload?: TenantUserRoleRemove
 ): Promise<void> => {
-  await axiosClient.delete(
+  return executeRbacVoidRequest(() => axiosClient.delete(
     `/api/v1/rbac/${tenantId}/tenant-user-roles/${assignmentId}`,
     { data: payload }
-  );
+  ));
 };
 
 // ============================================
@@ -317,11 +323,10 @@ export const listRbacAuditHistoryApi = async (
   tenantId: string,
   params?: ListRbacAuditParams
 ): Promise<PaginatedRbacAuditResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-user-role-history`,
     { params }
-  );
-  return response.data;
+  ));
 };
 
 /**
@@ -332,8 +337,7 @@ export const getRbacAuditHistoryApi = async (
   tenantId: string,
   historyId: string
 ): Promise<TenantUserRoleHistoryResponse> => {
-  const response = await axiosClient.get(
+  return executeRbacRequest(() => axiosClient.get(
     `/api/v1/rbac/${tenantId}/tenant-user-role-history/${historyId}`
-  );
-  return response.data;
+  ));
 };

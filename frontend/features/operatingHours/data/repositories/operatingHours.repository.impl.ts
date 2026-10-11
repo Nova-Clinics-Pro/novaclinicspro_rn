@@ -21,6 +21,7 @@ import {
   OnboardingOperatingHoursSourceItem,
 } from '../models/operatingHours.dtos';
 import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
+import { OperatingHoursOperationError } from '../../domain/errors/operatingHoursOperationError';
 
 // ============================================
 // QUERY KEYS
@@ -48,9 +49,9 @@ export const operatingHoursKeys = {
 export const useOperatingHoursListQuery = (
   tenantId: string,
   params?: ListOperatingHoursParams,
-  options?: Omit<UseQueryOptions<PaginatedOperatingHoursResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<PaginatedOperatingHoursResponse, OperatingHoursOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<PaginatedOperatingHoursResponse, Error>({
+  return useQuery<PaginatedOperatingHoursResponse, OperatingHoursOperationError>({
     queryKey: operatingHoursKeys.list(tenantId, params),
     queryFn: () => listOperatingHoursApi(tenantId, params),
     enabled: !!tenantId,
@@ -98,7 +99,7 @@ export const useOperatingHourDetailQuery = (
 export const useCreateOperatingHourMutation = (tenantId: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation<OperatingHourResponse, Error, OperatingHourCreate>({
+  return useMutation<OperatingHourResponse, OperatingHoursOperationError, OperatingHourCreate>({
     mutationFn: (payload) => createOperatingHourApi(tenantId, payload),
     onSuccess: async () => {
       await Promise.all([
@@ -115,7 +116,7 @@ export const useCreateOperatingHourMutation = (tenantId: string) => {
 export const useUpdateOperatingHourMutation = (tenantId: string, operatingHourId: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation<OperatingHourResponse, Error, OperatingHourUpdate>({
+  return useMutation<OperatingHourResponse, OperatingHoursOperationError, OperatingHourUpdate>({
     mutationFn: (payload) => updateOperatingHourApi(tenantId, operatingHourId, payload),
     onSuccess: async (data) => {
       queryClient.setQueryData(
@@ -136,7 +137,7 @@ export const useUpdateOperatingHourMutation = (tenantId: string, operatingHourId
 export const useDeleteOperatingHourMutation = (tenantId: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string>({
+  return useMutation<void, OperatingHoursOperationError, string>({
     mutationFn: (operatingHourId) => deleteOperatingHourApi(tenantId, operatingHourId),
     onSuccess: async () => {
       await Promise.all([

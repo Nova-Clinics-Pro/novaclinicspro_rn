@@ -19,6 +19,7 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 import {
   usePrescriptionDetailQuery,
   useUpdatePrescriptionMutation,
@@ -124,7 +125,7 @@ export const PrescriptionEditScreen: React.FC = () => {
           variant="error"
           title="Unable to Load Prescription"
           message={
-            error?.message?.includes('401')
+            error instanceof PrescriptionOperationError && error.kind === 'AUTHENTICATION_REQUIRED'
               ? 'Authentication failed. Please try logging in again.'
               : 'Could not load this prescription. Please try again.'
           }

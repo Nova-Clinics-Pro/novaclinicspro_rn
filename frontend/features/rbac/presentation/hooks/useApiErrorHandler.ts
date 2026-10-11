@@ -5,7 +5,7 @@
 
 import { useCallback } from 'react';
 import { Alert, AccessibilityInfo, Platform } from 'react-native';
-import { normalizeError, NormalizedError } from '../../../../core/api/axiosClient';
+import { RbacOperationError } from '../../domain/errors/rbacOperationError';
 
 interface ErrorHandlerOptions {
   showAlert?: boolean;
@@ -47,40 +47,34 @@ const rbacErrorMessages: Record<string, string> = {
 /**
  * Get user-friendly message for an error
  */
-const getUserFriendlyMessage = (error: NormalizedError, contextMessage?: string): string => {
+const getUserFriendlyMessage = (error: RbacOperationError, contextMessage?: string): string => {
   // Check for specific error codes
   if (error.code && rbacErrorMessages[error.code]) {
     return rbacErrorMessages[error.code];
   }
   
-  // Check HTTP status codes
-  if (error.status) {
-    switch (error.status) {
-      case 400:
+  switch (error.kind) {
+      case 'VALIDATION_FAILED':
         return contextMessage 
           ? `${contextMessage}: Invalid request data.`
           : 'Invalid request data. Please check your input.';
-      case 401:
+      case 'AUTHENTICATION_REQUIRED':
         return 'Your session has expired. Please log in again.';
-      case 403:
+      case 'PERMISSION_DENIED':
         return 'You do not have permission to perform this action.';
-      case 404:
+      case 'NOT_FOUND':
         return contextMessage
           ? `${contextMessage}: The requested resource was not found.`
           : 'The requested resource was not found.';
-      case 409:
+      case 'CONFLICT':
         return 'This operation conflicts with existing data.';
-      case 422:
-        return 'Invalid data provided. Please check your input.';
-      case 500:
-      case 502:
-      case 503:
+      case 'NETWORK_FAILED':
+        return rbacErrorMessages.NETWORK_ERROR;
+      case 'SAVE_FAILED':
         return 'Server error. Please try again later.';
-    }
+      default:
+        return rbacErrorMessages.UNKNOWN_ERROR;
   }
-  
-  // Fallback to the error message or generic message
-  return error.message || rbacErrorMessages['UNKNOWN_ERROR'];
 };
 
 export const useApiErrorHandler = () => {
@@ -91,8 +85,9 @@ export const useApiErrorHandler = () => {
     (error: unknown, options: ErrorHandlerOptions = {}) => {
       const { showAlert = true, logError = true, contextMessage } = options;
       
-      // Normalize the error
-      const normalizedError = normalizeError(error);
+      const normalizedError = error instanceof RbacOperationError
+        ? error
+        : new RbacOperationError('SAVE_FAILED');
       
       // Get user-friendly message
       const userMessage = getUserFriendlyMessage(normalizedError, contextMessage);
@@ -101,8 +96,7 @@ export const useApiErrorHandler = () => {
       if (logError) {
         console.error('RBAC Error:', {
           code: normalizedError.code,
-          message: normalizedError.message,
-          status: normalizedError.status,
+          kind: normalizedError.kind,
           context: contextMessage,
         });
       }
@@ -143,7 +137,7 @@ export const useApiErrorHandler = () => {
   const createMutationErrorHandler = useCallback(
     (
       contextMessage: string,
-      onErrorCallback?: (error: NormalizedError, userMessage: string) => void
+      onErrorCallback?: (error: RbacOperationError, userMessage: string) => void
     ) => {
       return (error: unknown) => {
         const result = handleError(error, {

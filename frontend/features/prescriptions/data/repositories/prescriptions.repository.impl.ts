@@ -28,6 +28,7 @@ import {
   ListPrescriptionsParams,
 } from '../models/prescriptions.dtos';
 import { LivingDocumentVersionListResponse, PrescriptionSignedVersionSnapshot } from '../../../livingDocuments/data/models/livingDocuments.dtos';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 
 // ============================================
 // QUERY KEYS
@@ -66,9 +67,9 @@ export const prescriptionsKeys = {
 export const usePrescriptionsListQuery = (
   tenantId: string,
   params?: ListPrescriptionsParams,
-  options?: Omit<UseQueryOptions<PrescriptionListResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<PrescriptionListResponse, PrescriptionOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<PrescriptionListResponse, Error>({
+  return useQuery<PrescriptionListResponse, PrescriptionOperationError>({
     queryKey: prescriptionsKeys.list(tenantId, params),
     queryFn: () => listPrescriptionsApi(tenantId, params),
     enabled: !!tenantId,
@@ -106,9 +107,9 @@ export const usePrescriptionByAppointmentQuery = (
 export const usePrescriptionDetailQuery = (
   tenantId: string,
   prescriptionId: string,
-  options?: Omit<UseQueryOptions<PrescriptionResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<PrescriptionResponse, PrescriptionOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<PrescriptionResponse, Error>({
+  return useQuery<PrescriptionResponse, PrescriptionOperationError>({
     queryKey: prescriptionsKeys.detail(tenantId, prescriptionId),
     queryFn: () => getPrescriptionApi(tenantId, prescriptionId),
     enabled: !!tenantId && !!prescriptionId,
