@@ -27,7 +27,7 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { supabase } from '../core/api/supabaseClient';
+import { authSessionService, type RecoveryCredentials } from '../features/auth/application/auth-session.service';
 import { useClinicTheme } from '../core/theme/useClinicTheme';
 import { spacing } from '../core/theme/spacing';
 
@@ -79,40 +79,18 @@ export default function ResetPasswordScreen() {
         setIsVerifying(true);
         setError(null);
 
-        // Check if we have a valid session from the reset link
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          throw sessionError;
-        }
-
-        // If no session, the link may be invalid or expired
-        if (!session) {
-          // Try to get session from URL hash (for web)
-          if (Platform.OS === 'web') {
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const accessToken = hashParams.get('access_token');
-            const refreshToken = hashParams.get('refresh_token');
-            const type = hashParams.get('type');
-
-            if (type === 'recovery' && accessToken && refreshToken) {
-              const { error: setError } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              });
-
-              if (setError) {
-                throw setError;
-              }
-            } else {
-              throw new Error('Invalid or expired reset link');
-            }
-          } else {
-            throw new Error('Invalid or expired reset link');
+        let recoveryCredentials: RecoveryCredentials | undefined;
+        if (Platform.OS === 'web') {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          const type = hashParams.get('type');
+          if (type === 'recovery' && accessToken && refreshToken) {
+            recoveryCredentials = { accessToken, refreshToken };
           }
         }
+        await authSessionService.establishRecoverySession(recoveryCredentials);
       } catch (err) {
-        console.error('Session verification error:', err);
         setError(
           err instanceof Error
             ? err.message
@@ -131,21 +109,10 @@ export default function ResetPasswordScreen() {
       setIsLoading(true);
       setError(null);
 
-      // Update the password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: data.password,
-      });
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Sign out to clear the recovery session
-      await supabase.auth.signOut();
+      await authSessionService.completePasswordRecovery(data.password);
 
       setSuccess(true);
     } catch (err) {
-      console.error('Password update error:', err);
       setError(
         err instanceof Error
           ? err.message

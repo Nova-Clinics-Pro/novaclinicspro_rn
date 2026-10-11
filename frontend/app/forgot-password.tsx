@@ -21,7 +21,7 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { supabase } from '../core/api/supabaseClient';
+import { authSessionService } from '../features/auth/application/auth-session.service';
 import { useClinicTheme } from '../core/theme/useClinicTheme';
 import { spacing } from '../core/theme/spacing';
 
@@ -61,13 +61,7 @@ export default function ForgotPasswordScreen() {
         ? `${window.location.origin}/reset-password`
         : 'novaclinicspro://reset-password';
 
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: redirectUrl,
-      });
-
-      if (resetError) {
-        throw resetError;
-      }
+      await authSessionService.requestPasswordReset(data.email, redirectUrl);
 
       setSuccess(true);
     } catch (err) {

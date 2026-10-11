@@ -32,6 +32,8 @@ jest.mock('../../../features/auth/data/datasources/supabase-auth.provider', () =
     setSession: jest.fn(),
     refreshSession: jest.fn(),
     signOut: jest.fn(),
+    resetPasswordForEmail: jest.fn(),
+    updatePassword: jest.fn(),
     subscribe: jest.fn(),
   },
 }));
@@ -87,5 +89,29 @@ describe('AuthSessionService', () => {
     expect(supabaseAuthProvider.subscribe).toHaveBeenCalledTimes(1);
     dispose();
     expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('owns registration finalization and password-reset requests', async () => {
+    await new AuthSessionService().finalizeRegistrationSession();
+    await new AuthSessionService().requestPasswordReset('doctor@example.test', 'novaclinicspro://reset-password');
+
+    expect(supabaseAuthProvider.signOut).toHaveBeenCalledTimes(1);
+    expect(supabaseAuthProvider.resetPasswordForEmail).toHaveBeenCalledWith(
+      'doctor@example.test',
+      'novaclinicspro://reset-password'
+    );
+  });
+
+  it('establishes a supplied recovery session then updates the password and signs out', async () => {
+    (supabaseAuthProvider.getSession as jest.Mock).mockResolvedValue(null);
+    (supabaseAuthProvider.setSession as jest.Mock).mockResolvedValue({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+
+    const service = new AuthSessionService();
+    await service.establishRecoverySession({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    await service.completePasswordRecovery('ValidPassword1');
+
+    expect(supabaseAuthProvider.setSession).toHaveBeenCalledWith({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    expect(supabaseAuthProvider.updatePassword).toHaveBeenCalledWith('ValidPassword1');
+    expect(supabaseAuthProvider.signOut).toHaveBeenCalledTimes(1);
   });
 });

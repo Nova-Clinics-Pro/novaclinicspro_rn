@@ -16,6 +16,7 @@ export type AuthProviderErrorCode =
   | 'EMAIL_UNCONFIRMED'
   | 'RATE_LIMITED'
   | 'NO_SESSION'
+  | 'INVALID_RECOVERY_LINK'
   | 'PROVIDER_FAILURE';
 
 export class AuthProviderError extends Error {
@@ -79,6 +80,16 @@ export class SupabaseAuthProvider {
 
   async signOut(): Promise<void> {
     const { error } = await supabase.auth.signOut();
+    if (error) throw normalizeProviderError(error.message);
+  }
+
+  async resetPasswordForEmail(email: string, redirectTo: string): Promise<void> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw normalizeProviderError(error.message);
+  }
+
+  async updatePassword(password: string): Promise<void> {
+    const { error } = await supabase.auth.updateUser({ password });
     if (error) throw normalizeProviderError(error.message);
   }
 
