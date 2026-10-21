@@ -28,10 +28,9 @@ export default function Index() {
   const { isAuthenticated, isLoading, currentUser, logout } = useAuth();
   
   // Fetch registration status only when user has no tenant and is not org admin
-  const { data: regStatus, isLoading: isLoadingRegStatus } = useRegistrationStatus(
-    currentUser?.userId || '',
-    { enabled: !!currentUser && !currentUser.tenantId && !currentUser.isOrgAdmin }
-  );
+  const { data: regStatus, isLoading: isLoadingRegStatus } = useRegistrationStatus({
+    enabled: !!currentUser && !currentUser.tenantId && !currentUser.isOrgAdmin,
+  });
 
   // Fetch onboarding status if user has a tenant
   // Note: This query may fail for users without tenant.read permission, which is OK
@@ -136,23 +135,10 @@ export default function Index() {
 
     // Priority 4: Handle registration status routing (legacy flow)
     if (regStatus) {
-      if (regStatus.status === 'no_applications') {
-        // No application found - show "No Clinic Assigned" message
-        return;
-      }
-
       if (registrationRoute) {
         router.replace(registrationRoute);
-        return;
       }
-
-      switch (regStatus.application_status?.toUpperCase()) {
-        case 'ACTIVE':
-          // Application is active but tenant_id not assigned - this is a backend data issue
-          // Show "No Clinic Assigned" message with more context
-        default:
-          return;
-      }
+      return;
     }
     // If no tenantId, not org admin, and no regStatus, show the "no tenant" state in render
     

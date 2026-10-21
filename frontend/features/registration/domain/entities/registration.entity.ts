@@ -26,13 +26,9 @@ export interface RegistrationResponse {
 }
 
 export interface RegistrationStatus {
-  status: 'registered' | 'no_applications';
-  application_id?: string;
-  /** Backend lifecycle status is canonical lowercase; uppercase is retained for legacy responses. */
-  application_status?: 'draft' | 'pending_review' | 'approved' | 'onboarding' | 'active' | 'rejected'
-    | 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'ONBOARDING' | 'ACTIVE' | 'REJECTED';
-  tenant_name?: string;
-  tenant_id?: string;
-  created_at?: string;
-  last_updated?: string;
+  status: 'registration_submitted' | 'pending_review' | 'approved' | 'rejected' | 'provisioning_pending' | 'provisioning_in_progress' | 'provisioning_completed' | 'provisioning_recovery_required';
+  recovery_state?: 'recovery_required';
+  action_required: boolean;
+  updated_at: string;
+  continuation?: { kind: 'approved_choice'; application_id: string; tenant_name: string };
 }

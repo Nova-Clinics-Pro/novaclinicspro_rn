@@ -20,7 +20,7 @@ export function PendingReviewScreen() {
   const { applicationId } = useLocalSearchParams<{ applicationId: string }>();
   const { setCurrentApplicationId } = useOnboardingStore();
   const { currentUser, logout } = useAuth();
-  const status = useRegistrationStatus(currentUser?.userId ?? '', { enabled: Boolean(currentUser?.userId) });
+  const status = useRegistrationStatus({ enabled: Boolean(currentUser?.userId) });
 
   useEffect(() => {
     if (applicationId) setCurrentApplicationId(applicationId);

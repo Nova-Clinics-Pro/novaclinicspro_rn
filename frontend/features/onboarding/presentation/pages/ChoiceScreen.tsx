@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ScrollView,
@@ -14,6 +14,8 @@ import { useTranslation } from '../../../../core/localization/useTranslation';
 import { ClinicTheme, useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { useApplicationDetailQuery } from '../../data/repositories/onboarding.repository.impl';
+import { useRegistrationStatus } from '../../../registration/presentation/hooks/useRegistrationStatus';
+import { isApprovedChoiceContinuation } from '../../../registration/presentation/registrationStatusRouting';
 import { BringClinicInput, ContactKind, NewClinicInput } from '../../domain/clinic-entry';
 import {
   buildClinicEntryViewModel,
@@ -148,9 +150,18 @@ export function ChoiceScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { t } = useTranslation();
   const router = useRouter();
-  const { applicationId } = useLocalSearchParams<{ applicationId: string }>();
   const { setCurrentApplicationId } = useOnboardingStore();
   const { currentUser } = useAuth();
+  const registrationStatus = useRegistrationStatus({
+    enabled: Boolean(currentUser?.userId),
+  });
+  const status = registrationStatus.data;
+  const continuation = status?.status === 'approved' && isApprovedChoiceContinuation(status.continuation)
+    ? status.continuation
+    : undefined;
+  const applicationId = currentUser?.userId && continuation
+    ? continuation.application_id
+    : undefined;
   const orchestration = useClinicEntryOrchestration();
   const [selectedPathId, setSelectedPathId] = useState<ClinicEntryPathId | null>(null);
   const [contactKind, setContactKind] = useState<ContactKind>('email');
@@ -257,7 +268,10 @@ export function ChoiceScreen() {
     }
   };
 
-  if (!applicationId) return <ErrorScreen message={t('onboarding.progressiveExperience.clinicEntry.empty')} />;
+  if (!applicationId && registrationStatus.isLoading) {
+    return <LoadingScreen message={t('onboarding.progressiveExperience.clinicEntry.loading')} />;
+  }
+  if (!applicationId) return <ErrorScreen message={t('onboarding.progressiveExperience.clinicEntry.empty')} onRetry={registrationStatus.refetch} />;
   if (isLoading || orchestration.isLoadingContext) {
     return <LoadingScreen message={t('onboarding.progressiveExperience.clinicEntry.loading')} />;
   }

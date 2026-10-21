@@ -20,7 +20,7 @@ export function DraftApplicationScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { currentUser, logout } = useAuth();
-  const status = useRegistrationStatus(currentUser?.userId ?? '', { enabled: Boolean(currentUser?.userId) });
+  const status = useRegistrationStatus({ enabled: Boolean(currentUser?.userId) });
 
   const refresh = useCallback(async () => {
     await status.refetch();

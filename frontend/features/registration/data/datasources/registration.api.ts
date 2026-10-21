@@ -125,11 +125,9 @@ export const registerClinicOwnerApi = async (
   }
 };
 
-export const getRegistrationStatusApi = async (
-  userId: string
-): Promise<RegistrationStatusResponse> => {
+export const getRegistrationStatusApi = async (): Promise<RegistrationStatusResponse> => {
   const response = await axiosClient.get<RegistrationStatusResponse>(
-    `/api/v1/auth/registration-status/${userId}`
+    '/api/v1/auth/registration-status/me'
   );
   return response.data;
 };

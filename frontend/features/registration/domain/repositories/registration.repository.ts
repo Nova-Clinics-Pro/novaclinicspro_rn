@@ -2,5 +2,5 @@ import type { RegistrationRequest, RegistrationResponse, RegistrationStatus } fr
 
 export interface RegistrationRepository {
   registerClinicOwner(request: RegistrationRequest): Promise<RegistrationResponse>;
-  getRegistrationStatus(userId: string): Promise<RegistrationStatus>;
+  getRegistrationStatus(): Promise<RegistrationStatus>;
 }

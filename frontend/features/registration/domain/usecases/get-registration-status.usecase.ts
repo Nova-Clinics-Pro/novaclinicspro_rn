@@ -4,7 +4,7 @@ import type { RegistrationRepository } from '../repositories/registration.reposi
 export class GetRegistrationStatusUseCase {
   constructor(private readonly repository: RegistrationRepository) {}
 
-  execute(userId: string): Promise<RegistrationStatus> {
-    return this.repository.getRegistrationStatus(userId);
+  execute(): Promise<RegistrationStatus> {
+    return this.repository.getRegistrationStatus();
   }
 }

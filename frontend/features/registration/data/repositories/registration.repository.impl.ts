@@ -7,8 +7,8 @@ class RegistrationRepositoryImpl implements RegistrationRepository {
     return registerClinicOwnerApi(request);
   }
 
-  getRegistrationStatus(userId: string): Promise<RegistrationStatus> {
-    return getRegistrationStatusApi(userId);
+  getRegistrationStatus(): Promise<RegistrationStatus> {
+    return getRegistrationStatusApi();
   }
 }
 
