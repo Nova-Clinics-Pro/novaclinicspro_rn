@@ -21,6 +21,11 @@ describe('template-authoritative onboarding registries', () => {
     expect(onboardingDestinations['clinic.financials']).toBeUndefined();
   });
 
+  it('sends operating-hours readiness actions to the canonical editable settings screen', () => {
+    expect(onboardingDestinations['clinic.operating_hours']({ tenant_id: 'tenant-1' }))
+      .toBe('/clinic-admin/settings/operating-hours');
+  });
+
   it('contains every active renderer key and has no step-code renderer authority', () => {
     expect([...onboardingRendererKeys].sort()).toEqual([
       'clinic_profile',

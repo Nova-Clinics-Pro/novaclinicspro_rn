@@ -138,6 +138,24 @@ describe('StaffSetupScreen query boundary', () => {
     expect(getByText('Staff Member 2')).toBeTruthy();
   });
 
+  it('keeps persisted staff ahead of a local draft instead of generating a default row', async () => {
+    useWizardStore.getState().setStepDraft('staff_setup', {
+      staff_members: [{ name: 'Draft Staff', role: 'nurse', phone: '111', email: 'draft@example.com' }],
+    });
+    mockStaffQuery.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [{ id: 'staff-1', name: 'Persisted Staff', role: 'therapist', phone: '222', email: 'persisted@example.com' }],
+    });
+
+    const { getByDisplayValue, queryByDisplayValue } = render(
+      <StaffSetupScreen tenantId="tenant-a" />
+    );
+
+    await waitFor(() => expect(getByDisplayValue('Persisted Staff')).toBeTruthy());
+    expect(queryByDisplayValue('Draft Staff')).toBeNull();
+  });
+
   it.each([
     { isLoading: false, isError: false, data: [] },
     { isLoading: false, isError: true, data: undefined },

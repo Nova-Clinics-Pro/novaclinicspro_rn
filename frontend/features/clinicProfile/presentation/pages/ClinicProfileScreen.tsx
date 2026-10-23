@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -42,17 +42,19 @@ export const ClinicProfileScreen = () => {
   const [gst, setGst] = useState('');
   const [logo, setLogo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hydratedTenantId = useRef<string | null>(null);
 
   useEffect(() => {
     const value = profile.data;
-    if (!value) return;
+    if (!value || value.id !== tenantId || hydratedTenantId.current === tenantId) return;
     setName(value.name ?? ''); setEmail(value.email ?? '');
     setPhone(value.phones?.[0] ?? ''); setWebsite(value.website_address ?? '');
     setStreet(value.address?.street ?? ''); setCity(value.address?.city ?? '');
     setState(value.address?.state ?? ''); setPincode(value.address?.pincode ?? ''); setCountry(value.address?.country ?? '');
     setRegistration(value.clinic_registration ?? ''); setPan(value.clinic_pan ?? ''); setGst(value.clinic_gst ?? '');
     setLogo(value.clinic_logo ?? null);
-  }, [profile.data]);
+    hydratedTenantId.current = tenantId;
+  }, [profile.data, tenantId]);
 
   const save = async () => {
     setError(null);

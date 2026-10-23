@@ -4,6 +4,7 @@ import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { axiosClient } from '../../core/api/axiosClient';
 import { listOnboardingRoomsApi } from '../../features/rooms/data/datasources/rooms.api';
+import { roomsKeys } from '../../features/rooms/data/repositories/rooms.repository.impl';
 import { TreatmentRoomsScreen } from '../../features/onboarding/presentation/pages/steps/TreatmentRoomsScreen';
 import { useWizardStore } from '../../features/onboarding/presentation/stores/wizard.store';
 
@@ -46,9 +47,15 @@ jest.mock('../../core/theme/useClinicTheme', () => ({
   }),
 }));
 
-jest.mock('../../features/rooms/data/repositories/rooms.repository.impl', () => ({
-  useOnboardingRoomsQuery: (...args: unknown[]) => mockRoomsQuery(...args),
-}));
+jest.mock('../../features/rooms/data/repositories/rooms.repository.impl', () => {
+  const actual = jest.requireActual(
+    '../../features/rooms/data/repositories/rooms.repository.impl'
+  );
+  return {
+    ...actual,
+    useOnboardingRoomsQuery: (...args: unknown[]) => mockRoomsQuery(...args),
+  };
+});
 
 jest.mock('../../features/onboarding/data/repositories/onboarding.repository.impl', () => ({
   useSubmitStepMutation: () => ({ mutateAsync: mockSubmitStep, isPending: false }),
@@ -142,6 +149,24 @@ describe('TreatmentRoomsScreen query boundary', () => {
     expect(mockRoomsQuery).toHaveBeenCalledWith('tenant-a');
   });
 
+  it('keeps persisted rooms ahead of a local draft instead of falling back to a generated room', async () => {
+    useWizardStore.getState().setStepDraft('treatment_rooms', {
+      rooms: [{ name: 'Draft Room', room_type: 'therapy', capacity: 4 }],
+    });
+    mockRoomsQuery.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [{ id: 'room-1', name: 'Persisted Room', room_type: 'treatment', capacity: 2 }],
+    });
+
+    const { getByDisplayValue, queryByDisplayValue } = render(
+      <TreatmentRoomsScreen tenantId="tenant-a" />
+    );
+
+    await waitFor(() => expect(getByDisplayValue('Persisted Room')).toBeTruthy());
+    expect(queryByDisplayValue('Draft Room')).toBeNull();
+  });
+
   it.each([
     { isLoading: false, isError: false, data: [] },
     { isLoading: false, isError: true, data: undefined },
@@ -179,6 +204,10 @@ describe('TreatmentRoomsScreen query boundary', () => {
 
     await waitFor(() => expect(getByText('Add Treatment Rooms')).toBeTruthy());
     expect(getByPlaceholderText('e.g., Consultation Room 1').props.value).toBe('');
+  });
+
+  it('keeps onboarding room query keys tenant-isolated', () => {
+    expect(roomsKeys.onboarding('tenant-a')).not.toEqual(roomsKeys.onboarding('tenant-b'));
   });
 
   it('submits normalized rooms through the existing onboarding completion mutation', async () => {

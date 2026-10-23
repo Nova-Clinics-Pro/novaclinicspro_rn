@@ -165,6 +165,25 @@ describe('OperatingHoursScreen query boundary', () => {
     expect(getAllByText('Closed')).toHaveLength(1);
   });
 
+  it('keeps persisted hours ahead of a local draft and never completes either implicitly', async () => {
+    jest.useFakeTimers();
+    useWizardStore.getState().setStepDraft('operating_hours', {
+      schedule: [{ day: 'Friday', is_open: true, open_time: '07:00', close_time: '12:00' }],
+    });
+    mockHoursQuery.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [{ day: 'Monday', is_open: true, open_time: '10:00', close_time: '16:00' }],
+    });
+
+    const { getByText, queryByText } = render(<OperatingHoursScreen tenantId="tenant-a" />);
+
+    expect(getByText('10:00 - 16:00')).toBeTruthy();
+    expect(queryByText('07:00 - 12:00')).toBeNull();
+    act(() => jest.advanceTimersByTime(500));
+    expect(mockSubmitStep).not.toHaveBeenCalled();
+  });
+
   it('autosaves the resolved schedule after 500ms', () => {
     jest.useFakeTimers();
     mockHoursQuery.mockReturnValue({
