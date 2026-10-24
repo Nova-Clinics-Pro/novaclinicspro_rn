@@ -23,11 +23,13 @@ import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { useTenantsListQuery } from '../../data/repositories/tenants.repository.impl';
 import { OrgTenantResponse } from '../../data/models/tenants.dtos';
+import { useOrganizationTenantScope } from '../hooks/useOrganizationTenantScope';
 
 export default function TenantsListScreen() {
   const theme = useClinicTheme();
   const router = useRouter();
   const { logout, currentUser } = useAuth();
+  const { organizationId } = useOrganizationTenantScope();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
 
@@ -39,7 +41,7 @@ export default function TenantsListScreen() {
     error,
     refetch,
     isFetching,
-  } = useTenantsListQuery({
+  } = useTenantsListQuery(organizationId, {
     search: searchQuery || undefined,
     status: selectedStatus,
   });

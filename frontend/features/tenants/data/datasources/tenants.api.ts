@@ -13,15 +13,33 @@ import {
   ListTenantsParams,
 } from '../models/tenants.dtos';
 
+export class OrganizationContextRequiredError extends Error {
+  constructor() {
+    super('organization_context_required');
+    this.name = 'OrganizationContextRequiredError';
+  }
+}
+
+const organizationParams = (organizationId: string) => {
+  if (!organizationId) {
+    throw new OrganizationContextRequiredError();
+  }
+
+  // FastAPI binds this scalar separately from the JSON tenant DTO.  It must
+  // remain an encoded query parameter for create, read, and update requests.
+  return { organization_id: organizationId };
+};
+
 /**
  * List all tenants
  * GET /api/v1/org/tenants
  */
 export const listTenantsApi = async (
+  organizationId: string,
   params?: ListTenantsParams
 ): Promise<OrgTenantResponse[]> => {
   const response = await axiosClient.get('/api/v1/org/tenants', {
-    params,
+    params: { ...params, ...organizationParams(organizationId) },
   });
   return response.data;
 };
@@ -30,8 +48,13 @@ export const listTenantsApi = async (
  * Get tenant by ID
  * GET /api/v1/org/tenants/{tenant_id}
  */
-export const getTenantApi = async (id: string): Promise<OrgTenantResponse> => {
-  const response = await axiosClient.get(`/api/v1/org/tenants/${id}`);
+export const getTenantApi = async (
+  organizationId: string,
+  id: string,
+): Promise<OrgTenantResponse> => {
+  const response = await axiosClient.get(`/api/v1/org/tenants/${id}`, {
+    params: organizationParams(organizationId),
+  });
   return response.data;
 };
 
@@ -40,9 +63,12 @@ export const getTenantApi = async (id: string): Promise<OrgTenantResponse> => {
  * POST /api/v1/org/tenants
  */
 export const createTenantApi = async (
+  organizationId: string,
   payload: OrgTenantCreate
 ): Promise<OrgTenantResponse> => {
-  const response = await axiosClient.post('/api/v1/org/tenants', payload);
+  const response = await axiosClient.post('/api/v1/org/tenants', payload, {
+    params: organizationParams(organizationId),
+  });
   return response.data;
 };
 
@@ -51,10 +77,13 @@ export const createTenantApi = async (
  * PATCH /api/v1/org/tenants/{tenant_id}
  */
 export const updateTenantApi = async (
+  organizationId: string,
   id: string,
   payload: OrgTenantUpdate
 ): Promise<OrgTenantResponse> => {
-  const response = await axiosClient.patch(`/api/v1/org/tenants/${id}`, payload);
+  const response = await axiosClient.patch(`/api/v1/org/tenants/${id}`, payload, {
+    params: organizationParams(organizationId),
+  });
   return response.data;
 };
 
@@ -62,9 +91,14 @@ export const updateTenantApi = async (
  * Deactivate tenant (soft delete via status update)
  * PATCH /api/v1/org/tenants/{tenant_id}
  */
-export const deactivateTenantApi = async (id: string): Promise<OrgTenantResponse> => {
+export const deactivateTenantApi = async (
+  organizationId: string,
+  id: string,
+): Promise<OrgTenantResponse> => {
   const response = await axiosClient.patch(`/api/v1/org/tenants/${id}`, {
     is_active: false,
+  }, {
+    params: organizationParams(organizationId),
   });
   return response.data;
 };
