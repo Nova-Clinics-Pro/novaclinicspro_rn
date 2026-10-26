@@ -73,23 +73,18 @@ import {
   useOrderingDoctorQuery,
   useTreatmentSheetPrefillQuery,
 } from '../../data/repositories/orderingDoctor.repository.impl';
+import {
+  AppointmentBookedSlots,
+  AppointmentSearchableDropdown,
+  AppointmentSessionTypeSelector,
+  AppointmentTypeSelector,
+  AppointmentPickerOption,
+  SessionType,
+} from '../components/CreateAppointmentSelectionControls';
 
 // ============================================
 // TYPES
 // ============================================
-
-type SessionType = 'DOCTOR' | 'THERAPY';
-
-interface PickerOption {
-  id: string;
-  label: string;
-  subtitle?: string;
-  phone?: string;
-  duration_minutes?: number | null;
-  role?: string;
-  staff_type?: string;
-  gender?: string; // BUG FIX #7: For gender matching
-}
 
 // Form state for Doctor consultation
 interface DoctorFormState {
@@ -122,370 +117,6 @@ interface MultiDayFormState {
   preferredTime: Date;
   notes: string;
 }
-
-// ============================================
-// TYPE SELECTOR COMPONENT
-// ============================================
-
-interface TypeSelectorProps {
-  value: AppointmentType;
-  onChange: (type: AppointmentType) => void;
-  allowMultiDay?: boolean; // Feature flag
-}
-
-const TypeSelector: React.FC<TypeSelectorProps> = ({ value, onChange, allowMultiDay = false }) => (
-  <View style={styles.typeSelector} accessibilityRole="radiogroup" accessibilityLabel="Appointment Type">
-    <TouchableOpacity
-      style={[styles.typeOption, value === 'SINGLE' && styles.typeOptionSelected]}
-      onPress={() => onChange('SINGLE')}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: value === 'SINGLE' }}
-      accessibilityLabel="Single Day appointment"
-    >
-      <Ionicons
-        name="calendar-outline"
-        size={24}
-        color={value === 'SINGLE' ? colors.primary.main : colors.text.secondary}
-      />
-      <Text style={[styles.typeOptionTitle, value === 'SINGLE' && styles.typeOptionTitleSelected]}>
-        Single Day
-      </Text>
-      <Text style={styles.typeOptionSubtitle}>One-time appointment</Text>
-    </TouchableOpacity>
-    
-    {/* Multi-day option - only show for Ayurveda and Physio clinics */}
-    {allowMultiDay && (
-      <TouchableOpacity
-        style={[styles.typeOption, value === 'MULTI' && styles.typeOptionSelected]}
-        onPress={() => onChange('MULTI')}
-        accessibilityRole="radio"
-        accessibilityState={{ checked: value === 'MULTI' }}
-        accessibilityLabel="Multi Day therapy series"
-      >
-        <Ionicons
-          name="calendar"
-          size={24}
-          color={value === 'MULTI' ? colors.primary.main : colors.text.secondary}
-        />
-        <Text style={[styles.typeOptionTitle, value === 'MULTI' && styles.typeOptionTitleSelected]}>
-          Multi Day
-        </Text>
-        <Text style={styles.typeOptionSubtitle}>Therapy series</Text>
-      </TouchableOpacity>
-    )}
-  </View>
-);
-
-// ============================================
-// SESSION TYPE TOGGLE (DOCTOR vs THERAPY)
-// ============================================
-
-interface SessionTypeSelectorProps {
-  value: SessionType;
-  onChange: (type: SessionType) => void;
-  allowTherapySession: boolean;
-}
-
-const SessionTypeSelector: React.FC<SessionTypeSelectorProps> = ({ value, onChange, allowTherapySession }) => (
-  <View style={styles.sessionTypeSelector} accessibilityRole="radiogroup" accessibilityLabel="Session Type">
-    <TouchableOpacity
-      style={[styles.sessionTypeOption, value === 'DOCTOR' && styles.sessionTypeOptionSelected]}
-      onPress={() => onChange('DOCTOR')}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: value === 'DOCTOR' }}
-      accessibilityLabel="Doctor Consultation"
-    >
-      <Ionicons
-        name="medkit"
-        size={18}
-        color={value === 'DOCTOR' ? colors.background.default : colors.text.secondary}
-      />
-      <Text style={[styles.sessionTypeText, value === 'DOCTOR' && styles.sessionTypeTextSelected]}>
-        Doctor Consultation
-      </Text>
-    </TouchableOpacity>
-    {allowTherapySession && (
-      <TouchableOpacity
-        style={[styles.sessionTypeOption, value === 'THERAPY' && styles.sessionTypeOptionSelected]}
-        onPress={() => onChange('THERAPY')}
-        accessibilityRole="radio"
-        accessibilityState={{ checked: value === 'THERAPY' }}
-        accessibilityLabel="Therapy Session"
-      >
-        <Ionicons
-          name="fitness"
-          size={18}
-          color={value === 'THERAPY' ? colors.background.default : colors.text.secondary}
-        />
-        <Text style={[styles.sessionTypeText, value === 'THERAPY' && styles.sessionTypeTextSelected]}>
-          Therapy Session
-        </Text>
-      </TouchableOpacity>
-    )}
-  </View>
-);
-
-// ============================================
-// SEARCHABLE DROPDOWN COMPONENT
-// ============================================
-
-interface SearchableDropdownProps {
-  title: string;
-  placeholder?: string;
-  options: PickerOption[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  isLoading?: boolean;
-  emptyText?: string;
-  showCreateOption?: boolean;
-  onCreateNew?: () => void;
-  multiple?: boolean;
-  selectedIds?: string[];
-  maxSelect?: number;
-  autoCloseOnSelect?: boolean;
-  disabled?: boolean;
-}
-
-const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
-  title,
-  placeholder = 'Select...',
-  options,
-  selectedId,
-  onSelect,
-  isLoading,
-  emptyText = 'No options available',
-  showCreateOption,
-  onCreateNew,
-  multiple,
-  selectedIds = [],
-  maxSelect = 2,
-  autoCloseOnSelect = true,
-  disabled = false,
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const selectedOption = options.find(o => o.id === selectedId);
-  const selectedCount = selectedIds.length;
-  const selectedLabels = options.filter(o => selectedIds.includes(o.id)).map(o => o.label).join(', ');
-
-  // Filter options by search
-  const filteredOptions = useMemo(() => {
-    if (!searchQuery) return options;
-    const query = searchQuery.toLowerCase();
-    return options.filter(o => 
-      o.label.toLowerCase().includes(query) ||
-      (o.subtitle?.toLowerCase().includes(query))
-    );
-  }, [options, searchQuery]);
-
-  const handleSelect = (id: string) => {
-    onSelect(id);
-    if (autoCloseOnSelect && !multiple) {
-      setExpanded(false);
-      setSearchQuery('');
-    }
-  };
-
-  const handleClose = () => {
-    setExpanded(false);
-    setSearchQuery('');
-  };
-
-  if (disabled) {
-    return (
-      <View style={[styles.dropdownContainer, styles.dropdownDisabled]}>
-        <View style={styles.dropdownHeader}>
-          <View style={styles.dropdownHeaderContent}>
-            <Text style={styles.dropdownTitle}>{title}</Text>
-            <Text style={[styles.dropdownValue, styles.dropdownValueDisabled]}>{placeholder}</Text>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.dropdownContainer}>
-      <TouchableOpacity
-        style={styles.dropdownHeader}
-        onPress={() => setExpanded(!expanded)}
-        accessibilityRole="button"
-        accessibilityLabel={`${title}: ${multiple ? selectedLabels || placeholder : selectedOption?.label || placeholder}`}
-        accessibilityHint="Double tap to open selection"
-      >
-        <View style={styles.dropdownHeaderContent}>
-          <Text style={styles.dropdownTitle}>{title}</Text>
-          {multiple ? (
-            <Text style={styles.dropdownValue} numberOfLines={1}>
-              {selectedCount > 0 ? selectedLabels : placeholder}
-            </Text>
-          ) : (
-            <Text style={styles.dropdownValue} numberOfLines={1}>
-              {selectedOption?.label || placeholder}
-            </Text>
-          )}
-        </View>
-        <Ionicons
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={colors.text.secondary}
-        />
-      </TouchableOpacity>
-
-      {expanded && (
-        <View style={styles.dropdownContent}>
-          {/* Search Input */}
-          <View style={styles.dropdownSearch}>
-            <Ionicons name="search" size={18} color={colors.text.tertiary} />
-            <TextInput
-              style={styles.dropdownSearchInput}
-              placeholder="Search..."
-              placeholderTextColor={colors.text.tertiary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus
-              accessibilityLabel="Search options"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear search">
-                <Ionicons name="close-circle" size={18} color={colors.text.tertiary} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Options */}
-          {isLoading ? (
-            <ActivityIndicator size="small" color={colors.primary.main} style={styles.dropdownLoader} />
-          ) : (
-            <ScrollView style={styles.dropdownOptions} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-              {/* Create New Option */}
-              {showCreateOption && onCreateNew && (
-                <TouchableOpacity
-                  style={styles.dropdownCreateOption}
-                  onPress={() => {
-                    handleClose();
-                    onCreateNew();
-                  }}
-                  accessibilityLabel="Create new client"
-                  data-testid="dropdown-create-new-client"
-                >
-                  <Ionicons name="add-circle" size={20} color={colors.primary.main} />
-                  <Text style={styles.dropdownCreateText}>+ Create New Client</Text>
-                </TouchableOpacity>
-              )}
-
-              {filteredOptions.length === 0 && !showCreateOption ? (
-                <Text style={styles.dropdownEmpty}>{emptyText}</Text>
-              ) : (
-                filteredOptions.map((option) => {
-                  const isSelected = multiple
-                    ? selectedIds.includes(option.id)
-                    : selectedId === option.id;
-                  const canSelect = !multiple || selectedIds.length < maxSelect || isSelected;
-
-                  return (
-                    <TouchableOpacity
-                      key={option.id}
-                      style={[
-                        styles.dropdownOption,
-                        isSelected && styles.dropdownOptionSelected,
-                        !canSelect && styles.dropdownOptionDisabled,
-                      ]}
-                      onPress={() => canSelect && handleSelect(option.id)}
-                      disabled={!canSelect}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isSelected }}
-                      accessibilityLabel={option.label}
-                    >
-                      <View style={styles.dropdownOptionContent}>
-                        <Text style={[
-                          styles.dropdownOptionLabel,
-                          isSelected && styles.dropdownOptionLabelSelected,
-                        ]}>
-                          {option.label}
-                        </Text>
-                        {option.subtitle && (
-                          <Text style={styles.dropdownOptionSubtitle}>{option.subtitle}</Text>
-                        )}
-                      </View>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.primary.main} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </ScrollView>
-          )}
-
-          {/* Done Button for multi-select */}
-          {multiple && (
-            <TouchableOpacity style={styles.dropdownDoneButton} onPress={handleClose} accessibilityLabel="Done selecting">
-              <Text style={styles.dropdownDoneText}>Done ({selectedCount} selected)</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </View>
-  );
-};
-
-// ============================================
-// BOOKED SLOTS DISPLAY (for Doctor)
-// ============================================
-
-interface BookedSlotsProps {
-  appointments: any[];
-  selectedDate: Date;
-  isLoading?: boolean;
-}
-
-const BookedSlots: React.FC<BookedSlotsProps> = ({ appointments, selectedDate, isLoading }) => {
-  if (isLoading) {
-    return (
-      <View style={styles.bookedSlotsLoading}>
-        <ActivityIndicator size="small" color={colors.primary.main} />
-        <Text style={styles.bookedSlotsLoadingText}>Loading schedule...</Text>
-      </View>
-    );
-  }
-
-  if (appointments.length === 0) {
-    return (
-      <View style={styles.bookedSlotsEmpty}>
-        <Ionicons name="checkmark-circle" size={20} color={colors.success.main} />
-        <Text style={styles.bookedSlotsEmptyText}>No booked slots - Doctor is available</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.bookedSlotsContainer}>
-      <Text style={styles.bookedSlotsTitle}>Already booked slots:</Text>
-      <View style={styles.bookedSlotsList}>
-        {appointments.slice(0, 5).map((apt) => (
-          <View key={apt.id} style={styles.bookedSlot}>
-            <View style={styles.bookedSlotTimeContainer}>
-              <Text style={styles.bookedSlotTime}>
-                {formatTime(apt.appointment_start)}
-              </Text>
-              {apt.appointment_end && (
-                <Text style={styles.bookedSlotTimeSeparator}> - {formatTime(apt.appointment_end)}</Text>
-              )}
-            </View>
-            <Text style={styles.bookedSlotClient} numberOfLines={1}>
-              {apt.client_name || 'Client'}
-            </Text>
-          </View>
-        ))}
-        {appointments.length > 5 && (
-          <Text style={styles.bookedSlotsMore}>+{appointments.length - 5} more appointments</Text>
-        )}
-      </View>
-    </View>
-  );
-};
 
 // ============================================
 // CREATE CLIENT MODAL
@@ -932,7 +563,7 @@ export const CreateAppointmentScreen: React.FC = () => {
   const validateMutation = useValidateAppointmentMutation();
 
   // ===== COMPUTED OPTIONS =====
-  const clientOptions: PickerOption[] = useMemo(() => {
+  const clientOptions: AppointmentPickerOption[] = useMemo(() => {
     const clients = debouncedClientSearch.length >= 2 && searchedClients?.items
       ? searchedClients.items
       : clientsData?.items || [];
@@ -965,7 +596,7 @@ export const CreateAppointmentScreen: React.FC = () => {
   }, [clientsData, searchedClients, debouncedClientSearch, selectedClientId, selectedClientInfo]);
 
   // Doctors only - CRITICAL: Filter on frontend too for safety
-  const doctorOptions: PickerOption[] = useMemo(() => {
+  const doctorOptions: AppointmentPickerOption[] = useMemo(() => {
     const allStaff = doctorsData?.items || [];
     // Double-filter to ensure ONLY doctors appear (backend may not filter correctly)
     const doctors = allStaff.filter((d: any) => {
@@ -994,7 +625,7 @@ export const CreateAppointmentScreen: React.FC = () => {
 
   // Therapists only - CRITICAL: Strict filter by staff_type = 'therapist' only
   // BUG FIX #4: Only show staff where staff_type = 'therapist', no other roles
-  const therapistOptions: PickerOption[] = useMemo(() => {
+  const therapistOptions: AppointmentPickerOption[] = useMemo(() => {
     const allStaff = therapistsData?.items || [];
     // Strict filter: ONLY staff where staff_type is exactly 'therapist'
     const therapists = allStaff.filter((s: any) => {
@@ -1021,7 +652,7 @@ export const CreateAppointmentScreen: React.FC = () => {
   // Track if there's a gender mismatch conflict
   const [genderMatchConflict, setGenderMatchConflict] = useState<string | null>(null);
   
-  const genderFilteredTherapistOptions: PickerOption[] = useMemo(() => {
+  const genderFilteredTherapistOptions: AppointmentPickerOption[] = useMemo(() => {
     const selectedClient = clientOptions.find(c => c.id === selectedClientId);
     const clientGender = selectedClient?.gender?.toLowerCase();
     
@@ -1062,7 +693,7 @@ export const CreateAppointmentScreen: React.FC = () => {
     }
   }, [genderFilteredTherapistOptions, selectedClientId, clientOptions, therapistOptions]);
 
-  const treatmentOptions: PickerOption[] = useMemo(() => {
+  const treatmentOptions: AppointmentPickerOption[] = useMemo(() => {
     return (treatmentsData?.items || []).map((t: TreatmentResponse) => ({
       id: t.id,
       label: t.name,
@@ -1071,7 +702,7 @@ export const CreateAppointmentScreen: React.FC = () => {
     }));
   }, [treatmentsData]);
 
-  const roomOptions: PickerOption[] = (roomsData?.items || []).map((r: any) => ({
+  const roomOptions: AppointmentPickerOption[] = (roomsData?.items || []).map((r: any) => ({
     id: r.id,
     label: r.name,
     subtitle: r.capacity ? `Capacity: ${r.capacity}` : undefined,
@@ -1593,7 +1224,7 @@ export const CreateAppointmentScreen: React.FC = () => {
             {multiDayAvailable && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Appointment Type</Text>
-                <TypeSelector value={appointmentType} onChange={handleAppointmentTypeChange} allowMultiDay={multiDayAvailable} />
+                <AppointmentTypeSelector value={appointmentType} onChange={handleAppointmentTypeChange} allowMultiDay={multiDayAvailable} />
               </View>
             )}
 
@@ -1601,14 +1232,14 @@ export const CreateAppointmentScreen: React.FC = () => {
             {appointmentType === 'SINGLE' && allowTherapySession && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Session Type</Text>
-                <SessionTypeSelector value={sessionType} onChange={handleSessionTypeChange} allowTherapySession={allowTherapySession} />
+                <AppointmentSessionTypeSelector value={sessionType} onChange={handleSessionTypeChange} allowTherapySession={allowTherapySession} />
               </View>
             )}
 
             {/* Client Selection */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Client *</Text>
-              <SearchableDropdown
+              <AppointmentSearchableDropdown
                 title="Select Client"
                 options={clientOptions}
                 selectedId={selectedClientId}
@@ -1627,7 +1258,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                 {/* Doctor Selection */}
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Doctor *</Text>
-                  <SearchableDropdown
+                  <AppointmentSearchableDropdown
                     title="Select Doctor"
                     options={doctorOptions}
                     selectedId={doctorForm.selectedDoctorId}
@@ -1641,9 +1272,8 @@ export const CreateAppointmentScreen: React.FC = () => {
                 {/* Booked Slots Display */}
                 {doctorForm.selectedDoctorId && (
                   <View style={styles.section}>
-                    <BookedSlots 
+                    <AppointmentBookedSlots
                       appointments={doctorBookedAppointments} 
-                      selectedDate={doctorForm.appointmentDate}
                       isLoading={isLoadingBooked}
                     />
                   </View>
@@ -1657,7 +1287,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                 {/* Treatment */}
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Treatment (Optional)</Text>
-                  <SearchableDropdown
+                  <AppointmentSearchableDropdown
                     title="Select Treatment"
                     options={treatmentOptions}
                     selectedId={therapyForm.selectedTreatmentId}
@@ -1678,7 +1308,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                       <Text style={styles.genderConflictText}>{genderMatchConflict}</Text>
                     </View>
                   )}
-                  <SearchableDropdown
+                  <AppointmentSearchableDropdown
                     title="Select Therapists"
                     options={genderFilteredTherapistOptions}
                     selectedId={null}
@@ -1695,7 +1325,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                 {/* Room */}
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Room (Optional)</Text>
-                  <SearchableDropdown
+                  <AppointmentSearchableDropdown
                     title="Select Room"
                     options={roomOptions}
                     selectedId={therapyForm.selectedRoomId}
@@ -1714,7 +1344,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                 {/* Treatment (ABOVE duration) */}
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Treatment *</Text>
-                  <SearchableDropdown
+                  <AppointmentSearchableDropdown
                     title="Select Treatment"
                     options={treatmentOptions}
                     selectedId={multiDayForm.selectedTreatmentId}
@@ -1735,7 +1365,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                       <Text style={styles.genderConflictText}>{genderMatchConflict}</Text>
                     </View>
                   )}
-                  <SearchableDropdown
+                  <AppointmentSearchableDropdown
                     title="Select Therapists"
                     options={genderFilteredTherapistOptions}
                     selectedId={null}
@@ -1755,7 +1385,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                   <Text style={{ color: colors.text.secondary, fontSize: 12, marginBottom: 6 }}>
                     Assign a doctor so this schedule appears on the Doctor Dashboard
                   </Text>
-                  <SearchableDropdown
+                  <AppointmentSearchableDropdown
                     title="Select Doctor"
                     options={doctorOptions}
                     selectedId={multiDayForm.selectedDoctorId}
@@ -2096,190 +1726,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
 
-  // Type Selector
-  typeSelector: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  typeOption: {
-    flex: 1,
-    alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.background.default,
-    borderRadius: spacing.sm,
-    borderWidth: 2,
-    borderColor: colors.border.light,
-    minHeight: 100,
-  },
-  typeOptionSelected: {
-    borderColor: colors.primary.main,
-    backgroundColor: colors.primary.main + '10',
-  },
-  typeOptionTitle: {
-    ...typography.body1,
-    color: colors.text.primary,
-    fontWeight: '600',
-    marginTop: spacing.sm,
-  },
-  typeOptionTitleSelected: {
-    color: colors.primary.main,
-  },
-  typeOptionSubtitle: {
-    ...typography.caption,
-    color: colors.text.secondary,
-    marginTop: spacing.xs / 2,
-    textAlign: 'center',
-  },
-
-  // Session Type Selector
-  sessionTypeSelector: {
-    flexDirection: 'row',
-    backgroundColor: colors.background.default,
-    borderRadius: spacing.sm,
-    padding: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-  },
-  sessionTypeOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: spacing.xs,
-    minHeight: 44,
-  },
-  sessionTypeOptionSelected: {
-    backgroundColor: colors.primary.main,
-  },
-  sessionTypeText: {
-    ...typography.body2,
-    color: colors.text.secondary,
-    fontWeight: '500',
-  },
-  sessionTypeTextSelected: {
-    color: colors.background.default,
-  },
-
-  // Dropdown
-  dropdownContainer: {
-    backgroundColor: colors.background.default,
-    borderRadius: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    overflow: 'hidden',
-  },
-  dropdownDisabled: {
-    opacity: 0.5,
-  },
-  dropdownHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    minHeight: 56,
-  },
-  dropdownHeaderContent: {
-    flex: 1,
-  },
-  dropdownTitle: {
-    ...typography.caption,
-    color: colors.text.secondary,
-  },
-  dropdownValue: {
-    ...typography.body1,
-    color: colors.text.primary,
-    marginTop: spacing.xs / 2,
-  },
-  dropdownValueDisabled: {
-    color: colors.text.tertiary,
-  },
-  dropdownContent: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border.light,
-  },
-  dropdownSearch: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.sm,
-    backgroundColor: colors.background.paper,
-    gap: spacing.sm,
-  },
-  dropdownSearchInput: {
-    flex: 1,
-    ...typography.body2,
-    color: colors.text.primary,
-    paddingVertical: spacing.xs,
-  },
-  dropdownOptions: {
-    maxHeight: 200,
-  },
-  dropdownOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    minHeight: 56,
-  },
-  dropdownOptionSelected: {
-    backgroundColor: colors.primary.main + '10',
-  },
-  dropdownOptionDisabled: {
-    opacity: 0.5,
-  },
-  dropdownOptionContent: {
-    flex: 1,
-  },
-  dropdownOptionLabel: {
-    ...typography.body1,
-    color: colors.text.primary,
-  },
-  dropdownOptionLabelSelected: {
-    color: colors.primary.main,
-    fontWeight: '600',
-  },
-  dropdownOptionSubtitle: {
-    ...typography.caption,
-    color: colors.text.secondary,
-    marginTop: spacing.xs / 2,
-  },
-  dropdownEmpty: {
-    ...typography.body2,
-    color: colors.text.tertiary,
-    textAlign: 'center',
-    padding: spacing.lg,
-  },
-  dropdownLoader: {
-    padding: spacing.md,
-  },
-  dropdownCreateOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    gap: spacing.sm,
-    minHeight: 56,
-  },
-  dropdownCreateText: {
-    ...typography.body1,
-    color: colors.primary.main,
-    fontWeight: '500',
-  },
-  dropdownDoneButton: {
-    padding: spacing.md,
-    backgroundColor: colors.primary.main,
-    alignItems: 'center',
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  dropdownDoneText: {
-    ...typography.button,
-    color: colors.background.default,
-  },
-
   // BUG FIX #5: Gender conflict banner styles
   genderConflictBanner: {
     flexDirection: 'row',
@@ -2296,88 +1742,6 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: colors.warning.main,
     flex: 1,
-  },
-
-  // Booked Slots
-  bookedSlotsContainer: {
-    backgroundColor: colors.warning.main + '10',
-    borderRadius: spacing.sm,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.warning.main + '30',
-  },
-  bookedSlotsLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: colors.background.default,
-    borderRadius: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-  },
-  bookedSlotsLoadingText: {
-    ...typography.body2,
-    color: colors.text.secondary,
-  },
-  bookedSlotsTitle: {
-    ...typography.caption,
-    color: colors.text.secondary,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  bookedSlotsList: {
-    gap: spacing.xs,
-  },
-  bookedSlot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.background.default,
-    padding: spacing.sm,
-    borderRadius: spacing.xs,
-  },
-  bookedSlotTimeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  bookedSlotTime: {
-    ...typography.body2,
-    color: colors.warning.main,
-    fontWeight: '600',
-  },
-  bookedSlotTimeSeparator: {
-    ...typography.body2,
-    color: colors.warning.main,
-  },
-  bookedSlotClient: {
-    ...typography.caption,
-    color: colors.text.secondary,
-    flex: 1,
-    textAlign: 'right',
-    marginLeft: spacing.sm,
-  },
-  bookedSlotsMore: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  bookedSlotsEmpty: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.success.main + '10',
-    borderRadius: spacing.sm,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.success.main + '30',
-  },
-  bookedSlotsEmptyText: {
-    ...typography.body2,
-    color: colors.success.main,
   },
 
   // Date Time
