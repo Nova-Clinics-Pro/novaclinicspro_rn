@@ -146,14 +146,11 @@ export default function DoctorDashboard() {
   React.useEffect(() => {
     if (currentUser && currentUser.roles && currentUser.roles.length > 0) {
       const userRole = currentUser.roles[0]?.toLowerCase() || '';
-      console.log('[Doctor] Route guard checking role:', userRole);
       
       // Allow: doctor only
       const allowedRoles = ['doctor'];
       
       if (!allowedRoles.includes(userRole) && !currentUser.isOrgAdmin) {
-        console.log('[Doctor] Access denied, redirecting to appropriate dashboard');
-        
         // Redirect to appropriate dashboard based on role
         if (userRole === 'therapist') {
           router.replace('/therapist');
@@ -187,31 +184,6 @@ export default function DoctorDashboard() {
       enabled: !!tenantId,
     }
   );
-
-  // Debug logging for appointments and KPIs
-  React.useEffect(() => {
-    console.log('[DoctorDashboard] State:', {
-      tenantId,
-      staffId,
-      currentUserUserId: currentUser?.userId,
-      selectedDate: selectedDate.toDateString(),
-      selectedDateStr,
-      kpiPeriod,
-      enabled: !!tenantId && !!staffId,
-    });
-  }, [tenantId, staffId, currentUser?.userId, selectedDate, selectedDateStr, kpiPeriod]);
-
-  // Log dashboard data when it changes
-  React.useEffect(() => {
-    if (dashboardData) {
-      console.log('[DoctorDashboard] Dashboard data received:', {
-        appointmentsCount: dashboardData.appointments?.length || 0,
-        onLeave: dashboardData.on_leave_today,
-        firstAppointment: dashboardData.appointments?.[0],
-        selectedDateStr,
-      });
-    }
-  }, [dashboardData, selectedDateStr]);
 
   // Fetch KPI metrics from backend
   const {
@@ -251,18 +223,6 @@ export default function DoctorDashboard() {
   });
   const pendingDocItems = pendingDocData?.items ?? [];
 
-  // Log KPI data when it changes
-  React.useEffect(() => {
-    if (kpiData) {
-      console.log('[DoctorDashboard] KPI Data received:', {
-        consultations: kpiData.consultations,
-        patients: kpiData.patients,
-        productivity: kpiData.clinical_productivity,
-        staffName: kpiData.staff_name,
-      });
-    }
-  }, [kpiData]);
-
   // Handle period change
   const handlePeriodChange = useCallback(
     (period: KPIPeriodType, fromDate?: string, toDate?: string) => {
@@ -290,17 +250,6 @@ export default function DoctorDashboard() {
     [dashboardData?.appointments, selectedDateStr]
   );
 
-  // Log filtered appointments
-  React.useEffect(() => {
-    if (dashboardData) {
-      console.log('[DoctorDashboard] Filtered appointments:', {
-        total: dashboardData.appointments?.length || 0,
-        filtered: filteredAppointments.length,
-        selectedDateStr,
-      });
-    }
-  }, [dashboardData, filteredAppointments.length, selectedDateStr]);
-
   // Get unique client IDs from filtered appointments
   const uniqueClientIds = useMemo(() => {
     return [...new Set(filteredAppointments.map(apt => apt.client_id))];
@@ -309,13 +258,6 @@ export default function DoctorDashboard() {
   const { data: episodeCountsData } = useClientEpisodeCountsQuery(tenantId, uniqueClientIds);
 
   const episodeCountMap = useMemo(() => episodeCountsData ?? {}, [episodeCountsData]);
-
-  // Debug log episode counts
-  React.useEffect(() => {
-    console.log('[DoctorDashboard] Episode counts data:', episodeCountsData);
-    console.log('[DoctorDashboard] Episode count map:', episodeCountMap);
-    console.log('[DoctorDashboard] Unique client IDs:', uniqueClientIds);
-  }, [episodeCountsData, episodeCountMap, uniqueClientIds]);
 
   // Map KPI data to card format
   const kpiCards = useMemo(() => {
@@ -326,14 +268,6 @@ export default function DoctorDashboard() {
       typeof kpiData.clinical_productivity === 'object';
     const hasTimeMetrics = kpiData.time_metrics && 
       typeof kpiData.time_metrics === 'object';
-    
-    console.log('[DoctorDashboard] KPI data structure:', {
-      hasConsultations: !!kpiData.consultations,
-      hasPatients: !!kpiData.patients,
-      hasProductivity,
-      hasTimeMetrics,
-      keys: Object.keys(kpiData),
-    });
     
     return {
       consultations: mapConsultationsToCards(kpiData.consultations),
@@ -537,20 +471,16 @@ export default function DoctorDashboard() {
                     onPress={undefined} // Remove navigation to detail page
                     showActions={true} // Enable quick actions
                     userRole="doctor"
-                    onStatusUpdate={(appointmentId, newStatus) => {
-                      console.log('[DoctorDashboard] Status update:', appointmentId, newStatus);
+                    onStatusUpdate={() => {
                       // TODO: Implement status update mutation
                     }}
-                    onCancel={(appointmentId) => {
-                      console.log('[DoctorDashboard] Cancel:', appointmentId);
+                    onCancel={() => {
                       // TODO: Implement cancel mutation
                     }}
                     onReschedule={(appointmentId) => {
-                      console.log('[DoctorDashboard] Reschedule:', appointmentId);
                       router.push(`/clinic-admin/appointments/${appointmentId}`);
                     }}
-                    onViewAllEpisodes={(clientId, clientName) => {
-                      console.log('[DoctorDashboard] View all episodes for client:', clientId, clientName);
+                    onViewAllEpisodes={(clientId) => {
                       router.push(`/clinic-admin/clients/${clientId}/episodes` as any);
                     }}
                     clientEpisodesCount={episodeCountMap[appointment.client_id] || 0}
@@ -746,7 +676,7 @@ export default function DoctorDashboard() {
         title="Doctor Dashboard"
         subtitle={`Welcome back, ${doctorName}`}
         onNotificationPress={() => router.push('/notifications/history')}
-        onProfilePress={() => console.log('Profile')}
+        onProfilePress={() => undefined}
         onLogoutPress={handleLogout}
       />
 

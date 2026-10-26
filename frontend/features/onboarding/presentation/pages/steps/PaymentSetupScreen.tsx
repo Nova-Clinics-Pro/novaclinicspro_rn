@@ -93,7 +93,6 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
 
   const handleSubmit = useCallback(async (saveContext?: RevisionAwareSaveContext) => {
     if (loading) {
-      console.log('[PaymentSetupScreen] Skipping submit - still loading');
       return;
     }
     
@@ -103,11 +102,8 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
     // Check if data has changed
     const hasChanges = currentSnapshot !== initialSnapshotRef.current;
     
-    console.log('[PaymentSetupScreen] Change detection:', { hasChanges });
-    
     // If no changes, just advance without API call
     if (!hasChanges && initialSnapshotRef.current !== null) {
-      console.log('[PaymentSetupScreen] No changes detected, skipping API call');
       if (isWizardMode && onSuccess) {
         onSuccess();
       }
@@ -124,9 +120,6 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
         expected_revision: saveContext?.expectedRevision,
       });
 
-      console.log('[PaymentSetupScreen] Step completed successfully');
-      console.log('[PaymentSetupScreen] Backend response:', JSON.stringify(result, null, 2));
-      
       // Update snapshot after successful save
       initialSnapshotRef.current = currentSnapshot;
       restoredSnapshotRef.current = null;
@@ -143,10 +136,8 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       const nextStep = result.next_step;
       
       if (nextStep) {
-        console.log('[PaymentSetupScreen] Navigating to next step:', nextStep);
         router.replace(`/onboarding/step-detail?tenantId=${tenantId}&stepCode=${nextStep}`);
       } else {
-        console.log('[PaymentSetupScreen] No next_step in response, checking onboarding status...');
         router.replace(`/onboarding/setup-wizard?tenantId=${tenantId}`);
       }
     } catch (error: any) {
