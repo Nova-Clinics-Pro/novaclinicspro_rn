@@ -72,7 +72,8 @@
     "state": "राज्य",
     "country": "देश",
     "profileSaveFailed": "क्लिनिक प्रोफ़ाइल सहेजी नहीं जा सकी। कृपया पुनः प्रयास करें।",
-    "noCategory": "कोई श्रेणी नहीं"
+    "noCategory": "कोई श्रेणी नहीं",
+    "consultation": "परामर्श"
   },
   "navigation": {
     "dashboard": "डैशबोर्ड",
@@ -285,7 +286,15 @@
       "partialSuccess": "आंशिक सफलता",
       "created": "बनाए गए",
       "failedToCreate": "अपॉइंटमेंट बनाने में विफल",
-      "confirmSessions": "{{count}} सत्रों की पुष्टि करें"
+      "confirmSessions": "{{count}} सत्रों की पुष्टि करें",
+      "applyToAllSlots": "सभी सत्रों पर लागू करें",
+      "appointmentCompleted": "यह अपॉइंटमेंट पूरा हो चुका है",
+      "clientNoShow": "मरीज़ उपस्थित नहीं हुआ",
+      "highCoverageOptions": "ये समय अधिकतर सत्रों के लिए उपलब्ध हैं",
+      "noActionsAvailable": "कोई कार्रवाई उपलब्ध नहीं है",
+      "originallyRequested": "मूल रूप से अनुरोधित",
+      "scheduledTime": "निर्धारित",
+      "worksForSessions": "{{count}}/{{total}} सत्रों के लिए उपलब्ध"
     },
     "clients": {
       "loadFailed": "ग्राहक लोड नहीं हो सके। कृपया पुनः प्रयास करें।",
@@ -414,6 +423,27 @@
       "invalidType": "अमान्य फ़ाइल प्रकार। कृपया एक समर्थित प्रारूप चुनें।",
       "uploadFailed": "फ़ाइल अपलोड विफल। कृपया पुनः प्रयास करें।",
       "downloadFailed": "फ़ाइल डाउनलोड विफल। कृपया पुनः प्रयास करें।"
+    },
+    "completeConsultation": {
+      "loadFailed": "परामर्श पूर्णता का सारांश लोड नहीं हो सका। कृपया पुनः प्रयास करें।"
+    },
+    "episodeWorkspace": {
+      "casesheetLoadFailed": "विज़िट नोट्स लोड नहीं हो सके। कृपया पुनः प्रयास करें।",
+      "loadFailed": "एपिसोड कार्यक्षेत्र लोड नहीं हो सका। कृपया पुनः प्रयास करें।",
+      "prescriptionsLoadFailed": "नुस्खे लोड नहीं हो सके। कृपया पुनः प्रयास करें।",
+      "treatmentSheetsLoadFailed": "उपचार योजनाएँ लोड नहीं हो सकीं। कृपया पुनः प्रयास करें।"
+    },
+    "leave": {
+      "cancelFailed": "अवकाश अनुरोध रद्द नहीं हो सका। कृपया पुनः प्रयास करें।",
+      "createFailed": "अवकाश अनुरोध भेजा नहीं जा सका। कृपया पुनः प्रयास करें।",
+      "loadFailed": "अवकाश अनुरोध लोड नहीं हो सके। कृपया पुनः प्रयास करें।",
+      "notAvailable": "इस परिवेश में अवकाश प्रबंधन उपलब्ध नहीं है।"
+    },
+    "therapistDashboard": {
+      "featureNotAvailable": "यह सुविधा इस परिवेश में उपलब्ध नहीं है।",
+      "kpiLoadFailed": "प्रदर्शन के आँकड़े लोड नहीं हो सके। कृपया पुनः प्रयास करें।",
+      "loadFailed": "थेरेपिस्ट डैशबोर्ड लोड नहीं हो सका। कृपया पुनः प्रयास करें।",
+      "worklistLoadFailed": "आपकी समय-सारणी लोड नहीं हो सकी। कृपया पुनः प्रयास करें।"
     }
   },
   "applicationStatus": {
@@ -518,7 +548,33 @@
     "createFailed": "अपॉइंटमेंट बनाने में असमर्थ। कृपया पुनः प्रयास करें।",
     "updateFailed": "अपॉइंटमेंट अपडेट करने में असमर्थ। कृपया पुनः प्रयास करें।",
     "cancelFailed": "अपॉइंटमेंट रद्द करने में असमर्थ। कृपया पुनः प्रयास करें।",
-    "rescheduleFailed": "अपॉइंटमेंट पुनर्निर्धारित करने में असमर्थ। कृपया पुनः प्रयास करें।"
+    "rescheduleFailed": "अपॉइंटमेंट पुनर्निर्धारित करने में असमर्थ। कृपया पुनः प्रयास करें।",
+    "addCaseSheet": "केस शीट जोड़ें",
+    "addPrescription": "प्रिस्क्रिप्शन जोड़ें",
+    "applyToAllSlots": "सभी सत्रों पर लागू करें",
+    "appointmentCompleted": "यह अपॉइंटमेंट पूरा हो चुका है",
+    "bookingConflict": "बुकिंग में टकराव",
+    "caseSheet": "केस शीट",
+    "chooseDifferentTime": "कोई दूसरा समय चुनें…",
+    "clientNoShow": "मरीज़ उपस्थित नहीं हुआ",
+    "confirmComplete": "इस अपॉइंटमेंट को पूर्ण चिह्नित करें?",
+    "confirmNoShow": "क्या आप सुनिश्चित हैं कि मरीज़ उपस्थित नहीं हुआ?",
+    "confirmReschedule": "इस अपॉइंटमेंट के लिए समय बदलने के विकल्प खोलें?",
+    "highCoverageOptions": "ये समय अधिकतर सत्रों के लिए उपलब्ध हैं",
+    "noActionsAvailable": "कोई कार्रवाई उपलब्ध नहीं है",
+    "noPaymentRecorded": "कोई भुगतान दर्ज नहीं है",
+    "noVisitHistory": "कोई पिछली विज़िट नहीं है",
+    "preferredTime": "पसंदीदा समय",
+    "prescription": "प्रिस्क्रिप्शन",
+    "requestedTime": "अनुरोधित",
+    "roundedToHour": "निकटतम घंटे में पूर्णांकित",
+    "scheduledTime": "निर्धारित",
+    "staffNotAvailable": "स्टाफ़ उपलब्ध नहीं है",
+    "timeNotAvailable": "चुना गया समय उपलब्ध नहीं है। कृपया कोई दूसरा समय चुनें।",
+    "validationFailed": "चुने गए समय की पुष्टि नहीं हो सकी। कृपया पुनः प्रयास करें।",
+    "viewCaseSheet": "केस शीट देखें",
+    "viewPrescription": "प्रिस्क्रिप्शन देखें",
+    "worksForSessions": "{{count}}/{{total}} सत्रों के लिए उपलब्ध"
   },
   "confirmations": {
     "delete": "क्या आप वाकई इसे हटाना चाहते हैं?",
@@ -568,7 +624,24 @@
     "episodeCreated": "एपिसोड सफलतापूर्वक बनाया गया",
     "episodeUpdated": "एपिसोड सफलतापूर्वक अपडेट किया गया",
     "appointmentLinked": "अपॉइंटमेंट एपिसोड से लिंक किया गया",
-    "appointmentUnlinked": "अपॉइंटमेंट एपिसोड से अनलिंक किया गया"
+    "appointmentUnlinked": "अपॉइंटमेंट एपिसोड से अनलिंक किया गया",
+    "addCasesheet": "केस शीट जोड़ें",
+    "addPrescription": "प्रिस्क्रिप्शन जोड़ें",
+    "addTreatmentSheet": "उपचार शीट जोड़ें",
+    "createEpisodeHelpText": "इस अपॉइंटमेंट को संबंधित विज़िट और दस्तावेज़ों के साथ रखने के लिए एक एपिसोड बनाएँ। एपिसोड किसी विशेष स्थिति के उपचार को समय के साथ देखने में सहायता करते हैं।",
+    "dangerZone": "जोखिम वाला क्षेत्र",
+    "episodeCreatedAndLinked": "एपिसोड बनाया गया और इस अपॉइंटमेंट से जोड़ा गया।",
+    "linkEpisodeHelpText": "इस अपॉइंटमेंट को जोड़ने के लिए एक एपिसोड चुनें। एपिसोड किसी विशेष स्थिति या उपचार योजना की सभी विज़िट और दस्तावेज़ों को एक साथ रखते हैं।",
+    "linkedToVisit": "विज़िट से जुड़ा हुआ",
+    "noCasesheetYet": "अभी कोई केस शीट नहीं बनी है",
+    "noPaymentYet": "कोई भुगतान दर्ज नहीं है",
+    "noPrescriptionYet": "इस विज़िट के लिए कोई प्रिस्क्रिप्शन नहीं है",
+    "noTreatmentSheetYet": "अभी कोई उपचार शीट नहीं बनी है",
+    "paymentDetails": "भुगतान का विवरण",
+    "viewCasesheet": "केस शीट देखें",
+    "viewEpisode": "एपिसोड देखें",
+    "viewPrescription": "प्रिस्क्रिप्शन देखें",
+    "viewTreatmentSheet": "उपचार शीट देखें"
   },
   "onboarding": {
     "actions": {
@@ -1332,7 +1405,90 @@
           "assessment": "मूल्यांकन",
           "plan": "योजना"
         }
-      }
+      },
+      "addCasesheet": "केस शीट जोड़ें",
+      "chiefComplaint": "मुख्य शिकायत",
+      "diagnosis": "निदान",
+      "editCasesheet": "संपादित करें",
+      "empty": "इस एपिसोड के लिए अभी कोई केस शीट नहीं है।",
+      "noContent": "अभी कोई विवरण दर्ज नहीं है।",
+      "noProgressNotes": "अभी कोई विज़िट दर्ज नहीं है।",
+      "progressNotes": "विज़िट / प्रगति नोट्स",
+      "save": "केस शीट सहेजें",
+      "status": {
+        "draft": "ड्राफ़्ट",
+        "final": "अंतिम",
+        "signed": "हस्ताक्षरित"
+      },
+      "title": "केस शीट",
+      "viewCasesheet": "केस शीट देखें"
+    },
+    "actions": {
+      "back": "वापस",
+      "retry": "पुनः प्रयास करें"
+    },
+    "header": {
+      "active": "सक्रिय",
+      "closed": "बंद",
+      "episode": "एपिसोड",
+      "episodeStatus": "एपिसोड की स्थिति",
+      "visit": "विज़िट",
+      "visitNumber": "विज़िट {{number}}"
+    },
+    "loading": "एपिसोड लोड हो रहा है...",
+    "prescriptions": {
+      "empty": "इस एपिसोड के लिए कोई प्रिस्क्रिप्शन दर्ज नहीं है।",
+      "issued": "{{date}} को जारी",
+      "medications": "{{count}} दवाएँ",
+      "newPrescription": "नया प्रिस्क्रिप्शन",
+      "title": "प्रिस्क्रिप्शन",
+      "viewPrescription": "प्रिस्क्रिप्शन देखें"
+    },
+    "tabs": {
+      "prescriptions": "विज़िट",
+      "treatmentPlans": "उपचार योजनाएँ",
+      "visitNotes": "केस शीट"
+    },
+    "treatmentPlans": {
+      "continueDocumentation": "दस्तावेज़ीकरण जारी रखें",
+      "createPlan": "उपचार योजना बनाएं",
+      "empty": "अभी कोई उपचार योजना नहीं है — थेरेपी शुरू करने के लिए एक बनाएँ।",
+      "fillDetails": "उपचार का विवरण भरें",
+      "fullyScheduled": "सभी सत्र निर्धारित हैं",
+      "openActivePlan": "सक्रिय योजना खोलें",
+      "partiallyScheduled": "कुछ सत्र निर्धारित हैं",
+      "pendingScheduling": "समय निर्धारण बाकी है",
+      "schedulePlan": "योजना का समय निर्धारित करें",
+      "schedulingStatus": "समय निर्धारण की स्थिति",
+      "sendToScheduling": "समय निर्धारण के लिए भेजें",
+      "sessions": "{{count}} सत्र",
+      "title": "उपचार योजनाएँ",
+      "viewCompleted": "पूर्ण योजना देखें",
+      "viewSchedule": "समय-सारणी देखें",
+      "waitingForScheduling": "समय निर्धारण की प्रतीक्षा में"
+    },
+    "visitNotes": {
+      "addNotes": "केस शीट जोड़ें",
+      "chiefComplaint": "मुख्य शिकायत",
+      "diagnosis": "निदान",
+      "draft": "ड्राफ़्ट",
+      "editNotes": "केस शीट देखें",
+      "empty": "इस एपिसोड के लिए अभी कोई केस शीट नहीं है।",
+      "final": "अंतिम",
+      "signed": "हस्ताक्षरित",
+      "status": "स्थिति",
+      "title": "केस शीट",
+      "viewNotes": "केस शीट देखें"
+    },
+    "visits": {
+      "addPrescription": "प्रिस्क्रिप्शन जोड़ें",
+      "empty": "इस एपिसोड के लिए अभी कोई विज़िट दर्ज नहीं है।",
+      "paymentDetails": "भुगतान का विवरण",
+      "paymentNotImplemented": "भुगतान विवरण की स्क्रीन जल्द उपलब्ध होगी।",
+      "staffLabel": "चिकित्सक / थेरेपिस्ट",
+      "title": "विज़िट",
+      "treatmentLabel": "उपचार",
+      "viewPrescription": "प्रिस्क्रिप्शन देखें"
     }
   },
   "livingDocuments": {
@@ -1521,5 +1677,74 @@
       "superseded_amended": "प्रतिस्थापित / संशोधित",
       "stopped_discontinued": "रोका गया / बंद"
     }
+  },
+  "completeConsultation": {
+    "action": {
+      "complete": "परामर्श पूरा करें"
+    },
+    "empty": {
+      "mandatory": "कोई आवश्यक कार्य बाकी नहीं है।",
+      "optional": "कोई वैकल्पिक कार्य सुझाया नहीं गया है।",
+      "unresolved": "कोई अनसुलझा तथ्य नहीं है।",
+      "warnings": "कोई चेतावनी नहीं है।"
+    },
+    "reasonCodes": {
+      "active_treatment_in_progress": "उपचार अभी जारी है",
+      "billing_facts_unavailable": "बिलिंग की जानकारी फ़िलहाल उपलब्ध नहीं है",
+      "capability_facts_unavailable": "सुविधाओं की जानकारी फ़िलहाल उपलब्ध नहीं है",
+      "capability_unavailable_for_new_work": "यह सुविधा फ़िलहाल नए कार्य के लिए उपलब्ध नहीं है",
+      "episode_closed": "एपिसोड बंद है",
+      "outstanding_balance": "बकाया राशि बाकी है",
+      "permission_facts_unavailable": "अनुमतियों की जानकारी फ़िलहाल उपलब्ध नहीं है",
+      "scheduling_denied": "समय निर्धारित करने की अनुमति नहीं मिली",
+      "treatment_clinical_review_pending": "उपचार की नैदानिक समीक्षा बाकी है",
+      "treatment_execution_facts_unavailable": "उपचार के निष्पादन का विवरण फ़िलहाल उपलब्ध नहीं है",
+      "treatment_lifecycle_unresolved": "उपचार की स्थिति फ़िलहाल अनिर्णीत है",
+      "treatment_plan_entity_not_yet_implemented": "उपचार योजनाएँ अभी समर्थित नहीं हैं",
+      "unbilled_services": "दी गई सेवाओं का अभी बिल नहीं बना है",
+      "unrecognised_document_status": "दस्तावेज़ की स्थिति पहचानी नहीं गई है",
+      "unrecognised_lifecycle_status": "उपचार की स्थिति पहचानी नहीं गई है",
+      "unresolved_mandatory_facts": "कुछ आवश्यक तथ्य अनसुलझे हैं",
+      "visit_not_started": "विज़िट अभी शुरू नहीं हुई है"
+    },
+    "recordingState": {
+      "absent": "दर्ज नहीं किया गया",
+      "not_applicable": "लागू नहीं",
+      "not_recorded": "दर्ज नहीं किया गया",
+      "recorded": "दर्ज किया गया",
+      "unavailable": "फ़िलहाल अनुपलब्ध",
+      "unresolved": "अनिर्णीत"
+    },
+    "sections": {
+      "billing": "बिलिंग",
+      "caseSheet": "केस शीट",
+      "mandatory": "बाकी आवश्यक कार्य",
+      "optional": "सुझाए गए वैकल्पिक कार्य",
+      "prescription": "प्रिस्क्रिप्शन",
+      "treatment": "उपचार",
+      "unresolved": "अनसुलझे तथ्य",
+      "visit": "विज़िट",
+      "warnings": "चेतावनियाँ"
+    },
+    "stageNames": {
+      "assessment": "केस शीट",
+      "billing": "बिलिंग",
+      "consultation": "परामर्श",
+      "prescription": "प्रिस्क्रिप्शन",
+      "treatment_plan": "उपचार योजना",
+      "treatment_recommendation": "उपचार सिफ़ारिश",
+      "visit_completion": "विज़िट पूर्णता"
+    },
+    "state": {
+      "already_complete": "पहले से पूर्ण",
+      "blocked": "अवरुद्ध",
+      "not_applicable": "लागू नहीं",
+      "not_ready": "पूरा करने के लिए तैयार नहीं",
+      "ready": "पूरा करने के लिए तैयार",
+      "ready_with_warnings": "चेतावनियों के साथ पूरा करने के लिए तैयार",
+      "unresolved": "अनिर्णीत",
+      "waiting_on_permission": "अनुमति की प्रतीक्षा में"
+    },
+    "title": "समीक्षा करें और पूरा करें"
   }
 }

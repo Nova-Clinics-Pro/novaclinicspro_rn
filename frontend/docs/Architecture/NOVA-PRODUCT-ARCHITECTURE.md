@@ -565,3 +565,85 @@ accepted Platform Foundation and this module map rather than redesign either.
 > requirements, design, or implementation evidence appears inconsistent, stop.
 > Identify the owning authority and approve the upstream correction before code.
 > Never resolve a governance conflict by silently choosing the easiest document.
+
+
+## Package D — bounded localization verification (2026-10-26)
+
+This is implementation evidence for the original A–F design-system/localization
+refactoring scope, not a new language policy or declaration of Package D closure.
+Authority: the existing pre-merge audit's localization findings and remediation
+13 (restore English/Hindi parity), this document's cross-cutting localization
+rule (§8), `CLAUDE.md` §4, and the owner's bounded Package D execution directive.
+No standalone approved Package D requirements/design/task register was found in
+the inspected existing spec locations; none was fabricated or duplicated.
+
+### Locale scope and preserved behavior
+
+Dedicated frontend catalogs exist for `en-US` and `hi-IN`. Configuration retains
+eight choices: `en-US`, `en-IN`, `hi-IN`, `ta-IN`, `te-IN`, `kn-IN`, `ml-IN`,
+`mr-IN`. `en-IN` aliases English; the other choices without catalogs continue
+using the existing English fallback. Configuration does not prove translation
+coverage for those languages. No locale was added, removed, relabeled or
+reclassified, and no provider, onboarding or clinical workflow was changed.
+
+### Requirements-to-code-to-test evidence
+
+| Existing requirement/finding | Bounded implementation | Verification |
+| --- | --- | --- |
+| Restore English/Hindi key parity; original audit: 185 missing Hindi keys | `core/localization/translations/hi-IN.json`: 185 Hindi leaves added; 40 reuse unambiguous existing translations; all 1,295 pre-existing Hindi values preserved | `tests/core/localization/i18n.test.ts`: complete leaf-key, nonempty-value and interpolation parity; independent JSON audit: 1,480 keys each, zero missing/extra keys, duplicate keys or parameter mismatches |
+| Preserve interpolation and translation lookup contracts | No `i18n.ts` change; restored session counts, visit numbers and completion-reason copy | Runtime tests exercise Hindi interpolation, absent parameter preservation and unknown-key reporting |
+| Preserve approved locale/fallback choices | No locale or resource-map edits | Tests cover all seven existing English/alias/fallback choices, stored preference identity, Hindi device-language matching and unknown-locale rejection |
+| Central theme token contract | No theme replacement or style changes | Existing `tests/core/theme/designTokens.test.ts` passes |
+| Presentation must not own transport | No presentation or transport edits | Existing `tests/architecture/b1-presentation-boundary-guard.test.ts`: 2 passed |
+
+Clean baseline: `1b463580af91c64edf23557af3bfdb92690dc9b2`, including the
+preserved Package A/C frontend work. Branch: `codex/package-d-localization-parity`.
+
+Offline commands run from `frontend/` using existing dependencies:
+
+- Jest with external native-preset-preserving overlay, pre-import network/process
+  guard, `--runInBand --no-cache --watchman=false --runTestsByPath` for
+  `tests/core/localization/i18n.test.ts`, `tests/core/theme/designTokens.test.ts`,
+  `tests/onboarding/tg23-conflict-localization.test.ts` and
+  `tests/onboarding/commercial-retention.localization.test.ts`:
+  **4 suites, 24 passed**, zero failed/skipped, exit 0.
+- Same guarded runner for the B1 architecture ratchet: **1 suite, 2 passed**,
+  exit 0. No guard-violation markers were emitted.
+- `tsc --noEmit --project tsconfig.production.json`: passed.
+- Scoped ESLint of the new localization test: passed without diagnostics.
+
+Environment: Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, TypeScript 6.0.3.
+The first invocation could not find the new test because it was initially
+written under an extra `frontend/` directory in the isolated worktree. Placement
+was corrected; no tests or assertions were weakened. The subsequent results
+above supersede that runner-path failure.
+
+### Remaining theme and acceptance gates
+
+The original audit identified seven screen-level color-token bypass candidates.
+A bounded TypeScript AST audit on this baseline confirms:
+
+| Existing audit path (relative to frontend) | Hex-color literal count |
+| --- | ---: |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | 100 |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | 58 |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | 51 |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | 46 |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | 39 |
+| `app/clinic-admin/settings/treatments/[treatmentId].tsx` | 42 |
+| `app/clinic-admin/settings/rooms/[roomId].tsx` | 36 |
+
+These 372 literal occurrences are candidates, not 372 proven independent
+violations. All seven import spacing/typography without the clinic-aware color
+hook; neither literal counting nor token tests prove centralized visual
+coverage. No direct inline object `style={{...}}` was found in those seven
+files; this does not close the original app-wide static/dynamic-style audit.
+Their existing styles and behavior were preserved. Theme-token migration,
+remaining hardcoded user-visible text, Hindi layout/accessibility review and
+package-level acceptance remain open. Do not infer full locale UX coverage or
+Package D completion from catalog parity.
+
+No new languages, frozen requirements, database, backend, dependency, CI,
+Commercial Platform, migration or deployment changes are part of this slice.
+Git inclusion is a separate owner gate; this evidence does not authorize a
+commit, push, merge or release.
