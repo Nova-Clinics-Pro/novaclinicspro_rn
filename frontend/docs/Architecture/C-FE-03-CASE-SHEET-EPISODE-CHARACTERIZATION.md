@@ -427,3 +427,92 @@ HEAD. Backend artifacts remain untouched. Five-file scope, baseline HEAD,
 empty index and diff whitespace checks pass. New component/test are Git-visible
 without force-add; no ignore rules changed. Ready for separately approved local
 Git inclusion of this slice, not full C-FE-03 or Package C completion.
+
+## C-FE-03 second approved slice: Episode metadata — 2026-10-29
+
+**Authority/baseline:** owner's C-FE-03 Episode Metadata Extraction directive,
+limited to the existing metadata grid near former EpisodeDetailScreen line 513.
+Verified clean `codex/af-frontend-integration` at
+5ce50a018826d26593c0a1b3a201bd14e00228e7 before editing. This authorizes only
+this display slice, not the remaining proposed Package C umbrella or lifecycle
+redesign. The first Case Sheet text slice remains preserved and unchanged.
+
+### Requirements → implementation → tests
+
+| Contract | Implementation | Evidence |
+| --- | --- | --- |
+| C-REQ-01 presentational dependency direction | New `features/episodes/presentation/components/EpisodeDetailMetadataGrid.tsx` imports only React, react-native and icons. No hooks, date parser, query, mutation, transport, auth or navigation. | TypeScript-AST guard allows only the three presentation imports and static StyleSheet.create; rejects other calls, dynamic dependencies and constructors. |
+| C-REQ-02 server/clinical authority | Screen retains its date formatter, query/focus/auth state, lifecycle/status interpretation, mutations, cache/refetch, document/consultation/prescription callbacks and edit/close/reopen behavior. | Reverse applying exactly the grid/import/style extraction reconstructs the baseline screen bytes. Runtime screen test checks tenant-scoped queries, formatter calls, existing back/Case Sheet callbacks, no mutation and unchanged ACTIVE close affordance. Existing canonical-writer/clinical regressions pass. |
+| C-REQ-03 equivalent display | Existing four metadata styles moved byte-identically; same native row order, labels, icons, sizes, text styles and theme values. | Grid tests assert layout/typography/order/icon props, all four clinic palettes, changed theme props, null/empty/undefined display values, zero visits and visibility independent of display values. |
+| C-REQ-04/05/06 characterize, retain owners, no speculative abstraction | Grid takes formatted values, explicit flags and resolved colors only; no shared framework or additional writer. | Existing C-FE-03 characterization retained unchanged; focused grid/screen tests plus the preserved first-slice and workflow selections. |
+
+Typed props: `startDateText?`, `endDateText?`, `lastVisitDateText?` are
+`string | null`; `showEndDate`/`showLastVisit` are required booleans;
+`visitsCount?: number | null`; `textColors` is readonly primary/tertiary strings.
+The screen still calls formatEpisodeDate; optional dates are formatted only
+when their original raw values are truthy. Explicit flags preserve the original
+optional-row visibility; Start Date and Total Visits rows remain present.
+Null/undefined/empty display values do not invent placeholders in the component.
+Colors come from the screen's existing clinic theme, including on rerender.
+No label, translation, accessibility attribute, clinic palette or fallback changed.
+
+Exactly five artifact paths, relative to frontend/:
+
+- `features/episodes/presentation/components/EpisodeDetailMetadataGrid.tsx` (new).
+- `features/episodes/presentation/pages/EpisodeDetailScreen.tsx`.
+- `tests/features/episodes/EpisodeDetailMetadataGrid.test.tsx` (new, 11 cases).
+- `tests/features/episodes/EpisodeDetailScreen.metadata.test.tsx` (new, 2 cases).
+- This existing characterization/evidence document.
+
+### Verification and limits
+
+Established pre-import JavaScript network/process guard and external Expo/Jest
+native-preset overlay; NODE_ENV=test, runInBand, no-cache, watchman=false,
+original haste fields preserved with forceNodeFilesystemAPI. No database,
+credentials, services, installs, CI or repository configuration changes.
+
+- Final focused run: **2 suites / 13 passed, zero failed/skipped, exit 0**,
+  Jest **3.741 seconds**. Initial new screen test used incorrect capitalization
+  of an existing English label; corrected the assertion to catalog's existing
+  `View Casesheet`, preserving the navigation assertion and production copy.
+- Combined: **17 suites / 108 passed, zero failed/skipped**, Jest **11.725 seconds**.
+  Includes all prior 87 tests plus 13 new cases and eight existing Episode
+  TreatmentSheetsSection, CreateConsultationScreen boundary and client-count
+  cases. Counts overlap between focused and combined runs; do not add them.
+  Final natural process exit is recorded below separately from assertions.
+- Production TypeScript: **PASS, exit 0** (`tsc --noEmit --project tsconfig.production.json`).
+- Scoped ESLint: **exit 0, zero errors, three inherited no-unused-vars warnings**
+  in EpisodeDetailScreen, matching rule/severity/message baseline signatures.
+  New component and both tests have zero diagnostics. No lint suppression/fix.
+- Four extracted styles byte-identical; exact reverse screen reconstruction and
+  `git diff --check` PASS. No guard-violation markers in verification logs.
+
+External temporary evidence: `/private/tmp/nova-episode-metadata-focused-results.json`,
+`nova-episode-metadata-regression-results.json`, their corresponding runner/log
+files, `nova-episode-metadata-tsc.log`, `nova-episode-metadata-eslint.log` and
+`nova-episode-metadata-baseline-eslint.json`. Existing Node 20.19.4, Jest 29.7.0,
+jest-expo 57.0.5, TypeScript 6.0.3, ESLint 9.31.0, React 19.2.3 and RN 0.86.3.
+These guards are JavaScript-level, not OS isolation; offline rendering does not
+establish native visual/accessibility or database acceptance.
+
+**Disposition:** both authorized presentation slices have implementation evidence;
+this second slice awaits separately approved local Git inclusion. No further
+extraction is implicitly authorized, and C-FE-03/Package C closure is not inferred.
+Relevant R7 contract/version, canonical-authoring/transition and B2.7/B2.8
+security/lifecycle gates remain for future changes intersecting those boundaries.
+No new such decision was required for this display-only grid. Native layout,
+large text, screen-reader and visual equivalence remain unverified. Package F
+credential-use hold remains unchanged, without database/credential access.
+
+
+Final combined runner exited naturally with **exit 0** after approximately
+five minutes of delayed teardown following assertion completion, consistent
+with the inherited regression-runner behavior. No forced exit, timer/mock
+change, assertion suppression or production adjustment was introduced.
+Temporary dependency linkage removed. Original B27 frontend/backend 1300/1670
+snapshot hashes and Git statuses match. Canonical writer, CasesheetTab,
+EpisodeWorkspaceScreen and preserved Case Sheet text slice match HEAD bytes.
+Exactly five intended files remain unstaged; baseline HEAD and empty index
+verified. New component and tests are Git-visible without ignore changes.
+Ready for separately approved local Git inclusion; no commit/push/merge or
+Package C-wide acceptance is claimed.
