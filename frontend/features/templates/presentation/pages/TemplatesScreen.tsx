@@ -30,6 +30,7 @@ import {
 } from '../../data/models/templates.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
@@ -166,6 +167,7 @@ const PlaceholderCard: React.FC<PlaceholderCardProps> = ({ type, onPress }) => {
 // ============================================
 
 export const TemplatesScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -199,23 +201,23 @@ export const TemplatesScreen: React.FC = () => {
         'Delete Template',
         `Are you sure you want to delete "${template.name}"?`,
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               try {
                 await deleteMutation.mutateAsync(template.id);
-                Alert.alert('Success', 'Template deleted');
+                Alert.alert(t('common.success'), 'Template deleted');
               } catch (error: any) {
-                Alert.alert('Error', error?.message || 'Failed to delete template');
+                Alert.alert(t('common.error'), error?.message || 'Failed to delete template');
               }
             },
           },
         ]
       );
     },
-    [deleteMutation]
+    [deleteMutation, t]
   );
 
   const handleCreateTemplate = useCallback(
@@ -223,10 +225,10 @@ export const TemplatesScreen: React.FC = () => {
       Alert.alert(
         'Create Template',
         'Template creation will be available soon. Contact support for custom templates.',
-        [{ text: 'OK' }]
+        [{ text: t('common.ok') }]
       );
     },
-    []
+    [t]
   );
 
   const handleViewTemplate = useCallback(
@@ -236,10 +238,10 @@ export const TemplatesScreen: React.FC = () => {
         `Type: ${TEMPLATE_METADATA[template.template_type]?.label}\n\nVariables: ${
           template.variables?.join(', ') || 'None'
         }\n\nTemplate editing coming soon.`,
-        [{ text: 'OK' }]
+        [{ text: t('common.ok') }]
       );
     },
-    []
+    [t]
   );
 
   // Filter templates by selected type
@@ -320,7 +322,7 @@ export const TemplatesScreen: React.FC = () => {
             <Ionicons name="cloud-offline-outline" size={24} color="#EF4444" />
             <Text style={styles.errorBoxText}>Failed to load templates</Text>
             <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : (

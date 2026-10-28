@@ -35,6 +35,7 @@ import {
 } from '../../data/models/rooms.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
@@ -44,6 +45,7 @@ const RoomCard: React.FC<{
   room: RoomResponse;
   onPress: () => void;
 }> = ({ room, onPress }) => {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -68,7 +70,7 @@ const RoomCard: React.FC<{
           <Text style={styles.roomName}>{room.name}</Text>
           {!room.is_active && (
             <View style={styles.inactiveBadge}>
-              <Text style={styles.inactiveBadgeText}>Inactive</Text>
+              <Text style={styles.inactiveBadgeText}>{t('common.inactive')}</Text>
             </View>
           )}
         </View>
@@ -100,6 +102,7 @@ const getTypeColor = (type: RoomType): string => {
 };
 
 export const RoomsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -150,11 +153,11 @@ export const RoomsScreen: React.FC = () => {
       });
       setShowCreateModal(false);
       setFormData({ name: '', capacity: '1', roomType: null });
-      Alert.alert('Success', 'Room created successfully');
+      Alert.alert(t('common.success'), 'Room created successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to create room');
+      Alert.alert(t('common.error'), 'Failed to create room');
     }
-  }, [createMutation, formData]);
+  }, [createMutation, formData, t]);
 
   const renderRoom = useCallback(({ item }: { item: RoomResponse }) => (
     <RoomCard
@@ -195,14 +198,14 @@ export const RoomsScreen: React.FC = () => {
             onPress={() => setShowInactive(false)}
           >
             <Text style={[styles.statValue, { color: '#10B981' }]}>{activeCount}</Text>
-            <Text style={styles.statLabel}>Active</Text>
+            <Text style={styles.statLabel}>{t('common.active')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.statBadge, showInactive && { backgroundColor: '#F3F4F620', borderColor: '#9CA3AF' }]}
             onPress={() => setShowInactive(true)}
           >
             <Text style={[styles.statValue, { color: '#6B7280' }]}>{inactiveCount}</Text>
-            <Text style={styles.statLabel}>Inactive</Text>
+            <Text style={styles.statLabel}>{t('common.inactive')}</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -549,7 +552,7 @@ const createStyles = (colors: SemanticColors) => StyleSheet.create({
   submitButtonText: {
     ...typography.body1,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.text.onPrimary,
   },
 });
 

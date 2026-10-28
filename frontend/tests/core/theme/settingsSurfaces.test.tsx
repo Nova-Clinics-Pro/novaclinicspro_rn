@@ -2,6 +2,9 @@ import React from 'react';
 import { Alert, StyleSheet } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import * as theme from '../../../core/theme/useClinicTheme';
+import { changeLanguage } from '../../../core/localization/i18n';
+import enUS from '../../../core/localization/translations/en-US.json';
+import hiIN from '../../../core/localization/translations/hi-IN.json';
 import type { ClinicType } from '../../../core/theme/clinicThemes';
 import { OperatingHoursScreen } from '../../../features/operatingHours/presentation/pages/OperatingHoursScreen';
 import { AppointmentRulesScreen } from '../../../features/appointmentRules/presentation/pages/AppointmentRulesScreen';
@@ -86,6 +89,11 @@ const nearestSurface = (element: ReturnType<Screen['getByText']>) => {
 const expectSurface = (screen: Screen, label: string, color: string) =>
   expect(nearestSurface(text(screen, label))).toBe(color);
 
+const expectForeground = (screen: Screen, name: string, color: string) => {
+  const label = name === 'Operating Hours' || name === 'Appointment Rules' ? 'Save' : name === 'Rooms' ? 'Create Room' : null;
+  if (label) expect(StyleSheet.flatten(text(screen, label).props.style).color).toBe(color);
+};
+
 const cases = [
   { name: 'Operating Hours', Component: OperatingHoursScreen,
     open: (screen: Screen) => fireEvent.press(screen.getByLabelText('Edit Monday hours')),
@@ -135,28 +143,32 @@ const cases = [
     } },
 ];
 const clinics: ClinicType[] = ['AYURVEDA', 'GENERAL_MEDICINE', 'DENTAL', 'PHYSIOTHERAPY'];
-beforeEach(() => {
+beforeEach(async () => {
+  await changeLanguage('en-US');
   jest.clearAllMocks();
   mockWrite.mockResolvedValue(undefined);
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(async () => { await changeLanguage('en-US'); jest.restoreAllMocks(); });
 
-describe.each(cases)('$name bounded semantic surfaces', ({ Component, open, check }) => {
+describe.each(cases)('$name bounded semantic surfaces', ({ name, Component, open, check }) => {
   it.each(clinics)('retains existing white surfaces for %s', (clinic) => {
     const colors = theme.getTheme(clinic).colors;
     expect(colors.surface.default).toBe('#FFFFFF');
+    expect(colors.text.onPrimary).toBe('#FFFFFF');
     expect(colors.surface.elevated).toBe('#FFFFFF');
     const screen = render(<theme.ThemeProvider clinicType={clinic}><Component /></theme.ThemeProvider>);
     open(screen);
     check(screen, colors.surface.default, colors.surface.elevated);
+    expectForeground(screen, name, colors.text.onPrimary);
     expect(mockWrite).not.toHaveBeenCalled();
   });
 
   it('propagates distinct surface roles on rerender without losing local input', () => {
     const original = theme.getTheme('AYURVEDA');
     const first = { ...original, colors: { ...original.colors,
-      surface: { ...original.colors.surface, default: '#123456', elevated: '#ABCDEF' } } };
+      surface: { ...original.colors.surface, default: '#123456', elevated: '#ABCDEF' },
+      text: { ...original.colors.text, onPrimary: '#112233' } } };
     const hook = jest.spyOn(theme, 'useClinicTheme').mockReturnValue(first);
     const screen = render(<Component />);
     open(screen);
@@ -164,10 +176,13 @@ describe.each(cases)('$name bounded semantic surfaces', ({ Component, open, chec
     if (Component === RoomsScreen) fireEvent.changeText(screen.getByPlaceholderText('e.g., Therapy Room 1'), 'Unsaved room');
     if (Component === TreatmentsScreen) fireEvent.changeText(screen.getByPlaceholderText('Search treatments... (min 3 chars)'), 'T');
     check(screen, '#123456', '#ABCDEF');
+    expectForeground(screen, name, '#112233');
     hook.mockReturnValue({ ...first, colors: { ...first.colors,
-      surface: { ...first.colors.surface, default: '#654321', elevated: '#FEDCBA' } } });
+      surface: { ...first.colors.surface, default: '#654321', elevated: '#FEDCBA' },
+      text: { ...first.colors.text, onPrimary: '#332211' } } });
     screen.rerender(<Component />);
     check(screen, '#654321', '#FEDCBA');
+    expectForeground(screen, name, '#332211');
     if (Component === RoomsScreen) expect(screen.getByDisplayValue('Unsaved room')).toBeTruthy();
     if (Component === TreatmentsScreen) expect(screen.getByDisplayValue('T')).toBeTruthy();
     expect(mockWrite).not.toHaveBeenCalled();
@@ -198,4 +213,34 @@ it('updates the Operating Hours applying surface while an existing operation is 
       open_time: '09:00:00', close_time: '18:00:00', break_start: null, break_end: null, status: 'active' })),
   );
   expect(screen.queryByText('Applying to all days...')).toBeNull();
+});
+
+// Rendering checks validate translated strings and retained input, not native text metrics.
+describe.each(cases)('$name existing English/Hindi key wiring', ({ name, Component, open }) => {
+  it('renders approved Hindi copy after an explicit locale rerender without writes', async () => {
+    const screen = render(<theme.ThemeProvider><Component /></theme.ThemeProvider>);
+    open(screen);
+    if (name === 'Rooms') fireEvent.changeText(screen.getByPlaceholderText('e.g., Therapy Room 1'), 'Unsaved room');
+    await act(async () => { await changeLanguage('hi-IN'); });
+    screen.rerender(<theme.ThemeProvider><Component /></theme.ThemeProvider>);
+    if (name === 'Operating Hours') expect(text(screen, hiIN.common.cancel)).toBeTruthy();
+    if (name === 'Appointment Rules') expect(text(screen, hiIN.common.save)).toBeTruthy();
+    if (name === 'Rooms' || name === 'Treatments') expect(text(screen, hiIN.common.active)).toBeTruthy();
+    if (name === 'Rooms') expect(screen.getByDisplayValue('Unsaved room')).toBeTruthy();
+    if (name === 'Treatment Detail') {
+      expect(text(screen, hiIN.common.duration)).toBeTruthy();
+      expect(text(screen, hiIN.common.description)).toBeTruthy();
+    }
+    if (name === 'Templates') {
+      const icon = screen.UNSAFE_getAllByType('Ionicons' as React.ComponentType).find((item) => item.props.name === 'trash-outline');
+      expect(icon).toBeDefined();
+      fireEvent.press(icon!, { stopPropagation: jest.fn() });
+      expect(jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.[0]?.text).toBe(hiIN.common.cancel);
+    }
+    expect(mockWrite).not.toHaveBeenCalled();
+    await act(async () => { await changeLanguage('en-US'); });
+    screen.rerender(<theme.ThemeProvider><Component /></theme.ThemeProvider>);
+    if (name === 'Appointment Rules') expect(text(screen, enUS.common.save)).toBeTruthy();
+    if (name === 'Rooms' || name === 'Treatments') expect(text(screen, enUS.common.active)).toBeTruthy();
+  });
 });

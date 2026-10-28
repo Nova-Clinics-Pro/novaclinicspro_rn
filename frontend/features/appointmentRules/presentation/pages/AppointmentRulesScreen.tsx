@@ -35,6 +35,7 @@ import {
 } from '../../data/models/appointmentRules.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
@@ -117,6 +118,7 @@ const EditModal: React.FC<EditModalProps> = ({
   onReset,
   isSaving,
 }) => {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -145,7 +147,7 @@ const EditModal: React.FC<EditModalProps> = ({
       'Reset to Default',
       `This will remove your custom setting and use the organization default (${defaultValue}${metadata.unit ? ` ${metadata.unit}` : ''}).`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Reset',
           style: 'destructive',
@@ -257,7 +259,7 @@ const EditModal: React.FC<EditModalProps> = ({
             )}
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={isSaving}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
@@ -267,7 +269,7 @@ const EditModal: React.FC<EditModalProps> = ({
                 {isSaving ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={styles.saveButtonText}>{t('common.save')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -283,6 +285,7 @@ const EditModal: React.FC<EditModalProps> = ({
 // ============================================
 
 export const AppointmentRulesScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -325,28 +328,28 @@ export const AppointmentRulesScreen: React.FC = () => {
             is_override_active: true,
           },
         });
-        Alert.alert('Success', 'Rule updated successfully');
+        Alert.alert(t('common.success'), 'Rule updated successfully');
         handleCloseModal();
       } catch (error: any) {
         console.error('Save error:', error);
-        Alert.alert('Error', error?.message || 'Failed to save rule');
+        Alert.alert(t('common.error'), error?.message || 'Failed to save rule');
       }
     },
-    [upsertMutation, handleCloseModal]
+    [upsertMutation, handleCloseModal, t]
   );
 
   const handleReset = useCallback(
     async (ruleCode: string) => {
       try {
         await deleteMutation.mutateAsync(ruleCode);
-        Alert.alert('Success', 'Rule reset to default');
+        Alert.alert(t('common.success'), 'Rule reset to default');
         handleCloseModal();
       } catch (error: any) {
         console.error('Reset error:', error);
-        Alert.alert('Error', error?.message || 'Failed to reset rule');
+        Alert.alert(t('common.error'), error?.message || 'Failed to reset rule');
       }
     },
-    [deleteMutation, handleCloseModal]
+    [deleteMutation, handleCloseModal, t]
   );
 
   // Count custom rules
@@ -431,7 +434,7 @@ export const AppointmentRulesScreen: React.FC = () => {
             <Ionicons name="cloud-offline-outline" size={24} color="#EF4444" />
             <Text style={styles.errorBoxText}>Failed to load rules</Text>
             <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : rulesQuery.data?.items.length === 0 ? (
@@ -820,7 +823,7 @@ const createStyles = (colors: SemanticColors) => StyleSheet.create({
   },
   saveButtonText: {
     ...typography.body1,
-    color: '#FFFFFF',
+    color: colors.text.onPrimary,
     fontWeight: '600',
   },
 });

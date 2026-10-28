@@ -24,11 +24,13 @@ import {
 import { ROOM_TYPES, RoomType, getRoomTypeLabel } from '../../../../features/rooms/data/models/rooms.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../../features/auth/presentation/providers/auth.store';
 
 export default function RoomDetailScreen() {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
@@ -62,9 +64,9 @@ export default function RoomDetailScreen() {
         room_type: formData.roomType,
       });
       setIsEditing(false);
-      Alert.alert('Success', 'Room updated successfully');
+      Alert.alert(t('common.success'), 'Room updated successfully');
     } catch {
-      Alert.alert('Error', 'Failed to update room');
+      Alert.alert(t('common.error'), 'Failed to update room');
     }
   };
 
@@ -72,9 +74,9 @@ export default function RoomDetailScreen() {
     const newStatus = !roomQuery.data?.is_active;
     try {
       await updateMutation.mutateAsync({ is_active: newStatus });
-      Alert.alert('Success', `Room ${newStatus ? 'activated' : 'deactivated'}`);
+      Alert.alert(t('common.success'), `Room ${newStatus ? 'activated' : 'deactivated'}`);
     } catch {
-      Alert.alert('Error', 'Failed to update room status');
+      Alert.alert(t('common.error'), 'Failed to update room status');
     }
   };
 
@@ -83,7 +85,7 @@ export default function RoomDetailScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
           title="Room Details"
-          subtitle="Loading..."
+          subtitle={t('common.loading')}
           onBackPress={() => router.back()}
         />
         <View style={styles.loadingContainer}>
@@ -98,7 +100,7 @@ export default function RoomDetailScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
           title="Room Details"
-          subtitle="Error"
+          subtitle={t('common.error')}
           onBackPress={() => router.back()}
         />
         <View style={styles.errorContainer}>
@@ -128,7 +130,7 @@ export default function RoomDetailScreen() {
               { backgroundColor: room.is_active ? '#10B981' : '#EF4444' }
             ]} />
             <Text style={styles.statusText}>
-              {room.is_active ? 'Active' : 'Inactive'}
+              {room.is_active ? t('common.active') : t('common.inactive')}
             </Text>
           </View>
           <TouchableOpacity
@@ -234,7 +236,7 @@ export default function RoomDetailScreen() {
                   });
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.saveButton, updateMutation.isPending && styles.disabledButton]}

@@ -44,6 +44,7 @@ import {
 } from '../../data/models/operatingHours.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
@@ -68,6 +69,7 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
   onSelect,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [hours, setHours] = useState(() => {
     const parts = initialValue.split(':');
     return parts[0] || '09';
@@ -163,10 +165,10 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
 
           <View style={timePickerStyles.actions}>
             <TouchableOpacity style={timePickerStyles.cancelBtn} onPress={onClose}>
-              <Text style={timePickerStyles.cancelBtnText}>Cancel</Text>
+              <Text style={timePickerStyles.cancelBtnText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={timePickerStyles.confirmBtn} onPress={handleConfirm}>
-              <Text style={timePickerStyles.confirmBtnText}>Confirm</Text>
+              <Text style={timePickerStyles.confirmBtnText}>{t('common.confirm')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -447,6 +449,7 @@ const EditModal: React.FC<EditModalProps> = ({
   onApplyToAll,
   isSaving,
 }) => {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -540,9 +543,9 @@ const EditModal: React.FC<EditModalProps> = ({
       'Delete Operating Hours',
       `Are you sure you want to delete the operating hours for ${dayName}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => onDelete(existingHours.id),
         },
@@ -561,7 +564,7 @@ const EditModal: React.FC<EditModalProps> = ({
       'Apply to All Days',
       'This will copy the current times to all other days. Existing hours will be replaced.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Apply',
           onPress: () => {
@@ -612,7 +615,7 @@ const EditModal: React.FC<EditModalProps> = ({
               <>
                 {/* Operating Hours */}
                 <View style={styles.formSection}>
-                  <Text style={styles.formSectionTitle}>Operating Hours</Text>
+                  <Text style={styles.formSectionTitle}>{t('onboarding.progressiveExperience.stepLabels.operatingHours')}</Text>
 
                   <View style={styles.timeInputRow}>
                     <TimeInput
@@ -702,7 +705,7 @@ const EditModal: React.FC<EditModalProps> = ({
             )}
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={isSaving}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
@@ -713,7 +716,7 @@ const EditModal: React.FC<EditModalProps> = ({
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text style={styles.saveButtonText}>
-                    {existingHours ? 'Update' : 'Save'}
+                    {existingHours ? t('common.update') : t('common.save')}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -730,6 +733,7 @@ const EditModal: React.FC<EditModalProps> = ({
 // ============================================
 
 export const OperatingHoursScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -797,8 +801,8 @@ export const OperatingHoursScreen: React.FC = () => {
         }[error.kind]
       : `Unable to ${action}. Please try again.`;
 
-    Alert.alert('Error', message);
-  }, []);
+    Alert.alert(t('common.error'), message);
+  }, [t]);
 
   const handleSave = useCallback(
     async (
@@ -816,26 +820,26 @@ export const OperatingHoursScreen: React.FC = () => {
         } else {
           await createMutation.mutateAsync(data as OperatingHourCreate);
         }
-        Alert.alert('Success', 'Operating hours saved successfully');
+        Alert.alert(t('common.success'), 'Operating hours saved successfully');
         handleCloseModal();
       } catch (error) {
         showUserFriendlyError(error, 'save operating hours');
       }
     },
-    [createMutation, deleteMutation, handleCloseModal, showUserFriendlyError]
+    [createMutation, deleteMutation, handleCloseModal, showUserFriendlyError, t]
   );
 
   const handleDelete = useCallback(
     async (hoursId: string) => {
       try {
         await deleteMutation.mutateAsync(hoursId);
-        Alert.alert('Success', 'Operating hours deleted');
+        Alert.alert(t('common.success'), 'Operating hours deleted');
         handleCloseModal();
       } catch (error) {
         showUserFriendlyError(error, 'delete operating hours');
       }
     },
-    [deleteMutation, handleCloseModal, showUserFriendlyError]
+    [deleteMutation, handleCloseModal, showUserFriendlyError, t]
   );
 
   // Apply to all days functionality
@@ -867,7 +871,7 @@ export const OperatingHoursScreen: React.FC = () => {
           await createMutation.mutateAsync(payload);
         }
 
-        Alert.alert('Success', 'Applied hours to all days');
+        Alert.alert(t('common.success'), 'Applied hours to all days');
         handleCloseModal();
         hoursQuery.refetch();
       } catch (error) {
@@ -876,7 +880,7 @@ export const OperatingHoursScreen: React.FC = () => {
         setApplyingToAll(false);
       }
     },
-    [hoursByDay, createMutation, deleteMutation, handleCloseModal, hoursQuery, showUserFriendlyError]
+    [hoursByDay, createMutation, deleteMutation, handleCloseModal, hoursQuery, showUserFriendlyError, t]
   );
 
   // Count configured days
@@ -888,7 +892,7 @@ export const OperatingHoursScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
-          title="Operating Hours"
+          title={t('onboarding.progressiveExperience.stepLabels.operatingHours')}
           subtitle="No clinic selected"
           onBackPress={() => router.back()}
         />
@@ -904,7 +908,7 @@ export const OperatingHoursScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <DashboardHeader
-        title="Operating Hours"
+        title={t('onboarding.progressiveExperience.stepLabels.operatingHours')}
         subtitle={`${openDays} days open`}
         onBackPress={() => router.back()}
       />
@@ -957,7 +961,7 @@ export const OperatingHoursScreen: React.FC = () => {
               <Ionicons name="cloud-offline-outline" size={24} color="#EF4444" />
               <Text style={styles.errorBoxText}>Failed to load schedule</Text>
               <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-                <Text style={styles.retryButtonText}>Retry</Text>
+                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -1337,7 +1341,7 @@ const createStyles = (colors: SemanticColors) => StyleSheet.create({
   },
   saveButtonText: {
     ...typography.body1,
-    color: '#FFFFFF',
+    color: colors.text.onPrimary,
     fontWeight: '600',
   },
   applyingOverlay: {

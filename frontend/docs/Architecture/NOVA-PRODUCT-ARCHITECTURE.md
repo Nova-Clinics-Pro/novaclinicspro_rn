@@ -839,3 +839,353 @@ update and the new test, followed by separate local commit authorization. The
 new test is untracked and not ignored; it must be explicitly included with that
 unit. No Phase 2 commit, push, merge, destination adoption or deployment is
 performed.
+
+
+## Package D — final bounded implementation and acceptance assessment (2026-10-28)
+
+Authority: the owner's Package D Final Bounded Closure directive and existing
+§8/§9 theme, localization and accessibility requirements; approved baseline
+`6f315c83a0e1ec728f8a1972a83ce13f7f2ecca5`. The preceding 17-substitution
+artifact is now committed at that baseline, parent
+`f3c64259f8e4c74a5af6094655d9324a1e85d124`; its earlier uncommitted statements
+above describe the historical pre-commit evidence. This new slice remains
+uncommitted. No separate Package D acceptance specification/register was found
+in the established spec locations, so no replacement framework is introduced.
+
+### Exact implementation boundary
+
+Only the approved three foreground colors change: Operating Hours
+`styles.saveButtonText.color`, Appointment Rules `styles.saveButtonText.color`,
+and Rooms `styles.submitButtonText.color` now use `colors.text.onPrimary`.
+All four existing palettes supply `#FFFFFF`, preserving current appearance.
+All other color literals and all palette definitions remain unchanged.
+
+Seven audited screens now reuse existing translation keys through the existing
+`useTranslation` hook. Only exact existing English values with matching
+semantic ownership and already-present Hindi values were substituted; no
+catalog, locale configuration, fallback, metadata enumeration, validation rule,
+API call, payload, navigation or entitlement change was made. Relevant callback
+dependencies include `t` so closures follow the existing locale hook. The
+Operating Hours TimeInput label `Close` denotes closing time, not the common
+close-dialog action; it is deliberately not mapped by lexical equality. The
+label `Closed` is not bound to an episode-lifecycle key merely because its
+English text matches.
+
+| Source path relative to frontend | Reused-key sites | Foreground role |
+| --- | ---: | --- |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | 16 | `saveButtonText.color` → `text.onPrimary` |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | 8 | `saveButtonText.color` → `text.onPrimary` |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | 5 | `submitButtonText.color` → `text.onPrimary` |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | 7 | No color change |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | 10 | No color change |
+| `app/clinic-admin/settings/treatments/[treatmentId].tsx` | 13 | No color change |
+| `app/clinic-admin/settings/rooms/[roomId].tsx` | 9 | No color change |
+
+There are **68 reused-key sites** (52 direct JSX/attribute/alert strings and
+16 conditional-text or alert-button labels). Common Cancel/Confirm/Save/Update,
+Delete/OK, Retry, Active/Inactive, Error/Success, Loading, Duration, Description
+and Created keys retain their existing English values. Existing treatment
+Price, Contraindications and Vata/Pitta/Kapha label keys and the existing
+Operating Hours step-label key are reused for those same concepts. No clinical
+terminology or new translation is invented.
+
+`tests/core/theme/settingsSurfaces.test.tsx` retains its original 31 cases,
+extends the four-palette and sentinel-rerender assertions to all three new
+foreground roles, and adds six English/Hindi screen-rendering cases.
+`tests/features/rooms/RoomDetailScreen.theme.test.tsx` retains its eight cases
+and adds a Hindi status/cancel rendering and retained-edit case. Tests restore
+English between cases. Existing navigation, validation/save/status assertions
+and mocked apply-to-all payload assertions remain active.
+
+### Seven-screen remaining color classification
+
+This is an occurrence classification, not a replacement authorization. The
+three substitutions reduce the previous 352 occurrences to **349**. Confirmed
+same-value semantic violations are identified separately from intentional
+state/category paint and unresolved mappings. The latter category includes
+fixed brand/foreground/root/border/control/feedback/shadow colors: some token
+values differ across palettes, and a visually equivalent substitute or
+permanent exception has not been approved. Classification of those mappings is
+reasoned from source ownership, not screenshot or product acceptance.
+
+| Screen | Confirmed semantic violations | Retained status/category | Requires mapping/visual/product decision | Total |
+| --- | ---: | ---: | ---: | ---: |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | 3 | 11 | 80 | 94 |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | 1 | 0 | 54 | 55 |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | 1 | 13 | 33 | 47 |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | 2 | 0 | 42 | 44 |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | 1 | 6 | 29 | 36 |
+| `app/clinic-admin/settings/treatments/[treatmentId].tsx` | 0 | 6 | 34 | 40 |
+| `app/clinic-admin/settings/rooms/[roomId].tsx` | 0 | 6 | 27 | 33 |
+
+**Eight confirmed unresolved occurrences**, all outside this directive's three
+color substitutions:
+
+- `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx:188`: `timePickerStyles.container.backgroundColor` → `surface.elevated`; currently white.
+- `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx:277`: `confirmBtnText.color` → `text.onPrimary`; currently white.
+- `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx:716`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+- `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx:270`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+- `features/rooms/presentation/pages/RoomsScreen.tsx:216`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+- `features/templates/presentation/pages/TemplatesScreen.tsx:398`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+- `features/templates/presentation/pages/TemplatesScreen.tsx:439`: `typeTabTextActive.color` → `text.onPrimary`; currently white.
+- `features/treatments/presentation/pages/TreatmentsScreen.tsx:307`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+
+Intentional state/category classification covers explicit room-type palette
+entries/fallbacks, active/inactive/open/closed differentiation, selected
+active/inactive statistics, inactive badges and activation/status-action
+styles. No category, dosha, metadata or status palette is changed. Their
+retention does not ratify a permanent exemption from central-theme governance.
+The other 299 occurrences require a role/appearance decision; they are not
+reported as 299 proven bugs. Existing static inline dynamic-state composition
+is retained. App-wide static-style/sizing classification remains incomplete;
+this seven-screen slice does not close the original wider audit.
+
+### Exact unresolved direct-copy requirements
+
+The following **132 remaining direct-copy sites** were inspected in the seven
+screens. Line references identify this uncommitted artifact. They require an
+approved key/English-Hindi wording disposition; they are not all unique strings
+or proof that every similar phrase is absent elsewhere in the catalogs. No
+cross-domain, case-different or approximate translation was silently selected.
+These are direct JSX text, title/subtitle/placeholder/accessibility attributes
+and literal alert arguments; the inventory does not claim exhaustive coverage
+of interpolated strings, imported metadata or other screens.
+
+**`features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` — 31 direct sites:**
+
+- L113 (text): "Hour".
+- L139 (text): "Min".
+- L412 (text): "Break:".
+- L419 (text): "Clinic closed on this day".
+- L421 (text): "Tap to configure hours".
+- L522 (alert): "Validation Error".
+- L543 (alert): "Delete Operating Hours".
+- L559 (alert): "Validation Error".
+- L564 (alert): "Apply to All Days".
+- L565 (alert): "This will copy the current times to all other days. Existing hours will be replaced.".
+- L604 (text): "Clinic Open".
+- L641 (text): "Include Break".
+- L653 (text): "Break Time".
+- L679 (text): "Apply to All Days".
+- L688 (text): "The clinic will be marked as closed on".
+- L688 (text): ". No appointments will be available.".
+- L823 (alert): "Operating hours saved successfully".
+- L836 (alert): "Operating hours deleted".
+- L874 (alert): "Applied hours to all days".
+- L896 (subtitle): "No clinic selected".
+- L901 (text): "No clinic context available".
+- L902 (text): "Please select a clinic first".
+- L933 (text): "Configured".
+- L938 (text): "Open Days".
+- L945 (text): "Closed".
+- L951 (text): "Weekly Schedule".
+- L952 (text): "Tap any day to configure operating hours".
+- L957 (text): "Loading schedule...".
+- L962 (text): "Failed to load schedule".
+- L984 (text): "Operating hours define when your clinic accepts appointments. Use \"Apply to All Days\" to quickly set the same hours for every day.".
+- L994 (text): "Applying to all days...".
+
+**`features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` — 22 direct sites:**
+
+- L86 (text): "Custom".
+- L147 (alert): "Reset to Default".
+- L192 (text): "Advanced configuration".
+- L194 (text): "Contact support to customize complex rules".
+- L230 (text): "Organization default:".
+- L243 (text): "Your Setting".
+- L257 (text): "Reset".
+- L331 (alert): "Rule updated successfully".
+- L345 (alert): "Rule reset to default".
+- L385 (title): "Appointment Rules".
+- L386 (subtitle): "Configure scheduling".
+- L391 (text): "No clinic context available".
+- L392 (text): "Please select a clinic first".
+- L401 (title): "Appointment Rules".
+- L423 (text): "Customize scheduling rules for your clinic. Changes override organization defaults.".
+- L430 (text): "Loading rules...".
+- L435 (text): "Failed to load rules".
+- L443 (text): "No Rules Configured".
+- L445 (text): "Appointment rules will appear here once your organization configures them.".
+- L453 (text): "Time & Duration".
+- L463 (text): "Booking Constraints".
+- L473 (text): "Assignment & Matching".
+
+**`features/rooms/presentation/pages/RoomsScreen.tsx` — 17 direct sites:**
+
+- L84 (text): "Capacity:".
+- L144 (alert): "Validation Error".
+- L144 (alert): "Room name is required".
+- L156 (alert): "Room created successfully".
+- L158 (alert): "Failed to create room".
+- L173 (title): "Rooms & Resources".
+- L174 (subtitle): "No clinic selected".
+- L179 (text): "No clinic context available".
+- L188 (title): "Rooms & Resources".
+- L214 (accessibilityLabel): "Add new room".
+- L237 (text): "No rooms configured".
+- L238 (text): "Add rooms to manage your clinic spaces".
+- L256 (text): "Add New Room".
+- L265 (text): "Room Name *".
+- L268 (placeholder): "e.g., Therapy Room 1".
+- L277 (text): "Capacity".
+- L290 (text): "Room Type".
+
+**`features/templates/presentation/pages/TemplatesScreen.tsx` — 22 direct sites:**
+
+- L99 (text): "Default".
+- L110 (text): "variables".
+- L196 (alert): "Cannot Delete".
+- L196 (alert): "Default templates cannot be deleted.".
+- L201 (alert): "Delete Template".
+- L211 (alert): "Template deleted".
+- L226 (alert): "Create Template".
+- L227 (alert): "Template creation will be available soon. Contact support for custom templates.".
+- L264 (title): "Document Templates".
+- L265 (subtitle): "Manage templates".
+- L270 (text): "No clinic context available".
+- L271 (text): "Please select a clinic first".
+- L280 (title): "Document Templates".
+- L318 (text): "Loading templates...".
+- L323 (text): "Failed to load templates".
+- L333 (text): "Your Templates".
+- L348 (text): "Available Template Types".
+- L350 (text): "Create templates for these document types".
+- L366 (text): "No Templates".
+- L380 (text): "About Templates".
+- L382 (text): "Templates define the format and content of your clinic documents. Use variables like".
+- L383 (text): "to insert dynamic data.".
+
+**`features/treatments/presentation/pages/TreatmentsScreen.tsx` — 8 direct sites:**
+
+- L214 (alert): "Delete Treatment".
+- L224 (alert): "Treatment deleted successfully".
+- L226 (alert): "Failed to delete treatment".
+- L266 (title): "Treatments".
+- L267 (subtitle): "No clinic selected".
+- L272 (text): "No clinic context available".
+- L281 (title): "Treatments & Services".
+- L305 (accessibilityLabel): "Add new treatment".
+
+**`app/clinic-admin/settings/treatments/[treatmentId].tsx` — 17 direct sites:**
+
+- L81 (alert): "Failed to update status".
+- L95 (alert): "Treatment updated successfully".
+- L97 (alert): "Failed to update treatment".
+- L105 (title): "Treatment Details".
+- L110 (text): "Loading treatment...".
+- L120 (title): "Treatment Details".
+- L126 (text): "Failed to load treatment".
+- L172 (text): "Overview".
+- L203 (text): "Ayurvedic Properties".
+- L209 (text): "Balances Vata".
+- L221 (text): "Balances Pitta".
+- L233 (text): "Balances Kapha".
+- L244 (text): "No Ayurvedic properties specified".
+- L273 (text): "Details".
+- L281 (text): "Last Updated".
+- L287 (text): "ID".
+- L304 (title): "Edit Treatment".
+
+**`app/clinic-admin/settings/rooms/[roomId].tsx` — 15 direct sites:**
+
+- L56 (alert): "Validation Error".
+- L56 (alert): "Room name is required".
+- L67 (alert): "Room updated successfully".
+- L69 (alert): "Failed to update room".
+- L79 (alert): "Failed to update room status".
+- L87 (title): "Room Details".
+- L92 (text): "Loading room details...".
+- L102 (title): "Room Details".
+- L108 (text): "Failed to load room".
+- L149 (text): "Room Details".
+- L166 (text): "Room Name".
+- L172 (placeholder): "Room name".
+- L181 (text): "Capacity".
+- L191 (text): "person(s)".
+- L197 (text): "Room Type".
+
+
+Additional explicit dependencies needing wording/key review include the
+English DAYS_OF_WEEK labels/formatters, room-type labels, rule metadata,
+template-type tabs/metadata, dynamic capacity/search/count text, alert-confirm
+bodies, activation/deactivation and save/create-progress wording, dosha
+sentences, and fallback descriptions. Existing user-provided names/content are
+data and must not be translated as UI copy. Shared DTO/metadata files and
+catalogs were not modified. Full Hindi workflow coverage is therefore **not
+satisfied**, despite complete catalog parity.
+
+### Verification, accessibility and limits
+
+Guarded local verification used the established external Jest overlay retaining
+Expo ios/native haste configuration with `forceNodeFilesystemAPI`, explicit
+paths, `--runInBand --no-cache --watchman=false`, and the existing network/process
+guard required before Jest/third-party imports. Final results:
+
+| Existing/focused suite | Passed |
+| --- | ---: |
+| `tests/core/theme/settingsSurfaces.test.tsx` | 37 |
+| `tests/features/rooms/RoomDetailScreen.theme.test.tsx` | 9 |
+| `tests/core/theme/designTokens.test.ts` | 6 |
+| `tests/core/localization/i18n.test.ts` | 15 |
+| `tests/architecture/b1-presentation-boundary-guard.test.ts` | 2 |
+| `tests/treatments/TreatmentsScreen.multiday.test.tsx` | 3 |
+| `tests/treatments/treatment-category-contract.test.ts` | 5 |
+| `tests/onboarding/tg23-conflict-localization.test.ts` | 2 |
+| `tests/onboarding/commercial-retention.localization.test.ts` | 1 |
+
+**80 passed; zero failed/skipped; nine suites; exit 0; 7.332 seconds.** No warnings
+or guard-violation markers in the final run. An intermediate syntax check
+caught an unbraced translation expression in a time-input label attribute; the
+attribute was restored unchanged before this final run. Two newly translated
+Template alert-button callbacks gained their required `t` dependencies after
+scoped lint identified the omission. These are corrected preparation errors,
+not inherited application failures or suppressed checks.
+
+Production TypeScript (`tsc --noEmit --project tsconfig.production.json`) passed.
+Scoped ESLint of all seven sources and both edited tests returned exit 1 with
+**five inherited errors and ten inherited warnings**; all seven source
+rule/severity/message signatures match committed baseline lint via stdin.
+Both edited tests have zero diagnostics. Separate debt candidates are the
+Operating Hours/Appointment Rules effect-state findings, Operating Hours
+unescaped quotes, and existing unused symbols. No rule, suppression or unrelated
+source was changed. `git diff --check` passes.
+
+Catalog parity remains 1,480 nonempty English/Hindi leaf keys with matching
+interpolation; existing locale/fallback tests pass. No catalog edit occurred.
+Environment: existing Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, TypeScript
+6.0.3, React 19.2.3, RN 0.86.3, RNTL 13.3.3 and ESLint 9.31.0. No install or
+backend/database operation was performed. The guard is JavaScript-level
+protection, not an OS-level isolation claim.
+
+Offline rendering confirms Hindi glyph strings, retained form/search state,
+existing programmatic room/treatment/day labels and unchanged card button
+roles. Back-action evidence in the Room Detail test is through the existing
+header mock, not proof of native header accessibility. Labels such as `Add new
+room`, `Add new treatment`, dynamic `Edit <day> hours` and room capacity remain
+English. Explicit one-line truncation is present in template names/descriptions,
+treatment names and rule descriptions. No new truncation, font-scaling override
+or layout rule was introduced. Hindi clipping/wrapping, native text metrics,
+large-text behavior, hit targets, contrast, modal focus/order, TalkBack/VoiceOver
+and screenshot equivalence remain **UNVERIFIED**; Jest does not establish them.
+No system dark-mode requirement or new locale scope is inferred.
+
+### Final bounded closure disposition
+
+**Package D is PARTIAL / NOT READY for package-level closure.** The three
+approved foreground corrections and safe existing-key substitutions are
+implemented and offline verified. Remaining implementation: the eight named
+same-value semantic occurrences (needs separate color scope approval), approved
+wording/key coverage for unresolved English UI and shared metadata, and
+classified disposition of the wider token/static-style/sizing findings.
+Remaining acceptance: seven-screen native visual/accessibility/Hindi layout
+checks, regression acceptance and package-owner closure of documented residuals.
+An exception requires explicit owner disposition; counting literals or passing
+mocked tests cannot create that disposition.
+
+Owner disposition requested: authorize a separate exact eight-occurrence color
+batch or explicitly defer it; approve the missing/context-sensitive English and
+Hindi key/copy mappings rather than invent translations; resolve appearance
+changes versus retained exceptions where palette values differ; and authorize
+native visual/accessibility acceptance in an appropriate environment. No such
+remediation, acceptance or release approval is assumed here. No commit, push,
+merge, dirty-checkout adoption or new documentation framework is performed.

@@ -38,11 +38,13 @@ import {
 import { TreatmentForm } from '../../../../features/treatments/presentation/components/TreatmentForm';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../../features/auth/presentation/providers/auth.store';
 
 export default function TreatmentDetailScreen() {
+  const { t } = useTranslation();
   const { colors } = useClinicTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -74,11 +76,11 @@ export default function TreatmentDetailScreen() {
     const newStatus = !treatmentQuery.data.is_active;
     try {
       await updateMutation.mutateAsync({ is_active: newStatus });
-      Alert.alert('Success', `Treatment ${newStatus ? 'activated' : 'deactivated'}`);
+      Alert.alert(t('common.success'), `Treatment ${newStatus ? 'activated' : 'deactivated'}`);
     } catch {
-      Alert.alert('Error', 'Failed to update status');
+      Alert.alert(t('common.error'), 'Failed to update status');
     }
-  }, [treatmentQuery.data, updateMutation]);
+  }, [treatmentQuery.data, updateMutation, t]);
 
   const handleEditSubmit = useCallback(async (data: TreatmentUpdate, hasChanges: boolean) => {
     // Issue #7: Don't call API if nothing changed
@@ -90,18 +92,18 @@ export default function TreatmentDetailScreen() {
     try {
       await updateMutation.mutateAsync(data);
       setIsEditing(false);
-      Alert.alert('Success', 'Treatment updated successfully');
+      Alert.alert(t('common.success'), 'Treatment updated successfully');
     } catch {
-      Alert.alert('Error', 'Failed to update treatment');
+      Alert.alert(t('common.error'), 'Failed to update treatment');
     }
-  }, [updateMutation]);
+  }, [updateMutation, t]);
 
   if (treatmentQuery.isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
           title="Treatment Details"
-          subtitle="Loading..."
+          subtitle={t('common.loading')}
           onBackPress={() => router.back()}
         />
         <View style={styles.loadingContainer}>
@@ -116,7 +118,7 @@ export default function TreatmentDetailScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
           title="Treatment Details"
-          subtitle="Error"
+          subtitle={t('common.error')}
           onBackPress={() => router.back()}
         />
         <View style={styles.errorContainer}>
@@ -152,7 +154,7 @@ export default function TreatmentDetailScreen() {
               { backgroundColor: treatment.is_active ? '#10B981' : '#EF4444' }
             ]} />
             <Text style={styles.statusText}>
-              {treatment.is_active ? 'Active' : 'Inactive'}
+              {treatment.is_active ? t('common.active') : t('common.inactive')}
             </Text>
           </View>
           <TouchableOpacity
@@ -175,21 +177,21 @@ export default function TreatmentDetailScreen() {
               <Text style={styles.overviewValue}>
                 {formatDuration(treatment.duration_minutes)}
               </Text>
-              <Text style={styles.overviewLabel}>Duration</Text>
+              <Text style={styles.overviewLabel}>{t('common.duration')}</Text>
             </View>
             <View style={styles.overviewItem}>
               <Ionicons name="pricetag-outline" size={24} color="#C28A4B" />
               <Text style={styles.overviewValue}>
                 {formatPrice(effectivePrice)}
               </Text>
-              <Text style={styles.overviewLabel}>Price</Text>
+              <Text style={styles.overviewLabel}>{t('treatments.form.price.label')}</Text>
             </View>
           </View>
         </View>
 
         {/* Description */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.sectionTitle}>{t('common.description')}</Text>
           <Text style={styles.description}>
             {treatment.description || 'No description provided'}
           </Text>
@@ -256,8 +258,7 @@ export default function TreatmentDetailScreen() {
               styles.warningTitle,
               !treatment.contraindications && styles.emptyWarningTitle
             ]}>
-              Contraindications
-            </Text>
+              {t('treatments.form.contraindications.label')}</Text>
           </View>
           <Text style={[
             styles.warningText,
@@ -271,7 +272,7 @@ export default function TreatmentDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Details</Text>
           <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Created</Text>
+            <Text style={styles.metaLabel}>{t('common.created')}</Text>
             <Text style={styles.metaValue}>
               {new Date(treatment.created_at).toLocaleDateString()}
             </Text>

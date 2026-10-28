@@ -1,9 +1,11 @@
 import React from 'react';
 import { Alert, StyleSheet } from 'react-native';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import RoomDetailScreen from '../../../app/clinic-admin/settings/rooms/[roomId]';
 import * as theme from '../../../core/theme/useClinicTheme';
+import { changeLanguage } from '../../../core/localization/i18n';
+import hiIN from '../../../core/localization/translations/hi-IN.json';
 import type { ClinicType } from '../../../core/theme/clinicThemes';
 
 const mockQuery = jest.fn();
@@ -42,14 +44,15 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: jest.requireActual<typeof import('react-native')>('react-native').View,
 }));
 
-beforeEach(() => {
+beforeEach(async () => {
+  await changeLanguage('en-US');
   jest.clearAllMocks();
   mockQuery.mockReturnValue({ data: room, isLoading: false, isError: false });
   mockMutation.mockReturnValue({ mutateAsync: mockMutateAsync, isPending: false });
   mockMutateAsync.mockResolvedValue(undefined);
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(async () => { await changeLanguage('en-US'); jest.restoreAllMocks(); });
 
 const screenFor = (clinicType: ClinicType) => (
   <theme.ThemeProvider clinicType={clinicType}><RoomDetailScreen /></theme.ThemeProvider>
@@ -144,4 +147,17 @@ describe('Room Detail approved semantic roles', () => {
     expect(screen.getByText('Failed to load room')).toBeTruthy();
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
+});
+
+it('uses existing Hindi status and cancel copy while retaining the room edit and accessible back action', async () => {
+  const screen = render(screenFor('AYURVEDA'));
+  fireEvent.press(screen.getByTestId('pencil'));
+  fireEvent.changeText(screen.getByPlaceholderText('Room name'), 'Unsaved Hindi-session edit');
+  await act(async () => { await changeLanguage('hi-IN'); });
+  screen.rerender(screenFor('AYURVEDA'));
+  expect(screen.getByText(hiIN.common.active)).toBeTruthy();
+  expect(screen.getByText(hiIN.common.cancel)).toBeTruthy();
+  expect(screen.getByDisplayValue('Unsaved Hindi-session edit')).toBeTruthy();
+  expect(screen.getByTestId('header-back')).toBeTruthy();
+  expect(mockMutateAsync).not.toHaveBeenCalled();
 });
