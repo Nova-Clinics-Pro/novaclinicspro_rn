@@ -271,3 +271,66 @@ native/Hindi/accessibility disposition, inherited lint and other A–F
 acceptance gates remain separate. This evidence-only repository change
 requires owner review and local commit approval; no commit, push, merge,
 CI execution or destination promotion is authorized here.
+
+
+## A–F continuation: current Package C verification and authorization boundary — 2026-10-28
+
+Authority: owner's A–F Refactoring Continuation directive permits the highest-value
+bounded read-only verification when no remaining task is already implementation-
+authorized. Both clean candidates were verified at their named branches/HEADs:
+frontend `codex/af-frontend-integration` / dd7173cfad058b0322320c3ad011d266bdc247f8;
+backend `codex/af-backend-integration` / a205c3d0bd2b0e7b67442a2b57cca03e721818f5.
+Both began clean. No historical test result was substituted for this run.
+
+The original backend `package-c-component-service-decomposition/PACKAGE-C-TASKS.md`
+still says PROPOSED / NOT APPROVED and requires task-specific approval after
+preconditions. C-FE-01/02 remain preserved implemented work. C-FE-03 remains
+characterization only; its existing Future candidates section does not authorize
+production extraction. C-FE-04 retains B2.7 prerequisites; C-BE-01/02 retain
+R7/B2 transaction/ownership prerequisites. No remaining extraction was silently
+authorized by the general continuation instruction. Protected appointment,
+case-sheet, episode and doctor-dashboard production paths are byte-identical
+at Git tree level to preserved C integration commit 1b463580af91c64edf23557af3bfdb92690dc9b2.
+
+Fresh guarded selection: the three C characterization suites (14 tests), the
+seven original canonical-writer/clinical regression suites listed above (62),
+and B1 architecture (2): **11 suites / 78 passed, zero failed or skipped**;
+Jest test duration **7.695 seconds**. Exact suite/assertion results are in
+`/private/tmp/nova-c-continuation-results.json`; external runner/log are
+`/private/tmp/nova-c-continuation-run.cjs` and
+`/private/tmp/nova-c-continuation.log`. Uses existing pre-import
+network/process guard, NODE_ENV=test before Jest, preserved native haste options,
+forceNodeFilesystemAPI, runInBand/no-cache/watchman=false and exact suite paths.
+No guard-violation markers. Existing theme/console output was not suppressed.
+Runner teardown/exit is recorded below independently of assertion success.
+
+Production TypeScript (`tsc --noEmit --project tsconfig.production.json`) passed,
+exit 0. Scoped ESLint on the four C production TSX paths and three characterization
+tests returned exit 1: **6 inherited errors / 10 inherited warnings**. Every
+rule/severity/message/line signature matches the preserved integration baseline;
+no source, assertion, lint rule, configuration or suppression changed. Existing
+Node 20.19.4/dependencies reused; no dependency installation. Native Python 3.11
+was unavailable at checked standard locations; Package E's existing runtime
+acceptance gap remains unverified, not solved by this frontend run.
+
+Next implementation decision: task-specific authorization for an exact C-FE-03
+presentation-only extraction boundary, with R7/B2 current-contract prerequisites
+confirmed and canonical writer/navigation/cache/tenant authority retained. This
+record does not approve extraction, clinical redesign or registration work.
+Package D still needs its recorded copy/appearance/native acceptance disposition;
+Package B security/lifecycle approvals remain; Package F credential use stays on
+explicit hold. No database activity, credentials access, source/test edits, Git
+staging/commit, push, merge or promotion was performed. This evidence-only update
+requires separate local Git-inclusion review.
+
+
+Final runner process exited naturally with **exit 0**, after delayed teardown
+(approximately five minutes after assertion results). No forced exit, timer
+mock or assertion suppression was introduced. This inherited cleanup behavior
+is not declared fixed. Temporary dependency linkage was removed. Installed
+Jest 29.7.0, jest-expo 57.0.5, TypeScript 6.0.3, ESLint 9.31.0, React 19.2.3
+and React Native 0.86.3 were reused. Original B27 frontend/backend snapshot
+checks passed: 1300/1670 recorded content hashes and their Git statuses match.
+Only this frontend evidence document and backend Engineering Truth changed;
+indexes remain empty. Local results are not GitHub-hosted, native-device,
+database, destination-integration or package-acceptance evidence.
