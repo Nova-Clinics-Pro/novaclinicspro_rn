@@ -213,7 +213,7 @@ export const RoomsScreen: React.FC = () => {
           onPress={() => setShowCreateModal(true)}
           accessibilityLabel="Add new room"
         >
-          <Ionicons name="add" size={24} color="#FFFFFF" />
+          <Ionicons name="add" size={24} color={colors.text.onPrimary} />
         </TouchableOpacity>
       </View>
 

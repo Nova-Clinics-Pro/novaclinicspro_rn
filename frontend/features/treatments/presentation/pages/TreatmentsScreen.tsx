@@ -304,7 +304,7 @@ export const TreatmentsScreen: React.FC = () => {
           onPress={() => router.push('/clinic-admin/settings/treatments/create' as any)}
           accessibilityLabel="Add new treatment"
         >
-          <Ionicons name="add" size={24} color="#FFFFFF" />
+          <Ionicons name="add" size={24} color={colors.text.onPrimary} />
         </TouchableOpacity>
       </View>
 

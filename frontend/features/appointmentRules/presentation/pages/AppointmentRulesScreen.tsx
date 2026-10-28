@@ -267,7 +267,7 @@ const EditModal: React.FC<EditModalProps> = ({
                 disabled={isSaving || metadata.valueType === 'object'}
               >
                 {isSaving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.text.onPrimary} />
                 ) : (
                   <Text style={styles.saveButtonText}>{t('common.save')}</Text>
                 )}

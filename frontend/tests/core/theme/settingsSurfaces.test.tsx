@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, StyleSheet } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import * as theme from '../../../core/theme/useClinicTheme';
 import { changeLanguage } from '../../../core/localization/i18n';
@@ -14,16 +14,19 @@ import { TreatmentsScreen } from '../../../features/treatments/presentation/page
 import TreatmentDetailScreen from '../../../app/clinic-admin/settings/treatments/[treatmentId]';
 
 const mockWrite = jest.fn();
+let mockPending = false;
+let mockAyurveda = false;
 const mockRefetch = jest.fn();
 const treatment = { id: 'treatment-a', name: 'Test treatment', code: 'TEST', is_active: true,
-  duration_minutes: 30, price: 100, description: 'Treatment description' };
+  duration_minutes: 30, price: 100, description: 'Treatment description',
+  dosha_benefits: { vata: { balances: true } } };
 const room = { id: 'room-a', name: 'Test room', capacity: 2, room_type: 'therapy', is_active: true };
 const rule = { id: 'rule-a', rule_code: 'slot_duration', is_override_active: false,
   effective_config: { value: 30 }, org_default_config: { value: 30 } };
 const template = { id: 'template-a', name: 'Test template', template_type: 'casesheet', variables: [] };
 const mockQuery = (items: unknown[]) => ({ data: { items, total: items.length },
   isLoading: false, isError: false, isRefetching: false, refetch: mockRefetch });
-const mockMutation = () => ({ mutateAsync: mockWrite, isPending: false });
+const mockMutation = () => ({ mutateAsync: mockWrite, isPending: mockPending });
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
@@ -62,7 +65,7 @@ jest.mock('../../../features/tenants/data/repositories/tenants.repository.impl',
   useCurrentTenantQuery: () => ({ data: undefined }),
 }));
 jest.mock('../../../core/hooks/useFeatures', () => ({
-  useFeatures: () => ({}), isAyurvedaClinic: () => false,
+  useFeatures: () => ({}), isAyurvedaClinic: () => mockAyurveda,
 }));
 jest.mock('../../../core/hooks/useDebounce', () => ({ useDebounce: (value: string) => value }));
 jest.mock('../../../features/capabilities/presentation/components/MultiDayAppointmentsSetting', () => ({
@@ -92,6 +95,11 @@ const expectSurface = (screen: Screen, label: string, color: string) =>
 const expectForeground = (screen: Screen, name: string, color: string) => {
   const label = name === 'Operating Hours' || name === 'Appointment Rules' ? 'Save' : name === 'Rooms' ? 'Create Room' : null;
   if (label) expect(StyleSheet.flatten(text(screen, label).props.style).color).toBe(color);
+  if (['Rooms', 'Templates', 'Treatments'].includes(name)) {
+    const add = screen.UNSAFE_getAllByType('Ionicons' as React.ComponentType).find((item) => item.props.name === 'add');
+    expect(add?.props.color).toBe(color);
+  }
+  if (name === 'Templates') expect(StyleSheet.flatten(text(screen, 'All').props.style).color).toBe(color);
 };
 
 const cases = [
@@ -146,6 +154,8 @@ const clinics: ClinicType[] = ['AYURVEDA', 'GENERAL_MEDICINE', 'DENTAL', 'PHYSIO
 beforeEach(async () => {
   await changeLanguage('en-US');
   jest.clearAllMocks();
+  mockPending = false;
+  mockAyurveda = false;
   mockWrite.mockResolvedValue(undefined);
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
@@ -242,5 +252,88 @@ describe.each(cases)('$name existing English/Hindi key wiring', ({ name, Compone
     screen.rerender(<theme.ThemeProvider><Component /></theme.ThemeProvider>);
     if (name === 'Appointment Rules') expect(text(screen, enUS.common.save)).toBeTruthy();
     if (name === 'Rooms' || name === 'Treatments') expect(text(screen, enUS.common.active)).toBeTruthy();
+  });
+});
+
+
+describe('final approved semantic roles', () => {
+  const openPicker = (screen: Screen) => {
+    fireEvent.press(screen.getByLabelText('Edit Monday hours'));
+    fireEvent.press(text(screen, '09:00'));
+  };
+  const expectPicker = (screen: Screen, elevated: string, foreground: string) => {
+    expectSurface(screen, 'Select Open Time', elevated);
+    expect(StyleSheet.flatten(text(screen, 'Confirm').props.style).color).toBe(foreground);
+  };
+
+  it.each(clinics)('retains the time-picker white roles for %s', (clinic) => {
+    const colors = theme.getTheme(clinic).colors;
+    expect(colors.surface.elevated).toBe('#FFFFFF');
+    expect(colors.text.onPrimary).toBe('#FFFFFF');
+    const screen = render(<theme.ThemeProvider clinicType={clinic}><OperatingHoursScreen /></theme.ThemeProvider>);
+    openPicker(screen);
+    expectPicker(screen, colors.surface.elevated, colors.text.onPrimary);
+    expect(mockWrite).not.toHaveBeenCalled();
+  });
+
+  it('updates picker surface/confirm roles on rerender and preserves the selected time', () => {
+    const original = theme.getTheme('AYURVEDA');
+    const first = { ...original, colors: { ...original.colors,
+      surface: { ...original.colors.surface, elevated: '#ABCDEF' },
+      text: { ...original.colors.text, onPrimary: '#112233' } } };
+    const hook = jest.spyOn(theme, 'useClinicTheme').mockReturnValue(first);
+    const screen = render(<OperatingHoursScreen />);
+    openPicker(screen);
+    fireEvent.press(text(screen, '10'));
+    expectPicker(screen, '#ABCDEF', '#112233');
+    hook.mockReturnValue({ ...first, colors: { ...first.colors,
+      surface: { ...first.colors.surface, elevated: '#FEDCBA' },
+      text: { ...first.colors.text, onPrimary: '#332211' } } });
+    screen.rerender(<OperatingHoursScreen />);
+    expectPicker(screen, '#FEDCBA', '#332211');
+    fireEvent.press(text(screen, 'Confirm'));
+    expect(text(screen, '10:00')).toBeTruthy();
+    expect(mockWrite).not.toHaveBeenCalled();
+  });
+
+  describe.each([
+    ['Operating Hours', OperatingHoursScreen, (screen: Screen) => fireEvent.press(screen.getByLabelText('Edit Monday hours'))],
+    ['Appointment Rules', AppointmentRulesScreen, (screen: Screen) => fireEvent.press(text(screen, 'Slot Duration'))],
+  ] as const)('%s pending-action foreground', (_name, Component, open) => {
+    it.each(clinics)('retains white during saving for %s', (clinic) => {
+      mockPending = true;
+      const screen = render(<theme.ThemeProvider clinicType={clinic}><Component /></theme.ThemeProvider>);
+      open(screen);
+      const indicators = screen.UNSAFE_getAllByType(ActivityIndicator);
+      expect(indicators).toHaveLength(1);
+      expect(indicators[0].props.color).toBe(theme.getTheme(clinic).colors.text.onPrimary);
+      expect(indicators[0].props.color).toBe('#FFFFFF');
+      expect(mockWrite).not.toHaveBeenCalled();
+    });
+
+    it('updates the pending indicator on theme rerender without writes', () => {
+      mockPending = true;
+      const original = theme.getTheme('AYURVEDA');
+      const hook = jest.spyOn(theme, 'useClinicTheme').mockReturnValue({ ...original,
+        colors: { ...original.colors, text: { ...original.colors.text, onPrimary: '#112233' } } });
+      const screen = render(<Component />);
+      open(screen);
+      expect(screen.UNSAFE_getAllByType(ActivityIndicator)[0].props.color).toBe('#112233');
+      hook.mockReturnValue({ ...original,
+        colors: { ...original.colors, text: { ...original.colors.text, onPrimary: '#332211' } } });
+      screen.rerender(<Component />);
+      expect(screen.UNSAFE_getAllByType(ActivityIndicator)[0].props.color).toBe('#332211');
+      expect(mockWrite).not.toHaveBeenCalled();
+    });
+  });
+
+  it('reuses the treatment-owned Ayurvedic section key in English and Hindi', async () => {
+    mockAyurveda = true;
+    const screen = render(<theme.ThemeProvider><TreatmentDetailScreen /></theme.ThemeProvider>);
+    expect(text(screen, enUS.treatments.form.sections.ayurvedicProperties)).toBeTruthy();
+    await act(async () => { await changeLanguage('hi-IN'); });
+    screen.rerender(<theme.ThemeProvider><TreatmentDetailScreen /></theme.ThemeProvider>);
+    expect(text(screen, hiIN.treatments.form.sections.ayurvedicProperties)).toBeTruthy();
+    expect(mockWrite).not.toHaveBeenCalled();
   });
 });

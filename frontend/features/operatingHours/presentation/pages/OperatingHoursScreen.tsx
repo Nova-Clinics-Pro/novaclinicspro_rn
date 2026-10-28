@@ -70,6 +70,8 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useClinicTheme();
+  const timePickerStyles = React.useMemo(() => createTimePickerStyles(colors), [colors]);
   const [hours, setHours] = useState(() => {
     const parts = initialValue.split(':');
     return parts[0] || '09';
@@ -177,7 +179,7 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
   );
 };
 
-const timePickerStyles = StyleSheet.create({
+const createTimePickerStyles = (colors: SemanticColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -185,7 +187,7 @@ const timePickerStyles = StyleSheet.create({
     alignItems: 'center',
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.elevated,
     borderRadius: 16,
     padding: spacing.lg,
     width: '80%',
@@ -274,7 +276,7 @@ const timePickerStyles = StyleSheet.create({
   },
   confirmBtnText: {
     ...typography.body1,
-    color: '#FFFFFF',
+    color: colors.text.onPrimary,
     fontWeight: '600',
   },
 });
@@ -713,7 +715,7 @@ const EditModal: React.FC<EditModalProps> = ({
                 disabled={isSaving}
               >
                 {isSaving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.text.onPrimary} />
                 ) : (
                   <Text style={styles.saveButtonText}>
                     {existingHours ? t('common.update') : t('common.save')}

@@ -200,7 +200,7 @@ export default function TreatmentDetailScreen() {
         {/* Ayurvedic Properties - Only show for Ayurveda clinics */}
         {isAyurvedaClinic && treatment.dosha_benefits && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ayurvedic Properties</Text>
+            <Text style={styles.sectionTitle}>{t('treatments.form.sections.ayurvedicProperties')}</Text>
             
             {treatment.dosha_benefits?.vata?.balances ? (
               <View style={styles.doshaItem}>

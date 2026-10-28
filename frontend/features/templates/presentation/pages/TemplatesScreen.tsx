@@ -395,7 +395,7 @@ export const TemplatesScreen: React.FC = () => {
         onPress={() => handleCreateTemplate()}
         activeOpacity={0.8}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="add" size={28} color={colors.text.onPrimary} />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -436,7 +436,7 @@ const createStyles = (colors: SemanticColors) => StyleSheet.create({
     fontWeight: '500',
   },
   typeTabTextActive: {
-    color: '#FFFFFF',
+    color: colors.text.onPrimary,
   },
   scrollView: {
     flex: 1,

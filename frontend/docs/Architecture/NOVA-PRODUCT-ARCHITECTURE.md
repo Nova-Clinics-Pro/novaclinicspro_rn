@@ -1189,3 +1189,134 @@ changes versus retained exceptions where palette values differ; and authorize
 native visual/accessibility acceptance in an appropriate environment. No such
 remediation, acceptance or release approval is assumed here. No commit, push,
 merge, dirty-checkout adoption or new documentation framework is performed.
+
+## Package D — preservation and final closure batches (2026-10-28)
+
+Authority: owner's Package D Preservation and Final Closure Batches directive.
+Phase 1 is preserved in `fe4ba580c4607b7da42d7d9ddff82bdcbd98fdad`, parent
+`6f315c83a0e1ec728f8a1972a83ce13f7f2ecca5`, message
+`refactor(theme-i18n): localize settings copy and action colors`. Exactly the
+ten approved receipt paths and SHA-256 hashes were checked before staging,
+in staged blobs and in the committed tree. That commit contains the previously
+verified three foreground changes, 68 existing-key substitutions, focused tests
+and this existing evidence document. Worktree was clean after commit; no tests
+were rerun to claim post-commit evidence for Phase 1. The historical 80-pass
+result above belongs to that artifact. Prior uncommitted/approval statements
+above describe the earlier checkpoint, not the current preservation status.
+
+### Phase 2 — reviewed eight-occurrence implementation
+
+All eight previously named occurrences have verified semantic owners and retain
+`#FFFFFF` in AYURVEDA, GENERAL_MEDICINE, DENTAL and PHYSIOTHERAPY. Only these
+color values were changed; the remaining 299 undecided color occurrences and
+42 retained status/category occurrences were not modified.
+
+| Source owner relative to frontend | Exact mapping | Focused verification |
+| --- | --- | --- |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | `timePickerStyles.container.backgroundColor` → `colors.surface.elevated`; `timePickerStyles.confirmBtnText.color` and pending-save `ActivityIndicator.color` → `colors.text.onPrimary` | Four clinic palettes; picker surface/confirm and pending-spinner rerenders; selected time survives and is confirmed without persistence |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | Pending-save `ActivityIndicator.color` → `colors.text.onPrimary` | Four clinic palettes and pending-spinner palette rerender; no mutation |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | Add-room `Ionicons.color` → `colors.text.onPrimary` | Existing four-palette and sentinel-rerender cases extended to the add icon |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | FAB `Ionicons.color` and `styles.typeTabTextActive.color` → `colors.text.onPrimary` | Existing four-palette and sentinel-rerender cases extended to both roles; selected-tab background retains its previous value |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | Add-treatment `Ionicons.color` → `colors.text.onPrimary` | Existing four-palette and sentinel-rerender cases extended to the add icon |
+
+TimePickerModal now uses the existing theme hook and memoizes its existing
+style factory by `colors`, following the same local convention as the previous
+slices. No time selection, time option, validation, query, mutation, navigation,
+status/category/dosha/metadata palette or business lifecycle is changed.
+Exact source reconstruction verifies the eight substitutions plus this local
+hook/factory wiring. The only additional source edit is the existing-key label
+reuse below. No palette, fallback, locale, dependency or shared metadata file
+changes occur.
+
+### Remaining 132-site copy register reconciled
+
+Reinspection of the previous section's exact 132 direct-copy sites found one
+additional approved semantic match after capitalization-normalized review:
+`app/clinic-admin/settings/treatments/[treatmentId].tsx` now uses
+`t('treatments.form.sections.ayurvedicProperties')` for the existing Ayurvedic
+section heading. This is the same treatment concept and the same existing
+English/Hindi catalog entry used by the treatment form; it introduces no
+clinical terminology. English deliberately follows the catalog's existing
+`Ayurvedic properties` capitalization instead of `Ayurvedic Properties`;
+Hindi follows the existing `आयुर्वेदिक गुण`. This is an explicit label-casing
+change, not a claim of byte-identical English presentation. No new key or
+translation is invented. English/Hindi component rendering is covered with
+Ayurveda feature availability and synthetic dosha data; clinical gating is
+unchanged.
+
+| Screen | Previous direct sites | Existing semantic key reused now | Unresolved sites | Existing-key availability / disposition |
+| --- | ---: | ---: | ---: | --- |
+| Operating Hours | 31 | 0 | 31 | 30 have no exact catalog-value match; `Closed` only matches episode-specific keys and must not reuse their lifecycle meaning for clinic hours |
+| Appointment Rules | 22 | 0 | 22 | No exact catalog-value match; approve screen-specific key/copy mappings |
+| Rooms | 17 | 0 | 17 | No exact catalog-value match; approve room labels, validation and create-state copy |
+| Templates | 22 | 0 | 22 | No exact catalog-value match; approve template labels, guidance and dialog wording |
+| Treatments | 8 | 0 | 8 | No exact catalog-value match; approve list/create/delete and clinic-context copy |
+| Treatment Detail | 17 | 1 | 16 | Existing treatment-owned section key reused; other direct strings have no exact match |
+| Room Detail | 15 | 0 | 15 | No exact catalog-value match; approve room detail/loading/error/validation copy |
+
+**131 direct sites remain: 130 without an exact English-value key match and one
+with wrong-domain matches.** This does not prove that no approximate/synonymous
+key exists; changing contextual meaning or wording requires owner disposition.
+The exact prior site lists remain the findings register, with the Ayurvedic
+heading now resolved. Baseline line references in those lists identify their
+historical checkpoint; Operating Hours gains two wiring lines in this batch.
+Dynamic sentences, imported day/room/rule/template metadata, native accessibility
+labels and wider app coverage remain additional dependencies as recorded above.
+No new language, locale requirement or fallback behavior is introduced.
+
+### Verification and acceptance status
+
+`tests/core/theme/settingsSurfaces.test.tsx` retains all 37 existing cases and
+adds 16: four picker palettes, one picker rerender/selection, eight pending-save
+palette cases, two pending-save rerenders and one treatment-owned heading
+English/Hindi case. Existing cases now also assert all three add icons and the
+selected-tab foreground. Test-only pending/feature fixture controls are reset
+between cases; no production dependency or testing architecture is added.
+
+Final guarded run from `frontend/` on 2026-10-28 used the existing external
+preset-preserving overlay, explicit nine-suite path selection, `--runInBand
+--no-cache --watchman=false`, and the existing pre-import network/process guard:
+
+- `tests/core/theme/settingsSurfaces.test.tsx`: **53 passed**.
+- Room Detail theme 9; design tokens 6; localization/i18n 15; B1 architecture
+  guard 2; Treatments multiday 3; treatment category contract 5; TG23 conflict
+  localization 2; commercial-retention localization 1: **43 passed**.
+- Total: **96 passed, 0 failed/skipped, nine suites, exit 0, 6.420 seconds**.
+  No warnings or guard-violation markers in the final log.
+- Production TypeScript passed, exit 0.
+- Scoped ESLint returned exit 1: the same **five inherited errors and ten
+  inherited warnings**, with matching rule/severity/message signatures against
+  the recorded committed-source baseline. The edited test has zero diagnostics.
+  No lint suppression, rule change or unrelated cleanup was performed.
+- `git diff --check` and exact source-boundary reconstruction passed. Catalogs
+  are unchanged; 1,480-key English/Hindi parity and existing fallback contracts
+  pass through the existing localization suite.
+
+Existing Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, React 19.2.3, RN 0.86.3,
+RNTL 13.3.3, TypeScript 6.0.3 and ESLint 9.31.0 were reused. No install, database
+operation or external service was required. The guard restricts standard
+JavaScript network/process paths and is not OS-level isolation. Temporary
+local dependency linkage is removed after verification.
+
+The reviewed eight-confirmed-color implementation gate is resolved. **Package D
+remains PARTIAL for package-wide acceptance**, not because these eight require
+another implementation review, but because approved key/copy coverage is still
+missing and the 299 color/static-style/sizing decisions are not dispositioned.
+There are **341 residual color occurrences**, consisting of the same 42 retained
+status/category and 299 unresolved mapping/appearance occurrences; this count
+does not establish that all are defects or accepted exceptions. No speculative
+replacement was made.
+
+Native Hindi clipping/wrapping, large-text behavior, contrast, hit targets,
+modal focus/order, TalkBack/VoiceOver and screenshot equivalence remain
+**UNVERIFIED**. Offline theme and translated-string rendering tests cannot
+close these gates or establish dark-mode support. Remaining owner actions:
+approve missing/context-sensitive key and English/Hindi copy mappings, decide
+appearance changes versus retained exceptions, and authorize native acceptance
+in an appropriate environment. No additional token discovery or broad redesign
+is implied by this checkpoint.
+
+Phase 2 comprises exactly six source files, the focused settings theme test
+and this evidence update. It is uncommitted and requires separate review and
+local commit approval. No second commit, push, merge, dirty B27 adoption,
+backend/database/CI/skill change or parallel documentation register is created.
