@@ -334,3 +334,96 @@ checks passed: 1300/1670 recorded content hashes and their Git statuses match.
 Only this frontend evidence document and backend Engineering Truth changed;
 indexes remain empty. Local results are not GitHub-hosted, native-device,
 database, destination-integration or package-acceptance evidence.
+
+## C-FE-03 first approved production slice — 2026-10-29
+
+**Authority and baseline:** owner's C-FE-03 First Production Extraction directive
+explicitly authorizes only CasesheetDetailTextSection, its four exclusively used
+styles and seven clinical/SOAP call sites. Branch codex/af-frontend-integration,
+HEAD 567e04cf3e8fd88be6a703f8dd02ab61eeb99df6 was verified clean before edits.
+This task-specific approval supersedes the earlier no-extraction authorization
+status for this slice only. The proposed umbrella and Episode extraction are
+not thereby approved, and C-FE-03 is not declared complete.
+
+### Exact implementation and requirements traceability
+
+| Existing contract | Implementation and evidence |
+| --- | --- |
+| C-REQ-01 dependency direction | New `features/casesheets/presentation/components/CasesheetDetailTextSection.tsx` imports only React/native/icon and existing theme modules. TypeScript-AST structural test uses an explicit presentation import allowlist and rejects dynamic import/require and fetch/eval calls. No repository, query/mutation, navigation, tenant or lifecycle dependency. |
+| C-REQ-02 clinical authority | Parent screen still chooses fields/labels/order and owns all queries, mutations, navigation, cache/refresh, printing/snapshots, sign/archive and treatment-sheet bridge. No change to CaseSheetModule or CasesheetTab; canonical-writer regressions pass. |
+| C-REQ-03 equivalent output | Props are `title: string`, `text?: string \| null`, `icon: keyof typeof Ionicons.glyphMap`. Existing `if (!content)` becomes equivalent `if (!text)`; unchanged heading/content/icon native tree, four byte-identical styles, existing static theme tokens and implicit accessibility behavior. No new copy, translation, accessibility attribute or theme policy. |
+| C-REQ-04 characterize first | Preserved 78-pass baseline evidence precedes this slice. New component tests plus one additive screen-order test cover the moved boundary; original six screen tests remain byte-preserved. |
+| C-REQ-05/06 bounded owner, no speculative sharing | Feature-local component owns only section presentation. No new hook, provider, business rule or generic shared-component framework. |
+
+Exactly five repository paths comprise this artifact (relative to `frontend/`):
+
+- `features/casesheets/presentation/components/CasesheetDetailTextSection.tsx` (new).
+- `features/casesheets/presentation/pages/CasesheetDetailScreen.tsx`.
+- `tests/features/casesheets/CasesheetDetailTextSection.test.tsx` (new).
+- `tests/features/casesheets/CasesheetDetailScreen.test.tsx` (one added order test).
+- This existing characterization/evidence document.
+
+The component preserves content strings, including zero-as-text and whitespace;
+empty string/null/undefined omit the entire section. Rerender checks replace
+heading/text/icon, omit then restore the section. The screen test asserts both
+heading and content order: Chief Complaint, Provisional Diagnosis, Final
+Diagnosis, Subjective, Objective, Assessment, Plan. SOAP presence conditions and
+its Clinical Notes wrapper stay in the screen. Four exclusive styles move with
+no value changes; reverse-applying only the helper/import/style/call-site move
+reconstructs the exact baseline screen bytes. No other screen code changed.
+
+### Offline verification
+
+Existing external native-preset overlay and pre-import network/process guard;
+NODE_ENV=test before Jest, runInBand, no-cache, watchman=false, original ios and
+android/ios/native haste fields retained with forceNodeFilesystemAPI. No database,
+secrets, external services or dependency installation. JavaScript-level guard
+coverage is not OS-level isolation or native-device validation.
+
+- Focused component + screen: **2 suites, 15 passed, zero failed/skipped,
+  exit 0**, Jest 4.320 seconds. Eight new component cases plus seven screen
+  cases (six existing and one new).
+- Combined regression: **12 suites, 87 passed, zero failed/skipped**, Jest
+  12.125 seconds. This is the previous exact 78-test selection plus the eight
+  component cases and one order test; counts are not added across repeated runs.
+  Includes C-FE-01/02/03 characterization, Case Sheet screen, read-only tab,
+  canonical writer/module composition, consultation flow/routes, treatment
+  lifecycle and B1 architecture. Final process exit is recorded below separately
+  from assertion success; no force-exit is authorized.
+- Production TypeScript (`tsc --noEmit --project tsconfig.production.json`):
+  **PASS, exit 0**.
+- Scoped ESLint on the two production and two test paths: **PASS, exit 0,
+  zero errors/warnings**. Broader inherited lint findings are not declared fixed.
+- Exact screen reconstruction and original-test preservation: PASS. Existing
+  four style definitions byte-identical. No guard-violation markers in focused,
+  regression, TypeScript or ESLint logs. `git diff --check`: PASS.
+
+Temporary external evidence: `/private/tmp/nova-cfe03-focused-results.json`,
+`nova-cfe03-regression-results.json`, corresponding runner/log files, plus
+`nova-cfe03-tsc.log` and `nova-cfe03-eslint.log`. Existing Node 20.19.4,
+Jest 29.7.0, jest-expo 57.0.5, TypeScript 6.0.3, ESLint 9.31.0,
+React 19.2.3 and React Native 0.86.3 reused.
+
+### Remaining scope and acceptance
+
+This slice does not authorize EpisodeDetailMetadataGrid, Episode module/writer
+consolidation, lifecycle derivation, route/cache ownership changes or the
+transitional treatment-sheet bridge's removal. Relevant R7 version/ownership
+and B2.7/B2.8 security gates remain for any future task that intersects those
+boundaries; no registration/organization-admin/approval/audit decision changed.
+Package F database-login hold remains unchanged, with no credential access.
+Native visual/accessibility equivalence is not established by offline rendering
+alone. Local Git inclusion requires separate approval of these five exact paths;
+no staging, commit, CI, push, merge or destination promotion was performed.
+
+
+Final combined runner exited naturally with **exit 0**, after approximately
+five minutes of delayed teardown following passing assertions. No force-exit,
+timer mock, assertion suppression or test configuration change. Temporary
+dependency linkage removed. Both original dirty B27 snapshots verified unchanged
+(1300 frontend / 1670 backend hashes and Git statuses). Canonical CaseSheetModule,
+CasesheetTab, EpisodeDetailScreen and EpisodeWorkspaceScreen byte hashes match
+HEAD. Backend artifacts remain untouched. Five-file scope, baseline HEAD,
+empty index and diff whitespace checks pass. New component/test are Git-visible
+without force-add; no ignore rules changed. Ready for separately approved local
+Git inclusion of this slice, not full C-FE-03 or Package C completion.

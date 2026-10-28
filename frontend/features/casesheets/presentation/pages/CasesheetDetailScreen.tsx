@@ -53,6 +53,7 @@ import {
 } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { CasesheetStatusBadge } from '../components/CasesheetStatusBadge';
 import { EmptyCasesheetsState } from '../components/EmptyCasesheetsState';
+import { CasesheetDetailTextSection } from '../components/CasesheetDetailTextSection';
 
 const DURATION_OPTIONS = [
   { days: 7, label: '7 Days' },
@@ -304,19 +305,6 @@ export const CasesheetDetailScreen: React.FC = () => {
     );
   };
 
-  const renderSection = (title: string, content: string | null | undefined, icon: keyof typeof Ionicons.glyphMap) => {
-    if (!content) return null;
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name={icon} size={18} color={colors.primary.main} />
-          <Text style={styles.sectionTitle}>{title}</Text>
-        </View>
-        <Text style={styles.sectionContent}>{content}</Text>
-      </View>
-    );
-  };
-
   const renderExtensions = () => {
     const extensions = casesheet?.data_json?.extensions;
     if (!extensions || extensions.length === 0) return null;
@@ -544,18 +532,18 @@ export const CasesheetDetailScreen: React.FC = () => {
         </View>
 
         {/* Clinical Sections */}
-        {renderSection('Chief Complaint', casesheet.chief_complaint, 'alert-circle-outline')}
-        {renderSection('Provisional Diagnosis', casesheet.provisional_diagnosis, 'medical-outline')}
-        {renderSection('Final Diagnosis', casesheet.final_diagnosis, 'checkmark-circle-outline')}
+        {<CasesheetDetailTextSection title="Chief Complaint" text={casesheet.chief_complaint} icon="alert-circle-outline" />}
+        {<CasesheetDetailTextSection title="Provisional Diagnosis" text={casesheet.provisional_diagnosis} icon="medical-outline" />}
+        {<CasesheetDetailTextSection title="Final Diagnosis" text={casesheet.final_diagnosis} icon="checkmark-circle-outline" />}
 
         {/* SOAP Data (if available in data_json) */}
         {casesheet.data_json && (
           <View style={styles.soapContainer}>
             <Text style={styles.soapTitle}>Clinical Notes</Text>
-            {casesheet.data_json.subjective && renderSection('Subjective', casesheet.data_json.subjective, 'person-outline')}
-            {casesheet.data_json.objective && renderSection('Objective', casesheet.data_json.objective, 'eye-outline')}
-            {casesheet.data_json.assessment && renderSection('Assessment', casesheet.data_json.assessment, 'analytics-outline')}
-            {casesheet.data_json.plan && renderSection('Plan', casesheet.data_json.plan, 'list-outline')}
+            {casesheet.data_json.subjective && <CasesheetDetailTextSection title="Subjective" text={casesheet.data_json.subjective} icon="person-outline" />}
+            {casesheet.data_json.objective && <CasesheetDetailTextSection title="Objective" text={casesheet.data_json.objective} icon="eye-outline" />}
+            {casesheet.data_json.assessment && <CasesheetDetailTextSection title="Assessment" text={casesheet.data_json.assessment} icon="analytics-outline" />}
+            {casesheet.data_json.plan && <CasesheetDetailTextSection title="Plan" text={casesheet.data_json.plan} icon="list-outline" />}
           </View>
         )}
 
@@ -831,30 +819,6 @@ const styles = StyleSheet.create({
   },
 
   // Sections
-  section: {
-    backgroundColor: colors.background.default,
-    borderRadius: 12,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    gap: spacing.xs,
-  },
-  sectionTitle: {
-    ...typography.body1,
-    color: colors.primary.main,
-    fontWeight: '600',
-  },
-  sectionContent: {
-    ...typography.body1,
-    color: colors.text.primary,
-    lineHeight: 22,
-  },
   soapContainer: {
     marginTop: spacing.sm,
   },

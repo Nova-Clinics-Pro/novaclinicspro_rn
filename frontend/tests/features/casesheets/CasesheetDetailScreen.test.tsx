@@ -193,6 +193,25 @@ describe('CasesheetDetailScreen clinical read boundaries', () => {
     consoleLog.mockRestore();
   });
 
+  it('preserves the seven clinical and SOAP sections in their established order', () => {
+    const content = ['cfe-chief', 'cfe-provisional', 'cfe-final', 'cfe-subjective',
+      'cfe-objective', 'cfe-assessment', 'cfe-plan'];
+    mockUseCasesheetDetailQuery.mockReturnValue({
+      data: { ...baseCasesheet, chief_complaint: content[0],
+        provisional_diagnosis: content[1], final_diagnosis: content[2],
+        data_json: { subjective: content[3], objective: content[4],
+          assessment: content[5], plan: content[6] } },
+      isLoading: false, isError: false, error: null,
+      refetch: jest.fn(), isRefetching: false,
+    });
+    const view = render(<CasesheetDetailScreen />);
+    expect(view.getAllByText(/^cfe-/).map((node) => node.props.children)).toEqual(content);
+    const headings = ['Chief Complaint', 'Provisional Diagnosis', 'Final Diagnosis',
+      'Subjective', 'Objective', 'Assessment', 'Plan'];
+    expect(view.getAllByText(/^(Chief Complaint|Provisional Diagnosis|Final Diagnosis|Subjective|Objective|Assessment|Plan)$/)
+      .map((node) => node.props.children)).toEqual(headings);
+  });
+
   it('contains no direct transport, endpoint construction, or datasource access', () => {
     const source = readFileSync(
       resolve(
