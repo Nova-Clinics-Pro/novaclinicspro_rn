@@ -44,6 +44,8 @@ import {
 } from '../../data/models/operatingHours.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 import { OperatingHoursOperationError } from '../../domain/errors/operatingHoursOperationError';
 
@@ -286,6 +288,9 @@ interface TimeInputProps {
 }
 
 const TimeInput: React.FC<TimeInputProps> = ({ label, value, onChange }) => {
+  const { colors } = useClinicTheme();
+  const timeInputStyles = React.useMemo(() => createTimeInputStyles(colors), [colors]);
+
   const [pickerVisible, setPickerVisible] = useState(false);
 
   return (
@@ -309,7 +314,7 @@ const TimeInput: React.FC<TimeInputProps> = ({ label, value, onChange }) => {
   );
 };
 
-const timeInputStyles = StyleSheet.create({
+const createTimeInputStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -321,7 +326,7 @@ const timeInputStyles = StyleSheet.create({
   input: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 8,
@@ -347,6 +352,9 @@ interface DayCardProps {
 }
 
 const DayCard: React.FC<DayCardProps> = ({ dayOfWeek, dayName, hours, onEdit }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const isOpen = hours?.is_open ?? false;
   const openTime = hours?.open_time ? formatTimeForDisplay(hours.open_time) : '--:--';
   const closeTime = hours?.close_time ? formatTimeForDisplay(hours.close_time) : '--:--';
@@ -439,6 +447,9 @@ const EditModal: React.FC<EditModalProps> = ({
   onApplyToAll,
   isSaving,
 }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const dayName = dayOfWeek !== null ? DAYS_OF_WEEK[dayOfWeek]?.label || '' : '';
 
   // Form state
@@ -719,6 +730,9 @@ const EditModal: React.FC<EditModalProps> = ({
 // ============================================
 
 export const OperatingHoursScreen: React.FC = () => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { currentUser } = useAuthStore();
 
@@ -997,7 +1011,7 @@ export const OperatingHoursScreen: React.FC = () => {
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -1026,7 +1040,7 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
     padding: spacing.lg,
@@ -1065,7 +1079,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   dayCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -1186,7 +1200,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.elevated,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
@@ -1333,7 +1347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   applyingContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.elevated,
     borderRadius: 16,
     padding: spacing.xl,
     alignItems: 'center',

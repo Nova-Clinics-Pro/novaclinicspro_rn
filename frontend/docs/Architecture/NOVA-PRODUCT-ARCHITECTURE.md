@@ -722,3 +722,120 @@ Package D-wide theme, static-style, hardcoded-copy and visual/accessibility
 acceptance remains open. Current clinic-theme tests do not establish system
 dark-mode support. Git inclusion of this exact source/test/evidence unit remains
 a separate owner approval; no commit, push, merge or release is implied.
+
+## Package D — 17 settings-surface substitutions (2026-10-28)
+
+Authority: the owner's approved Package D Theme Commit and Next Remediation
+Batch. The preceding Room Detail unit is now preserved in local commit
+`f3c64259f8e4c74a5af6094655d9324a1e85d124`, parent
+`7809e505c160bb69a67b2bc066eaefcb558c096e`, with exactly its route, theme test and
+this document. Phase 2 below remains uncommitted and requires separate Git
+inclusion approval. No original dirty B27 checkout was used as an integration
+destination.
+
+### Exact approved requirement-to-implementation mapping
+
+All properties below are `backgroundColor`, previously `#FFFFFF`. Existing
+`surface.default` and `surface.elevated` are both `#FFFFFF` in AYURVEDA,
+GENERAL_MEDICINE, DENTAL and PHYSIOTHERAPY. Ownership distinguishes an ordinary
+card/control surface from an elevated modal or operation overlay; hex equality
+alone is not authority for other substitutions.
+
+| Owning path relative to frontend | `colors.surface.default` | `colors.surface.elevated` |
+| --- | --- | --- |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | `timeInputStyles.input`, `styles.summaryCard`, `styles.dayCard` | `styles.modalContent`, `styles.applyingContent` |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | `styles.ruleCard` | `styles.modalContent` |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | `styles.statBadge`, `styles.roomCard` | `styles.modalContainer` |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | `styles.tabsContainer`, `styles.templateCard` | None |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | `styles.searchContainer`, `styles.statCard`, `styles.treatmentCard` | None |
+| `app/clinic-admin/settings/treatments/[treatmentId].tsx` | `styles.statusCard`, `styles.section` | None |
+
+The earlier Operating Hours candidate named `input` is specifically the
+`TimeInput` component's style, not an unrelated global input. The Rooms modal
+surface belongs to `modalContainer`; `modalContent` has no background property.
+The six files use the existing `useClinicTheme` hook and memoized style
+factories keyed by `colors`. Existing style consumers, including nested cards,
+inputs and tabs, subscribe before any conditional return. No new shared theme
+abstraction, palette or system dark-mode infrastructure is added.
+
+Exact source reconstruction against the committed Phase 1 parent confirms only
+17 value substitutions, the two theme imports per file, factory declarations
+and component hook/style wiring. The Templates expression component is wrapped
+in a block to bind its styles. Repository calls, query/mutation arguments,
+validation, local state/effects, callbacks, navigation, labels and accessibility
+props remain unchanged. Existing selected-status fills, closed/inactive-card
+styles, room-type colors, template/rule metadata colors and dosha colors retain
+their precedence and values.
+
+### Verification and evidence scope
+
+`tests/core/theme/settingsSurfaces.test.tsx` adds 31 cases:
+
+- Six screen owners across four real clinic palettes (24 cases).
+- Six distinct default/elevated sentinel-palette rerenders; open modal state and
+  existing room-name/search input survive rerenders without mutation calls.
+- One pending Operating Hours apply-to-all operation: the overlay follows the
+  elevated token on rerender, then the existing seven day-specific payloads
+  finish through mocked mutations. No persistence or clinical execution occurs.
+
+The first focused run was 26 passed / 5 failed: the new Templates assertion
+looked at the active tab's retained green fill instead of its enclosing strip.
+Only the test lookup was corrected; the selected-tab fill is now separately
+asserted to remain unchanged. This was a test assertion error, not evidence for
+a production color change.
+
+Final guarded local command used explicit paths with Jest `--runInBand
+--no-cache --watchman=false`, the existing external preset-preserving runner
+and a pre-import network/process guard. The six suites were:
+
+- `tests/core/theme/settingsSurfaces.test.tsx`: 31 passed.
+- `tests/features/rooms/RoomDetailScreen.theme.test.tsx`: 8 passed.
+- `tests/core/theme/designTokens.test.ts`: 6 passed.
+- `tests/architecture/b1-presentation-boundary-guard.test.ts`: 2 passed.
+- `tests/treatments/TreatmentsScreen.multiday.test.tsx`: 3 passed.
+- `tests/treatments/treatment-category-contract.test.ts`: 5 passed.
+
+**55 passed, 0 failed/skipped, 6 suites, exit 0, 7.151 seconds**; no warnings or
+guard-violation markers. Production `tsc --noEmit --project
+tsconfig.production.json` passed, exit 0. Scoped ESLint returned exit 1:
+**5 inherited errors and 10 inherited warnings**, with matching rule/severity/
+message signatures when each source file was linted from committed HEAD via
+stdin. Errors are the existing effect/state rules (Operating Hours and
+Appointment Rules) and two existing unescaped quotes (Operating Hours). No new
+source diagnostics; the new test has zero diagnostics. No lint suppression,
+rule changes or unrelated fixes were made.
+
+Environment: Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, React 19.2.3,
+React Native 0.86.3, React Native Testing Library 13.3.3, TypeScript 6.0.3 and
+ESLint 9.31.0, all previously installed. The external runner retains the Expo
+preset's ios/native haste settings and adds only `forceNodeFilesystemAPI`.
+The JavaScript guard blocks standard network/process APIs; it is not OS-level
+isolation. Temporary dependency linkage is removed after checks. No database,
+backend, dependency installation, CI or palette changes occur.
+
+### Remaining Package D boundaries
+
+The seven-screen literal count is now **352** (Operating Hours 95, Appointment
+Rules 56, Rooms 48, Templates 44, Treatments 36, Treatment Detail 40, Room Detail
+33), down from 369 before this batch. These are remaining literal occurrences,
+not 352 independently confirmed defects. All 17 approved white properties have
+been resolved; no candidate was rejected for lack of a mapping or changed
+current-palette value.
+
+Confirmed retained behavior includes status/category/metadata/dosha color
+composition and selected-state overrides. Fixed accent foregrounds, root
+backgrounds, borders/gray values, shadows and remaining white foregrounds still
+need role-by-role classification; those occurrences are not approved as a
+blanket substitution set. Some current token values differ from these literals,
+so replacement could change appearance. Intentional retention in this batch is
+not a permanent architecture exemption. No artwork or third-party exemption is
+newly established.
+
+Package D-wide app audit, remaining hardcoded copy, visual/accessibility and
+package acceptance remain open. Tests establish these bounded mocked component
+contracts, not live workflows, screenshot equivalence or system dark-mode
+support. Next gate: owner review of exactly six source files, this evidence
+update and the new test, followed by separate local commit authorization. The
+new test is untracked and not ignored; it must be explicitly included with that
+unit. No Phase 2 commit, push, merge, destination adoption or deployment is
+performed.

@@ -36,6 +36,8 @@ import {
 } from '../../data/models/treatments.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 import { MultiDayAppointmentsSetting } from '../../../capabilities/presentation/components/MultiDayAppointmentsSetting';
 
@@ -50,6 +52,9 @@ const TreatmentCard: React.FC<{
   onPress: () => void;
   isAyurvedaClinic?: boolean;
 }> = ({ treatment, onPress, isAyurvedaClinic = false }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const effectivePrice = treatment.price || treatment.base_price;
   const doshaInfo = getDoshaSummary(treatment.dosha_benefits);
 
@@ -126,6 +131,9 @@ const TreatmentCard: React.FC<{
 };
 
 export const TreatmentsScreen: React.FC = () => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { currentUser } = useAuthStore();
   const tenantId = currentUser?.tenantId || '';
@@ -347,7 +355,7 @@ export const TreatmentsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -363,7 +371,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 10,
     paddingHorizontal: spacing.md,
     height: 44,
@@ -392,7 +400,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 10,
     padding: spacing.sm,
     alignItems: 'center',
@@ -415,7 +423,7 @@ const styles = StyleSheet.create({
   treatmentCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,

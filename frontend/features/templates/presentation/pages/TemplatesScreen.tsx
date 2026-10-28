@@ -30,6 +30,8 @@ import {
 } from '../../data/models/templates.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 
 // ============================================
@@ -50,7 +52,10 @@ interface TypeTabProps {
   onPress: () => void;
 }
 
-const TypeTab: React.FC<TypeTabProps> = ({ type, isActive, onPress }) => (
+const TypeTab: React.FC<TypeTabProps> = ({ type, isActive, onPress }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  return (
   <TouchableOpacity
     style={[styles.typeTab, isActive && styles.typeTabActive]}
     onPress={onPress}
@@ -59,6 +64,7 @@ const TypeTab: React.FC<TypeTabProps> = ({ type, isActive, onPress }) => (
     <Text style={[styles.typeTabText, isActive && styles.typeTabTextActive]}>{type.label}</Text>
   </TouchableOpacity>
 );
+};
 
 // ============================================
 // TEMPLATE CARD COMPONENT
@@ -71,6 +77,9 @@ interface TemplateCardProps {
 }
 
 const TemplateCard: React.FC<TemplateCardProps> = ({ template, onPress, onDelete }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const metadata = TEMPLATE_METADATA[template.template_type];
   if (!metadata) return null;
 
@@ -126,6 +135,9 @@ interface PlaceholderCardProps {
 }
 
 const PlaceholderCard: React.FC<PlaceholderCardProps> = ({ type, onPress }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const metadata = TEMPLATE_METADATA[type];
   if (!metadata) return null;
 
@@ -154,6 +166,9 @@ const PlaceholderCard: React.FC<PlaceholderCardProps> = ({ type, onPress }) => {
 // ============================================
 
 export const TemplatesScreen: React.FC = () => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { currentUser } = useAuthStore();
   const tenantId = currentUser?.tenantId || '';
@@ -388,7 +403,7 @@ export const TemplatesScreen: React.FC = () => {
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -397,7 +412,7 @@ const styles = StyleSheet.create({
     maxHeight: 52,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
   },
   tabsContent: {
     paddingHorizontal: spacing.md,
@@ -459,7 +474,7 @@ const styles = StyleSheet.create({
     marginTop: -spacing.xs,
   },
   templateCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,

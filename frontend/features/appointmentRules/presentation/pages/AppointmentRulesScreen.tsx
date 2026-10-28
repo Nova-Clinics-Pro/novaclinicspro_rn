@@ -35,6 +35,8 @@ import {
 } from '../../data/models/appointmentRules.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 
 // ============================================
@@ -47,6 +49,9 @@ interface RuleCardProps {
 }
 
 const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const metadata = RULE_METADATA[rule.rule_code];
   if (!metadata) return null;
 
@@ -112,6 +117,9 @@ const EditModal: React.FC<EditModalProps> = ({
   onReset,
   isSaving,
 }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const metadata = rule ? RULE_METADATA[rule.rule_code] : null;
   const [value, setValue] = useState<any>(null);
 
@@ -275,6 +283,9 @@ const EditModal: React.FC<EditModalProps> = ({
 // ============================================
 
 export const AppointmentRulesScreen: React.FC = () => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { currentUser } = useAuthStore();
   const tenantId = currentUser?.tenantId || '';
@@ -483,7 +494,7 @@ export const AppointmentRulesScreen: React.FC = () => {
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -535,7 +546,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   ruleCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -647,7 +658,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.elevated,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '70%',

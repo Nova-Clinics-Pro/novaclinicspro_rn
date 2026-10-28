@@ -38,9 +38,14 @@ import {
 import { TreatmentForm } from '../../../../features/treatments/presentation/components/TreatmentForm';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../../features/auth/presentation/providers/auth.store';
 
 export default function TreatmentDetailScreen() {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { treatmentId } = useLocalSearchParams<{ treatmentId: string }>();
   const { currentUser } = useAuthStore();
@@ -312,7 +317,7 @@ export default function TreatmentDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -354,7 +359,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -394,7 +399,7 @@ const styles = StyleSheet.create({
     color: '#10B981',
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,

@@ -35,6 +35,8 @@ import {
 } from '../../data/models/rooms.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 
 // Room card component
@@ -42,6 +44,9 @@ const RoomCard: React.FC<{
   room: RoomResponse;
   onPress: () => void;
 }> = ({ room, onPress }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const typeLabel = getRoomTypeLabel(room.room_type);
   const typeIcon = getRoomTypeIcon(room.room_type) as keyof typeof Ionicons.glyphMap;
   const typeColor = room.room_type ? getTypeColor(room.room_type) : '#6B7280';
@@ -95,6 +100,9 @@ const getTypeColor = (type: RoomType): string => {
 };
 
 export const RoomsScreen: React.FC = () => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { currentUser } = useAuthStore();
   const tenantId = currentUser?.tenantId || '';
@@ -324,7 +332,7 @@ export const RoomsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -343,7 +351,7 @@ const styles = StyleSheet.create({
   statBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 20,
@@ -376,7 +384,7 @@ const styles = StyleSheet.create({
   roomCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -465,7 +473,7 @@ const styles = StyleSheet.create({
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.elevated,
   },
   modalContent: {
     flex: 1,
