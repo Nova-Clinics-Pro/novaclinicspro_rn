@@ -189,3 +189,85 @@ syntax nodes in CreateAppointmentScreen; the base has the same six errors and
 seven warnings. PreviewAppointmentsScreen has zero errors and three warnings
 (base: zero errors, six warnings). The extracted components add no lint findings.
 This is inherited lint debt, not an authorized Package C behavior change.
+
+### A–F frontend integration runner correction (2026-10-28)
+
+Candidate: `codex/af-frontend-integration`, HEAD
+`1677534401518e629b8829c672419a00939e91c4`. The candidate started clean.
+The owner's Frontend Integration Regression Unblock directive authorizes this
+bounded diagnosis and evidence update, without production or assertion changes.
+
+**Verified root cause:** the temporary runner called Jest's `runCLI` API
+directly with `process.env.NODE_ENV` undefined. Installed Jest 29.7.0's
+`jest-cli/bin/jest.js` normally initializes this variable to `test` before
+calling Jest. The external API runner bypassed that CLI bootstrap. Expo's
+preset and native mocks were present; neither haste nor browser mocks were the
+cause of these two failures.
+
+React Native 0.86.3 `TouchableOpacity._setOpacityTo` starts `Animated.timing`
+with `useNativeDriver: true`. On the disabled-to-enabled rerender and the
+consultation action update, `AnimatedProps.#connectAnimatedView` receives no
+native handle from react-test-renderer. Its existing test-mode branch uses
+the synthetic tag `-1`; outside `NODE_ENV=test`, it throws `Unable to locate
+attached view in the native tree`. No code in that branch was patched, caught,
+or suppressed. Passing suites do not necessarily exercise this animation
+transition, so their success did not establish correct runner initialization.
+
+**Correction:** external runners initialize `process.env.NODE_ENV = 'test'`
+after installing the network/process guard and before importing Jest or
+transformed test modules. Canonical Jest CLI invocation should likewise use
+an explicit `NODE_ENV=test` for this verification. The existing Expo preset,
+`ios` default, `android,ios,native` platforms, `forceNodeFilesystemAPI`,
+run-in-band/no-cache/no-watchman options and guards remain unchanged. No
+repository Jest setup/configuration, test, mock, dependency or application
+file requires a correction. Native-device animation correctness is not
+established by react-test-renderer's documented-in-source test fallback.
+
+Controlled individual runs changed only runner initialization:
+
+| Existing suite | Before | After |
+| --- | --- | --- |
+| PreviewAppointmentsPresentation characterization | 4 passed / 1 failed | 5 passed |
+| consultationFlow integration | 11 passed / 1 failed | 12 passed |
+
+All assertions, rerenders, clinical commands and navigation checks are
+byte-identical to HEAD. The approved 14-suite selection then passed **114/114**
+in 9.351 seconds; the existing 15-suite regression selection passed **91/91**
+in 8.829 seconds. These selections overlap by six tests: **199 unique tests**
+passed, zero failed/skipped. This includes Package A's ten focused checks,
+payment's two tests, Package C's fourteen characterization checks and Package
+D's ninety-six checks, including the B1 architecture guard. Exact suite lists
+are the prior selections above and the existing Package D architecture
+evidence, not a new acceptance scope.
+
+Both individual corrected runs and both approved selection runs exited 0.
+Corrected external runners are `/private/tmp/nova-unblock-frontend-run.cjs`
+and `/private/tmp/nova-unblock-frontend-regression-run.cjs`; their only
+execution change from the earlier runners is test-environment initialization
+(result output paths are separate to preserve the failing evidence).
+
+The consultation-containing runs retain delayed natural teardown. The fixture
+creates a QueryClient with retry disabled but no explicit GC/cleanup setting;
+installed query-core defaults to a five-minute GC timer outside server mode.
+This is consistent with the observed delay and existing cleanup debt, not a
+new assertion failure. No force-exit, timer override or fixture change is used.
+
+Production TypeScript passed (exit 0). Scoped ESLint over the same twenty
+changed TS/TSX files returned exit 1 with **12 errors / 20 warnings**; exact
+messages match the prior candidate run. The earlier comparison against B27
+has 12 errors / 23 warnings and no new rule/severity/message summaries.
+No lint rule or suppression changed. Existing theme-provider fallback and
+synthetic wizard-identity console warnings remain; they were not suppressed.
+
+Environment: Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, React 19.2.3,
+React Native 0.86.3, RNTL 13.3.3, TypeScript 6.0.3 and ESLint 9.31.0;
+existing installed dependencies only. Python/JavaScript-level guards are not
+OS-level isolation. No database, external service or dependency installation
+was used. Temporary dependency linkage is removed after verification.
+
+The external runner fix is not an application change or completed additional
+Package C decomposition. Package C's remaining implementation, Package D
+native/Hindi/accessibility disposition, inherited lint and other A–F
+acceptance gates remain separate. This evidence-only repository change
+requires owner review and local commit approval; no commit, push, merge,
+CI execution or destination promotion is authorized here.
