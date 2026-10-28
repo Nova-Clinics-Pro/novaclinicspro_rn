@@ -647,3 +647,78 @@ No new languages, frozen requirements, database, backend, dependency, CI,
 Commercial Platform, migration or deployment changes are part of this slice.
 Git inclusion is a separate owner gate; this evidence does not authorize a
 commit, push, merge or release.
+
+
+## Package D — Room Detail semantic-token slice (2026-10-28)
+
+Authority: owner-approved bounded theme execution following localization commit
+`7809e505c160bb69a67b2bc066eaefcb558c096e`. This slice does not reopen Package A,
+C, localization, clinic policy or canonical feature ownership.
+
+| Approved role | Implementation in `app/clinic-admin/settings/rooms/[roomId].tsx` | Test evidence |
+| --- | --- | --- |
+| Status-card surface | `statusCard.backgroundColor = colors.surface.default` | All four current clinic themes retain white; custom palette rerender updates the enclosing status-card surface |
+| Detail-section surface | `section.backgroundColor = colors.surface.default` | Same palette and rerender assertions for the room form section |
+| Primary-action foreground | `saveButtonText.color = colors.text.onPrimary` | All four current themes retain white; token changes propagate while unsaved edits are retained |
+
+The component reads the existing `useClinicTheme` hook and memoizes its existing
+style construction by `colors`. Only those three style values change. Reversing
+the two imports, two hook/style-wiring statements, style-factory signature and
+three substitutions reconstructs the parent source byte-for-byte. Query and
+mutation hooks, tenant/room arguments, validation, payloads, navigation, status
+and category behavior, all other style values, labels and accessibility props
+are unchanged. No new palette or dark-mode infrastructure is introduced.
+
+`tests/features/rooms/RoomDetailScreen.theme.test.tsx` adds eight cases (four
+clinic palettes, reactive palette rerender, validation/save/back navigation,
+status mutation and loading/error branches). It uses existing feature mocks;
+no browser mocks, real persistence, network calls or authorization claims are
+introduced. The first test run revealed a brittle renderer-parent lookup;
+the test now asserts the nearest enclosing surface rather than fixed wrapper
+depth. Production behavior was not changed to satisfy that lookup.
+
+Final guarded verification on 2026-10-28:
+
+- Room Detail test, existing `tests/core/theme/designTokens.test.ts` and existing
+  `tests/architecture/b1-presentation-boundary-guard.test.ts`:
+  **3 suites, 16 passed**, zero failed/skipped, exit 0 (4.097 seconds).
+- Production `tsc --noEmit --project tsconfig.production.json`: passed.
+- Scoped ESLint for the route and new test: passed without diagnostics; no lint
+  suppression or rule changes. Mock factories use typed `jest.requireActual`.
+- Guards installed before third-party imports; native-preset platform settings
+  preserved in the external runner; no network/process violation markers.
+- Existing Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, TypeScript 6.0.3; no install.
+
+### Read-only remaining classification
+
+The seven-screen historical count falls from 372 to **369** hex literals;
+Room Detail falls from 36 to **33**. This is a count of candidates, not a claim
+that all remaining occurrences are interchangeable theme violations.
+
+Further appearance-preserving surface groups, subject to exact scope review:
+
+| Screen owner | Existing white roles and potential existing semantic owner |
+| --- | --- |
+| Operating Hours | `input`, `summaryCard`, `dayCard`: surface; `modalContent`, `applyingContent`: modal surface. The root `container` is different: replacing white with the current Ayurveda background token changes appearance and is not an automatic substitution. |
+| Appointment Rules | `ruleCard`: surface; `modalContent`: elevated modal surface |
+| Rooms list | `statBadge`, `roomCard`: surface; `modalContainer`: modal surface |
+| Templates | `tabsContainer`, `templateCard`: surfaces |
+| Treatments list | `searchContainer`, `statCard`, `treatmentCard`: surfaces |
+| Treatment Detail | `statusCard`, `section`: surfaces; separate from treatment state/lifecycle ownership |
+
+Current clinic `surface.default` and `surface.elevated` values are white for all
+four palettes, but the proper role must be selected by the owning component,
+not hex equality alone. This table authorizes no additional edits.
+
+Retained intentional behavior: runtime category-color/opacity composition and
+status differentiation. Their fixed palette ownership is not thereby declared
+an accepted permanent exception. Room-type palettes, metadata-provided rule and
+template colors, shadow paint without a dedicated semantic token, gray/border
+values that differ from active tokens, root-background changes and any new
+contrast/visual behavior require separate classification or approval. No
+artwork or mandatory third-party hex-value exemption was established.
+
+Package D-wide theme, static-style, hardcoded-copy and visual/accessibility
+acceptance remains open. Current clinic-theme tests do not establish system
+dark-mode support. Git inclusion of this exact source/test/evidence unit remains
+a separate owner approval; no commit, push, merge or release is implied.
