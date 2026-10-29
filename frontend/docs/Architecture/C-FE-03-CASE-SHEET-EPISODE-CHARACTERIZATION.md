@@ -1,6 +1,6 @@
 # C-FE-03 — Case-Sheet / Episode Composition Characterization
 
-**Status:** Characterization complete locally; no extraction authorized.
+**Status:** Characterization and both explicitly approved presentation extractions are committed and offline-verified; native and full-package acceptance remain pending.
 **Baseline:** `b061018c1e44cb9f9ba78053f3136e387a9e79d6` (`refactor/package-c-fe-03`).
 **Scope:** Package C C-FE-03 evidence only. This record does not assert that R7 is complete, nor that uncommitted work in another worktree is present in this baseline.
 
@@ -516,3 +516,96 @@ Exactly five intended files remain unstaged; baseline HEAD and empty index
 verified. New component and tests are Git-visible without ignore changes.
 Ready for separately approved local Git inclusion; no commit/push/merge or
 Package C-wide acceptance is claimed.
+
+
+## Final Package C acceptance reconciliation — 2026-10-29
+
+**Verified baseline before this evidence correction:** frontend
+codex/af-frontend-integration at b2274c109c18d8dcd76d4748eb791d13f8a9717c;
+backend codex/af-backend-integration at afd5db34e30b574bdecc1987d22424a26bb63f06.
+Both worktrees and indexes were clean. No suite was rerun for reconciliation.
+The stale initial characterization-only status and earlier pending-Git-inclusion
+statements are superseded by this dated record, not deleted from history.
+
+### Authority boundary
+
+Existing backend `.kiro/specs/package-c-component-service-decomposition/`
+PACKAGE-C-REQUIREMENTS.md, PACKAGE-C-DESIGN.md and PACKAGE-C-TASKS.md still
+explicitly say PROPOSED / NOT APPROVED. They are the original planning/acceptance
+reference, not proof of a ratified all-six-task implementation inventory. Owner
+execution directives separately approved C-FE-01/02 integration, C-FE-03
+characterization and the two exact display extractions. Those directives do not
+approve C-FE-04, C-BE-01/02 or unrestricted additional clinical decomposition.
+Do not classify unapproved proposed work as an omitted approved requirement.
+
+### Task-by-task disposition
+
+| Task | Verified committed scope/evidence | Current disposition |
+| --- | --- | --- |
+| C-FE-01 | Original 43f05b5 selection-control source retained byte-for-byte; consolidated preservation 1b463580af91c64edf23557af3bfdb92690dc9b2. Current 108-test selection includes its five characterization cases. Route/query/command/cache ownership retained. | Approved selection-control subset CODE-COMPLETE / OFFLINE-VERIFIED in candidate; native acceptance outstanding. No additional approved implementation gap identified. |
+| C-FE-02 | Original b061018 preview-component/screen source retained byte-for-byte; same 1b463580 preservation. Five characterization cases cover presentation imports, screen-owned plan/create/cache/R7 coordination, loading/error/retry/empty states, alternative intent callbacks and confirmation affordances. | Approved preview subset CODE-COMPLETE / OFFLINE-VERIFIED in candidate; native acceptance outstanding. |
+| C-FE-03 | Original a8a113c characterization test retained byte-for-byte in 1b463580; text section 5ce50a018826d26593c0a1b3a201bd14e00228e7; metadata grid b2274c109c18d8dcd76d4748eb791d13f8a9717c. Source/tests match both approved artifact receipts; all commits are in current ancestry. | Characterization PLUS both approved extractions CODE-COMPLETE / COMMITTED / OFFLINE-VERIFIED. No longer characterization-only or awaiting these commits. No broader clinical authoring consolidation implemented or authorized. |
+| C-FE-04 | PACKAGE-C-TASKS.md section C-FE-04 explicitly defers registration construction work; acceptance criteria not yet defined. No implementation in accepted C artifact. | DEFERRED / BLOCKED, NOT COMPLETE: B2_7_BLOCKED, B2.7-B-ISS-001, B2.7-FO-002, B2.8 activation and protected registration lifecycle/security review; separate task authorization required. |
+| C-BE-01 | Task section C-BE-01 requires treatment-sheet command/query/UoW/lifecycle map and approved design before implementation. No accepted Package C service extraction. | BLOCKED / NOT IMPLEMENTED: R7 treatment-plan/session authority and B2/R7 transaction compatibility, explicit design/task approval. Not a completed or independently approved backend task. |
+| C-BE-02 | Task section C-BE-02 requires authoritative fact/projection/transaction map before a possible pure assembler extraction. Package E workspace import/mock/lint cleanup is not this decomposition. | BLOCKED / NOT IMPLEMENTED: exact R7/B2 ownership review, B2.8 boundary compatibility and owner authorization. |
+
+The historical requirements table's B2.8 "not started" statement is not current
+implementation evidence: backend Engineering Truth records d310a93 offline
+preparation (28 opt-in checks passed, 22 cases default-disabled). Enforcement
+activation/parent security approvals remain open. No C1/C6 or B2.7 prerequisite
+is silently waived by that preparation or by frontend completion.
+
+### Acceptance criteria and closure decision
+
+For the explicitly approved frontend scope, C-REQ-01..06 and nonfunctional
+criteria have bounded source/test evidence: presentation-only dependencies,
+unchanged server/clinical authority, characterized equivalent local behavior,
+one existing query/cache/mutation owner, no speculative shared framework,
+exact manifests and reversible commits. The most recent combined historical
+run is **17 suites / 108 passed, zero failures/skips, natural exit 0**, including
+B1 and canonical-writer/consultation regressions. Production TypeScript passed;
+latest Episode scope has zero lint errors and three baseline-matched warnings.
+Other inherited lint and delayed teardown debt remain; do not claim a globally
+clean lint suite, fresh test execution, GitHub-hosted verification or live
+backend authorization acceptance.
+
+Reversible preservation boundaries: 1b463580 contains the eight-path C-FE-01/02/
+characterization consolidation; 5ce50a01 contains the five-path text extraction;
+b2274c10 contains the five-path metadata extraction. An authorized rollback
+would revert only the relevant task-sized commit in dependency order, newest
+first where dependencies require it; never reset/clean/stash the dirty B27
+checkouts. No schema/data rollback is involved. No rollback executed here.
+
+**A — YES, implementation/offline-verification closure for the exact executable
+frontend subset.** It is already assembled in the clean candidate; no duplicate
+replay, extra extraction or missing approved production behavior is identified.
+Ready for review/integration subject to separately controlled destination and
+acceptance gates; this is not merge authorization or release readiness.
+
+**B — retain explicit blocked/deferred tasks.** Original exit criterion 1
+requires inventory approval or approved supersession; full-package closure
+cannot count the proposed backend/registration tasks as done. The Product Owner
+owns inventory/disposition and B2.7 product policy decisions; Platform Security
+owns relevant security/ownership concurrence (including FO-002/C1/C6/B2.8);
+clinical/R7 architecture and backend owners must confirm transaction/lifecycle
+boundaries before any backend extraction. No additional R7/B2.7 decision is
+needed merely to acknowledge the completed display-only subset.
+
+**C — acceptance work remains, not another production-refactoring batch.**
+Native iOS/Android comparison of appointment controls/preview and the two detail
+sections must verify layout/order, truncation/wrapping, icons/themes, large text,
+focus/navigation, accessibility labels/order and VoiceOver/TalkBack. Existing
+local tests support unchanged native structure; they do not establish these
+runtime observations. No device/runtime acceptance environment was verified or
+used here. Backend RLS/tenant acceptance remains separate; Package F credential
+use is explicitly blocked. No unrestricted new code task is authorized.
+
+**Proposed overall disposition: approved frontend subset CODE-COMPLETE /
+OFFLINE-VERIFIED; Package C FULL ACCEPTANCE PENDING, with C-FE-04 DEFERRED/BLOCKED
+and C-BE-01/02 BLOCKED.** Next useful A–F milestone is an owner-authorized native
+frontend acceptance pass for the preserved A/C/D candidate, reusing existing
+evidence and recording results in existing records. This may close multiple
+acceptance gates without inventing copy, changing visuals or adding refactoring.
+This status correction changes only this evidence document, remains uncommitted,
+and requires separate Git-inclusion approval. No production/test/config change,
+credentials, database, CI, push, merge, promotion or new documentation framework.
