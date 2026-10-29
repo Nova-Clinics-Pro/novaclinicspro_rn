@@ -1320,3 +1320,37 @@ Phase 2 comprises exactly six source files, the focused settings theme test
 and this evidence update. It is uncommitted and requires separate review and
 local commit approval. No second commit, push, merge, dirty B27 adoption,
 backend/database/CI/skill change or parallel documentation register is created.
+
+## A/C/D native acceptance attempt — 2026-10-29
+
+Owner authorized native acceptance using an existing suitable environment,
+without installs, configuration changes, production services or emulator setup.
+Candidate after evidence preservation: `d1c4033aa920b0993ebb6ee2678e151f504a14f4`
+on codex/af-frontend-integration. The exact environment observations and
+criterion-by-criterion matrix are recorded in the existing
+C-FE-03-CASE-SHEET-EPISODE-CHARACTERIZATION.md native-disposition section.
+
+**Observed:** iOS has CommandLineTools but no Xcode app/simctl found. Android
+SDK/emulator/API 35 AVD definitions exist; read-only enumeration of the existing
+ADB daemon succeeded with zero connected devices. Candidate build outputs in
+the checked APK/ios/build locations are absent; no approved service-isolated
+candidate runtime or physical-device workflow was established. No app launch,
+emulator boot/install, dependency installation, credential access or service/
+database connection was performed. Sandbox Crashpad diagnostics occurred while
+listing AVDs; actual boot capability remains unverified.
+
+**Package D disposition:** native Hindi layout/clipping, large text, theme
+appearance, focus/accessibility and TalkBack/VoiceOver remain BLOCKED; system-dark
+appearance NOT RUN. app.json automatic interface style is not proof of dark-mode
+support. Existing four-palette/token/catalog unit evidence remains historical
+offline proof only. No native PASS/FAIL, screenshots or accessibility outcomes
+were fabricated; no Jest/TypeScript rerun replaced native acceptance. Existing
+131 direct-English and 299 unresolved appearance occurrences are not remediated
+or newly accepted by this task; prior 42 intentional categories remain retained.
+
+Minimal continuation: approve a named existing Android target/candidate build
+and a synthetic/offline workflow avoiding production; authorize any necessary
+boot/build/install separately within the no-dependency-change boundary. iOS
+needs suitable separately approved tooling/device setup. No new copy, palette,
+dark-mode architecture, workflow or documentation framework is introduced.
+This is an uncommitted evidence append; no further commit/push/merge/CI/deployment.

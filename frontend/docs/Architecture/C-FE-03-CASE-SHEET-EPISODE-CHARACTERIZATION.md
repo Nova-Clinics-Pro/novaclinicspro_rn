@@ -609,3 +609,74 @@ acceptance gates without inventing copy, changing visuals or adding refactoring.
 This status correction changes only this evidence document, remains uncommitted,
 and requires separate Git-inclusion approval. No production/test/config change,
 credentials, database, CI, push, merge, promotion or new documentation framework.
+
+## A/C/D native acceptance availability and disposition — 2026-10-29
+
+Authority: owner's Package C Evidence Preservation and A/C/D Native Acceptance
+request. The reviewed reconciliation alone was committed as
+`d1c4033aa920b0993ebb6ee2678e151f504a14f4`, parent
+`b2274c109c18d8dcd76d4748eb791d13f8a9717c`, exact one-document path/hash,
+clean index/worktree immediately after commit. Backend remains clean at
+`afd5db34e30b574bdecc1987d22424a26bb63f06`. No further commit is authorized.
+
+### Observed environment (availability checks, not acceptance PASS)
+
+- iOS: xcode-select selects `/Library/Developer/CommandLineTools`; xcrun cannot
+  locate simctl; no Xcode application found in /Applications. Existing native
+  source/workspace/Podfile.lock does not supply an executable simulator/runtime.
+- Android: existing adb/emulator binaries, platforms 33–36, build-tools and
+  API 35 system images/AVDs found. `emulator -list-avds` listed seven existing
+  definitions, with Crashpad/Mach permission diagnostics under the sandbox.
+  No emulator boot or setup was attempted; boot usability remains unverified.
+- Existing local ADB daemon was listening. Sandbox-local enumeration initially
+  failed with Operation not permitted; one authorized elevated **read-only
+  inventory** succeeded, exit 0, **zero connected devices**. No daemon start,
+  pairing, device/app action, role/credential or database operation performed.
+- Candidate has native android/ios source but no APK at android/app/build/outputs/apk,
+  no ios/build, dist or .expo runtime artifact in checked locations. No existing
+  .maestro/.detox/e2e workflow or native acceptance package script was found in
+  the inspected candidate locations. A usable approved physical-device or
+  service-isolated candidate-build/synthetic-data workflow was not established.
+  This does not assert that no external build or device exists elsewhere.
+- app.json declares userInterfaceStyle=automatic. This is configuration evidence,
+  not proof of system-dark-theme support or appearance. Existing Package D
+  evidence explicitly leaves system dark-mode/native verification unproven.
+
+### Native criteria matrix
+
+No application was launched and no native criterion is reported PASS or FAIL.
+Existing Jest/TypeScript evidence was neither rerun nor counted as native proof.
+
+| Criterion / existing scope | Status | Exact blocker / evidence needed |
+| --- | --- | --- |
+| C-FE-01 appointment selection and interaction | BLOCKED | No connected target or verified candidate runtime; observe selection, availability/disabled affordances and callbacks using existing scenarios. |
+| C-FE-02 preview display/alternatives/confirmation | BLOCKED | Same environment prerequisite; observe ordering, loading/error/retry/empty states and existing intent navigation. |
+| C-FE-03 Case Sheet clinical/SOAP text | BLOCKED | Same prerequisite; compare seven sections, omission and reading order against the preserved pre-extraction behavior. |
+| C-FE-03 Episode dates/count metadata | BLOCKED | Same prerequisite; observe optional dates, zero/count display, row order and live theme propagation. |
+| Light/clinic-palette appearance | BLOCKED | Candidate native rendering and baseline comparison required; offline token checks are not screenshots. |
+| System-dark appearance | NOT RUN | Native target unavailable; automatic appearance flag does not establish a dark palette. No dark infrastructure/design implementation authorized. |
+| D English/Hindi supported-copy layout | BLOCKED | Native candidate with synthetic scenarios required; check clipping/wrapping and supported catalog coverage. Existing missing-copy decisions remain open. |
+| Large fonts/text wrapping | BLOCKED | Native target/font-scale acceptance required; no device setting changed. |
+| Accessibility labels/focus order | BLOCKED | Observe native accessibility tree, navigation and modal focus on the approved target. |
+| VoiceOver / TalkBack | BLOCKED | No usable iOS runtime or connected Android target; screen-reader execution not performed. |
+| A payment/logging-related native navigation and relevant clinical interactions | BLOCKED | Safe candidate runtime and approved synthetic workflow needed; no account/service/clinical data accessed. |
+
+### Minimal next setup/approval and integration disposition
+
+Prefer existing Android tooling: owner must identify/approve one existing AVD
+or connected authorized device, a build/bundle corresponding to this candidate,
+and a safe synthetic/offline workflow that cannot contact production. If a
+build, dependency resolution, device boot/install or fixture/service setup is
+needed, obtain that bounded setup approval first; no install/download or setup
+occurred here. iOS additionally needs approved full Xcode/simulator tooling or
+an approved physical-device workflow; do not infer it from CommandLineTools.
+Do not invent a new native harness or change configuration as part of this
+availability task. No native setup authorization implies Package F database
+login consent, tenant fixtures or production service access.
+
+Code/offline frontend subset remains ready for **destination integration review**,
+not unconditional acceptance, merge/promotion or release. Native A/C/D evidence
+remains blocked/not run; Package D's existing copy/appearance decisions and
+Package C's separate blocked/deferred tasks remain. No production defect was
+observed because application execution did not occur. This native disposition
+is an uncommitted evidence-only append; no additional Git commit authorized.
