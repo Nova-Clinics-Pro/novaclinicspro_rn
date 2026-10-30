@@ -23,11 +23,12 @@ import { colors } from '../../core/theme/colors';
 import { spacing } from '../../core/theme/spacing';
 import { typography } from '../../core/theme/typography';
 import { useAuth } from '../../features/auth/presentation/hooks/useAuth';
-import { formatInrCurrency } from '../../core/utils/currency';
+import { usePlatformTenants } from '../../features/tenants/presentation/hooks/usePlatformTenants';
 import { t, ErrorTokens } from '../../core/localization';
 
 export default function SuperAdminDashboard() {
   const { logout, currentUser } = useAuth();
+  const tenants = usePlatformTenants(0, 1);
 
   const handleLogout = async () => {
     // Use confirm for web, Alert for native
@@ -78,14 +79,17 @@ export default function SuperAdminDashboard() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* System-wide Stats - Show 0 values instead of dummy data */}
+        {/* Total is authoritative across pages; other metrics remain unavailable. */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>System Overview</Text>
+          {tenants.isPending ? <Text>{t('common.loading')}</Text> : tenants.isError ? (
+            <Pressable accessibilityRole="button" onPress={() => { void tenants.refetch(); }}><Text>{t('errors.tenants.loadFailed')} · {t('common.retry')}</Text></Pressable>
+          ) : null}
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <StatCard
                 title="Total Clinics"
-                value="0"
+                value={!tenants.isPending && !tenants.isError && tenants.data ? String(tenants.data.total) : "—"}
                 icon="business"
                 color={colors.primary.main}
               />
@@ -93,7 +97,7 @@ export default function SuperAdminDashboard() {
             <View style={styles.statItem}>
               <StatCard
                 title="Active Subscriptions"
-                value="0"
+                value="—"
                 icon="checkmark-circle"
                 color={colors.success.main}
               />
@@ -101,7 +105,7 @@ export default function SuperAdminDashboard() {
             <View style={styles.statItem}>
               <StatCard
                 title="Total Revenue"
-                value={formatInrCurrency(0)}
+                value="—"
                 icon="cash"
                 color={colors.warning.main}
               />
@@ -109,7 +113,7 @@ export default function SuperAdminDashboard() {
             <View style={styles.statItem}>
               <StatCard
                 title="Total Patients"
-                value="0"
+                value="—"
                 icon="people"
                 color={colors.info.main}
               />
@@ -173,10 +177,7 @@ export default function SuperAdminDashboard() {
           {/* Empty state - no dummy data */}
           <View style={styles.emptyStateCard}>
             <Ionicons name="business-outline" size={48} color={colors.text.tertiary} />
-            <Text style={styles.emptyStateTitle}>No recent onboarding</Text>
-            <Text style={styles.emptyStateText}>
-              New clinic registrations will appear here
-            </Text>
+            <Text style={styles.emptyStateTitle}>{t('common.featureUnavailable')}</Text>
           </View>
         </View>
 

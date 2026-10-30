@@ -1,4 +1,5 @@
 {
+  "platformTenants": { "title": "Clinics" },
   "common": {
     "save": "Save",
     "cancel": "Cancel",

@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
+import { t } from '../../../../core/localization';
 import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { useTenantsListQuery } from '../../data/repositories/tenants.repository.impl';
@@ -29,7 +30,8 @@ export default function TenantsListScreen() {
   const theme = useClinicTheme();
   const router = useRouter();
   const { logout, currentUser } = useAuth();
-  const { organizationId } = useOrganizationTenantScope();
+  const organizationScope = useOrganizationTenantScope();
+  const { organizationId } = organizationScope;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
 
@@ -38,7 +40,6 @@ export default function TenantsListScreen() {
     data: tenants,
     isLoading,
     isError,
-    error,
     refetch,
     isFetching,
   } = useTenantsListQuery(organizationId, {
@@ -154,11 +155,13 @@ export default function TenantsListScreen() {
         Unable to Load Tenants
       </Text>
       <Text style={[styles.errorSubtitle, { color: theme.colors.text.secondary }]}>
-        {error?.message || 'An error occurred. Please try again.'}
+        {t('errors.generic.loadFailed')}
       </Text>
       <TouchableOpacity
         style={[styles.retryButton, { backgroundColor: theme.colors.primary.default }]}
-        onPress={() => refetch()}
+        onPress={() => organizationScope.error || !organizationScope.scopeMatches
+          ? organizationScope.refetch()
+          : refetch()}
       >
         <Text style={[styles.retryButtonText, { color: theme.colors.primary.onPrimary }]}>
           Retry
@@ -229,14 +232,14 @@ export default function TenantsListScreen() {
       </View>
 
       {/* Tenants List */}
-      {isLoading && !isFetching ? (
+      {organizationScope.isLoading || isLoading ? (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={theme.colors.primary.default} />
           <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
             Loading tenants...
           </Text>
         </View>
-      ) : isError ? (
+      ) : isError || organizationScope.error || !organizationScope.scopeMatches ? (
         renderError()
       ) : (
         <FlatList

@@ -1,4 +1,5 @@
 {
+  "platformTenants": { "title": "क्लिनिक" },
   "common": {
     "save": "सहेजें",
     "cancel": "रद्द करें",

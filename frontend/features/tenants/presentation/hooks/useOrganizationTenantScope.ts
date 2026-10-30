@@ -48,5 +48,6 @@ export const useOrganizationTenantScope = () => {
     scopeMatches,
     isLoading: organizationContext.isLoading,
     error: organizationContext.error,
+    refetch: organizationContext.refetch,
   };
 };

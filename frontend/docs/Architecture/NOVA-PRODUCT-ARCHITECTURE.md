@@ -1354,3 +1354,95 @@ boot/build/install separately within the no-dependency-change boundary. iOS
 needs suitable separately approved tooling/device setup. No new copy, palette,
 dark-mode architecture, workflow or documentation framework is introduced.
 This is an uncommitted evidence append; no further commit/push/merge/CI/deployment.
+
+
+### 2026-10-30 — Super Admin tenant-list denial and truthful dashboard states
+
+**VERIFIED:** The owner reports `/auth/me` HTTP 200 and an organization-scoped
+`/api/v1/org/tenants` HTTP 403 with `clinic_entry.unauthorized`,
+`errors.clinicEntry.unauthorized`, and `retryable: false`. Current router and live
+OpenAPI both require organization context. `OrganizationTenantAdministrationService`
+requires `organization.clinics.list` through
+`OrganizationAuthorizationService.require_permission`; this rejects absent active
+customer membership. Read-only development-project inspection found the intended
+administrator active with authoritative `is_org_admin=true` but zero active
+organization memberships. There are 18 clinic records, 12 active; the 403 is not
+an empty database. The live request's bearer subject was not independently inspected.
+
+**Authority conflict / BLOCKED:** ADR-PF-002 distinguishes platform administration
+from customer membership; E2's historical reuse audit describes global platform
+listing. Current FO-002 implementation and explicit negative tests deliberately
+scope this route to customer organization authorization. B2.7-FO-002 requires
+Security/Organization review. No backend authorization was changed. Platform
+list/detail restoration needs an explicit decision reconciling those contracts;
+a separate audited, read-only platform API using verified identity plus active
+server-side platform authority is the recommended boundary. Customer routes and
+all mutation permissions must remain scoped. Tenant self-service detail also
+retains tenant RBAC and same-tenant checks. The extension-only platform authority
+correction in backend commit c92c593e8c5ffdd18f0ee18dafdc8e419af13752 remains intact;
+it does not authorize broadening other routes.
+
+**Presentation correction:** `app/super-admin/index.tsx` previously displayed four
+hardcoded zero statistics and an unwired recent-onboarding empty state; these now
+show unavailable values using an existing localization key. No statistics query
+was added. `useOrganizationTenantScope.ts` exposes the existing refetch operation.
+`TenantsListScreen.tsx` distinguishes loading, scope failure/mismatch, request
+failure, and a genuine successful empty response; it retries the relevant source
+and shows a localized generic error. Existing API errors already propagated.
+No identity, cache key, query contract, membership or tenant authority changed.
+
+**Verification:** `tests/tenants/tenantListingFailurePresentation.test.tsx` adds
+seven cases for failure/loading/empty states and unavailable dashboard metrics.
+Together with organization scope/API/repository tests and the B1 presentation
+boundary guard: 18 passed across five suites, zero failures/skips, exit 0.
+Production TypeScript passed. Scoped ESLint: zero errors and five inherited unused
+symbol warnings in TenantsListScreen. Existing backend FO-002 and tenant transport
+regressions: 16 passed under guarded CPython 3.11.15, three dependency deprecation
+warnings, zero guard violations. Evidence is in `/private/tmp/nova-tenant-list-frontend.json`,
+`/private/tmp/nova-tenant-list-backend.json`, and corresponding logs; TypeScript and
+lint logs use the same prefix. `git diff --check` passed. No live authenticated
+listing success is claimed. No commercial extension, database write, role change,
+commit or push was performed. Platform listing remains blocked pending the named
+authorization decision; commercial execution retains its separate controlled gate.
+
+
+### 2026-10-30 — Approved platform tenant reads and Super Admin integration
+
+Owner approved a separate, audited, read-only platform tenant list/detail slice.
+This supersedes the preceding authorization-decision hold for that slice; it does
+not broaden customer `/org/tenants`, membership, clinical or platform-write rights.
+
+Backend contract: `GET /api/v1/platform/tenants?offset=0&limit=25` returns items,
+total, active_total, offset, limit; detail is `GET /api/v1/platform/tenants/{id}`.
+Administrative projection is id/code/name/clinic_type/status/is_active/created_at
+and nullable server-resolved organization_id. No contact, clinical, patient,
+prescription, billing or subscription data is exposed. Active clinic total is not
+an active-subscription count. Requests require verified identity and strict active
+database platform privilege, not customer membership or provider metadata.
+
+New domain entity, platform datasource, identity-keyed React Query repository,
+presentation hooks and `PlatformTenantsScreen.tsx` provide paginated read-only
+list/detail UI. Only `/super-admin/tenants` and its detail route select these
+screens. Customer datasource/repository/scope flows and their mutation contracts
+are retained. Caches are keyed by authenticated identity plus page/target and the
+existing logout flow clears them. No alternate tenant authority or writer added.
+Dashboard requests limit=1 and renders `total`, never items.length, as Total
+Clinics. Other statistics and recent onboarding remain unavailable. Loading,
+error/retry, unavailable, populated and successful-empty states remain distinct;
+stale counts are not shown during pending/error states. Added only the platform
+clinic-title key to both English and Hindi catalogs; no fallback policy changed.
+
+Guarded Node 20.19.4 verification: **30 passed / 7 suites**, zero failures/skips,
+including platform UI, transport/cache tests, existing customer scope/API/repository
+regressions and B1 presentation boundary checks. Production TypeScript passed.
+Scoped ESLint passed with no diagnostics on the new platform paths and dashboard.
+No frontend guard-violation marker appeared. Existing customer screen's five
+unused-symbol warnings from the preceding task were not cleaned up. Evidence:
+`/private/tmp/nova-platform-frontend.json` and `.log`,
+`/private/tmp/nova-platform-ts.log`, `/private/tmp/nova-platform-eslint.log`.
+
+Native visual/accessibility and authenticated live listing are UNVERIFIED.
+No services restarted. Live calls require separate permission for the mandatory
+platform audit inserts; no development database writes were performed. Existing
+commercial correction commit is unchanged. No extension, role/membership change,
+commit, push or merge. Existing recovery/Expo notification work was preserved.
