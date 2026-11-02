@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { act, render, waitFor } from '@testing-library/react-native';
+import { act, cleanupAsync, render, waitFor } from '@testing-library/react-native';
 import { ReactNode } from 'react';
 import { Text } from 'react-native';
 import { ApiRequestFallbackProvider } from '../../../core/providers/ApiRequestFallbackProvider';
@@ -17,9 +17,12 @@ jest.mock('../../../core/utils/errorHandler', () => ({
 
 const FALLBACK_MESSAGE = 'An unexpected error occurred. Please try again.';
 
-const createClient = () => new QueryClient({
-  defaultOptions: { queries: { retry: false } },
-});
+const clients = new Set<QueryClient>();
+const createClient = () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  clients.add(client);
+  return client;
+};
 
 const renderWithClient = (client: QueryClient, children: ReactNode) =>
   render(
@@ -72,7 +75,16 @@ describe('ApiRequestFallbackProvider', () => {
     resetApiRequestActivityForTests();
     mockLogError.mockClear();
   });
-  afterEach(() => {
+  afterEach(async () => {
+    // Unmount observers while fake timers still own their GC scheduling.
+    // Restoring real timers before RNTL's outer cleanup leaks 5-minute timers.
+    await cleanupAsync();
+    // Pending query cancellation settles asynchronously and schedules GC in finally.
+    // Await it before removing cache entries or restoring real timers.
+    await Promise.all([...clients].map(client => client.cancelQueries()));
+    clients.forEach(client => client.clear());
+    clients.clear();
+    resetApiRequestActivityForTests();
     jest.useRealTimers();
   });
 
@@ -95,7 +107,6 @@ describe('ApiRequestFallbackProvider', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
     // This is a UI fallback, not a forced HTTP/query cancellation.
     expect(client.isFetching()).toBe(1);
-    client.clear();
   });
 
   it.each([500, 503])('shows the generic fallback for an unhandled %i response', async (status) => {
@@ -103,7 +114,6 @@ describe('ApiRequestFallbackProvider', () => {
     const screen = renderWithClient(client, <FailureQuery error={{ response: { status } }} />);
 
     await waitFor(() => expect(screen.getByText(FALLBACK_MESSAGE)).toBeTruthy());
-    client.clear();
   });
 
   it('does not affect successful queries', async () => {
@@ -112,7 +122,6 @@ describe('ApiRequestFallbackProvider', () => {
 
     await waitFor(() => expect(screen.getByText('ready')).toBeTruthy());
     expect(screen.queryByText(FALLBACK_MESSAGE)).toBeNull();
-    client.clear();
   });
 
   it('leaves feature-owned failures to their existing presentation', async () => {
@@ -126,7 +135,6 @@ describe('ApiRequestFallbackProvider', () => {
       expect(client.getQueryState(['api-fallback', 'feature', '503'])?.status).toBe('error');
     });
     expect(screen.queryByText(FALLBACK_MESSAGE)).toBeNull();
-    client.clear();
   });
 
   it('does not change the existing authenticated-session 401 ownership', async () => {
@@ -137,7 +145,6 @@ describe('ApiRequestFallbackProvider', () => {
       expect(client.getQueryState(['api-fallback', 'global', '401'])?.status).toBe('error');
     });
     expect(screen.queryByText(FALLBACK_MESSAGE)).toBeNull();
-    client.clear();
   });
 
   it('does not force an explicitly long-running query into the ordinary fallback', async () => {
@@ -151,7 +158,6 @@ describe('ApiRequestFallbackProvider', () => {
     expect(screen.queryByText('Taking longer than usual…')).toBeNull();
     expect(screen.queryByText(FALLBACK_MESSAGE)).toBeNull();
     expect(client.isFetching()).toBe(1);
-    client.clear();
   });
 
   it('also protects ordinary Axios activity outside React Query', async () => {
@@ -168,7 +174,6 @@ describe('ApiRequestFallbackProvider', () => {
     await act(async () => {
       completeApiRequest(request);
     });
-    client.clear();
   });
 
   it('presents an unhandled raw Axios server failure without overriding retry ownership', async () => {
@@ -191,7 +196,6 @@ describe('ApiRequestFallbackProvider', () => {
       'api.fallback.transport_failure',
       { response: { status: 503 } }
     );
-    client.clear();
   });
 
   it('does not classify a canceled request during navigation as an unexpected failure', async () => {
@@ -206,8 +210,5 @@ describe('ApiRequestFallbackProvider', () => {
     });
 
     expect(screen.queryByText(FALLBACK_MESSAGE)).toBeNull();
-    await act(async () => {
-      client.clear();
-    });
   });
 });
