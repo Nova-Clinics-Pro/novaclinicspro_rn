@@ -1446,3 +1446,723 @@ No services restarted. Live calls require separate permission for the mandatory
 platform audit inserts; no development database writes were performed. Existing
 commercial correction commit is unchanged. No extension, role/membership change,
 commit, push or merge. Existing recovery/Expo notification work was preserved.
+
+
+### 2026-10-30 — Strict platform dashboard architecture audit (append-only correction)
+
+Audited all 16 paths in 7ad1dc4276956556fb25dcd9460f214827752ec8, the exact backend
+c2e8691 commit, shared UI/theme/navigation, B0 ratification and ADR-PF-015. Earlier
+functional passes do not establish strict architecture/theme/navigation acceptance.
+This is an evidence correction, not a rewrite of historical implementation.
+
+| Committed frontend file | Actual responsibility | Strict gate disposition |
+| --- | --- | --- |
+| app/super-admin/index.tsx | Dashboard invokes usePlatformTenants(0,1), uses total not items.length, generic error/loading/unavailable metrics | Correct count semantics; no clinic table/inline Manage; inherited local logout confirmation/static styles plus newly unthemed loading/error text |
+| app/super-admin/tenants/index.tsx | Selects platform list screen | COMPLIANT route adapter |
+| app/super-admin/tenants/[tenantId].tsx | Selects platform read-only detail screen | COMPLIANT adapter; actual screen Back is noncanonical |
+| core/localization/translations/en-US.json | platformTenants.title only | COMPLIANT; no fallback change |
+| core/localization/translations/hi-IN.json | Matching platform title key | COMPLIANT parity; native layout UNVERIFIED |
+| docs/Architecture/NOVA-PRODUCT-ARCHITECTURE.md | Prior evidence sections | Preserved; qualified by this dated correction |
+| features/tenants/data/datasources/platformTenants.api.ts | Sole platform HTTP boundary, shared axiosClient, encoded identifier | Transport placement COMPLIANT; raw response.data typed as domain without a mapping boundary |
+| features/tenants/data/repositories/platformTenants.repository.ts | TanStack query/cache keys, calls datasource | B0 permits repository hooks; strict requested domain repository contract/composition missing |
+| features/tenants/domain/entities/platformTenant.ts | Wire-shaped interface/page with snake_case fields | No domain-to-data import; distinct DTO/domain mapping not implemented |
+| features/tenants/presentation/hooks/usePlatformTenants.ts | Reads canonical authenticated identity; imports concrete query-hook exports | No direct transport; strict contract abstraction missing; do not mislabel B0-permitted hook placement itself forbidden |
+| features/tenants/presentation/hooks/useOrganizationTenantScope.ts | Exposes existing scope refetch | COMPLIANT narrow customer error-retry addition |
+| features/tenants/presentation/pages/PlatformTenantsScreen.tsx | List/detail render, pagination state, route navigation | VERIFIED theme, shared control and navigation deviations; no commercial table/inline Manage |
+| features/tenants/presentation/pages/TenantsListScreen.tsx | Distinguishes customer loading/scope/error/empty state | Narrow error correction; existing custom header/buttons/routes are inherited debt, not a new platform permission |
+| tests/tenants/platformTenantReads.test.tsx | List/detail/dashboard state/count tests | Passing behavioral tests; mocks shared header and theme, not full UI consistency verification |
+| tests/tenants/platformTenantTransport.test.tsx | Namespace/page params, encoded detail, errors, identity-separated query cache | Passing transport/cache tests; no domain mapping contract test |
+| tests/tenants/tenantListingFailurePresentation.test.tsx | Customer scope/error/empty and unavailable dashboard | Passing; shared navigation and strict theme not covered |
+
+Actual list flow: SuperAdminDashboard or PlatformTenantsScreen ->
+presentation/hooks/usePlatformTenants.ts -> data/repositories/platformTenants.repository.ts
+(TanStack useQuery) -> data/datasources/platformTenants.api.ts -> central axiosClient
+-> platform GET -> raw transport body travels back as a PlatformTenant/Page type.
+Detail uses the corresponding usePlatformTenant / usePlatformTenantQuery /
+getPlatformTenantApi path. No screen imports Axios/fetch/datasource; screens do
+not construct API endpoints or decide commercial entitlement.
+
+B0 ARCHITECTURE-RATIFICATION.md:25-43 explicitly permits feature query hooks in
+data/repositories as the approved application/query boundary. Their physical
+location or import by a presentation hook is NOT automatically a violation.
+However this implementation has no domain repository contract, distinct wire DTO,
+mapper or injected repository implementing that contract. It does not meet the
+newly requested stronger contract flow. Existing tenant.entity.ts supplies an
+explicit DTO-to-domain mapping precedent. A compatible correction can retain the
+approved query-hook boundary and add a typed platform read repository/DTO mapper
+below it; do not add a ceremonial duplicate hook layer or a parallel API client.
+
+Verified deviations (new unless otherwise stated):
+
+- PlatformTenantsScreen.tsx:2,10,23-25,39 uses native Button controls, not approved
+  shared themed controls. :20,36 hardcodes padding=16 instead of spacing.md;
+  :21,22,37,38 and error/loading states omit central typography or text color.
+  No hex/RGB literal exists in this new screen; literal padding and native
+  defaults still violate the strict token gate. Replace with approved shared
+  components and theme spacing/typography/color/radii/sizes, not a local palette.
+  Required tests: theme rerender across existing palettes, states/text/accessibility,
+  token guard and supported responsive/native observations.
+- :23 interpolates a UI route locally; :39 implements an ad hoc native Back.
+  List has no shared Back header, while super-admin/_layout.tsx:23 hides stack
+  headers. There is no shell-provided Back to inherit. Reuse DashboardHeader's
+  onBackPress and a governed feature route builder, with safe back/root behavior.
+  Required tests: shared Back invoked once, no duplicate header/control, no root
+  Back, unchanged protected-route handling and inline Manage no navigation.
+- Dashboard index.tsx:33-64 local web/native logout confirmation is INHERITED,
+  not introduced by 7ad1dc4. It calls useAuth.logout, which correctly delegates
+  to the canonical unifiedLogoutService (cache/session cleanup preserved).
+  Shared header Logout is already rendered at :68-74, but confirmation/error
+  UI is locally duplicated. Reuse the canonical command with shared approved
+  confirmation orchestration; do not add direct Supabase signOut. Tests must
+  exercise confirmation, one logout command and canonical cleanup/navigation.
+- Dashboard :85-86 introduces loading/error Text outside central typography and
+  text tokens. Existing radius=12 styles at :260,283 are INHERITED, as are static
+  colors and placeholder notification/profile handlers (:72-73), alert-only
+  feature actions and broad hardcoded copy. These are not genuine implemented
+  administration actions; the new dashboard must not reproduce placeholders.
+- Core DashboardHeader, StatCard, QuickActionButton and ConfirmationDialog exist.
+  DashboardHeader has optional Back/Logout callbacks; no standalone canonical
+  Logout-confirmation hook/button was found in core/auth. No general shared
+  Button/Table/Input/Badge component was found in core/components; do not invent
+  feature-specific copies. StatCard itself contains inherited literal shadow/
+  elevation values (:76-80); core/theme has no dedicated elevation export.
+  Approve any necessary shared primitive/confirmation/elevation extension before
+  implementing the strict requirement; do not silently expand global UI debt.
+
+Before/after intended boundary (NOT IMPLEMENTED): screen -> approved query hook
+-> domain platform read repository contract -> concrete data repository/DTO mapper
+-> platform datasource -> shared client. Backend remains authoritative. Central
+cache key conventions and identity segregation remain. Customer scope/selection
+and all mutations remain unchanged. Shared theme/header/confirmation replace
+local visual/navigation implementations, not their business behavior.
+
+Dashboard target is approved UX but NOT IMPLEMENTED: columns are clinic name,
+code, type, operational status, owning organization, trial state/expiry,
+subscription plan/status, effective entitlement and inline Manage. Manage sections
+are Overview, Organization, Commercial, Administration and Audit. Root gets shared
+Logout and no meaningless Back; actual subpages get one shared Back. Desktop table
+and mobile wrapping/expansion must preserve direct status visibility. No View
+Status detour, fake values, disabled placeholder write buttons or per-row HTTP
+fan-out. Extend Trial stays absent/unavailable until its authenticated workflow
+and separate execution authorization are satisfied.
+
+BLOCKER: existing platform schema intentionally contains metadata and counts
+only. Trial GET still requires customer organization/tenant context, subscription
+GET requires same-tenant RBAC, and audit reads require the explicit platform
+capability in accepted ADR-PF-015:106-113. A new/expanded privileged aggregate read
+contract is required; never reuse customer access checks as a platform bypass.
+Propose batched organization/commercial summaries for list and bounded histories
+for Manage using canonical CommercialEntitlementService. Audit feed must be
+separately capability-gated, tenant-target constrained and safe-field allowlisted,
+with organization/commercial/platform event ownership retained. No new clinical
+access or write permission. Exact capability and exposure require Security/Product
+approval. Until then no new API, dashboard implementation or production correction
+was made under this task's explicit STOP conditions.
+
+Fresh offline evidence: 41/41 backend tests and 30/30 frontend tests passed with
+zero failures/skips/errors and zero guard violations. Existing B1 architecture
+guard passed unchanged; it detects raw network imports/calls, not every typed
+contract, theme or navigation requirement. TypeScript passed. Scoped Ruff passed;
+ESLint had zero errors/five inherited TenantsListScreen unused-symbol warnings.
+Files: /private/tmp/nova-platform-architecture-audit-{backend,frontend}.json and
+.log; -ts.log, -eslint.log, -ruff.log with the same audit prefix. No new UI/theme/
+Manage/navigation tests were claimed. Authenticated live browser, responsive
+layout and native accessibility remain UNVERIFIED. Only this existing architecture
+record and backend Engineering Truth were appended; unrelated work is preserved.
+No code, source commit, service state, database, role, membership or trial changed.
+
+
+### 2026-10-30 — Approved dashboard remediation: implementation and traceability
+
+Owner approved the prior strict-audit corrections and platform commercial
+summaries. Historical entries above remain intact; the prior stop applies only to
+unapproved audit reads, which Phase E explicitly permits leaving unavailable.
+
+Before: screen -> query-hook -> raw transport data labeled as domain model.
+After: screen -> existing authenticated application/query-facing hook ->
+B0-approved repository query boundary consuming IPlatformTenantRepository -> data
+repository + DTO mapper -> datasource/shared axiosClient -> platform API.
+PlatformTenantDto/PageDto are separate from camel-case domain entities. Domain
+contracts have no data/transport imports. The existing query-hook boundary was
+retained; no ceremonial extra hook, second API client, authority derivation or
+customer membership impersonation was introduced. Query keys keep platform
+prefixes, authenticated actor, page and target identity, adding search/filter/sort
+inputs for correct cache segregation. Existing logout cancellation/cache clearing
+and auth navigation remain canonical and unchanged.
+
+Central primitives added only where missing: ThemedButton, ThemedInput,
+ThemedText and responsive DataTable. They use useClinicTheme typography/colors/
+spacing/radii/sizes/borders and central opacity. Shared DashboardHeader retains
+its callback API and Back/Logout controls, now binds the active theme; notification
+callback and 99+ badge compatibility are tested. ConfirmationDialog retains its
+public API and uses central tokens. Its old shadow values were moved unchanged
+to central elevations.dialog; gaps/radii are normalized to existing spacing/radius
+scales. Named central sizing tokens cover wide layout and dialog dimensions.
+No local palette, native unthemed button, arbitrary feature font or framework.
+
+PlatformAdminShell composes that single shared header and ConfirmationDialog with
+one centralized useLogoutConfirmation hook around useAuth.logout. Confirmation
+coalesces in-flight commands, cancellation performs no logout, failures remain
+visible in the dialog, and canonical unifiedLogoutService owns session/cache/
+navigation cleanup. Root has no Back. Subpages use shared useBackNavigation with
+history or the governed platformTenantRoutes.dashboard fallback. No direct
+Supabase signOut, screen-owned confirmation, duplicate header or Back. Protected
+route authorization remains unchanged. Super Admin layout background also binds
+the central active theme. Other unmodified legacy Super Admin pages are outside
+this correction; no broad UI or clinical refactoring occurred.
+
+Root /super-admin is now the primary PlatformClinicWorkspace. Its columns show
+clinic name/code, type, operational status, owning organization, stored trial
+state/expiry, subscription plan/status, effective canonical entitlement, Manage.
+All statuses are visible before expanding. Manage expands/collapses inline and
+renders Overview, Organization/association, Commercial details/recent extension
+history, Administration and Audit. It makes no additional per-row request or page
+transition. Detail deep links reuse the same read-only Manage rendering. Search,
+status filters, deterministic sorting, paging and full filtered totals work;
+changing search/filter/sort resets page and expansion. Pending/error states never
+claim stale or zero totals. Empty is only a successful empty response. Nullable
+commercial data and multiple candidates have explicit not-configured/inconsistent
+presentation. Backend entitlement is rendered as supplied; ACTIVE stored state
+is never interpreted as valid access by the UI.
+
+There is no View Status detour, fabricated subscription statistic or fake action.
+Administration explicitly states that no write actions are verified/authorized
+here. No Extend Trial or payment action is offered. Audit explicitly states the
+capability requirement and performs no event-feed API request. No approved audit-
+read capability/field-level read contract was found in the inspected repository
+records; is_org_admin is not substituted. Future enablement requires Platform
+Security/Product Architecture approval and assignment rules. Existing capability
+assignment infrastructure alone does not authorize audit reads.
+
+Desktop rendering uses shared table columns; below the central wide-layout token,
+rows stack labeled cells while retaining every essential status. Text keeps native
+font scaling/wrapping. Automated widths 400/1200 with fontScale=2 verify component
+presence/behavior, not real layout bounds or TalkBack. All four current clinic
+palettes are tested across rerenders. Manual responsive/native visual, large-text
+clipping, focus traversal and screen-reader checks remain UNVERIFIED.
+
+Fresh verification: **86 passed / 14 frontend suites**, zero failures/skips and
+zero network/process guard markers. Tests include repository/DTO/domain contract,
+identity cache, injected repository, loading/error/empty/populated states,
+search/filter/sort/paging, inline expansion with no navigation/fan-out, denied
+audit availability, shared Back fallback/root absence, confirmation/cancel/error/
+in-flight coalescing, theme/header callbacks, canonical logout regressions,
+localization and old/new architecture guards. TypeScript production passed;
+scoped ESLint (including final shared/test paths) has zero errors/warnings.
+English/Hindi platform copy/keys are present; no fallback or locale policy change.
+Backend guarded offline selection has **67 passed**, no failures/skips/errors or
+guard violations. Existing guards/assertion purposes were preserved; tests adapted
+only to the approved read-model and UI contracts, with new stricter guards added.
+
+Evidence uses /private/tmp/nova-superadmin-{backend,frontend}.json and .log,
+-ts.log, -eslint.log, -eslint-final.log and -ruff.log. Exact changed paths/hashes
+are in /private/tmp/nova-superadmin-remediation-manifest.json. No new documentation
+framework. All source remains uncommitted for review. Unrelated password recovery,
+notification and other working-tree changes are preserved. No live database,
+audit insert, authentication-provider request, trial grant, service start/restart,
+configuration, dependency, CI, push or merge operation was performed. Next steps
+are scoped Git inclusion review and separately authorized live development/UI
+verification with mandatory audit persistence. No release/UAT-complete claim.
+
+## 2026-10-30 — Super Admin UX rejection and bounded presentation correction
+
+Owner visual verdict supersedes any prior implication of completed UX acceptance.
+The earlier implementation returned the right read data but exposed raw enums and
+ISO timestamps, used primary filled row actions, and arranged Manage as a single
+vertical field stream. Unit tests established data/section presence, not visual
+quality. Architecture/API verification is retained; visual acceptance is pending.
+
+The corrected table retains clinic name/code/type, operational status, owning
+organization, trial/expiry, subscription, canonical effective entitlement and an
+inline Manage toggle. Shared ThemedButton adds an opt-in subtle variant (existing
+primary behavior retained); StatusBadge uses existing central feedback/surface
+colors and caption typography. No new color palette, font or local spacing scale.
+DataTable weights identity/organization columns and uses its existing responsive
+breakpoint; the Manage action keeps the accessible touch target without a large
+filled block or repeating each clinic name in its visible label.
+
+Before Manage: sequential heading/field text. After: wrapping, bordered Overview,
+Organization, Commercial, Audit and Administration cards; on narrow screens each
+card occupies the available row. Identifiers and aggregate version are secondary,
+explicitly expandable details. Canonical shared Back/Logout remain unchanged.
+Search, status filters, sort and pagination retain server query ownership.
+
+Display-only application adapter platformTenantPresentation.ts maps not_entitled
+to Access blocked and no_commercial_evidence to No valid commercial entitlement,
+localizes status labels, and formats timestamps with device timezone indication.
+Date-only billing dates remain calendar dates. Unknown values render an explicit
+unavailable/review label rather than an internal enum. Elapsed stored ACTIVE
+trials display Expired while the stored state remains available in Commercial.
+This clock-based display label never authorizes access, changes lifecycle state,
+or overrides canonical backend entitlement. Canonical entitlement service and
+all backend files remain unchanged during this correction.
+
+Commercial action disposition: the existing POST onboarding/{tenant_id}/
+commercial-trial/extensions endpoint requires the trusted active database
+platform administrator, server-resolved active target/organization/association,
+aggregate version, reason, duration and idempotency header. It is not called here.
+The platform read contract currently returns actions: []; it provides no verified
+command eligibility. Authenticated PostgreSQL command acceptance is outstanding.
+The runtime channel field accepts nonempty text; repository test examples alone
+are not sufficient authority to ratify SUPPORT spelling/vocabulary. No new
+channel or permission was introduced. Administration therefore shows a specific
+unavailable explanation, not a working-looking extension button. A separately
+reviewed authoritative availability and channel contract is needed before a
+mutation UI can be enabled. The 30-day grant remains unexecuted. Audit history
+continues to state unavailable pending the approved explicit read capability.
+
+Verification artifacts remain outside the repository under
+/private/tmp/nova-superadmin-ux-*.json and *.log. Guarded CPython 3.11 backend
+regressions: 67 passed, zero guard violations (three inherited dependency
+warnings). Frontend regression evidence and final counts are recorded below.
+Focused coverage includes elapsed-trial labeling without evidence mutation,
+entitlement/reason labels, local timezone/date-only formatting, structured cards,
+real Dimensions-driven mobile/desktop branches, theme-bound badges/compact actions,
+secondary identifiers, expand/collapse, unavailable actions, canonical logout,
+customer scope and architecture dependency guards.
+
+Visual acceptance: NOT VERIFIED. Browser automation was unavailable due to
+Computer Use permission in the acceptance session. No authenticated browser
+session or tokens were extracted. Owner verification must show the refreshed
+Super Admin table at desktop and narrow width, inline Manage open/closed, readable
+status badges/local dates, card wrapping at large font, search/filter/sort/pages,
+explicit audit/action unavailability, and canonical Back/Logout confirmation.
+Provide screenshots of the table and expanded Manage at both widths, excluding
+credentials or recovery URLs. Mocked responsive tests are not native or browser
+visual acceptance. No commit, push, commercial mutation or database write occurred.
+
+Final correction verification: 97/97 frontend tests passed across 15 suites;
+zero failed/skipped. Production TypeScript and scoped ESLint passed. Backend
+67/67 guarded tests passed, zero guard violations. Existing B1/platform boundary,
+customer-isolation and canonical logout checks passed. These results do not
+constitute visual acceptance or authenticated commercial-command acceptance.
+
+## 2026-10-30 — Owner clarification: Super Admin dashboard is read-only
+
+This decision supersedes the preceding Administration/action-availability UI
+proposal. The Administration panel and its extension-unavailable prompt are
+removed. Manage/Close only expand/collapse inline read details; there are no
+command handlers, mutation hooks, role controls, trial-extension or subscription
+management controls inside Manage. No commercial endpoint was invoked, and no
+service restart, database write or role change was performed for this correction.
+
+Manage now separates Overview, Organization, Commercial, Entitlement and
+Audit/History. Cards align at the start and use their content height rather than
+stretching into equal-height empty panels. Fields wrap within cards using existing
+spacing, typography, surfaces, borders and size tokens. Overview contains clinic
+name/code/type, operational status and creation date; Organization shows ownership
+and association status; Commercial shows trial lifecycle, activation/expiry and
+subscription/billing periods; Entitlement shows the canonical effective state and
+reason; Audit/History retains the explicit audit-unavailable state and bounded
+read-only extension history. Secondary identifier-toggle controls were removed.
+
+The clinic-label defect was a mismatch between theme IDs and the actual canonical
+clinic types. The type-only ClinicType dependency references the existing
+core/hooks/useFeatures.ts union without importing its runtime auth/network code;
+the display map covers general, ayurveda, allopathy, dental, physio and
+multispeciality. Operational display preserves server lifecycle status, including
+onboarding when isActive=false; it no longer substitutes inactive from that flag.
+Commercial entitlement remains a separate server decision. No lifecycle,
+authorization, tenant context, transport or backend contract changed.
+
+Main table operational status, trial expiry, subscription and effective entitlement
+remain visible. Existing query/repository/datasource flow, pagination, search,
+sorting, shared theme, canonical Back and canonical Logout remain intact. New
+architecture assertions prevent buttons, onPress handlers and mutation access in
+Manage. Tests cover all canonical clinic labels, onboarding state, natural card
+height, absence of the Administration panel and all detail buttons, responsive
+layout, customer scope and canonical navigation/logout.
+
+Automated results are recorded below. Browser/native visual acceptance remains
+NOT VERIFIED. Owner review must confirm readable table labels (especially
+Ayurveda and Onboarding), inline open/close, the five read-only sections, compact
+content-height cards at desktop/narrow widths, commercial information visible
+without Manage, and absence of administrative action controls. No commit is
+permitted before owner acceptance. Earlier automated evidence is retained as
+history and does not override this visual gate.
+
+Read-only clarification verification: 104/104 frontend tests passed across 15
+suites, zero failed/skipped; production TypeScript, scoped ESLint and git diff
+checks passed. Guarded execution used the existing offline runner. Layout tests
+exercise widths 320, 400 and 1200; visual acceptance remains pending owner review.
+
+## 2026-10-30 — Screenshot-driven Super Admin acceptance baseline
+
+Latest owner instruction (attachment 60edfea9-da06-4c0f-a308-e9dab51e1e99)
+explicitly supersedes the preceding no-Administration-panel instruction. The
+approved screenshot is a layout specification, not live counts or command
+execution authority. Administration is now visible with two disabled controls;
+no commercial action is enabled or executed.
+
+Layout implementation: shared application header with opt-in labeled canonical
+Logout; four summary cards; wrapping horizontal search/select/filter toolbar;
+compact eight-column desktop table / labeled mobile clinic rows; outlined
+Manage/Close toggle with expanded-row border; inline clinic identity and status
+header; Overview, Organization, Commercial and Effective Entitlement cards; then
+Administration (primary) and Audit/History (secondary). Four information cards
+appear at the central wide breakpoint, two on tablet and one on mobile. Cards
+retain content height and do not stretch into equal-height empty panels. Table
+and detail display use existing localization/presentation mapping, semantic
+badges and device-timezone dates. Read-only technical IDs and extension-history
+expansion were restored per the new screenshot instruction.
+
+Shared additions: ThemedCard, ThemedSelect and ThemedNotice extend the central UI
+library rather than introduce feature-local control copies. The legacy StatCard
+uses static palettes/literal styles and was deliberately left unchanged; summary
+composition instead uses the same new shared theme-bound card as Manage. All
+appearance values reference active theme typography, spacing, surfaces, borders,
+radii and size tokens. The shared header's labeled logout is opt-in; existing
+canonical logout command/confirmation and Back ownership remain unchanged.
+
+Contract coverage and explicit gaps:
+- Total and active summary counts use an unfiltered platform list query with
+  limit=1 through the existing actor-keyed B0 query/repository/datasource flow.
+  Page rows use a separate query. Summary totals are not filtered/page counts.
+  Errors/initialization do not fabricate zero; summary can be retried.
+- Commercial attention and expiring-soon aggregation are not in the current
+  backend contract. Their cards say unavailable, with the missing-contract reason.
+  No frontend count derivation or unapproved expiry window was introduced.
+- Search is server-side name/code only. Status supports active/inactive/suspended;
+  sort supports newest/name ascending/name descending. Clinic-type and organization
+  selects are visibly disabled, with a backend-support explanation. Organization
+  search/oldest sorting and onboarding-specific filter are not claimed supported.
+- Clear filters resets the query and page. Page size uses existing server limit
+  support (10/25/50), defaults to 10, and resets expanded state. Footer shows the
+  current page, filtered result count and visible range; page controls are bounded.
+- Organization type is absent from the read contract; no clinic/organization
+  equivalence was inferred. Existing owning organization and association IDs/status
+  are displayed server-authoritatively.
+- Extend Trial is visible but disabled: trusted platform-admin authorization and
+  authenticated PostgreSQL workflow acceptance remain pending. The committed
+  endpoint supports 1–30 days/version/reason/idempotency, but command eligibility
+  and approved channel vocabulary have not been established for enabling this UI.
+  No form/confirmation or command is opened by a disabled button; no grant sent.
+- Manage Subscription is visible but disabled: no approved management operation
+  exists here. No payment endpoint, navigation placeholder or command was invented.
+- Audit read capability remains absent. The explicit unavailable banner remains;
+  recent audit/commercial events are marked unavailable, and only already-projected
+  bounded extension records can be expanded. No audit read request was added.
+
+Architecture: presentation -> existing approved query-hook boundary -> domain
+repository -> data repository/DTO mapper -> datasource -> backend. No transport,
+SQL, entitlement calculation or command writer added to presentation. Backend
+implementation, customer membership authorization and entitlement resolver remain
+unchanged. No production, credential, environment, dependency or original dirty
+worktree changes. No live service navigation or database mutation was performed.
+
+Verification uses preserved offline guards, NODE_ENV=test and the existing Jest
+overlay. Component tests cover global vs filtered counts, missing metrics,
+filters/clear/sort/pages, canonical clinic types/statuses, elapsed-trial display,
+inline expansion, disabled actions/no confirmation, technical/history toggles,
+audit restrictions, central themes, responsive dimensions and canonical Back/
+Logout. Existing customer-isolation and B1/platform boundary checks are retained.
+Results and exact file hashes are recorded in the external screenshot receipt.
+
+VISUAL ACCEPTANCE: PENDING. The reference was inspected, but no actual running
+signed-in browser comparison or native PASS is claimed. Computer Use was
+unavailable in the preceding acceptance session; no user token was extracted or
+substituted. Owner acceptance checklist: compare header and summary strip;
+search/filter toolbar; all eight columns; highlighted inline Manage; four cards
+at wide desktop and wrapped cards at tablet/mobile; visible disabled Administration
+buttons and explanations; restricted Audit/History; technical/history expansion;
+pagination and filtered/global totals; canonical Logout confirmation and Back on
+subpages. Provide fresh desktop and narrow screenshots, with Manage open and
+closed. Missing server contracts above prevent exact data/interaction parity
+with the reference; they must remain explicit, not be hidden behind example data.
+No commit is permitted before owner visual acceptance.
+
+Final screenshot-driven automated results: 106/106 frontend tests passed across
+15 suites; 67/67 backend tests passed with zero guard violations. Production
+TypeScript, scoped ESLint and diff checks passed. Three backend dependency
+deprecation warnings remain inherited. Ruff was not rerun because no backend
+files changed. These results are not live browser or native visual acceptance.
+
+## 2026-11-01 — Super Admin stabilization, partial live acceptance and contract decisions
+
+Current scope preserves the October 30 screenshot-driven layout. Only compact
+card padding, identifier disclosure and concise availability copy changed.
+Organization and association UUIDs now appear exclusively under the existing
+Show Identifiers toggle with the clinic identifier/version; normal Organization
+content is name/status/association status. Central theme, cards, buttons, Back,
+Logout, query/repository/datasource boundaries and command-disabled state remain.
+
+### Transport investigation — exact failure remains unidentified
+
+The configured public API origin is http://192.168.1.7:8000. Backend PID 2978 and
+Metro PID 98548 have the named consolidated worktrees as cwd. Current LAN health
+returns 200; browser-origin OPTIONS for platform tenants with Authorization
+preflight returns 200 and Allow-Origin '*'; unauthenticated list returns 401.
+These checks do not prove the owner's failing browser request succeeded.
+
+The literal api.fallback.transport_failure originates in
+core/providers/ApiRequestFallbackProvider.tsx after apiRequestActivity records a
+response-less or >=500 non-cancelled transport error. The provider logs the
+context through logError (development console.error) and retains its fallback UI.
+Platform reads follow screen -> usePlatformTenants -> domain repository-backed
+query boundary -> repository DTO mapper -> platformTenants.api -> axiosClient ->
+platform router -> application -> domain ports -> SQL adapter/UoW. Axios timeout
+is 30 seconds; global query retry policy retries transient errors at most twice,
+not deterministic 4xx. Optional disabled metrics/filters issue no corresponding
+unsupported-feature request. No evidence identifies the actual failed method,
+pathname, status/code or response. No error is suppressed or reclassified, and no
+transport/security code was changed. The owner has been asked once for sanitized
+Network evidence; never export bearer headers, recovery links or raw HAR files.
+
+### Live read evidence, not substituted authentication
+
+November 1 at approximately 06:50 IST: existing signed-in browser requests for
+platform list limit=1 and limit=10 returned 200 in the modified backend process.
+Corresponding UUIDs 82c1df0d-0e98-4f0f-8a12-b1eb390ea248 and
+6e29c183-b9bd-4330-82c0-0f445f3b700d persist in successful platform.tenant.list
+records for the trusted database actor. Read-only catalog evidence confirms the
+actor active/platform-admin flags, 18 clinic rows, 12 operationally active clinics,
+and one active association for the target. This verifies those specific list
+calls and correlated audit persistence, not a fresh Codex-authenticated detail
+call or all response fields. No authenticated session was exposed to Codex, and
+no token was extracted/fabricated. Live detail, paginated full-ID coverage and
+unauthorized signed-in actor checks remain pending. Offline negative tests and
+unauthenticated 401 are separate evidence.
+
+Owner-assisted read acceptance: in the existing signed-in browser refresh
+/super-admin; inspect list pages offset=0/10 and confirm 18 distinct clinic IDs and
+12 active globally. Then open /super-admin/tenants/a1bd6dda-dbcd-4321-950a-fa28f435a4dd
+and inspect GET /api/v1/platform/tenants/{id}. Share only method/path/status and
+safe request-correlation UUID (if exposed), not Authorization. Compare organization,
+trial, subscription, entitlement and bounded history to the read data. Subsequent
+read-only audit verification must match these exact fresh calls. Do not click any
+commercial mutation or create a different login/role for this verification.
+
+### Extension gate — existing endpoint retained, no live grant
+
+POST /api/v1/onboarding/{tenant_id}/commercial-trial/extensions requires the
+existing verified identity, active authoritative platform-admin database user,
+active target, and unique active organization association resolved server-side.
+Request fields: aggregate_version >=1, extension_days 1..30, nonblank reason,
+channel (SUPPORT is the owner's specified business channel), optional requester/
+request-operation identifiers, and Idempotency-Key. The facade scopes idempotency
+by organization/actor/operation and fingerprints target association and payload.
+UoW commit follows domain persistence and audit; exceptions roll back. Domain
+requires matching aggregate version and eligible stored state; extensions from
+elapsed ACTIVE use max(previous expiry, authoritative UTC now) + requested days.
+No second extension API, command writer, permission or channel was introduced.
+
+Read-only live state: stored ACTIVE, elapsed expiry October 26, version 2, zero
+extension days/records, no claim, no paid subscription; target operationally active
+with one active organization association. This is conditionally eligible for the
+existing 30-day domain path, subject to a fresh locked authoritative read at command
+time. Canonical clinical entitlement remains denied after trial expiry. Offline
+extension tests do not prove real authenticated PostgreSQL commit/rollback or
+organization audit behavior. That acceptance is unavailable without an approved
+session and a controlled synthetic test mechanism that persists no business
+mutation. The real grant remains separately gated and unexecuted. Extend Trial
+stays disabled; no confirmation form or live submit is enabled. Manage Subscription
+also stays disabled because no approved operation exists.
+
+### Proposed minimal read contracts — NOT implemented or approved by this record
+
+The existing E8 domain already defines derived EXPIRING and uses
+commercial_trial_expiring_window_days (default 7); earlier wording implying no
+window implementation existed was incomplete. Reuse the effective backend policy,
+never a new frontend constant. A platform aggregate still needs approved counting
+scope and explicit treatment of inconsistent/multiple trial evidence.
+
+Proposed GET /api/v1/platform/tenants/summary, under the same strict platform read
+authority and mandatory audit: total clinics; operationally active; commercial
+attention = distinct operationally active clinics whose canonical entitlement is
+not operationally entitled (including inconsistent evidence, counted once);
+expiring soon = distinct clinics with one consistent trial whose canonical domain
+runtime_state is EXPIRING, using effective policy and server UTC as_of. Response
+must include as_of and effective window_days. Owner must ratify whether inactive
+clinics, paid clinics with an expiring trial and inconsistent evidence belong in
+each metric; none were arbitrarily combined into an implemented count here.
+
+Proposed GET /api/v1/platform/tenants/options: canonical clinic-type label/value
+options and server-resolved organization IDs/names from governed administration
+records. Extend existing list with clinic_type and organization_id predicates,
+combined with current search/status; filtered totals use the identical predicates,
+and sort retains the deterministic ID tie-breaker. Same application/domain ports,
+no SQL in transport and no partial-page client filtering. Current APIs do not offer
+these predicates/options, so the controls remain disabled. Approval is needed for
+the exact read contract/inclusion scope before implementation. Existing working
+name/code search, status filtering, sorts and pagination are unchanged.
+
+### Verification and stopping point
+
+Offline execution artifacts: /private/tmp/nova-stabilization-*.json and *.log.
+The old Node preload was missing; the first attempt stopped before Jest import.
+A standard-library-only temporary replacement restores fail-closed network/DNS/
+HTTP/TLS/process restrictions, dummy public configuration and disabled dotenv
+loading before Jest/Babel imports. No repository/dependency configuration changed.
+Backend retains its established pre-import Python network/database/process guard.
+No real PostgreSQL write tests, commercial commands or services were started.
+
+UI is ready for focused owner visual review, but overall stabilization remains
+BLOCKED — RUNTIME FAILURE (the reported failed request is not yet identified),
+BLOCKED — AUTHENTICATION (fresh controlled detail/extension acceptance unavailable),
+and BLOCKED — API CONTRACT (summary counting definitions/options/filter contracts).
+Do not declare the red error fixed or the full dashboard complete. No commit,
+push, merge, role change, migration, trial extension or payment occurred.
+
+Final stabilization execution evidence: 128/128 frontend assertions passed in 19
+suites, zero reported failed/skipped; Jest then retained open handles and did not
+exit. Only its verified PID 12996 was terminated (SIGTERM), not backend/Metro.
+Therefore a clean frontend process exit and the full-run exit-time guard snapshot
+are UNVERIFIED; no zero-violation/full clean-exit claim is made for that run.
+Focused UI/architecture run: 42 passed, exit 0, zero recorded guard violations.
+TypeScript and scoped ESLint passed, with zero recorded guard violations.
+Backend platform/customer/audit regression: 67 passed; extension/domain/transport
+selection: 60 passed; both exited 0 with zero guard violations. Scoped Ruff and
+13-file Python 3.11 grammar checks passed. No backend source changed.
+
+Current browser control attempt again returned Computer Use permissions are not
+granted. Authenticated Codex/browser acceptance and visual comparison remain
+BLOCKED; do not extract a browser token as a substitute. Original unrelated file
+hashes remain unchanged, both staging indexes are empty, and no commits were made.
+
+## 2026-11-01 — Remaining Super Admin acceptance: Jest closure and controlled-DB proposal
+
+### Verified test-only correction
+
+The 19-suite run previously passed assertions but retained referenced timers.
+Narrowing to the four transport/fallback suites reproduced the hang (21 passing
+tests). An external standard-library async_hooks probe identified seven real
+300000 ms React Query GC timers from Query.removeObserver during unmount. The
+fixture restored real timers before RNTL's outer afterEach unmounted observers.
+After correcting that order, a second probe found two GC timers from Query.fetch's
+asynchronous cancellation finally block. Clearing a query client before awaiting
+cancellation left those timers orphaned after timer restoration.
+
+Only tests/core/providers/ApiRequestFallbackProvider.test.tsx changed: track the
+fixture clients, await cleanupAsync(), await client.cancelQueries(), clear each
+client/cache and tracker, then restore real timers. Per-test clear calls moved
+into this single ordered teardown. No gcTime policy override, forceExit, blanket
+timer sweep, production code or assertion changes. TypeScript AST comparison
+confirms all 20 expect expressions are identical. Focused 21/21 and complete
+128/128 tests in 19 suites now exit naturally with status 0 and zero guard
+violations. The final full run used the exact persisted 19-suite selection from
+nova-stabilization-frontend.json. No open-handle warning remains. TypeScript and
+scoped ESLint pass. Earlier failed/hanging diagnostic attempts are not clean-exit
+acceptance evidence; their processes were cleaned up separately.
+
+### Still-unavailable runtime acceptance evidence
+
+No sanitized failed method/path/status/error was supplied in the current request
+or receipt; api.fallback.transport_failure remains a marker, not an identified
+request. No error handling changed. Do not reinterpret previous successful GETs
+as proof that the reported failure is fixed.
+
+No accessible authenticated browser session is exposed to the tools (the last
+Computer Use attempt denied permission). Do not extract browser credentials or
+substitute a service-role key, forged token or caller-set identity. Fresh detail
+and complete endpoint pagination remain BLOCKED, not failed. The previously
+observed database 18/12 count and correlated list records are retained as partial
+historical evidence. They do not establish a distinct-ID union for the two pages.
+Owner-assisted evidence still needed: normal signed-in UI requests for offset=0
+and offset=10 with limit=10 and identical cleared filters/sort; sanitized response
+IDs and totals; detail GET for a1bd6dda-dbcd-4321-950a-fa28f435a4dd; status and safe
+correlation UUID. Require 18 IDs, 18 distinct IDs, no duplicates, and exact
+request/audit actor/target/outcome/correlation matches. No new identities or role
+assignments are needed or authorized.
+
+### Proposed minimal PostgreSQL acceptance — SPECIFICATION ONLY
+
+Do not POST the real clinic's 30-day grant, even inside an assumed rollback.
+The existing HTTP facade commits its own UoW; wrapping an unrelated inspection
+connection in BEGIN/ROLLBACK does not roll back a request using another connection.
+A production-pool HTTP request is therefore unsuitable for this rollback test.
+
+Before execution, owner must approve this exact fixture/connection boundary and
+provide an approved authenticated test mechanism. A database/security operator
+must inspect triggers, rules, default/sequence behavior, extensions, external
+functions, change consumers and outbox/subscription hooks on the affected tables.
+Rollback does not undo sequence allocations, external calls, operational logs or
+all independently committed work. Stop if any uncontained external side effect
+or independent connection is found. Source inspection found repository flushes
+and same-UoW audit/idempotency, but is not a substitute for deployed catalog review.
+No migrations, grants, roles, existing memberships or production credentials.
+
+1. Use existing development project evkcvntjpkxlcxgwychq, verified CA+hostname TLS,
+   a dedicated connection and no role switching. Pin database/project identity.
+   Snapshot the protected real trial's version/expiry/history counters read-only.
+2. On that connection: BEGIN ISOLATION LEVEL REPEATABLE READ; SET LOCAL
+   statement_timeout='5s'; SET LOCAL lock_timeout='1s'; SET LOCAL
+   idle_in_transaction_session_timeout='60s'. Never COMMIT the outer transaction.
+3. Create only explicitly approved synthetic UUID-scoped organization, clinic,
+   active organization association and commercial trial fixtures. Reuse an approved
+   existing administrator actor as a read-only FK; do not create or elevate a user
+   or membership. A second synthetic target without a trial can test target binding.
+   Fixture writes require separate authorization before this plan is executed.
+4. Use a dedicated test-only ASGI composition, never the shared live backend.
+   Preserve real JWT validation and server-side platform-authority/target resolution.
+   Bind every UoW/repository/audit/idempotency session to the same connection with
+   join_transaction_mode='create_savepoint'. Verify transaction/connection identity
+   throughout. UoW commit releases only request savepoints; the outer transaction
+   must remain active. Any independently opened session or outer commit aborts the
+   test and fails acceptance. No application source/production wiring changes.
+5. Submit a one-day grant to the synthetic target only, using the existing endpoint,
+   channel SUPPORT, required reason, fresh fixture aggregate version and a unique
+   test idempotency key. Inspect actual trial/version/extension/event/org-audit and
+   org-idempotency rows inside the transaction. Require correct actor/organization/
+   tenant, exactly one transition and scoped response. An identical replay must
+   leave version/history unchanged; conflicting replay and stale version must fail.
+   The second target must never read/update the first target's trial.
+6. Verify failure rollback using an explicitly reviewed test-only audit-boundary
+   failpoint within a separate savepoint; do not revoke grants, disable auditing or
+   alter schema. This establishes transaction rollback behavior, not live permission
+   denial. No email, payment, notification, scheduler or external writer may run.
+7. ROLLBACK the outer transaction in finally and close all sessions/connections.
+   A separate read-only connection must find zero fixture UUIDs, idempotency keys,
+   events, extensions or audit rows, and unchanged protected real trial snapshots.
+   Stop/report if concurrent owners changed the real baseline rather than overwriting.
+
+Affected persistence is limited to org_organizations, org_tenants,
+org_organization_tenants, org_commercial_trials, org_commercial_trial_events,
+org_commercial_trial_extensions, org_idempotency_records and org_audit_logs;
+org_users is read-only. Inspect actual deployed dependencies before final approval.
+This savepoint procedure does not prove cross-connection concurrency or durable
+outer-commit behavior: those need separately approved isolated fixtures. It is not
+an authorization to execute, and not proof of authenticated live acceptance.
+
+### Conditional Git boundary
+
+Accumulate the reviewed manifests in chronological order: original 14-backend /
+31-frontend manifest, UX correction, read-only correction, screenshot implementation
+and November 1 stabilization receipts. All 51 prior file hashes matched before
+this correction. Add this one tracked test file to the frontend boundary. Final
+provisional boundary is 14 backend paths and 38 frontend paths; exact lists/hashes
+are in /private/tmp/nova-close-commit-scope.json. The frontend architecture document
+contains unrelated Expo notification/recovery appendices: include only platform/
+Super Admin hunks, preserving those unrelated appendices unstaged. Authentication,
+notification sources/tests, node_modules symlink, secrets, temporary tooling,
+receipts and all other dirty work remain excluded. Optionally preserve the test
+teardown as its own one-file frontend commit, separate from 37 dashboard paths.
+No commit is authorized. Transport evidence, authenticated detail/pagination and
+controlled PostgreSQL acceptance remain unresolved despite the Jest gate closing.
+
+### 2026-11-01 — Platform commercial read completion and controlled extension preparation
+
+The platform detail projection now carries bounded, authoritative extension records:
+decision, days, timestamp, previous and resulting expiry, support channel, reason
+and authorized approver identifier. This is commercial-extension history, not
+platform audit history. The latter remains unavailable until an explicit audit-read
+capability is approved; the UI distinguishes that state from an empty extension
+history and from API failure.
+
+The Super Admin screen can prepare a 1–30 day SUPPORT extension with a business
+reason and refreshes the platform projection before confirmation. It does not issue
+the commercial POST command. Platform-only administrators lack an approved command
+aggregate read contract, and PostgreSQL transaction acceptance is still required
+before a production-facing mutation can be enabled. The existing commercial-trial
+repository/datasource remains the future command boundary; no duplicate transport
+or local entitlement rule was added.
+
+Subscription information shown by the platform read projection is now expandable
+as a read-only detail view. Plan assignment, checkout, billing, suspension and
+cancellation remain customer-scoped E9/payment-provider operations and need a
+separate platform-admin contract, audit policy and owner authorization.
+
+Focused platform frontend tests passed 49/49, and offline backend platform-read
+tests passed 39/39 under the existing database/network/process guard. Production
+TypeScript, scoped ESLint, Python 3.11 parsing and scoped Ruff passed. This records
+offline evidence only; no extension, subscription, membership, role, audit-capability
+or commercial database record was changed.

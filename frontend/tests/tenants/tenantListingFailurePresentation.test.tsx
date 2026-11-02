@@ -12,14 +12,11 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jes
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('../../core/components/DashboardHeader', () => ({ DashboardHeader: () => null }));
 jest.mock('../../core/components/QuickActionButton', () => ({ QuickActionButton: () => null }));
-jest.mock('../../core/localization', () => ({ t: (key: string) => key, ErrorTokens: { auth: { logoutFailed: 'logoutFailed' } } }));
+jest.mock('../../core/localization', () => ({ t: (key: string) => key, getCurrentLocale: () => 'en-US', ErrorTokens: { auth: { logoutFailed: 'logoutFailed' } } }));
 jest.mock('../../features/auth/presentation/hooks/useAuth', () => ({ useAuth: () => ({ logout: jest.fn(), currentUser: { fullName: 'Synthetic Admin' } }) }));
 jest.mock('../../features/tenants/presentation/hooks/useOrganizationTenantScope', () => ({ useOrganizationTenantScope: () => mockScope }));
 jest.mock('../../features/tenants/data/repositories/tenants.repository.impl', () => ({ useTenantsListQuery: () => mockQuery }));
-jest.mock('../../core/theme/useClinicTheme', () => ({ useClinicTheme: () => ({ colors: {
-  background: { default: '#fff' }, primary: { default: '#123', onPrimary: '#fff' }, text: { primary: '#111', secondary: '#222', tertiary: '#333' },
-  surface: { default: '#fff' }, border: { default: '#aaa' }, feedback: { error: '#900', success: '#090', warning: '#990', errorLight: '#fee', successLight: '#efe', warningLight: '#ffe' },
-} }) }));
+jest.mock('../../core/theme/useClinicTheme', () => ({ useClinicTheme: () => jest.requireActual('../../core/theme/useClinicTheme').getTheme('AYURVEDA') }));
 
 describe('tenant listing failures are not empty-clinic evidence', () => {
   beforeEach(() => {
@@ -72,9 +69,9 @@ describe('tenant listing failures are not empty-clinic evidence', () => {
 
   it('does not present unavailable dashboard statistics as verified zero values', () => {
     const view = render(<SuperAdminDashboard />);
-    expect(view.getAllByText('—')).toHaveLength(4);
+    expect(view.getByText('errors.tenants.loadFailed')).toBeTruthy();
     expect(view.queryByText('0')).toBeNull();
     expect(view.queryByText('No recent onboarding')).toBeNull();
-    expect(view.getAllByText('common.featureUnavailable').length).toBeGreaterThan(0);
+    expect(view.queryByText('platformTenants.title (0)')).toBeNull();
   });
 });

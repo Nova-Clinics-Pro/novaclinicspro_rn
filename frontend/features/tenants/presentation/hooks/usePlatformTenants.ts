@@ -1,9 +1,10 @@
+import { PlatformTenantQuery } from '../../domain/entities/platformTenant';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { usePlatformTenantsQuery, usePlatformTenantQuery } from '../../data/repositories/platformTenants.repository';
 
-export const usePlatformTenants = (offset = 0, limit = 25) => {
+export const usePlatformTenants = (offset = 0, limit = 25, query: PlatformTenantQuery = {}) => {
   const { currentUser } = useAuth();
-  return usePlatformTenantsQuery(currentUser?.userId, offset, limit);
+  return usePlatformTenantsQuery(currentUser?.userId, offset, limit, query);
 };
 export const usePlatformTenant = (id: string) => {
   const { currentUser } = useAuth();

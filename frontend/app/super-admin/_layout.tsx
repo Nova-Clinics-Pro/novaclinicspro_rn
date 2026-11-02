@@ -12,16 +12,17 @@
  */
 
 import { Stack } from 'expo-router';
-import { colors } from '../../core/theme/colors';
+import { useClinicTheme } from '../../core/theme/useClinicTheme';
 import { ProtectedRoute } from '../../core/components/ProtectedRoute';
 
 export default function SuperAdminLayout() {
+  const theme = useClinicTheme();
   return (
     <ProtectedRoute>
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: colors.background.paper },
+          contentStyle: { backgroundColor: theme.colors.background.default },
         }}
       >
         <Stack.Screen name="index" />

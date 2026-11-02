@@ -15,6 +15,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { elevations } from '../theme/elevations';
+import { opacities } from '../theme/semanticColors';
 import { useClinicTheme } from '../theme/useClinicTheme';
 
 // ============================================
@@ -40,6 +42,8 @@ interface ConfirmationDialogProps {
   reasonPlaceholder?: string;
   /** Whether the action is loading */
   loading?: boolean;
+  /** Optional, caller-owned fields shown before the confirmation buttons. */
+  children?: React.ReactNode;
   /** Callback when confirmed */
   onConfirm: (reason?: string) => void;
   /** Callback when cancelled */
@@ -60,10 +64,12 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   requireReason = false,
   reasonPlaceholder = 'Enter reason (optional)',
   loading = false,
+  children,
   onConfirm,
   onCancel,
 }) => {
   const theme = useClinicTheme();
+  const styles = makeStyles(theme);
   const [reason, setReason] = useState('');
 
   const handleConfirm = () => {
@@ -151,6 +157,8 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 />
               )}
 
+              {children}
+
               {/* Buttons */}
               <View style={styles.buttons}>
                 <TouchableOpacity
@@ -187,7 +195,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                   accessibilityRole="button"
                 >
                   {loading ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <ActivityIndicator color={theme.colors.text.onPrimary} size="small" />
                   ) : (
                     <Text style={styles.confirmButtonText}>{confirmText}</Text>
                   )}
@@ -205,7 +213,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ReturnType<typeof useClinicTheme>) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'center',
@@ -214,67 +222,61 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     width: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.colors.surface.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   dialog: {
-    width: '85%',
-    maxWidth: 400,
-    borderRadius: 12,
-    padding: 20,
-    gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    ...elevations.dialog,
+    width: theme.sizes.dialogWidth,
+    maxWidth: theme.sizes.dialogMaxWidth,
+    borderRadius: theme.radii.large,
+    padding: theme.spacing.md,
+    gap: theme.spacing.md,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...theme.typography.h5,
   },
   message: {
-    fontSize: 14,
-    lineHeight: 20,
+    ...theme.typography.body2,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    minHeight: 80,
+    borderWidth: theme.borderWidths.default,
+    borderRadius: theme.radii.medium,
+    padding: theme.spacing.sm,
+    ...theme.typography.body2,
+    minHeight: theme.sizes.inputMultilineMinHeight,
   },
   buttons: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.medium,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: theme.sizes.touchTarget,
   },
   cancelButton: {
-    borderWidth: 1,
+    borderWidth: theme.borderWidths.default,
   },
   confirmButton: {
     // backgroundColor set dynamically
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: opacities.disabled,
   },
   buttonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...theme.typography.body2,
+    fontWeight: theme.typography.button.fontWeight,
   },
   confirmButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...theme.typography.body2,
+    fontWeight: theme.typography.button.fontWeight,
+    color: theme.colors.text.onPrimary,
   },
 });
