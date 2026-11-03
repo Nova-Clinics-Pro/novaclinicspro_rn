@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IPlatformTenantRepository } from '../../domain/repositories/platformTenant.repository';
 import { PlatformTenant, PlatformTenantPage, PlatformTenantQuery } from '../../domain/entities/platformTenant';
 import { PlatformTenantDto } from '../models/platformTenants.dtos';
@@ -36,10 +37,33 @@ export const platformTenantKeys = {
   list: (actorId: string | undefined, offset: number, limit: number, query: PlatformTenantQuery) => ['platform-tenants', actorId, offset, limit, query] as const,
   detail: (actorId: string | undefined, id: string) => ['platform-tenant', actorId, id] as const,
 };
+// Every platform list read persists a mandatory access-audit row. The list queries
+// therefore stay fresh for 30 s and are not refetched passively on window focus or
+// network reconnect. Mount refetch (when stale), explicit refetch() (Retry, Manage
+// refresh) and key changes (filter/pagination) are unchanged. Detail is deliberately
+// excluded: it keeps staleTime 0 so a fresh aggregate version is read.
+export const platformTenantListQueryPolicy = {
+  staleTime: 30_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+} as const;
 // B0-approved query boundary consumes the domain contract. Transport/mapping stays below it.
 export const usePlatformTenantsQuery = (actorId: string | undefined, offset = 0, limit = 25, query: PlatformTenantQuery = {}, repository: IPlatformTenantRepository = platformTenantRepository) => useQuery({
-  queryKey: platformTenantKeys.list(actorId, offset, limit, query), queryFn: () => repository.list(offset, limit, query), enabled: Boolean(actorId), staleTime: 0,
+  queryKey: platformTenantKeys.list(actorId, offset, limit, query), queryFn: () => repository.list(offset, limit, query), enabled: Boolean(actorId), ...platformTenantListQueryPolicy,
+  // Keep the previous page's rows on screen while a new search/page loads (isPlaceholderData).
+  placeholderData: keepPreviousData,
 });
 export const usePlatformTenantQuery = (actorId: string | undefined, id: string, repository: IPlatformTenantRepository = platformTenantRepository) => useQuery({
   queryKey: platformTenantKeys.detail(actorId, id), queryFn: () => repository.get(id), enabled: Boolean(actorId && id), staleTime: 0,
 });
+// Targeted, awaited refresh of ONE tenant through the existing detail query key (staleTime 0).
+// The detail endpoint serves the same projection as a list row (same service projection and
+// response model), so trial state, expiry and aggregate version are all authoritative here.
+// fetchQuery de-duplicates concurrent refreshes of the same tenant and updates the detail cache.
+export const usePlatformTenantRefresh = (actorId: string | undefined, repository: IPlatformTenantRepository = platformTenantRepository) => {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (id: string): Promise<PlatformTenant> => queryClient.fetchQuery({ queryKey: platformTenantKeys.detail(actorId, id), queryFn: () => repository.get(id), staleTime: 0 }),
+    [queryClient, actorId, repository],
+  );
+};

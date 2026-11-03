@@ -14,6 +14,8 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { elevations } from '../theme/elevations';
 import { opacities } from '../theme/semanticColors';
@@ -42,6 +44,16 @@ interface ConfirmationDialogProps {
   reasonPlaceholder?: string;
   /** Whether the action is loading */
   loading?: boolean;
+  /** Opt-in: show only the confirm action (for single-button notices). */
+  hideCancel?: boolean;
+  /** Disables the confirm action (e.g. while required data is loading or invalid). */
+  confirmDisabled?: boolean;
+  /**
+   * Opt-in: bound the dialog to a fraction of the window height and scroll
+   * the message/fields, keeping the title and the action buttons in view.
+   * Default off, so existing dialogs (e.g. logout) are unchanged.
+   */
+  scrollBody?: boolean;
   /** Optional, caller-owned fields shown before the confirmation buttons. */
   children?: React.ReactNode;
   /** Callback when confirmed */
@@ -64,6 +76,9 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   requireReason = false,
   reasonPlaceholder = 'Enter reason (optional)',
   loading = false,
+  confirmDisabled = false,
+  hideCancel = false,
+  scrollBody = false,
   children,
   onConfirm,
   onCancel,
@@ -71,6 +86,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   const theme = useClinicTheme();
   const styles = makeStyles(theme);
   const [reason, setReason] = useState('');
+  const { height: windowHeight } = useWindowDimensions();
 
   const handleConfirm = () => {
     onConfirm(requireReason ? reason : undefined);
@@ -85,6 +101,45 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   const confirmButtonColor = destructive
     ? theme.colors.feedback.error
     : theme.colors.primary.default;
+
+  const bodyContent = (
+    <>
+      {/* Message */}
+      <Text
+        style={[
+          styles.message,
+          { color: theme.colors.text.secondary },
+        ]}
+      >
+        {message}
+      </Text>
+
+      {/* Reason Input (if required) */}
+      {requireReason && (
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.colors.background.muted,
+              borderColor: theme.colors.border.default,
+              color: theme.colors.text.primary,
+            },
+          ]}
+          placeholder={reasonPlaceholder}
+          placeholderTextColor={theme.colors.text.tertiary}
+          value={reason}
+          onChangeText={setReason}
+          multiline
+          numberOfLines={3}
+          textAlignVertical="top"
+          editable={!loading}
+          accessibilityLabel="Reason input"
+        />
+      )}
+
+      {children}
+    </>
+  );
 
   return (
     <Modal
@@ -112,6 +167,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
               style={[
                 styles.dialog,
                 { backgroundColor: theme.colors.background.default },
+                scrollBody ? { maxHeight: windowHeight * theme.sizes.dialogMaxHeightRatio } : null,
               ]}
             >
               {/* Title */}
@@ -124,43 +180,22 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 {title}
               </Text>
 
-              {/* Message */}
-              <Text
-                style={[
-                  styles.message,
-                  { color: theme.colors.text.secondary },
-                ]}
-              >
-                {message}
-              </Text>
-
-              {/* Reason Input (if required) */}
-              {requireReason && (
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.colors.background.muted,
-                      borderColor: theme.colors.border.default,
-                      color: theme.colors.text.primary,
-                    },
-                  ]}
-                  placeholder={reasonPlaceholder}
-                  placeholderTextColor={theme.colors.text.tertiary}
-                  value={reason}
-                  onChangeText={setReason}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  editable={!loading}
-                  accessibilityLabel="Reason input"
-                />
+              {scrollBody ? (
+                <ScrollView
+                  testID="confirmation-dialog-body"
+                  style={styles.scrollBody}
+                  contentContainerStyle={styles.scrollBodyContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {bodyContent}
+                </ScrollView>
+              ) : (
+                bodyContent
               )}
-
-              {children}
 
               {/* Buttons */}
               <View style={styles.buttons}>
+                {!hideCancel && (
                 <TouchableOpacity
                   style={[
                     styles.button,
@@ -181,16 +216,17 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                     {cancelText}
                   </Text>
                 </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   style={[
                     styles.button,
                     styles.confirmButton,
                     { backgroundColor: confirmButtonColor },
-                    loading && styles.buttonDisabled,
+                    (loading || confirmDisabled) && styles.buttonDisabled,
                   ]}
                   onPress={handleConfirm}
-                  disabled={loading}
+                  disabled={loading || confirmDisabled}
                   accessibilityLabel={confirmText}
                   accessibilityRole="button"
                 >
@@ -246,6 +282,12 @@ const makeStyles = (theme: ReturnType<typeof useClinicTheme>) => StyleSheet.crea
     padding: theme.spacing.sm,
     ...theme.typography.body2,
     minHeight: theme.sizes.inputMultilineMinHeight,
+  },
+  scrollBody: {
+    flexShrink: 1,
+  },
+  scrollBodyContent: {
+    gap: theme.spacing.md,
   },
   buttons: {
     flexDirection: 'row',

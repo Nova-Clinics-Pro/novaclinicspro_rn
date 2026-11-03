@@ -5,6 +5,7 @@ import {
   getCommercialRetentionApi,
   getCommercialTrialApi,
   grantCommercialTrialExtensionApi,
+  initializeLegacyCommercialTrialApi,
   requestCommercialTrialExtensionApi,
   requestCommercialTrialSubscriptionApi,
 } from '../datasources/commercial-trial.api';
@@ -98,6 +99,7 @@ export const commercialTrialRepository: ICommercialTrialRepository = {
   async getCommercialTrial(organizationId, tenantId, signal) { try { return mapCommercialTrial(await getCommercialTrialApi(tenantId, signal), organizationId, tenantId); } catch (error) { if (isRecognizedPretrialAbsence(error)) return notStarted(organizationId, tenantId); return mapError(error); } },
   async getCommercialRetention(organizationId, tenantId, signal) { try { return mapCommercialRetention(await getCommercialRetentionApi(tenantId, signal), organizationId, tenantId); } catch (error) { if (isRecognizedPretrialAbsence(error)) return notStarted(organizationId, tenantId); return mapRetentionError(error); } },
   async activateCommercialTrial(organizationId, tenantId, aggregateVersion, confirmed, idempotencyKey) { try { return mapCommercialTrial(await activateCommercialTrialApi(tenantId, { contract_version: COMMERCIAL_TRIAL_CONTRACT_V1, aggregate_version: aggregateVersion, confirmed }, idempotencyKey), organizationId, tenantId); } catch (error) { return mapError(error); } },
+  async initializeLegacyCommercialTrial(organizationId, tenantId, aggregateVersion, confirmed, idempotencyKey) { try { return mapCommercialTrial(await initializeLegacyCommercialTrialApi(tenantId, { contract_version: COMMERCIAL_TRIAL_CONTRACT_V1, aggregate_version: aggregateVersion, confirmed }, idempotencyKey), organizationId, tenantId); } catch (error) { return mapError(error); } },
   async requestCommercialTrialExtension(organizationId, tenantId, reason, channel, idempotencyKey) { try { return mapCommercialTrial(await requestCommercialTrialExtensionApi(tenantId, { contract_version: COMMERCIAL_TRIAL_CONTRACT_V1, reason, channel }, idempotencyKey), organizationId, tenantId); } catch (error) { return mapError(error); } },
   async grantCommercialTrialExtension(organizationId, tenantId, aggregateVersion, extensionDays, reason, channel, idempotencyKey, requesterId, requestOperationId) { try { return mapCommercialTrial(await grantCommercialTrialExtensionApi(tenantId, { contract_version: COMMERCIAL_TRIAL_CONTRACT_V1, aggregate_version: aggregateVersion, extension_days: extensionDays, reason, channel, ...(requesterId ? { requester_id: requesterId } : {}), ...(requestOperationId ? { request_operation_id: requestOperationId } : {}) }, idempotencyKey), organizationId, tenantId); } catch (error) { return mapError(error); } },
   async requestCommercialTrialSubscription(_organizationId, tenantId) { try { return mapHandoff(await requestCommercialTrialSubscriptionApi(tenantId), tenantId); } catch (error) { return mapError(error); } },

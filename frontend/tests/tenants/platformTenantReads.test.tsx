@@ -10,9 +10,11 @@ const mockPush = jest.fn();
 const mockPageHook = jest.fn();
 const mockDetailHook = jest.fn();
 const mockQuery: any = { data: undefined, isPending: false, isError: false, refetch: mockRetry };
+jest.mock('../../features/tenants/presentation/hooks/usePlatformTrialCommands', () => ({ usePlatformTrialCommands: () => ({ initialize: jest.fn(), grant: jest.fn() }), createOperationKey: () => 'synthetic-key', toPlatformTrialFailure: () => ({ kind: 'UNKNOWN', retryable: true }) }));
 jest.mock('../../features/tenants/presentation/hooks/usePlatformTenants', () => ({
   usePlatformTenants: (...args: any[]) => { mockPageHook(...args); return mockQuery; },
   usePlatformTenant: (...args: any[]) => { mockDetailHook(...args); return mockQuery; },
+  usePlatformTenantRefresh: () => jest.fn(),
 }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, back: jest.fn() }), useLocalSearchParams: () => ({ tenantId: 'synthetic-id' }), Link: ({ children }: any) => children }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));

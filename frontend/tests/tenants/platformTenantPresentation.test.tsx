@@ -80,9 +80,9 @@ it('prepares a bounded extension without executing a command and reveals read-on
   fireEvent.press(view.getByRole('button', { name: 'platformAdmin.prepareExtension' }));
   expect(view.getByText('platformAdmin.extensionDialogTitle')).toBeTruthy();
   fireEvent.changeText(view.getByLabelText('platformAdmin.extensionReason'), 'Synthetic support investigation');
-  fireEvent.press(view.getByRole('button', { name: 'platformAdmin.prepareExtension' }));
-  expect(view.getByText('platformAdmin.extensionPendingGate')).toBeTruthy();
-  fireEvent.press(view.getByLabelText('Cancel'));
+  fireEvent.press(view.getByRole('button', { name: 'platformAdmin.reviewExtension' }));
+  expect(view.getByText('platformAdmin.extensionNotSentYet')).toBeTruthy();
+  fireEvent.press(view.getByLabelText('common.close'));
   fireEvent.press(view.getByRole('button', { name: 'platformAdmin.viewSubscription' }));
   expect(view.getByTestId('subscription-details')).toBeTruthy();
   expect(view.getAllByText('platformAdmin.noSubscription').length).toBeGreaterThan(0);

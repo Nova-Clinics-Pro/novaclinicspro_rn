@@ -46,7 +46,8 @@ it('administrative presentation adapters cannot execute commands or access trans
   expect(adapter).not.toMatch(/axios|\bfetch\(|datasources|\/api\/v1|supabase|grant_extension/);
   expect(adapter).not.toContain('administrationAvailability');
   const manage = source('features/tenants/presentation/components/PlatformTenantManage.tsx');
-  expect(manage).not.toMatch(/useMutation|administrationAvailability|grantExtension|\.post\(/);
+  expect(manage).not.toMatch(/useMutation|administrationAvailability|\.post\(|axios|commercialPlatform/);
+  expect(manage).toContain('usePlatformTrialCommands');
   expect(manage).toContain("label={t('platformAdmin.prepareExtension')}");
   expect(manage).toContain("label={t('platformAdmin.viewSubscription')}");
   expect(manage).toContain('manage-card-administration');

@@ -11,6 +11,8 @@ export const sizes = {
   selectMaxHeight: '80%' as const,
   dialogMaxWidth: 400,
   dialogWidth: '85%' as const,
+  /** Fraction of the window height a scrollable dialog may occupy. */
+  dialogMaxHeightRatio: 0.9,
   inputMultilineMinHeight: 80,
   /** Minimum accessible touch target (WCAG 2.5.5 / platform guidance). */
   touchTarget: 44,

@@ -20,11 +20,13 @@ jest.mock('expo-router', () => ({ useRouter: () => mockRouter, useLocalSearchPar
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('../../core/localization', () => ({ t: (key: string) => key, getCurrentLocale: () => 'en-US' }));
 jest.mock('../../features/auth/presentation/hooks/useAuth', () => ({ useAuth: () => ({ currentUser: { userId: 'synthetic-actor', fullName: 'Synthetic Admin' }, logout: mockLogout }) }));
-jest.mock('../../features/tenants/presentation/hooks/usePlatformTenants', () => ({ usePlatformTenants: (...args: any[]) => { mockPageHook(...args); return args[1] === 1 ? mockTotals : mockPage; }, usePlatformTenant: (...args: any[]) => mockDetail(...args) }));
+jest.mock('../../features/tenants/presentation/hooks/usePlatformTrialCommands', () => ({ usePlatformTrialCommands: () => ({ initialize: jest.fn(), grant: jest.fn() }), createOperationKey: () => 'synthetic-key', toPlatformTrialFailure: () => ({ kind: 'UNKNOWN', retryable: true }) }));
+jest.mock('../../features/tenants/presentation/hooks/usePlatformTenants', () => ({ usePlatformTenants: (...args: any[]) => { mockPageHook(...args); return args[1] === 1 ? mockTotals : mockPage; }, usePlatformTenant: (...args: any[]) => mockDetail(...args) , usePlatformTenantRefresh: () => jest.fn() }));
 
 const workspace = (showBack = false) => render(<ThemeProvider><PlatformClinicWorkspace showBack={showBack} /></ThemeProvider>);
 
 beforeEach(() => { jest.clearAllMocks(); mockLogout.mockResolvedValue(undefined); mockRouter.canGoBack.mockReturnValue(true); });
+afterEach(() => { jest.useRealTimers(); });
 it('root has one shared Logout and no meaningless Back', () => {
   const view = workspace();
   expect(view.getAllByLabelText('navigation.logout')).toHaveLength(1);
@@ -69,11 +71,14 @@ it('Manage stays inline, shows all sections, and never offers unverified writes/
   expect(mockRouter.push).not.toHaveBeenCalled(); expect(mockDetail).not.toHaveBeenCalled();
   expect(view.queryByText('View Status')).toBeNull(); expect(view.queryByText('Extend Trial')).toBeNull();
 });
-it('search, filter and sort reset pagination and have distinct query inputs', () => {
+it('search (debounced), filter and sort reset pagination and have distinct query inputs', () => {
+  jest.useFakeTimers();
   const view = workspace();
   fireEvent.press(view.getByText('common.next'));
   expect(mockPageHook).toHaveBeenLastCalledWith(10,10,{ sort: 'created_desc' });
   fireEvent.changeText(view.getByLabelText('common.search'),'Synthetic');
+  expect(mockPageHook).toHaveBeenLastCalledWith(10,10,{ sort: 'created_desc' });
+  act(() => { jest.advanceTimersByTime(300); });
   expect(mockPageHook).toHaveBeenLastCalledWith(0,10,{ sort: 'created_desc', search: 'Synthetic' });
   fireEvent.press(view.getByLabelText('platformAdmin.operationalStatus'));
   fireEvent.press(view.getByRole('button', { name: 'platformAdmin.active' }));
@@ -81,6 +86,7 @@ it('search, filter and sort reset pagination and have distinct query inputs', ()
   fireEvent.press(view.getByLabelText('platformAdmin.sortBy'));
   fireEvent.press(view.getByText('platformAdmin.name_asc'));
   expect(mockPageHook).toHaveBeenLastCalledWith(0,10,{ sort: 'name_asc', search: 'Synthetic', status: 'active' });
+  jest.useRealTimers();
 });
 it.each([400, 1200])('keeps essential statuses visible in mobile/desktop presentation: %s', width => {
   const spy = jest.spyOn(RN,'useWindowDimensions').mockReturnValue({ width, height: 800, scale: 1, fontScale: 2 });
