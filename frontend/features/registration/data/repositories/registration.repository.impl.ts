@@ -3,8 +3,8 @@ import type { RegistrationRequest, RegistrationResponse, RegistrationStatus } fr
 import type { RegistrationRepository } from '../../domain/repositories/registration.repository';
 
 class RegistrationRepositoryImpl implements RegistrationRepository {
-  registerClinicOwner(request: RegistrationRequest): Promise<RegistrationResponse> {
-    return registerClinicOwnerApi(request);
+  registerClinicOwner(request: RegistrationRequest, idempotencyKey: string): Promise<RegistrationResponse> {
+    return registerClinicOwnerApi(request, idempotencyKey);
   }
 
   getRegistrationStatus(): Promise<RegistrationStatus> {

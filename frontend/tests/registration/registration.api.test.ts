@@ -71,3 +71,46 @@ describe('registration error classification', () => {
     expect(error.message).not.toContain('Contact name cannot contain test');
   });
 });
+
+describe('registerClinicOwnerApi Idempotency-Key header', () => {
+  const { axiosClient } = jest.requireMock('../../core/api/axiosClient');
+  const { registerClinicOwnerApi } = require('../../features/registration/data/datasources/registration.api');
+  const request = { email: 'owner@example.test' } as any;
+
+  beforeEach(() => axiosClient.post.mockReset());
+
+  it('sends the supplied key as the Idempotency-Key header on the register endpoint', async () => {
+    axiosClient.post.mockResolvedValue({ data: { success: true } });
+
+    await registerClinicOwnerApi(request, 'attempt-key-1');
+
+    expect(axiosClient.post).toHaveBeenCalledTimes(1);
+    expect(axiosClient.post).toHaveBeenCalledWith(
+      '/api/v1/auth/register-clinic-owner',
+      request,
+      { headers: { 'Idempotency-Key': 'attempt-key-1' } }
+    );
+  });
+
+  it('sends the same key again for a retry that is given the same key', async () => {
+    axiosClient.post.mockResolvedValue({ data: { success: true } });
+
+    await registerClinicOwnerApi(request, 'attempt-key-1');
+    await registerClinicOwnerApi(request, 'attempt-key-1');
+
+    const keys = axiosClient.post.mock.calls.map((call: any[]) => call[2].headers['Idempotency-Key']);
+    expect(keys).toEqual(['attempt-key-1', 'attempt-key-1']);
+  });
+
+  it.each(['', '   ', 'x'.repeat(256)])('does not send a request with an invalid key (%#)', async key => {
+    await expect(registerClinicOwnerApi(request, key)).rejects.toMatchObject({ kind: 'UNEXPECTED' });
+    expect(axiosClient.post).not.toHaveBeenCalled();
+  });
+
+  it('maps the backend idempotency conflict (409) and key validation (400) like other registration errors', async () => {
+    axiosClient.post.mockRejectedValueOnce(axiosError(409, { detail: 'Idempotency-Key was reused with a different request payload' }));
+    await expect(registerClinicOwnerApi(request, 'k')).rejects.toMatchObject({ kind: 'CONFLICT', status: 409 });
+    axiosClient.post.mockRejectedValueOnce(axiosError(400, { detail: 'Idempotency-Key must be non-empty' }));
+    await expect(registerClinicOwnerApi(request, 'k')).rejects.toMatchObject({ kind: 'FORM_VALIDATION', status: 400 });
+  });
+});
