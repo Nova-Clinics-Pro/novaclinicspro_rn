@@ -8,8 +8,9 @@ describe('AUTH-2 recovery presentation boundary', () => {
     expect(source(path)).not.toContain('supabaseClient');
   });
 
-  it('keeps web recovery-link parsing in the route and provider operations in AuthSessionService', () => {
-    expect(source('app/reset-password.tsx')).toContain('URLSearchParams');
+  it('keeps recovery-link parsing in the presentation adapter and provider operations in AuthSessionService', () => {
+    expect(source('app/reset-password.tsx')).toContain('parsePasswordRecoveryCallback');
+    expect(source('features/auth/presentation/recovery-links.ts')).toContain('URLSearchParams');
     expect(source('app/reset-password.tsx')).toContain('authSessionService.establishRecoverySession');
     const service = source('features/auth/application/auth-session.service.ts');
     expect(service).toContain('requestPasswordReset');

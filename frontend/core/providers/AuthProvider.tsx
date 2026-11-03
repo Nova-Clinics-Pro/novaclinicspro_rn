@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { usePathname } from 'expo-router';
 import { ThemeProvider } from '../theme/useClinicTheme';
 import { useAuthStore } from '../../features/auth/presentation/providers/auth.store';
 import { authSessionService } from '../../features/auth/application/auth-session.service';
@@ -13,7 +14,12 @@ interface AuthProviderProps {
 }
 
 const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isRecoveryRoute = usePathname() === '/reset-password';
   useEffect(() => {
+    // The reset route establishes its provider-only recovery session. Ordinary
+    // bootstrap/subscription must not restore or hydrate a login over it.
+    if (isRecoveryRoute) return;
+
     let disposed = false;
     let unsubscribe: (() => void) | null = null;
 
@@ -38,7 +44,7 @@ const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) 
       disposed = true;
       unsubscribe?.();
     };
-  }, []);
+  }, [isRecoveryRoute]);
 
   return <>{children}</>;
 };

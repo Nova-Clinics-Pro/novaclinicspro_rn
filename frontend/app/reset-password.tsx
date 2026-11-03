@@ -9,7 +9,8 @@
  * 4. Password is updated via Supabase
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as Linking from 'expo-linking';
 import {
   View,
   Text,
@@ -27,7 +28,8 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { authSessionService, type RecoveryCredentials } from '../features/auth/application/auth-session.service';
+import { authSessionService } from '../features/auth/application/auth-session.service';
+import { parsePasswordRecoveryCallback, INVALID_RECOVERY_LINK } from '../features/auth/presentation/recovery-links';
 import { useClinicTheme } from '../core/theme/useClinicTheme';
 import { spacing } from '../core/theme/spacing';
 
@@ -55,6 +57,10 @@ export default function ResetPasswordScreen() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const verification = useRef<Promise<void> | null>(null);
+  const webCallback = useRef<string | null>(null);
+  const linkingUrl = Linking.useLinkingURL();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -72,37 +78,32 @@ export default function ResetPasswordScreen() {
     },
   });
 
-  // Verify the session from the URL parameters
+  // Do not log callback URLs. Strip browser credentials before provider work.
+  // Expo's linking hook supplies both cold-start and warm native callbacks.
   useEffect(() => {
-    const verifySession = async () => {
-      try {
-        setIsVerifying(true);
-        setError(null);
-
-        let recoveryCredentials: RecoveryCredentials | undefined;
-        if (Platform.OS === 'web') {
-          const hashParams = new URLSearchParams(window.location.hash.substring(1));
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
-          const type = hashParams.get('type');
-          if (type === 'recovery' && accessToken && refreshToken) {
-            recoveryCredentials = { accessToken, refreshToken };
-          }
-        }
-        await authSessionService.establishRecoverySession(recoveryCredentials);
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Invalid or expired reset link. Please request a new password reset.'
-        );
-      } finally {
-        setIsVerifying(false);
-      }
-    };
-
-    verifySession();
-  }, []);
+    let disposed = false;
+    let callback = linkingUrl;
+    if (Platform.OS === 'web') {
+      webCallback.current ??= window.location.href;
+      callback = webCallback.current;
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    try {
+      if (!callback) throw new Error(INVALID_RECOVERY_LINK);
+      const credentials = parsePasswordRecoveryCallback(callback);
+      verification.current ??= authSessionService.establishRecoverySession(credentials);
+    } catch {
+      setError(INVALID_RECOVERY_LINK);
+      setIsVerifying(false);
+      return;
+    }
+    void verification.current.then(() => {
+      if (!disposed) { setRecoveryReady(true); setError(null); }
+    }).catch(() => {
+      if (!disposed) setError(INVALID_RECOVERY_LINK);
+    }).finally(() => { if (!disposed) setIsVerifying(false); });
+    return () => { disposed = true; };
+  }, [linkingUrl]);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     try {
@@ -138,7 +139,7 @@ export default function ResetPasswordScreen() {
   }
 
   // Invalid/expired link error state
-  if (error && !success) {
+  if (error && !success && !recoveryReady) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.default }]}>
         <View style={styles.centerContainer}>

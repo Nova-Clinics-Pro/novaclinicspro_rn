@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { authSessionService } from '../features/auth/application/auth-session.service';
+import { getPasswordRecoveryRedirect } from '../features/auth/presentation/recovery-links';
 import { useClinicTheme } from '../core/theme/useClinicTheme';
 import { spacing } from '../core/theme/spacing';
 
@@ -54,12 +55,7 @@ export default function ForgotPasswordScreen() {
       setIsLoading(true);
       setError(null);
 
-      // Supabase will send reset link
-      // For mobile, the link should use deep linking (novaclinicspro://reset-password)
-      // For web, it redirects to the web URL
-      const redirectUrl = Platform.OS === 'web' 
-        ? `${window.location.origin}/reset-password`
-        : 'novaclinicspro://reset-password';
+      const redirectUrl = getPasswordRecoveryRedirect();
 
       await authSessionService.requestPasswordReset(data.email, redirectUrl);
 

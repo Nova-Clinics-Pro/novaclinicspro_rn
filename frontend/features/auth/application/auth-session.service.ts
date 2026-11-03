@@ -23,6 +23,7 @@ export interface RecoveryCredentials {
 export class AuthSessionService {
   private hydratedAccessToken: string | null = null;
   private recoveryMode = false;
+  private recoverySessionReady = false;
 
   private async hydrateCurrentUser(accessToken: string): Promise<AuthUserSession> {
     try {
@@ -48,6 +49,8 @@ export class AuthSessionService {
 
   async login(email: string, password: string): Promise<AuthUserSession> {
     const session = await supabaseAuthProvider.signInWithPassword(email, password);
+    this.recoveryMode = false;
+    this.recoverySessionReady = false;
     await this.persistSession(session);
     try {
       return await this.hydrateCurrentUser(session.accessToken);
@@ -66,6 +69,16 @@ export class AuthSessionService {
   async bootstrap(): Promise<AuthBootstrapResult> {
     let restoringPersistedSession = false;
     try {
+      if (this.recoveryMode) {
+        // Leaving reset must not turn a recovery-only session into normal login.
+        // A failed sign-out remains fail-closed; explicit login can still proceed.
+        await supabaseAuthProvider.signOut();
+        await useAuthStore.getState().clearSession();
+        this.recoveryMode = false;
+        this.recoverySessionReady = false;
+        this.hydratedAccessToken = null;
+        return { authenticated: false, session: null, error: 'No active session' };
+      }
       await useAuthStore.getState().initializeFromStorage();
       const persistedState = useAuthStore.getState();
       let session = await supabaseAuthProvider.getSession();
@@ -105,8 +118,8 @@ export class AuthSessionService {
       this.hydratedAccessToken = null;
       return;
     }
-    await this.persistSession(session);
     if (this.recoveryMode) return;
+    await this.persistSession(session);
     if (this.hydratedAccessToken === session.accessToken) return;
     try {
       await this.hydrateCurrentUser(session.accessToken);
@@ -145,16 +158,19 @@ export class AuthSessionService {
     }
   }
 
-  /** Validates an existing recovery session or establishes one from a web link. */
+  /** Recovery always requires fresh callback credentials, never an unrelated login. */
   async establishRecoverySession(credentials?: RecoveryCredentials): Promise<void> {
     this.recoveryMode = true;
+    this.recoverySessionReady = false;
     try {
-      const existingSession = await supabaseAuthProvider.getSession();
-      if (existingSession) return;
-      if (!credentials) {
+      if (!credentials?.accessToken || !credentials.refreshToken) {
         throw new AuthProviderError('INVALID_RECOVERY_LINK', 'Invalid or expired reset link. Please request a new password reset.');
       }
+      // A recovery-only provider session must not retain another user's normal
+      // application/tenant identity or trigger /auth/me hydration.
+      await useAuthStore.getState().clearSession();
       await supabaseAuthProvider.setSession(credentials);
+      this.recoverySessionReady = true;
     } catch (error) {
       this.recoveryMode = false;
       throw this.normalizeRecoveryError(error, 'Invalid or expired reset link. Please request a new password reset.');
@@ -162,10 +178,15 @@ export class AuthSessionService {
   }
 
   async completePasswordRecovery(password: string): Promise<void> {
+    if (!this.recoveryMode || !this.recoverySessionReady) {
+      throw new Error('Invalid or expired reset link. Please request a new password reset.');
+    }
     try {
       await supabaseAuthProvider.updatePassword(password);
-      // Preserve current behavior: a provider sign-out failure is surfaced.
+      // Consume this local recovery flow even if provider sign-out later fails.
+      this.recoverySessionReady = false;
       await supabaseAuthProvider.signOut();
+      await useAuthStore.getState().clearSession();
       this.hydratedAccessToken = null;
       this.recoveryMode = false;
     } catch (error) {

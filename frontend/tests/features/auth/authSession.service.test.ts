@@ -115,3 +115,52 @@ describe('AuthSessionService', () => {
     expect(supabaseAuthProvider.signOut).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('recovery session isolation', () => {
+  beforeEach(() => { jest.clearAllMocks(); mockState.accessToken = null; mockState.refreshToken = null; mockState.currentUser = null; mockState.isAuthenticated = false; });
+  it('rejects a missing link even when an ordinary provider session exists', async () => {
+    (supabaseAuthProvider.getSession as jest.Mock).mockResolvedValue({ accessToken: 'ordinary-access', refreshToken: 'ordinary-refresh' });
+    await expect(new AuthSessionService().establishRecoverySession()).rejects.toThrow('Invalid or expired');
+    expect(supabaseAuthProvider.setSession).not.toHaveBeenCalled();
+    expect(supabaseAuthProvider.getSession).not.toHaveBeenCalled();
+  });
+  it('rejects password updates before a recovery session is established', async () => {
+    await expect(new AuthSessionService().completePasswordRecovery('ValidPassword1')).rejects.toThrow('Invalid or expired');
+    expect(supabaseAuthProvider.updatePassword).not.toHaveBeenCalled();
+  });
+  it('clears normal tenant identity and prevents recovery auth events from hydrating it', async () => {
+    (supabaseAuthProvider.setSession as jest.Mock).mockResolvedValue({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    const service = new AuthSessionService();
+    await service.establishRecoverySession({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    await service.handleAuthStateChange({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    expect(mockState.clearSession).toHaveBeenCalledTimes(1);
+    expect(mockState.setTokens).not.toHaveBeenCalled();
+    expect(authRepository.getCurrentUser).not.toHaveBeenCalled();
+  });
+  it('handles a rejected expired/reused session and blocks password mutation', async () => {
+    (supabaseAuthProvider.setSession as jest.Mock).mockRejectedValueOnce(new Error('synthetic expired session'));
+    const service = new AuthSessionService();
+    await expect(service.establishRecoverySession({ accessToken: 'synthetic-expired', refreshToken: 'synthetic-used' })).rejects.toThrow('Invalid or expired');
+    await expect(service.completePasswordRecovery('ValidPassword1')).rejects.toThrow('Invalid or expired');
+    expect(supabaseAuthProvider.updatePassword).not.toHaveBeenCalled();
+  });
+  it('does not bootstrap an abandoned recovery session into a normal login', async () => {
+    (supabaseAuthProvider.setSession as jest.Mock).mockResolvedValue({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    const service = new AuthSessionService();
+    await service.establishRecoverySession({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    await expect(service.bootstrap()).resolves.toEqual({ authenticated: false, session: null, error: 'No active session' });
+    expect(supabaseAuthProvider.signOut).toHaveBeenCalledTimes(1);
+    expect(authRepository.getCurrentUser).not.toHaveBeenCalled();
+    await expect(service.completePasswordRecovery('ValidPassword1')).rejects.toThrow('Invalid or expired');
+  });
+
+  it('consumes a successful flow, clears local state and rejects a second update', async () => {
+    (supabaseAuthProvider.setSession as jest.Mock).mockResolvedValue({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    const service = new AuthSessionService();
+    await service.establishRecoverySession({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' });
+    await service.completePasswordRecovery('ValidPassword1');
+    await expect(service.completePasswordRecovery('OtherPassword2')).rejects.toThrow('Invalid or expired');
+    expect(supabaseAuthProvider.updatePassword).toHaveBeenCalledTimes(1);
+    expect(mockState.clearSession).toHaveBeenCalledTimes(2);
+  });
+});
