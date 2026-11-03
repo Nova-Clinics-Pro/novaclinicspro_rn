@@ -9,6 +9,10 @@ import { AuthProvider } from '../core/providers/AuthProvider';
 import { queryClient } from '../core/api/queryClient';
 import { LogBox } from 'react-native';
 import { ApiRequestFallbackProvider } from '../core/providers/ApiRequestFallbackProvider';
+import { installWebAlert } from '../core/utils/webAlert';
+import { WebAlertHost } from '../core/components/WebAlertHost';
+
+installWebAlert();
 
 // Ignore only specific non-critical warnings
 LogBox.ignoreLogs([
@@ -47,6 +51,7 @@ export default function RootLayout() {
             <Stack.Screen name="localization" />
             <Stack.Screen name="tenant-localization" />
           </Stack>
+          <WebAlertHost />
         </AuthProvider>
       </ApiRequestFallbackProvider>
     </QueryClientProvider>

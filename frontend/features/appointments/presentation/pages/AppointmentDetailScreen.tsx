@@ -791,7 +791,7 @@ export const AppointmentDetailScreen: React.FC = () => {
   // FIX: Use case-insensitive status comparison
   const canModify = canModifyAppointment && ['scheduled', 'confirmed'].includes(appointment.status?.toLowerCase());
   const canComplete = canCompleteSession && ['confirmed', 'in_progress'].includes(appointment.status?.toLowerCase());
-  const isPartOfSeries = appointment.series_id && appointment.session_number;
+  const isPartOfSeries = Boolean(appointment.series_id && appointment.session_number);
 
   // Display values with fallbacks
   const displayClientName = clientName || t('common.unknownClient') || 'Unknown Client';
@@ -881,7 +881,7 @@ export const AppointmentDetailScreen: React.FC = () => {
               <Text style={styles.clientName} data-testid="detail-client-name">
                 {displayClientName}
               </Text>
-              {displayClientPhone && (
+              {!!displayClientPhone && (
                 <Text style={styles.clientPhone} data-testid="detail-client-phone">
                   {displayClientPhone}
                 </Text>
@@ -947,7 +947,7 @@ export const AppointmentDetailScreen: React.FC = () => {
         )}
 
         {/* Notes Section (keep if exists) */}
-        {appointment.notes && (
+        {!!appointment.notes && (
           <View style={styles.section}>
             <SectionHeader title={t('common.notes') || 'Notes'} icon="document-text" />
             <View style={styles.notesCard}>
@@ -958,12 +958,12 @@ export const AppointmentDetailScreen: React.FC = () => {
 
         {/* Timestamps */}
         <View style={styles.metaSection}>
-          {appointment.created_at && (
+          {!!appointment.created_at && (
             <Text style={styles.metaText}>
               {t('common.created')}: {formatDate(appointment.created_at)}
             </Text>
           )}
-          {appointment.updated_at && (
+          {!!appointment.updated_at && (
             <Text style={styles.metaText}>
               {t('common.updated')}: {formatDate(appointment.updated_at)}
             </Text>

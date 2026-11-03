@@ -1002,7 +1002,9 @@ export const CreateAppointmentScreen: React.FC = () => {
     });
 
     try {
-      await createMutation.mutateAsync(payload);
+      const created = await createMutation.mutateAsync(payload);
+      // Land on the appointment that was just created (not back on whatever opened this form).
+      const openCreated = () => router.replace(`/clinic-admin/appointments/${created.id}` as any);
 
       const clientPhone = selectedClientInfo?.phone;
       const clientName = selectedClientInfo?.name || 'Client';
@@ -1027,19 +1029,19 @@ export const CreateAppointmentScreen: React.FC = () => {
           'Appointment Created!',
           'Would you like to send a WhatsApp confirmation to the client?',
           [
-            { text: 'Skip', style: 'cancel', onPress: () => router.back() },
+            { text: 'Skip', style: 'cancel', onPress: () => openCreated() },
             { 
               text: 'Send WhatsApp', 
               onPress: () => {
                 Linking.openURL(whatsappUrl);
-                router.back();
+                openCreated();
               }
             },
           ]
         );
       } else {
         Alert.alert('Success', 'Appointment created successfully');
-        router.back();
+        openCreated();
       }
     } catch (error) {
       if (error instanceof AppointmentCreationError && error.kind === 'NETWORK_AFTER_SUBMIT') {
@@ -1431,7 +1433,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   minimumDate={new Date()}
                   onChange={(event: DateTimePickerEvent, date?: Date) => {
-                    setShowDatePicker(Platform.OS === 'ios');
+                    setShowDatePicker(Platform.OS === 'ios' || Platform.OS === 'web');
                     if (date) {
                       console.log('[DatePicker] Date selected (RAW):', {
                         iso: date.toISOString(),
@@ -1470,7 +1472,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                   mode="time"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={(event: DateTimePickerEvent, time?: Date) => {
-                    setShowTimePicker(Platform.OS === 'ios');
+                    setShowTimePicker(Platform.OS === 'ios' || Platform.OS === 'web');
                     if (time) {
                       console.log('[TimePicker] Time selected (RAW):', {
                         iso: time.toISOString(),
