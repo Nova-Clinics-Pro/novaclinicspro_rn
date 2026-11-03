@@ -180,6 +180,6 @@ This policy is identical in the frontend and backend repositories.
   worktrees (including worktrees whose directory has disappeared).
 - The consolidated branches (`integration/refactoring-consolidated` in the frontend and
   backend repositories) remain the authoritative development branches. Promotion to
-  `dev` still requires explicit approval (section 5).
+  `dev` requires explicit approval.
 - Commercial Platform work keeps its own base rule (section 5): feature branches
   originate from synchronized `origin/cp`, and `cp` remains integration-only.
