@@ -262,6 +262,64 @@ A contribution snapshot is: append-only, immutable after insert, Visit-attribute
 
 ---
 
+## Decision 13 — Living Document Identity, Immutable Snapshots & Linear Lineage · **RATIFIED** *(clarification, 2026-10-02)*
+
+**Purpose.** This ratifies the storage/ownership semantics deliberately deferred by Decision 2 and `design.md` §2.6. It clarifies implementation of FR-LD-1; it does not expand R7 into R8 or alter FR-CS-1's one-Case-Sheet-per-Episode invariant.
+
+**Three distinct concepts.** (1) **Document identity** is the enduring clinical object: the Episode's one Case Sheet, a Prescription, or a Treatment Plan/clinical-intent series. (2) An **immutable signed version/snapshot** is the complete clinical content attested by a clinician at a particular time. (3) **Lineage** records the version relationship and audit metadata: stable lineage identity, immediate predecessor/successor, amendment actor/reason/timestamp, signing metadata, and derived current relationship. Lineage owns **no clinical content**.
+
+**Complete snapshots, never deltas.** Every retained signed version stores complete clinical content as signed. Field-level deltas, JSON Patch, event replay, and a generic clinical-data dump are not the authoritative representation; comparisons may be derived later.
+
+**Case Sheet.** An Episode retains exactly **one** Case Sheet identity/current-authoring document. A Visit never creates another Case Sheet. Signed snapshots V1 → V2 → V3 belong to that one identity and are not additional Case Sheets. `TenantCasesheetContribution` remains separate Visit-attributed contribution history; it must not be relabelled or reused as Living Document version history merely because it has a content snapshot.
+
+**Prescription.** A Prescription retains one identity with complete immutable signed versions in one lineage. Amendment means amendment of that Prescription, not creation of an unrelated Prescription. This is distinct from R8 Prescription copy-forward.
+
+**Treatment Plan.** A clinical-intent amendment creates a distinct immutable Plan version; scheduling changes create none. Generic Living Document lineage is the common cross-document supersession/audit authority. `superseded_by_plan_id` is a synchronized projection only and must never become competing authority.
+
+### D5-OD-1 … D5-OD-15 — Treatment Plan amendment/supersession contract · **RATIFIED** *(2026-10-04)*
+
+1. **D5-OD-1:** Clinical-intent amendment creates a new Treatment Plan row/version; it never mutates the predecessor's clinical intent.
+2. **D5-OD-2:** One Living Document identity represents the enduring Treatment Plan clinical-intent series.
+3. **D5-OD-3:** Generic G1 lineage is the sole authoritative supersession/currentness authority for that series.
+4. **D5-OD-4:** `document_version` and `superseded_by_plan_id` are synchronized projections, never independent lineage authority.
+5. **D5-OD-5:** Executed and completed historical sessions remain owned by their predecessor Plan; in-progress sessions remain predecessor-owned and may complete.
+6. **D5-OD-6:** Future not-started predecessor rows become `SUPERSEDED` with provenance; `SUPERSEDED` is neither `CANCELLED` nor `COMPLETED`.
+7. **D5-OD-7:** Amendment never silently rebinds a session from predecessor to successor.
+8. **D5-OD-8:** Replacement relations are optional N:M audit relations, not ownership transfer or automatic scheduling.
+9. **D5-OD-9:** Replacement scheduling remains a separate operational action; amendment does not copy logistics as authoritative scheduling truth.
+10. **D5-OD-10:** Schedule-only/logistics changes create no Treatment Plan version.
+11. **D5-OD-11:** Future unexecuted instruction editing remains a session/instruction concern and creates no Treatment Plan version.
+12. **D5-OD-12:** Execution correction remains a session/execution concern and creates no Treatment Plan version.
+13. **D5-OD-13:** Concurrent START and supersession have exactly one winner: a committed start preserves `IN_PROGRESS`; a committed supersession rejects a later start.
+14. **D5-OD-14:** Runtime authorization is permission-driven: `treatment_plan.amend` governs clinical amendment and `treatment_order.schedule` governs scheduling/replacement logistics; subscription availability and seeded role grant remain separate.
+15. **D5-OD-15:** Amendment/supersession does not reassign billing history: billing stays attached to its actual Visit/session, and no successor Plan or replacement relation transfers it.
+
+**Strict linear lineage.** Each lineage has exactly one root; every non-root has exactly one immediate predecessor; every version has zero or one successor; branching, merging, multiple roots, disconnected chains sharing a lineage ID, and cycles are prohibited. Exactly one terminal/current version exists, derived as the unique member with no successor. Persisted currentness, if later needed, is only a transactionally consistent projection.
+
+**Invariant scope.** Tenant, client, Episode where applicable, document type, stable document identity, and lineage remain invariant across versions. Visit may differ. Concurrent amendments of the same predecessor permit only one committed successor; enforcement is domain + application/repository + database, never UI-only.
+
+**Retention.** A signed historical version is never edited in place, ordinarily deleted, soft-deleted out of clinical history, hidden so historical retrieval/rendering fails, removed by supersession, or destroyed by incidental cascade. Supersession retains V1, creates V2, and records V1 → V2.
+
+**R7 scope boundary.** Generic G1 Living Documents covers Case Sheet, Prescription, and Treatment Plan only. Treatment Sheet/session instruction/execution history remains under its existing lifecycle unless a future separately ratified requirement names a particular signed artifact. No G1 amendment command, permission, frontend surface, Treatment Plan D.5 behavior, or R8 copy-forward is introduced by this clarification.
+
+**Implementation consequence.** Immutable snapshot/version persistence remains owned by the originating document domain; generic lineage references those immutable versions but does not duplicate clinical content. T-BE-G.1 must establish this foundation before G.2 and D.5; exact tables/FKs and pre-adoption migration shape remain an implementation design task subject to its acceptance criteria.
+
+---
+
+## Decision 14 — Living Document Amendment Authoring Lifecycle · **RATIFIED** *(2026-10-02)*
+
+**Decision.** A clinician amending a signed Case Sheet or Prescription follows the existing source-document lifecycle: `SIGNED → AMEND → DRAFT → FINAL → SIGNED`. The amendment is not immediately a second signed historical version. The `AMEND` action requires the document-specific amendment permission (`casesheet.amend` or `prescription.amend`) and transitions the existing source document into amendment-draft authoring; it creates no new Case Sheet, Prescription identity, Living Document identity, signed snapshot, or lineage node.
+
+**Lineage boundary.** Living Document lineage versions correspond to completed signed clinical states, not mutable amendment drafts. Editing or finalizing an amendment creates no lineage node. Only successful signing atomically transitions the current source document to `SIGNED`, appends exactly one successor to the then-current signed lineage version, and creates that successor's complete immutable domain-owned snapshot. The predecessor snapshot remains immutable throughout.
+
+**Source-document ownership.** Amendment uses the existing current source document as its authoring surface; it does not fork another mutable clinical document. The Episode therefore retains exactly one Case Sheet, and a Prescription retains its existing stable identity. Amendment draft authoring remains subject to the same distinct amendment permission; generic update or sign permission alone cannot initiate or author an amendment. Existing sign authorization continues to govern the final signing operation where the source lifecycle requires it, but does not confer amendment authority.
+
+**Concurrency and retention.** At amendment signing, the expected signed predecessor must still be current. If another amendment has already created a successor, the stale signing attempt fails. The source signed transition, successor lineage append, and immutable snapshot creation are one transaction; the preceding authoring interactions are separate transactions. Cancelling or abandoning an amendment must never alter, delete, or unlock any prior signed snapshot or lineage version. No new cancellation state is introduced by this decision.
+
+**Scope.** This decision resolves `G2_SOURCE_DOCUMENT_AMENDMENT_SEQUENCE_DECISION_REQUIRED` for FR-LD-2 / T-BE-G.2 only. It does not introduce Treatment Plan amendment behavior, copy-forward, a second document lifecycle, or a new lineage authority.
+
+---
+
 ## Patient-Safety Reality Check — **F-2, BLOCKING, owner response required**
 
 The owner scoped into R7 core: *"At minimum surface existing verified data for: allergies · active medicines · known contraindication warnings · pending clinical reviews · renal-risk indicators where existing data already supports them"* — with the instruction **"Do not invent unsupported clinical rules."** Verified against code:
@@ -433,23 +491,3 @@ R7 uses **only** the verified Prescription document lifecycle (`DRAFT → FINAL 
 **(1) R7 now requires an additive migration.** Verified this task: **no Treatment Plan entity exists.** The only `*plan*` models are `org_subscription_plan` / `subscription_plan_capability` (billing — unrelated); `app/domain/treatment_plan/` contains only a `SyncResult` dataclass. Ratifying the Plan as *first-class persisted and versioned* therefore requires **a new table + versioning** — an **additive migration in R7**. Earlier feasibility stated *"no schema change in the core design"*; **that is now superseded.** Backend size rises accordingly.
 
 **(2) Naming collision to resolve in requirements — `tenant_visits.treatment_plan` is a TEXT column.** Verified: `treatment_plan: Mapped[str | None]` → `TEXT`, nullable. Today "treatment plan" exists **only as free text on the Visit** — which is precisely the pre-entity representation the ratification replaces. Requirements must decide its disposition (retain as legacy visit note · migrate · deprecate) and must ensure implementers never confuse the free-text column with the new entity. **Non-blocking for freeze; blocking for the Treatment Plan requirements.**
-
----
-
-## D5-OD-1 … D5-OD-15 — Treatment Plan amendment/supersession contract · **RATIFIED** *(2026-10-04)*
-
-1. **D5-OD-1:** Clinical-intent amendment creates a new Treatment Plan row/version; it never mutates the predecessor's clinical intent.
-2. **D5-OD-2:** One Living Document identity represents the enduring Treatment Plan clinical-intent series.
-3. **D5-OD-3:** Generic G1 lineage is the sole authoritative supersession/currentness authority for that series.
-4. **D5-OD-4:** `document_version` and `superseded_by_plan_id` are synchronized projections, never independent lineage authority.
-5. **D5-OD-5:** Executed and completed historical sessions remain owned by their predecessor Plan; in-progress sessions remain predecessor-owned and may complete.
-6. **D5-OD-6:** Future not-started predecessor rows become `SUPERSEDED` with provenance; `SUPERSEDED` is neither `CANCELLED` nor `COMPLETED`.
-7. **D5-OD-7:** Amendment never silently rebinds a session from predecessor to successor.
-8. **D5-OD-8:** Replacement relations are optional N:M audit relations, not ownership transfer or automatic scheduling.
-9. **D5-OD-9:** Replacement scheduling remains a separate operational action; amendment does not copy logistics as authoritative scheduling truth.
-10. **D5-OD-10:** Schedule-only/logistics changes create no Treatment Plan version.
-11. **D5-OD-11:** Future unexecuted instruction editing remains a session/instruction concern and creates no Treatment Plan version.
-12. **D5-OD-12:** Execution correction remains a session/execution concern and creates no Treatment Plan version.
-13. **D5-OD-13:** Concurrent START and supersession have exactly one winner: a committed start preserves `IN_PROGRESS`; a committed supersession rejects a later start.
-14. **D5-OD-14:** Runtime authorization is permission-driven: `treatment_plan.amend` governs clinical amendment and `treatment_order.schedule` governs scheduling/replacement logistics; subscription availability and seeded role grant remain separate.
-15. **D5-OD-15:** Amendment/supersession does not reassign billing history: billing stays attached to its actual Visit/session, and no successor Plan or replacement relation transfers it.

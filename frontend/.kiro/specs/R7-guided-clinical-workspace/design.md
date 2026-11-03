@@ -162,7 +162,7 @@ Registered on the UoW alongside existing repos (convention ✅). `tenant_` prefi
 ### 2.6 Living documents
 **Implements:** FR-LD-1, FR-LD-2, FR-LD-3 · **Decision:** D2 · **Principle:** P6
 
-Version/supersession representation **[VP]** — deliberately not fixed here; it is a schema change requiring its own approval, and R7 core ships without amendment (Group G defers cleanly). Design constraints that are **not** deferred: a `SIGNED` version is never mutated; a superseded version is retained, renderable exactly as signed, and visibly marked; prints identify the version; amendment records author/reason/timestamp and requires a distinct permission (**ETX-1**).
+Version/supersession representation was originally **[VP]**; its ownership semantics are now ratified by `R7-OWNER-RATIFICATION.md` Decision 13 (2026-10-02). Stable document identity, complete immutable domain-owned signed snapshots, and content-free generic lineage are distinct. The exact pre-adoption table/FK design remains T-BE-G.1 work. Design constraints: a `SIGNED` version is never mutated; a superseded version is retained, renderable exactly as signed, and visibly marked; prints identify the version; amendment records author/reason/timestamp and requires a distinct permission (**ETX-1**). Generic G1 excludes Treatment Sheet/session execution.
 
 **Rollback caveat (FR-FLAG-1 AC 3).** Supersession is **data-shaped**: a flag rolls back code, not records. Group G requires its own rollback plan — this is the one place R7's "flag-off = no data effect" posture does not hold, and the design says so rather than implying otherwise.
 
