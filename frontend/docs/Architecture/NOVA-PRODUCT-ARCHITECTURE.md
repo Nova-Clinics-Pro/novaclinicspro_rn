@@ -1355,6 +1355,221 @@ needs suitable separately approved tooling/device setup. No new copy, palette,
 dark-mode architecture, workflow or documentation framework is introduced.
 This is an uncommitted evidence append; no further commit/push/merge/CI/deployment.
 
+### Android Expo Go UAT notification boundary — 2026-10-29
+
+**Verified current implementation; bounded owner-approved compatibility fix.**
+On consolidated frontend baseline `55a38ad3f3742ea23871c4a460d53c1ae582d9d5`,
+the auth/logout import chain reached a static `expo-notifications` import and
+module-level handler registration before login. `expo-push.service.ts` now uses
+`Constants.executionEnvironment === ExecutionEnvironment.StoreClient` to avoid
+evaluating that native module in Expo Go. Its type-only import is erased at runtime.
+`nativeNotificationsAvailable` explicitly exposes this runtime distinction.
+
+Expo Go returns denied permission results and no push token, never reuses a cached
+native-build token, skips device registration, and provides safe listener/badge/
+cancellation cleanup. Local scheduling explicitly rejects as unavailable rather
+than returning a false success. This bounded adapter disables native notification
+operations in Expo Go, including local scheduling; it does not change notification
+behavior in compatible bare/standalone builds. Local storage cleanup remains safe.
+The lifecycle, auth, tenant, clinical, backend and production configuration sources
+are unchanged. No additional runtime error suppression or LogBox filtering was added.
+
+**Offline verification:** Node 20.19.4, existing Jest/Expo dependencies; 56 tests
+passed across 13 suites, zero failed/skipped, final exit 0. This includes 15 new
+`tests/features/notifications/expoPushRuntimeCompatibility.test.ts` cases; the
+existing notification lifecycle (9), notification presentation boundary (1),
+authSession (5), bootstrapSession.persistence (2), authStoreClearSession (3),
+authTenantHydration (2), unifiedLogout (5), logoutBoundary.characterization (4),
+logoutOrchestration.boundary (3), session-restoration-boundary (3),
+doctorLogoutPlatform (2) and B1 presentation-boundary guard (2) tests.
+Production TypeScript, scoped ESLint on the provider/new test, and diff whitespace
+checks passed. Tests used the existing pre-import network/process guard,
+`NODE_ENV=test`, `--runInBand --watchman=false --no-cache`, and an external overlay
+preserving Expo's iOS/Android/native haste settings. No network/process guard
+violations occurred in the final run.
+
+Runner limitations were kept separate from application results: an initial
+Watchman probe was blocked by the guard; a subsequent all-assertions-passing run
+exited 1 on Expo's lazy-fetch/native-logger teardown. The latter also reproduced
+without the new tests. The successful final test command additionally used the
+installed SDK's `EXPO_PUBLIC_USE_RN_FETCH=1` switch solely in the test environment;
+no repository/runtime configuration was changed and no assertions/errors were
+suppressed. Evidence: `/private/tmp/nova-expo-go-final-results.json` and
+`/private/tmp/nova-expo-go-final.log` (temporary local artifacts).
+
+**Acceptance still unverified:** actual Android Expo Go reload/open, live login
+and logout, and real-device/native push delivery. No application server, backend,
+provider session or database connection was started for this verification.
+Existing testing-secret, account and Data API containment gates remain separate;
+this change does not authorize clinical UAT or database/security changes.
+
+### Password recovery for Android Expo Go — 2026-10-30
+
+**Owner-approved bounded repair; live email acceptance pending.** Forgot Password
+previously supplied `novaclinicspro://reset-password`, while the native project
+registers `frontend`; Expo Go owns neither standalone app scheme. The reset route
+parsed credentials only on web and accepted an unrelated existing provider session.
+The reported localhost fallback is consistent with a missing/mismatched Supabase
+redirect allowlist or a Site-URL-based email template, but the actual Dashboard
+Site URL/allowlist/template could not be read through the available connector.
+Do not report those remote values as inspected or changed.
+
+`features/auth/presentation/recovery-links.ts` now generates `/reset-password` on
+the current browser origin, or on the web equivalent of Expo Go's generated Metro
+host (`exp://HOST:PORT/--/reset-password` becomes
+`http://HOST:PORT/reset-password`; `exps` preserves HTTPS). Standalone/native builds
+use `expo-linking`'s generated registered scheme. No LAN address is hardcoded.
+The existing reset route supplies the dedicated password form, handles cold/warm
+native URLs, rejects provider errors/non-recovery/missing credentials, and removes
+browser callback query/fragment values before asynchronous work. No callback URLs,
+provider token values or password values are logged by the new code.
+
+AuthSessionService requires callback credentials, clears normal app identity,
+establishes the provider-only session through `setSession`, and gates password
+updates until that succeeds. The existing adapter uses `updateUser({password})`.
+Recovery does not hydrate `/auth/me`; AuthProvider skips ordinary bootstrap and
+subscription on `/reset-password`. Leaving an unfinished flow signs out rather
+than converting recovery into application login. Success signs out, clears normal
+state, and consumes the local recovery flow. Supabase remains authoritative for
+email-link single use, expiry and user/password validation. Existing normal auth,
+authorization, tenant, backend and commercial behavior is unchanged.
+
+**Required development Dashboard configuration (owner action; not performed):**
+project `evkcvntjpkxlcxgwychq`, Authentication > URL Configuration: use the current
+reachable web UAT origin as Site URL and add its exact `/reset-password` URL to
+Redirect URLs. At inspection the origin was `http://192.168.1.7:8081`. Update the
+allowlist when the LAN host changes; do not use broad production wildcards.
+Retain the standard recovery email `{{ .ConfirmationURL }}` link, rather than a
+hardcoded Site URL that drops the requested callback. Production web recovery
+requires its approved HTTPS origin; native builds need their generated scheme
+allowlisted separately. Browser recovery deliberately returns the user to Expo Go
+for a fresh login, rather than relying on Expo Go custom-scheme interception.
+
+**Offline evidence:** Node 20.19.4; 81 tests passed, 16 suites, zero failed/skipped,
+exit 0, with existing pre-import network/process restrictions, `NODE_ENV=test`,
+`EXPO_PUBLIC_USE_RN_FETCH=1`, `--watchman=false --runInBand --no-cache` and the
+existing external Expo-preserving Jest overlay. Focused suites cover URL generation
+and error parsing, the actual form and submission, bootstrap ownership, provider
+SDK calls, recovery isolation and the existing login/logout/notification/B1 guards.
+Evidence: `/private/tmp/nova-recovery-final.json` and
+`/private/tmp/nova-recovery-final.log` (temporary artifacts). No existing recovery
+link/token was opened or reused. No emails, Auth-user modifications, Dashboard
+changes, database writes, commercial extensions, service startup or Git commits
+were performed. Real email delivery, allowlist behavior, browser/Expo-Go navigation
+and server-enforced expired/reused-link rejection remain owner-led acceptance gates.
+Production TypeScript and scoped ESLint passed (zero errors; three inherited
+`import/first` warnings in the pre-existing authSession test import layout).
+`git diff --check` passed. After reusing existing reset-request error wording in
+the URL helper, its 15 URL tests were rerun and passed. Prior notification changes,
+local environment files, and the owner's dependency symlink were preserved.
+
+### Recovery-route redirect investigation — 2026-10-30
+
+**Reported phone/browser redirect remains UNVERIFIED; no further production
+change made.** The existing Expo process on port 8081 has its working directory
+in this consolidated frontend. A token-free HTTP GET to `/reset-password`
+returned 200 with the same path and no HTTP redirect. The served web bundle
+contains this worktree's reset route, recovery-link parser and recovery-session
+service; it does not contain the former hardcoded callback scheme.
+
+A fresh Codex browser at `http://192.168.1.7:8081/reset-password` displayed
+**Link Expired / Request New Link / Back to Login** and stayed on the reset
+route. The same was observed with the synthetic `?error_code=otp_expired`
+callback. No real email callback, recovery token, account or password was used.
+These observations do not validate a real provider recovery session or reproduce
+the reported phone failure.
+
+The reset screen is a root Expo Router route, outside protected clinic layouts.
+Root `_layout.tsx` has no login redirect. AuthProvider already skips normal
+bootstrap/subscription at `/reset-password`; the reset screen navigates to login
+only on explicit user actions. Ordinary unauthenticated entry at `app/index.tsx`
+(line 57 at review) and `core/components/ProtectedRoute.tsx` (line 49) deliberately
+redirect to `/login`. Neither is established as the cause of the reported reset
+failure. No authentication guard was disabled or widened. The SDK client keeps
+`detectSessionInUrl: false`; the reset screen captures callback credentials before
+removing them from the address bar and passes them explicitly to the application
+service. Real SIGNED_IN/PASSWORD_RECOVERY event timing and the affected browser's
+initial navigation remain unobserved; do not claim their race was reproduced.
+
+Extended existing `recoveryScreens.test.tsx` with missing-callback and pending
+verification cases, including assertions against both push and replace navigation.
+Extended `recoveryBootstrapGuard.test.tsx` with ordinary protected-route rejection,
+hydration waiting and authenticated rendering. Existing tests retain valid and
+expired callback handling and rejection of a normal session as recovery authority.
+Guarded focused verification: **49/49 tests, eight suites, zero failures/skips,
+exit 0, zero guard violations**. Production TypeScript and scoped ESLint on the
+two changed test files passed. Artifacts outside Git:
+`/private/tmp/nova-recovery-route-investigation.json`, corresponding `.log`,
+`/private/tmp/nova-recovery-route-ts.log`, and
+`/private/tmp/nova-recovery-route-lint.log`.
+
+**Next acceptance:** the owner should request one fresh email and observe the
+callback on the affected phone. Record only origin/path, whether query/fragment
+credential fields are present (names only), visible error text and whether the
+path changes before rendering. Never share the full callback URL, token values
+or password. A real callback still reaching login requires a navigation trace
+before another source correction; stale client state or provider redirect
+configuration is a hypothesis, not a verified cause. Existing remote redirect
+settings and live password update remain unverified. Prior unrelated working
+changes, original B27 worktrees, backend and provider settings remain untouched.
+
+### Actual recovery-email destination evidence — 2026-10-30
+
+**Verified from development-project logs, not a mocked callback:** read-only
+Supabase unified logs for `evkcvntjpkxlcxgwychq` show the successful
+`POST /auth/v1/recover` at `2026-10-30T03:35:36.449Z` supplied exactly
+`http://192.168.1.7:8081/reset-password`. The Android
+`GET /auth/v1/verify` at `03:35:52.034Z` had `type=recovery` but its
+`redirect_to` was exactly `http://localhost:8081`, with no reset path; status 303.
+An adjacent non-Android verification at `03:36:07.272Z` had the same destination.
+The preceding successful request/verification pair at 03:23–03:24 showed the same
+mismatch. Diagnostics selected only timestamps, operation, status, safe redirect
+origin/path or equality checks, user-agent Android boolean and constant auth/error
+codes. No token, full verification URL, email address or password was output.
+
+The corresponding Auth entry records `auth_event.action=login` at 03:35:52.
+This is provider-side verification evidence, not proof of a frontend
+PASSWORD_RECOVERY event or a successfully initialized reset screen. The intended
+callback was already different in the verification request. The exact Dashboard
+allowlist/template cause was not independently read: the available connector has
+no Auth-configuration operation and the browser Dashboard required sign-in.
+Allowlist fallback versus template substitution must not be reported as directly
+inspected. Gmail wrapping was not inspected and is not established as the cause.
+
+The owner subsequently reported changing Site URL to
+`http://192.168.1.7:8081`, and confirmed the exact `/reset-password` Redirect URL
+and `{{ .ConfirmationURL }}` recovery template were configured. These settings
+are owner-reported. Site URL alone targets the root; ordinary unauthenticated root
+routing at `app/index.tsx:57` intentionally leads to login. The physical browser's
+first pathname, any subsequent navigation and recovery-session establishment
+remain UNVERIFIED; the root redirect is a code-path explanation, not an observed
+phone trace. No guard or production recovery source was changed in this task.
+
+The existing Expo process was confirmed to originate in the consolidated frontend
+at HEAD `55a38ad3f3742ea23871c4a460d53c1ae582d9d5` with the preserved uncommitted
+recovery changes. A token-free reset request returned HTTP 200. A later bundle
+request lost its connection and the listener ceased; the cause was not determined.
+Expo was restarted from the same frontend with `EXPO_OFFLINE=1`, the existing
+Node 20.19.4 executable and `expo start --lan --port 8081`; it advertised
+`exp://192.168.1.7:8081`. No dependencies were installed. ADB listed no connected
+Android phone, so no device trace was captured.
+
+**Live retest BLOCKED:** after the settings correction, the fresh request at
+`2026-10-30T03:44:57.371Z` still supplied the correct LAN reset URL but returned
+HTTP 429; Auth reports `over_email_send_rate_limit`. Do not issue further retries,
+reuse consumed links or change rate limits to manufacture a pass. The configured
+cooldown/next permitted send time was not established. Once permitted, send one
+fresh email and observe its verification destination and reset form on the phone.
+The owner must perform the password entry/update; no remote password was changed.
+
+Existing guarded URL/provider regression selection passed **18/18**, two suites,
+zero failures/skips, exit 0 and zero guard violations. Evidence:
+`/private/tmp/nova-recovery-email-url-regression.json` and corresponding `.log`.
+No new source correction or regression test was warranted for an unconfirmed
+frontend defect; existing callback generation and exact SDK forwarding tests were
+reused. This is not real-email/browser acceptance. No commit, push, database query,
+Auth-setting change by the agent, role change or commercial change was performed.
+
 
 ### 2026-10-30 — Super Admin tenant-list denial and truthful dashboard states
 
