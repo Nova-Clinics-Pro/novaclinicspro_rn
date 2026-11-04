@@ -1,6 +1,7 @@
 import {
   RegistrationSubmissionError,
   mapRegistrationSubmissionError,
+  registerClinicOwnerApi,
 } from '../../features/registration/data/datasources/registration.api';
 
 jest.mock('../../core/api/axiosClient', () => ({
@@ -74,7 +75,6 @@ describe('registration error classification', () => {
 
 describe('registerClinicOwnerApi Idempotency-Key header', () => {
   const { axiosClient } = jest.requireMock('../../core/api/axiosClient');
-  const { registerClinicOwnerApi } = require('../../features/registration/data/datasources/registration.api');
   const request = { email: 'owner@example.test' } as any;
 
   beforeEach(() => axiosClient.post.mockReset());
