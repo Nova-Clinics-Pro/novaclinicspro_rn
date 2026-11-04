@@ -1,0 +1,23 @@
+{
+ "ayurveda": {
+  "clinicType": "ayurveda",
+  "capabilities": {
+   "ayurvedaAssessments": true,
+   "therapyAppointments": true,
+   "ayurvedaTreatmentWorkflow": "as supported by Ayurveda configuration",
+   "ordinaryAppointments": true,
+   "ordinaryConsultation": true
+  }
+ },
+ "general": {
+  "clinicType": "general",
+  "capabilities": {
+   "ayurvedaAssessments": false,
+   "therapyAppointments": false,
+   "ayurvedaTreatmentWorkflow": "not available",
+   "ordinaryAppointments": true,
+   "ordinaryConsultation": true
+  }
+ },
+ "_note": "Expected behaviour only. These profiles never configure, grant or override application permissions; tests read the live configuration and compare it to this expectation."
+}

@@ -1,0 +1,33 @@
+{
+ "clinic_owner": {
+  "description": "Registers the clinic; full clinic administration",
+  "expectedAccess": [
+   "dashboard",
+   "patients",
+   "appointments",
+   "settings"
+  ]
+ },
+ "anonymous": {
+  "description": "Not signed in",
+  "expectedAccess": [
+   "login",
+   "register"
+  ]
+ },
+ "doctor": {
+  "description": "Clinical role (account must exist in the clinic)",
+  "expectedAccess": [
+   "consultation",
+   "casesheet",
+   "prescription"
+  ]
+ },
+ "therapist": {
+  "description": "Executes treatment sessions",
+  "expectedAccess": [
+   "treatment execution"
+  ]
+ },
+ "_note": "Descriptive profiles for scenario authoring; real access is decided by the backend."
+}
