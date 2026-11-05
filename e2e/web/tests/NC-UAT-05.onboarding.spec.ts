@@ -20,8 +20,14 @@ for (const clinicType of ['ayurveda', 'general'] as ClinicType[]) {
       await expect(page).toHaveURL(/onboarding/, { timeout: 60_000 });
       await page.waitForTimeout(6000);
       await evidence.shot('onboarding');
-      // Defect NC-WEB-001: session_refresh_required stays true for a fresh owner, the wizard shows a tenant-mismatch error.
+      // Regression NC-WEB-001: a fresh owner's token has no tenant claim yet (/auth/me session_refresh_required). The session
+      // must be reconciled so the wizard loads its journey instead of a tenant-mismatch error.
       await expect(page.getByText('Unable to load clinic preparation'), 'onboarding journey failed to load').toHaveCount(0);
+      await expect(page.getByText('Your clinic preparation journey'), 'the preparation journey is rendered').toBeVisible({ timeout: 30_000 });
+      // The handshake persisted the tenant claim: a brand-new sign-in token no longer reports stale claims.
+      const afterHandshake = new ApiSession(owner);
+      await afterHandshake.signIn();
+      expect((await afterHandshake.get('/api/v1/auth/me')).body.session_refresh_required, 'claims reconciled after the UI handshake').toBe(false);
       expect(diagnostics.pageErrors).toEqual([]);
     });
   });

@@ -14,3 +14,12 @@ export const getCurrentUserApi = async (): Promise<CurrentUserResponse> => {
   const response = await axiosClient.get<CurrentUserResponse>('/api/v1/auth/me');
   return response.data;
 };
+
+/**
+ * Ask the backend to project the authoritative effective tenant into the
+ * provider token claims. The caller must then refresh the provider session.
+ * POST /api/v1/auth/organizations/{organization_id}/session-refresh
+ */
+export const refreshEffectiveTenantSessionApi = async (organizationId: string): Promise<void> => {
+  await axiosClient.post(`/api/v1/auth/organizations/${organizationId}/session-refresh`);
+};

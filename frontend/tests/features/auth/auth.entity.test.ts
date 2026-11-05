@@ -58,4 +58,27 @@ describe('mapCurrentUserToDomain', () => {
 
     expect(mapped.isDemoTenant).toBe(false);
   });
+
+  it('maps the backend-authoritative session scope so stale token claims can be detected', () => {
+    const base = { user_id: 'user-1', email: 'owner@example.com', tenant_id: 'tenant-1', roles: [], permissions: [], is_org_admin: false };
+
+    expect(
+      mapCurrentUserToDomain({
+        ...base,
+        effective_organization_id: 'org-1',
+        effective_tenant_id: 'tenant-1',
+        session_refresh_required: true,
+      }).sessionScope
+    ).toEqual({ effectiveOrganizationId: 'org-1', effectiveTenantId: 'tenant-1', sessionRefreshRequired: true });
+
+    // Older backend responses without the fields carry no scope (nothing to reconcile).
+    expect(mapCurrentUserToDomain(base).sessionScope).toBeUndefined();
+
+    // A missing flag is never treated as "refresh required".
+    expect(mapCurrentUserToDomain({ ...base, effective_tenant_id: null }).sessionScope).toEqual({
+      effectiveOrganizationId: null,
+      effectiveTenantId: null,
+      sessionRefreshRequired: false,
+    });
+  });
 });

@@ -39,6 +39,16 @@ export interface AuthUserSession {
    * Empty array for non-owner users.
    */
   ownedClinics: OwnedClinic[];
+  /**
+   * Backend-authoritative organization/tenant scope. `sessionRefreshRequired` is
+   * true while the provider token claims lag behind it (for example right after
+   * registration provisioned the clinic); the session must then be reconciled.
+   */
+  sessionScope?: {
+    effectiveOrganizationId: string | null;
+    effectiveTenantId: string | null;
+    sessionRefreshRequired: boolean;
+  };
 }
 
 /**
@@ -84,6 +94,9 @@ export const mapCurrentUserToDomain = (dto: {
     is_primary?: boolean;
   }>;
   application_status?: 'draft' | 'pending_review' | 'approved' | 'onboarding' | 'active' | 'rejected' | null;
+  effective_organization_id?: string | null;
+  effective_tenant_id?: string | null;
+  session_refresh_required?: boolean;
 }): AuthUserSession => {
   const ownedClinics = (dto.owned_clinics || []).map(c => ({
     tenantId: c.tenant_id,
@@ -113,6 +126,15 @@ export const mapCurrentUserToDomain = (dto: {
     isDemoTenant: dto.is_demo_tenant === true,
     applicationStatus: dto.application_status || null,
     ownedClinics,
+    ...(dto.session_refresh_required !== undefined || dto.effective_tenant_id !== undefined
+      ? {
+          sessionScope: {
+            effectiveOrganizationId: dto.effective_organization_id ?? null,
+            effectiveTenantId: dto.effective_tenant_id ?? null,
+            sessionRefreshRequired: dto.session_refresh_required === true,
+          },
+        }
+      : {}),
   };
 };
 

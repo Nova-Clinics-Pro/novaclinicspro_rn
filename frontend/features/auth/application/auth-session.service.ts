@@ -25,22 +25,64 @@ export class AuthSessionService {
   private hydratedAccessToken: string | null = null;
   private recoveryMode = false;
   private recoverySessionReady = false;
+  /** True while reconcileStaleSessionScope drives its own provider refresh (its auth event must not re-enter hydration). */
+  private reconcilingScope = false;
 
   private async hydrateCurrentUser(accessToken: string): Promise<AuthUserSession> {
+    let user: AuthUserSession;
     try {
-      const user = await authRepository.getCurrentUser();
-      useAuthStore.getState().setCurrentUser(user);
-      this.hydratedAccessToken = accessToken;
-      return user;
+      user = await authRepository.getCurrentUser();
     } catch (firstError: any) {
       if (firstError?.isAxiosError && !firstError?.response) {
         await new Promise(resolve => setTimeout(resolve, 800));
-        const user = await authRepository.getCurrentUser();
-        useAuthStore.getState().setCurrentUser(user);
-        this.hydratedAccessToken = accessToken;
-        return user;
+        user = await authRepository.getCurrentUser();
+      } else {
+        throw firstError;
       }
-      throw firstError;
+    }
+    useAuthStore.getState().setCurrentUser(user);
+    this.hydratedAccessToken = accessToken;
+    return this.reconcileStaleSessionScope(user);
+  }
+
+  /**
+   * NC-WEB-001. The backend is authoritative for the effective organization/tenant
+   * and reports `sessionRefreshRequired` while the provider token claims lag behind
+   * it (a clinic provisioned at registration has no tenant claim yet). Every
+   * tenant-scoped surface fails closed on that flag, so the canonical handshake
+   * (server-side claim projection, then provider token refresh) must run once the
+   * session is hydrated; otherwise a new owner is stuck on "selected clinic changed".
+   * The backend decides the scope from database membership; nothing is trusted from
+   * the client and tenant isolation is unchanged. Attempted at most once per
+   * hydration; a failure leaves the fail-closed state in place.
+   */
+  private async reconcileStaleSessionScope(user: AuthUserSession): Promise<AuthUserSession> {
+    const scope = user.sessionScope;
+    if (
+      !scope?.sessionRefreshRequired ||
+      !scope.effectiveOrganizationId ||
+      !scope.effectiveTenantId ||
+      isLoggingOut()
+    ) {
+      return user;
+    }
+    const epoch = getLogoutEpoch();
+    this.reconcilingScope = true;
+    try {
+      await authRepository.refreshEffectiveTenantSession(scope.effectiveOrganizationId);
+      const refreshed = await supabaseAuthProvider.refreshSession();
+      if (isLoggingOut() || getLogoutEpoch() !== epoch) return user;
+      await this.persistSession(refreshed);
+      const reconciled = await authRepository.getCurrentUser();
+      if (isLoggingOut() || getLogoutEpoch() !== epoch) return user;
+      useAuthStore.getState().setCurrentUser(reconciled);
+      this.hydratedAccessToken = refreshed.accessToken;
+      return reconciled;
+    } catch (error) {
+      logError('auth.session_scope_reconciliation', error);
+      return user;
+    } finally {
+      this.reconcilingScope = false;
     }
   }
 
@@ -151,7 +193,7 @@ export class AuthSessionService {
       this.hydratedAccessToken = null;
       return;
     }
-    if (this.recoveryMode) return;
+    if (this.recoveryMode || this.reconcilingScope) return;
     await this.persistSession(session);
     if (this.hydratedAccessToken === session.accessToken) return;
     try {
