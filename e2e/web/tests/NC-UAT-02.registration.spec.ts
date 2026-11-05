@@ -76,11 +76,17 @@ test.describe('NC-UAT-02 Registration contract and idempotency (API)', () => {
 
 test.describe('NC-UAT-02 Duplicate clinic name handling (API)', () => {
   test.use({ scenario: { id: 'NC-UAT-02', clinicType: 'general', role: 'anonymous' } });
-  test('registering a second clinic with an existing clinic name does not cause a server error', async () => {
+  test('registering a second clinic with an existing clinic name is rejected as a conflict, not a server error', async () => {
     const existing = identityFor('WEB', 'general');
     const other = { ...existing, email: `nc-web-uat-${config.runId}-dupname-${crypto.randomBytes(2).toString('hex')}@${config.emailDomain}`, phone: `+9171${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}` };
     const res = await fetch(`${config.apiBaseUrl}/api/v1/auth/register-clinic-owner`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `nc-uat-${crypto.randomUUID()}` }, body: JSON.stringify(registrationPayload(other)) });
-    // The product rule for duplicate clinic names is undefined; any client-visible outcome below 500 is acceptable.
-    expect(res.status, 'a name collision must not surface as a server error').toBeLessThan(500);
+    // NC-BE-002: the clinic-name collision is an expected conflict, never a server error. No naming policy is
+    // implied beyond the existing unique tenant code derived from the name.
+    expect(res.status, 'a name collision must be reported as a conflict').toBe(409);
+    expect((await res.json()).detail?.error, 'a meaningful, stable error code').toBe('clinic_name_unavailable');
+    // The rejection happens before any external identity exists, so the same applicant can correct the name and register.
+    const corrected = { ...other, clinicName: `${other.clinicName} ${crypto.randomBytes(2).toString('hex')}` };
+    const retry = await fetch(`${config.apiBaseUrl}/api/v1/auth/register-clinic-owner`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `nc-uat-${crypto.randomUUID()}` }, body: JSON.stringify(registrationPayload(corrected)) });
+    expect(retry.status, 'a corrected clinic name registers normally').toBe(201);
   });
 });
