@@ -13,9 +13,19 @@
  * outside the component tree.
  */
 let loggingOut = false;
+let logoutEpoch = 0;
 
 export function setLoggingOut(value: boolean): void {
+  // Each logout start opens a new epoch so that session work begun earlier
+  // (e.g. a concurrent bootstrap restoring a persisted session) can detect that
+  // a logout happened meanwhile and must not re-establish authentication.
+  if (value && !loggingOut) logoutEpoch += 1;
   loggingOut = value;
+}
+
+/** Monotonic counter incremented every time a logout begins. */
+export function getLogoutEpoch(): number {
+  return logoutEpoch;
 }
 
 export function isLoggingOut(): boolean {

@@ -6,12 +6,14 @@
 import { Stack } from 'expo-router';
 import { useClinicTheme } from '../../core/theme/useClinicTheme';
 import { useTranslation } from '../../core/localization/useTranslation';
+import { ProtectedRoute } from '../../core/components/ProtectedRoute';
 
 export default function OnboardingLayout() {
   const theme = useClinicTheme();
   const { t } = useTranslation();
 
   return (
+    <ProtectedRoute>
     <Stack
       screenOptions={{
         headerStyle: {
@@ -63,5 +65,6 @@ export default function OnboardingLayout() {
         options={{ title: t('applicationStatus.rejected.title') }}
       />
     </Stack>
+    </ProtectedRoute>
   );
 }

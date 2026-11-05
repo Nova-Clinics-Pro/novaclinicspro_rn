@@ -1,5 +1,6 @@
 /** Canonical application owner for the Auth session lifecycle. */
 import { logError } from '../../../core/utils/errorHandler';
+import { getLogoutEpoch, isLoggingOut } from '../../../core/api/authGuard';
 import { authRepository } from '../data/repositories/auth.repository.impl';
 import {
   AuthProviderError,
@@ -79,19 +80,49 @@ export class AuthSessionService {
         this.hydratedAccessToken = null;
         return { authenticated: false, session: null, error: 'No active session' };
       }
+      // A logout that begins before or during bootstrap wins: bootstrap must never
+      // restore a persisted session over it (the /logout route loads the app and
+      // runs bootstrap and logout concurrently).
+      const epoch = getLogoutEpoch();
+      const supersededByLogout = () => isLoggingOut() || getLogoutEpoch() !== epoch;
+      const loggedOut: AuthBootstrapResult = { authenticated: false, session: null, error: 'No active session' };
+      if (supersededByLogout()) return loggedOut;
       await useAuthStore.getState().initializeFromStorage();
+      if (supersededByLogout()) {
+        await useAuthStore.getState().clearSession();
+        return loggedOut;
+      }
       const persistedState = useAuthStore.getState();
       let session = await supabaseAuthProvider.getSession();
+      if (supersededByLogout()) {
+        await useAuthStore.getState().clearSession();
+        return loggedOut;
+      }
       if (!session && persistedState.accessToken && persistedState.refreshToken) {
         restoringPersistedSession = true;
         session = await supabaseAuthProvider.setSession({
           accessToken: persistedState.accessToken,
           refreshToken: persistedState.refreshToken,
         });
+        if (supersededByLogout()) {
+          // setSession re-seeded the provider storage; remove it again.
+          await supabaseAuthProvider.invalidateLocalSession();
+          await useAuthStore.getState().clearSession();
+          return loggedOut;
+        }
       }
-      if (!session) return { authenticated: false, session: null, error: 'No active session' };
+      if (!session) return loggedOut;
       await this.persistSession(session);
+      if (supersededByLogout()) {
+        await supabaseAuthProvider.invalidateLocalSession();
+        await useAuthStore.getState().clearSession();
+        return loggedOut;
+      }
       const user = await this.hydrateCurrentUser(session.accessToken);
+      if (supersededByLogout()) {
+        await useAuthStore.getState().clearSession();
+        return loggedOut;
+      }
       return { authenticated: true, session: user };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Session bootstrap failed';
@@ -111,6 +142,8 @@ export class AuthSessionService {
   }
 
   async handleAuthStateChange(session: AuthProviderSession | null): Promise<void> {
+    // While a logout is running no provider event may re-establish authentication.
+    if (session && isLoggingOut()) return;
     if (!session) {
       if (useAuthStore.getState().isAuthenticated || useAuthStore.getState().accessToken) {
         await useAuthStore.getState().clearSession();
@@ -134,8 +167,30 @@ export class AuthSessionService {
     });
   }
 
-  async signOutProviderBestEffort(): Promise<void> {
+  /**
+   * Synchronously (storage-level) invalidates the persisted provider session and
+   * returns the access token needed to revoke it remotely. Fail-closed: a storage
+   * failure is logged and reported as null, never thrown into logout.
+   */
+  async invalidateLocalProviderSession(): Promise<string | null> {
     try {
+      return await supabaseAuthProvider.invalidateLocalSession();
+    } catch (error) {
+      logError('auth.logout.provider_local_invalidation', error);
+      return null;
+    }
+  }
+
+  async signOutProviderBestEffort(revocationToken?: string | null): Promise<void> {
+    try {
+      if (revocationToken) {
+        try {
+          await supabaseAuthProvider.revokeRemoteSession(revocationToken);
+        } catch (error) {
+          // Local invalidation already happened; keep going to the SDK sign-out.
+          logError('auth.logout.remote_revocation', error);
+        }
+      }
       await supabaseAuthProvider.signOut();
     } catch (error) {
       logError('auth.logout.supabase_signout', error);

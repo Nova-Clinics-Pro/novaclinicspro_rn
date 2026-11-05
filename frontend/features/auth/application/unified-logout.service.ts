@@ -18,7 +18,8 @@ export interface UnifiedLogoutOptions {
  *
  * Safety order: synchronously block authenticated requests; capture the
  * outgoing identity; begin isolated notification cleanup; synchronously
- * invalidate local auth; cancel and clear tenant queries; clear the outgoing
+ * invalidate the persisted provider session locally, then the app auth state;
+ * cancel and clear tenant queries; clear the outgoing
  * user's onboarding draft; navigate; finally attempt provider sign-out.
  * Remote notification/provider work is intentionally best-effort and never
  * blocks local logout.
@@ -60,6 +61,15 @@ export class UnifiedLogoutService {
       // clearSession synchronously sets isAuthenticated false before its
       // storage cleanup resolves. This remains the authoritative local guard.
       const clearSessionPromise = clearSession();
+
+      // Invalidate the persisted provider session locally, right after the synchronous
+      // auth flag flip and before any other await or navigation. The SDK's own
+      // signOut() only removes it after a network call, so unloading the page (or
+      // any provider/network failure) before that call settles used to leave a
+      // restorable session behind. The returned token is used for remote
+      // revocation after local logout has completed.
+      const revocationToken = await authSessionService.invalidateLocalProviderSession();
+
       try {
         await queryClient.cancelQueries();
       } catch (error) {
@@ -85,7 +95,7 @@ export class UnifiedLogoutService {
 
       navigateToLogin();
       try {
-        await authSessionService.signOutProviderBestEffort();
+        await authSessionService.signOutProviderBestEffort(revocationToken);
       } catch (error) {
         // The provider adapter is normally non-throwing; retain the logout
         // guarantee if a future adapter or test double rejects unexpectedly.

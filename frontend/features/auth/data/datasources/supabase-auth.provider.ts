@@ -4,7 +4,7 @@
  * This is the sole feature-level owner of Supabase Auth SDK envelopes.  The
  * application session coordinator receives only the normalized contracts below.
  */
-import { supabase } from '../../../../core/api/supabaseClient';
+import { supabase, supabaseAuthStorage, SUPABASE_AUTH_STORAGE_KEY } from '../../../../core/api/supabaseClient';
 
 export interface AuthProviderSession {
   accessToken: string;
@@ -80,6 +80,30 @@ export class SupabaseAuthProvider {
 
   async signOut(): Promise<void> {
     const { error } = await supabase.auth.signOut();
+    if (error) throw normalizeProviderError(error.message);
+  }
+
+  /**
+   * Fail-closed local invalidation. The SDK's own signOut() removes the persisted
+   * session only AFTER its network call resolves, so a page unload, offline state
+   * or provider outage leaves a restorable session behind. This removes the
+   * persisted provider session first and hands back the access token so the
+   * remote revocation can still be attempted afterwards.
+   */
+  async invalidateLocalSession(): Promise<string | null> {
+    let accessToken: string | null = null;
+    try {
+      const { data } = await supabase.auth.getSession();
+      accessToken = data.session?.access_token ?? null;
+    } finally {
+      supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+    }
+    return accessToken;
+  }
+
+  /** Best-effort server-side revocation of a session already invalidated locally. */
+  async revokeRemoteSession(accessToken: string): Promise<void> {
+    const { error } = await supabase.auth.admin.signOut(accessToken, 'global');
     if (error) throw normalizeProviderError(error.message);
   }
 

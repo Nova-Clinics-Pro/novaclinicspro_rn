@@ -19,8 +19,12 @@ jest.mock('../../../features/onboarding/presentation/stores/wizard.store', () =>
 }));
 
 const mockProviderSignOut = jest.fn();
+const mockInvalidateProviderSession = jest.fn();
 jest.mock('../../../features/auth/application/auth-session.service', () => ({
-  authSessionService: { signOutProviderBestEffort: mockProviderSignOut },
+  authSessionService: {
+    signOutProviderBestEffort: mockProviderSignOut,
+    invalidateLocalProviderSession: mockInvalidateProviderSession,
+  },
 }));
 
 const mockClearSession = jest.fn();
@@ -50,6 +54,7 @@ describe('UnifiedLogoutService', () => {
     mockClearQueries.mockImplementation(() => { order.push('clearQueries'); });
     mockClearWizardDraft.mockImplementation(async () => { order.push('clearDraft'); });
     mockProviderSignOut.mockImplementation(async () => { order.push('providerSignOut'); });
+    mockInvalidateProviderSession.mockImplementation(async () => { order.push('invalidateProviderSession'); return 'revocable-access-token'; });
   });
 
   it('captures outgoing identity, starts notification cleanup, then completes local logout before provider sign-out', async () => {
@@ -61,6 +66,7 @@ describe('UnifiedLogoutService', () => {
     expect(order).toEqual([
       'notification:{"tenantId":"tenant-a","userId":"user-a"}',
       'clearSession',
+      'invalidateProviderSession',
       'cancelQueries',
       'clearQueries',
       'clearDraft',
@@ -68,7 +74,31 @@ describe('UnifiedLogoutService', () => {
       'providerSignOut',
     ]);
     expect(mockClearWizardDraft).toHaveBeenCalledWith(identity);
+    expect(mockProviderSignOut).toHaveBeenCalledWith('revocable-access-token');
     expect(isLoggingOut()).toBe(false);
+  });
+
+  it('removes the persisted provider session before navigating even when remote sign-out never settles (page unload / offline)', async () => {
+    const service = new UnifiedLogoutService();
+    mockProviderSignOut.mockImplementation(() => new Promise<void>(() => { /* never resolves */ }));
+    const navigateToLogin = jest.fn(() => order.push('navigate'));
+
+    void service.logout({ navigateToLogin });
+    await new Promise(resolve => setTimeout(resolve, 20));
+
+    expect(order.indexOf('invalidateProviderSession')).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('invalidateProviderSession')).toBeLessThan(order.indexOf('navigate'));
+    expect(order.indexOf('clearSession')).toBeLessThan(order.indexOf('navigate'));
+  });
+
+  it('stays fail-closed locally when persisted provider session invalidation reports no token', async () => {
+    const service = new UnifiedLogoutService();
+    mockInvalidateProviderSession.mockImplementationOnce(async () => null);
+
+    await service.logout({ navigateToLogin: jest.fn() });
+
+    expect(mockClearSession).toHaveBeenCalledTimes(1);
+    expect(mockProviderSignOut).toHaveBeenCalledWith(null);
   });
 
   it('does not block local logout when notification or provider remote cleanup fails', async () => {
@@ -111,6 +141,8 @@ describe('UnifiedLogoutService', () => {
     expect(mockCleanupForIdentity).toHaveBeenCalledTimes(1);
     expect(mockClearSession).toHaveBeenCalledTimes(1);
 
+    // Provider-session invalidation is awaited before queries are cancelled.
+    await new Promise(resolve => setTimeout(resolve, 0));
     releaseQueries();
     await first;
   });

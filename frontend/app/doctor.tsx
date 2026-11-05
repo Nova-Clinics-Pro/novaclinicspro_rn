@@ -5,6 +5,7 @@
  * Data is supplied through the Doctor Dashboard feature query boundary.
  */
 
+import { ProtectedRoute } from '../core/components/ProtectedRoute';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -78,7 +79,7 @@ import { toDoctorDashboardError } from '../features/doctorDashboard/application/
 // getPendingDocumentationStatusLabel (raw state/scheduling_status/
 // documentation_status branching) is superseded, not recreated elsewhere.
 
-export default function DoctorDashboard() {
+function DoctorDashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { logout, currentUser } = useAuth();
@@ -896,3 +897,12 @@ const caseResolverStyles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+/** Authenticated route: anonymous visitors are redirected to /login (backend remains authoritative). */
+export default function DoctorDashboardGuarded() {
+  return (
+    <ProtectedRoute>
+      <DoctorDashboard />
+    </ProtectedRoute>
+  );
+}

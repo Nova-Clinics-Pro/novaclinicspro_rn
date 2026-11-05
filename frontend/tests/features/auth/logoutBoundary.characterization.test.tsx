@@ -58,6 +58,7 @@ const mockClearSession = jest.fn(async () => {
 });
 jest.mock('../../../features/auth/application/auth-session.service', () => ({
   authSessionService: {
+    invalidateLocalProviderSession: jest.fn(),
     signOutProviderBestEffort: jest.fn(),
     login: jest.fn(),
     bootstrap: jest.fn(),
@@ -107,12 +108,16 @@ describe('Logout boundary (T-0.4 baseline, T-A.4 fix)', () => {
     callOrder.length = 0;
     jest.clearAllMocks();
     mockRouterReplace.mockClear();
+    (authSessionService.invalidateLocalProviderSession as jest.Mock).mockImplementation(async () => {
+      callOrder.push('invalidateProviderSession');
+      return 'access-token-to-revoke';
+    });
     (authSessionService.signOutProviderBestEffort as jest.Mock).mockImplementation(async () => {
       callOrder.push('supabaseSignOut');
     });
   });
 
-  it('T-A.4 FIX: logout clears the local session, cancels and clears the query cache, THEN attempts Supabase signOut (moved to best-effort, after local cleanup)', async () => {
+  it('T-A.4 FIX: logout invalidates the persisted provider session and clears the local session, cancels and clears the query cache, THEN attempts Supabase signOut (moved to best-effort, after local cleanup)', async () => {
     jest.spyOn(queryClient, 'cancelQueries').mockImplementation(async () => {
       callOrder.push('cancelQueries');
       return 0;
@@ -126,7 +131,7 @@ describe('Logout boundary (T-0.4 baseline, T-A.4 fix)', () => {
       await result.current.logout();
     });
 
-    expect(callOrder).toEqual(['clearSession', 'cancelQueries', 'clear', 'supabaseSignOut']);
+    expect(callOrder).toEqual(['clearSession', 'invalidateProviderSession', 'cancelQueries', 'clear', 'supabaseSignOut']);
   });
 
   it('T-A.4 FIX: the authGuard flag is set synchronously before local cleanup starts, and cleared once logout completes', async () => {
