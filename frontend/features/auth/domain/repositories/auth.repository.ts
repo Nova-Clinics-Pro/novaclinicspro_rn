@@ -16,4 +16,6 @@ export interface AuthRepository {
    * provider token claims (the provider session must be refreshed afterwards).
    */
   refreshEffectiveTenantSession(organizationId: string): Promise<void>;
+  /** Revoke the session behind the token on the server; resolves true when the server confirmed. */
+  revokeServerSession(accessToken: string): Promise<boolean>;
 }

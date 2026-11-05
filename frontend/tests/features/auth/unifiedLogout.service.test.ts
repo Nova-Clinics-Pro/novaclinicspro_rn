@@ -20,10 +20,12 @@ jest.mock('../../../features/onboarding/presentation/stores/wizard.store', () =>
 
 const mockProviderSignOut = jest.fn();
 const mockInvalidateProviderSession = jest.fn();
+const mockRevokeServerSession = jest.fn();
 jest.mock('../../../features/auth/application/auth-session.service', () => ({
   authSessionService: {
     signOutProviderBestEffort: mockProviderSignOut,
     invalidateLocalProviderSession: mockInvalidateProviderSession,
+    revokeServerSession: mockRevokeServerSession,
   },
 }));
 
@@ -54,7 +56,19 @@ describe('UnifiedLogoutService', () => {
     mockClearQueries.mockImplementation(() => { order.push('clearQueries'); });
     mockClearWizardDraft.mockImplementation(async () => { order.push('clearDraft'); });
     mockProviderSignOut.mockImplementation(async () => { order.push('providerSignOut'); });
+    mockRevokeServerSession.mockImplementation(async () => { order.push('serverRevoke'); return true; });
     mockInvalidateProviderSession.mockImplementation(async () => { order.push('invalidateProviderSession'); return 'revocable-access-token'; });
+  });
+
+  it('still navigates and signs the SDK out when the server could not confirm revocation', async () => {
+    mockRevokeServerSession.mockImplementationOnce(async () => false);
+    const navigateToLogin = jest.fn(() => order.push('navigate'));
+
+    await new UnifiedLogoutService().logout({ navigateToLogin });
+
+    expect(navigateToLogin).toHaveBeenCalledTimes(1);
+    expect(mockProviderSignOut).toHaveBeenCalledTimes(1);
+    expect(order.indexOf('invalidateProviderSession')).toBeLessThan(order.indexOf('navigate'));
   });
 
   it('captures outgoing identity, starts notification cleanup, then completes local logout before provider sign-out', async () => {
@@ -67,6 +81,7 @@ describe('UnifiedLogoutService', () => {
       'notification:{"tenantId":"tenant-a","userId":"user-a"}',
       'clearSession',
       'invalidateProviderSession',
+      'serverRevoke',
       'cancelQueries',
       'clearQueries',
       'clearDraft',
@@ -74,7 +89,8 @@ describe('UnifiedLogoutService', () => {
       'providerSignOut',
     ]);
     expect(mockClearWizardDraft).toHaveBeenCalledWith(identity);
-    expect(mockProviderSignOut).toHaveBeenCalledWith('revocable-access-token');
+    expect(mockRevokeServerSession).toHaveBeenCalledWith('revocable-access-token');
+    expect(mockProviderSignOut).toHaveBeenCalledWith();
     expect(isLoggingOut()).toBe(false);
   });
 
@@ -98,7 +114,7 @@ describe('UnifiedLogoutService', () => {
     await service.logout({ navigateToLogin: jest.fn() });
 
     expect(mockClearSession).toHaveBeenCalledTimes(1);
-    expect(mockProviderSignOut).toHaveBeenCalledWith(null);
+    expect(mockRevokeServerSession).toHaveBeenCalledWith(null);
   });
 
   it('does not block local logout when notification or provider remote cleanup fails', async () => {

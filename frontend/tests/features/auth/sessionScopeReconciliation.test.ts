@@ -40,7 +40,6 @@ jest.mock('../../../features/auth/data/datasources/supabase-auth.provider', () =
     refreshSession: jest.fn(),
     signOut: jest.fn(),
     invalidateLocalSession: jest.fn(),
-    revokeRemoteSession: jest.fn(),
     resetPasswordForEmail: jest.fn(),
     updatePassword: jest.fn(),
     subscribe: jest.fn(),

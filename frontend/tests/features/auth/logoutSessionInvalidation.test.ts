@@ -30,7 +30,7 @@ const mockState = {
 };
 
 jest.mock('../../../features/auth/data/repositories/auth.repository.impl', () => ({
-  authRepository: { getCurrentUser: jest.fn() },
+  authRepository: { getCurrentUser: jest.fn(), revokeServerSession: jest.fn() },
 }));
 
 jest.mock('../../../features/auth/data/datasources/supabase-auth.provider', () => ({
@@ -42,7 +42,6 @@ jest.mock('../../../features/auth/data/datasources/supabase-auth.provider', () =
     refreshSession: jest.fn(),
     signOut: jest.fn(),
     invalidateLocalSession: jest.fn(),
-    revokeRemoteSession: jest.fn(),
     resetPasswordForEmail: jest.fn(),
     updatePassword: jest.fn(),
     subscribe: jest.fn(),
@@ -181,13 +180,24 @@ describe('AuthSessionService provider invalidation', () => {
     await expect(new AuthSessionService().invalidateLocalProviderSession()).resolves.toBeNull();
   });
 
-  it('revokes the captured token remotely before the SDK sign-out, and still signs out locally if revocation fails', async () => {
-    provider.revokeRemoteSession.mockRejectedValue(new Error('offline'));
-    provider.signOut.mockResolvedValue(undefined);
+  it('revokes the captured token on the server and reports confirmation', async () => {
+    (authRepository.revokeServerSession as jest.Mock).mockResolvedValue(true);
 
-    await expect(new AuthSessionService().signOutProviderBestEffort('captured-token')).resolves.toBeUndefined();
+    await expect(new AuthSessionService().revokeServerSession('captured-token')).resolves.toBe(true);
+    expect(authRepository.revokeServerSession).toHaveBeenCalledWith('captured-token');
+  });
 
-    expect(provider.revokeRemoteSession).toHaveBeenCalledWith('captured-token');
+  it('reports false (never throws) when the server revocation fails or there is no token', async () => {
+    (authRepository.revokeServerSession as jest.Mock).mockRejectedValue(new Error('offline'));
+
+    await expect(new AuthSessionService().revokeServerSession('captured-token')).resolves.toBe(false);
+    await expect(new AuthSessionService().revokeServerSession(null)).resolves.toBe(false);
+  });
+
+  it('signs the SDK out locally even when the provider rejects', async () => {
+    provider.signOut.mockRejectedValue(new Error('provider down'));
+
+    await expect(new AuthSessionService().signOutProviderBestEffort()).resolves.toBeUndefined();
     expect(provider.signOut).toHaveBeenCalledTimes(1);
   });
 });

@@ -79,7 +79,7 @@ export class SupabaseAuthProvider {
   }
 
   async signOut(): Promise<void> {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw normalizeProviderError(error.message);
   }
 
@@ -99,12 +99,6 @@ export class SupabaseAuthProvider {
       supabaseAuthStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
     }
     return accessToken;
-  }
-
-  /** Best-effort server-side revocation of a session already invalidated locally. */
-  async revokeRemoteSession(accessToken: string): Promise<void> {
-    const { error } = await supabase.auth.admin.signOut(accessToken, 'global');
-    if (error) throw normalizeProviderError(error.message);
   }
 
   async resetPasswordForEmail(email: string, redirectTo: string): Promise<void> {

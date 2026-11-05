@@ -23,3 +23,22 @@ export const getCurrentUserApi = async (): Promise<CurrentUserResponse> => {
 export const refreshEffectiveTenantSessionApi = async (organizationId: string): Promise<void> => {
   await axiosClient.post(`/api/v1/auth/organizations/${organizationId}/session-refresh`);
 };
+
+export interface ServerLogoutResponse {
+  status: string;
+  provider_session_revoked: boolean;
+}
+
+/**
+ * Revoke the session behind `accessToken` on the server (idempotent). The token
+ * is passed explicitly because local session state is already cleared when
+ * logout calls this. POST /api/v1/auth/logout
+ */
+export const revokeServerSessionApi = async (accessToken: string): Promise<ServerLogoutResponse> => {
+  const response = await axiosClient.post<ServerLogoutResponse>('/api/v1/auth/logout', null, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    skipAuthRefreshRetry: true,
+    timeout: 5000,
+  });
+  return response.data;
+};

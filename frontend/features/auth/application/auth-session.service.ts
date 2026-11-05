@@ -223,16 +223,24 @@ export class AuthSessionService {
     }
   }
 
-  async signOutProviderBestEffort(revocationToken?: string | null): Promise<void> {
+  /**
+   * Server-side revocation of the session behind a token captured before local
+   * invalidation. Resolves true only when the server confirmed. Never throws:
+   * the session is already invalid locally and a failure is only logged.
+   */
+  async revokeServerSession(accessToken: string | null): Promise<boolean> {
+    if (!accessToken) return false;
     try {
-      if (revocationToken) {
-        try {
-          await supabaseAuthProvider.revokeRemoteSession(revocationToken);
-        } catch (error) {
-          // Local invalidation already happened; keep going to the SDK sign-out.
-          logError('auth.logout.remote_revocation', error);
-        }
-      }
+      return await authRepository.revokeServerSession(accessToken);
+    } catch (error) {
+      logError('auth.logout.server_revocation', error);
+      return false;
+    }
+  }
+
+  /** Clears the SDK's in-memory state for this device only (other sessions are untouched). */
+  async signOutProviderBestEffort(): Promise<void> {
+    try {
       await supabaseAuthProvider.signOut();
     } catch (error) {
       logError('auth.logout.supabase_signout', error);

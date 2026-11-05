@@ -4,7 +4,7 @@
  */
 const mockRemoveItem = jest.fn();
 const mockGetSession = jest.fn();
-const mockAdminSignOut = jest.fn();
+const mockSignOut = jest.fn();
 
 jest.mock('../../../core/api/supabaseClient', () => ({
   SUPABASE_AUTH_STORAGE_KEY: 'sb-testref-auth-token',
@@ -12,7 +12,7 @@ jest.mock('../../../core/api/supabaseClient', () => ({
   supabase: {
     auth: {
       getSession: (...args: unknown[]) => mockGetSession(...args),
-      admin: { signOut: (...args: unknown[]) => mockAdminSignOut(...args) },
+      signOut: (...args: unknown[]) => mockSignOut(...args),
     },
   },
 }));
@@ -45,12 +45,12 @@ describe('SupabaseAuthProvider local invalidation', () => {
     expect(mockRemoveItem).toHaveBeenCalledTimes(1);
   });
 
-  it('revokes remotely with global scope and surfaces provider errors for the caller to log', async () => {
-    mockAdminSignOut.mockResolvedValue({ error: null });
-    await new SupabaseAuthProvider().revokeRemoteSession('tok-1');
-    expect(mockAdminSignOut).toHaveBeenCalledWith('tok-1', 'global');
+  it('signs out with local scope only, so other sessions of the user are not ended', async () => {
+    mockSignOut.mockResolvedValue({ error: null });
+    await new SupabaseAuthProvider().signOut();
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
 
-    mockAdminSignOut.mockResolvedValue({ error: { message: 'boom' } });
-    await expect(new SupabaseAuthProvider().revokeRemoteSession('tok-1')).rejects.toThrow();
+    mockSignOut.mockResolvedValue({ error: { message: 'boom' } });
+    await expect(new SupabaseAuthProvider().signOut()).rejects.toThrow();
   });
 });
