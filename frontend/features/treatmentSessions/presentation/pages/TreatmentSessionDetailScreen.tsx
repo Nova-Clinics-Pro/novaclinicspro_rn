@@ -30,6 +30,7 @@ import {
   useCompleteTreatmentSessionMutation,
   useDeleteTreatmentSessionMutation,
 } from '../../data/repositories/treatmentSessions.repository.impl';
+import { TREATMENT_SESSION_LIFECYCLE_ACTIONS_AVAILABLE } from '../../domain/sessionLifecycleAvailability';
 import {
   getSessionStatusLabel,
   getSessionStatusColor,
@@ -163,8 +164,8 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
   const statusColor = getSessionStatusColor(session.status);
   const duration = calculateSessionDuration(session.scheduled_start, session.scheduled_end);
   const actualDuration = calculateSessionDuration(session.actual_start, session.actual_end);
-  const canStart = session.status === 'scheduled';
-  const canComplete = session.status === 'in_progress';
+  const canStart = TREATMENT_SESSION_LIFECYCLE_ACTIONS_AVAILABLE && session.status === 'scheduled';
+  const canComplete = TREATMENT_SESSION_LIFECYCLE_ACTIONS_AVAILABLE && session.status === 'in_progress';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
