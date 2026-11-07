@@ -926,5 +926,63 @@
   "dependsOn": [
    "NC-UAT-15"
   ]
+ },
+ {
+  "id": "NC-UAT-19",
+  "name": "Server-side access-token revocation",
+  "group": "core",
+  "objective": "Logout revokes the session on the server: a token captured from the browser stops working, refresh cannot restore it, and the user's other sessions stay valid.",
+  "clinicTypes": [
+   "ayurveda"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Registered clinic owner (run NC-UAT-02 first)"
+  ],
+  "testData": [
+   "none"
+  ],
+  "expectedOutcomes": [
+   "An independent second session of the same user can call the API before logout",
+   "A token captured from the browser works before logout",
+   "Logout returns to sign-in",
+   "Replaying the captured token after logout is rejected as session_revoked (401)",
+   "Reload and direct navigation to /clinic-admin, /profile and /onboarding/wizard-flow show sign-in",
+   "A token minted by refreshing the revoked session, if one is issued, is rejected (401)",
+   "The independent second session still works after logout"
+  ],
+  "authorization": [
+   "A captured access token has no residual access after logout and cannot be restored by refresh"
+  ],
+  "persistence": [
+   "Revocation applies to the signed-out session only; other sessions of the same user are unaffected"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full",
+    "note": "Captured browser token replayed against the API"
+   },
+   "android": {
+    "applicability": "limited",
+    "note": "No Android flow for this scenario yet"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "limited",
+    "note": "No manual Android procedure defined yet"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_server_side_session_revocation.py",
+   "tests/test_session_revocation_redis_recovery.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-02"
+  ]
  }
 ]
