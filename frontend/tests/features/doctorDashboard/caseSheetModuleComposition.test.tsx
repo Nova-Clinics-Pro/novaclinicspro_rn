@@ -140,14 +140,17 @@ const existingCasesheetWorkspaceData = {
 
 let queryClient: QueryClient;
 
-const wrapperWithAppointment = (appointmentId: string) =>
-  ({ children }: { children: React.ReactNode }) => (
+const wrapperWithAppointment = (appointmentId: string) => {
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <WorkspaceProvider tenantId="tenant-1" episodeId="episode-1" appointmentId={appointmentId} clientId="client-1">
         <WorkspaceSaveStatusProvider>{children}</WorkspaceSaveStatusProvider>
       </WorkspaceProvider>
     </QueryClientProvider>
   );
+  Wrapper.displayName = 'WrapperWithAppointment';
+  return Wrapper;
+};
 
 const renderModule = (appointmentId: string, expandedSections: Set<any> = new Set(['chiefComplaint'])) => {
   const ref = createRef<CaseSheetModuleHandle>();
