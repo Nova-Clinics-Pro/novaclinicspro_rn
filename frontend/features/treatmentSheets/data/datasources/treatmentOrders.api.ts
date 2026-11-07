@@ -273,34 +273,47 @@ export const releaseTreatmentSheetApi = async (
   }
 };
 
-/** Phase 4 (R4) · T-D.4/T-E.6 (ADR-R4-07). One tenant_clinical_review_notes
- * row -- `outcome: null` means the review is open ("Under Clinical Review"). */
+/** Phase 4 (R4) · T-D.4/T-E.6 (ADR-R4-07). One clinical review note as the backend returns it
+ * (`ClinicalReviewResponse`) -- `outcome: null` means the review is open ("Under Clinical Review"). */
 export interface ClinicalReviewNoteResponse {
   id: string;
-  tenant_id: string;
   treatment_sheet_id: string;
-  recorded_by_staff_id: string;
-  recorded_at: string;
-  notes_json: Record<string, unknown>;
+  notes: string;
   outcome: string | null;
-  is_deleted: boolean;
+  outcome_at?: string | null;
+  created_by_staff_id: string;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
+
+/**
+ * The backend note body is plain text (`notes: str`, min length 1). The review UI collects a free-text
+ * observation and hands it over as `{ observation }`; that text is what is persisted.
+ */
+export const clinicalReviewNoteText = (notesJson: Record<string, unknown> | undefined): string => {
+  const observation = notesJson?.observation;
+  return typeof observation === 'string' ? observation.trim() : '';
+};
 
 /**
  * Phase 4 (R4) · T-D.4 (ADR-R4-07). Append a Clinical Review note --
  * documentation activity only, always outcome=NULL. Distinct from
  * recordClinicalReviewOutcomeApi's own DECISION action.
- * POST /api/v1/treatment-sheets/{sheet_id}/clinical-review-notes
+ * POST /api/v1/treatment-sheets/{sheet_id}/clinical-reviews   body: { notes: string }
  * (no If-Match -- notes do not mutate the sheet, per T-D.4's own design)
  */
 export const addClinicalReviewNoteApi = async (
   sheetId: string,
   notesJson: Record<string, unknown>
 ): Promise<ClinicalReviewNoteResponse> => {
+  const notes = clinicalReviewNoteText(notesJson);
+  if (!notes) {
+    throw new Error('A clinical observation is required to save a note.');
+  }
   try {
     const response = await axiosClient.post(
-      `/api/v1/treatment-sheets/${sheetId}/clinical-review-notes`,
-      { notes_json: notesJson }
+      `/api/v1/treatment-sheets/${sheetId}/clinical-reviews`,
+      { notes }
     );
     return response.data;
   } catch (error) {
@@ -308,19 +321,23 @@ export const addClinicalReviewNoteApi = async (
   }
 };
 
-/** Phase 4 (R4) · T-D.5 (ADR-R4-07). The five Clinical Review outcomes. */
+/** Phase 4 (R4) · T-D.5 (ADR-R4-07). The five Clinical Review outcomes, in the backend's own vocabulary
+ * (`ClinicalReviewOutcome`): completion is `mark_complete`. */
 export type ClinicalReviewOutcome =
   | 'continue_unchanged'
   | 'update_future_rows'
   | 'extend'
   | 'stop_remaining'
-  | 'complete';
+  | 'mark_complete';
 
 /**
  * Phase 4 (R4) · T-D.5 (ADR-R4-07). Record a Clinical Review DECISION --
  * distinct from addClinicalReviewNoteApi's documentation activity.
- * POST /api/v1/treatment-sheets/{sheet_id}/clinical-review-outcome
+ * POST /api/v1/treatment-sheets/{sheet_id}/clinical-reviews/outcome   body: { outcome }
  * Requires: If-Match: <version>
+ *
+ * The outcome endpoint takes only the outcome. An optional decision note typed in the dialog is saved first as a
+ * normal note; if that save fails the outcome is NOT recorded, so a decision is never made without its note.
  */
 export const recordClinicalReviewOutcomeApi = async (
   sheetId: string,
@@ -328,10 +345,13 @@ export const recordClinicalReviewOutcomeApi = async (
   outcome: ClinicalReviewOutcome,
   notesJson: Record<string, unknown> = {}
 ): Promise<TreatmentOrderResponse> => {
+  if (clinicalReviewNoteText(notesJson)) {
+    await addClinicalReviewNoteApi(sheetId, notesJson);
+  }
   try {
     const response = await axiosClient.post(
-      `/api/v1/treatment-sheets/${sheetId}/clinical-review-outcome`,
-      { outcome, notes_json: notesJson },
+      `/api/v1/treatment-sheets/${sheetId}/clinical-reviews/outcome`,
+      { outcome },
       { headers: ifMatch(version) }
     );
     return response.data;
