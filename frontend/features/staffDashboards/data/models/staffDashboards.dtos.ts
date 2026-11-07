@@ -356,3 +356,47 @@ export interface CompleteSheetRowResponse {
   row_id: string;
   status: string;
 }
+
+// ============================================
+// SESSION NON-EXECUTION (T-BE-E.4a)
+// ============================================
+
+/**
+ * Governed reason vocabulary for why a scheduled Session did not execute.
+ * Exact backend values — SessionNonExecutionReason (app/domain/common/enums.py).
+ */
+export type SessionNonExecutionReasonCode =
+  | 'PATIENT_NO_SHOW'
+  | 'PATIENT_CANCELLED'
+  | 'CLINIC_CANCELLED'
+  | 'CLINICAL_HOLD'
+  | 'OTHER';
+
+/**
+ * Request body for POST /clinic/treatment-sheets/rows/{row_id}/non-execution.
+ * `recorded_by_staff_id` is intentionally absent — derived server-side from the JWT.
+ * `reason_text` is required by the backend only when reason_code is 'OTHER'.
+ */
+export interface RecordSessionNonExecutionRequest {
+  reason_code: SessionNonExecutionReasonCode;
+  reason_text?: string | null;
+}
+
+/**
+ * Response from POST /clinic/treatment-sheets/rows/{row_id}/non-execution —
+ * field-for-field passthrough of what the backend service returns.
+ *
+ * NOTE (T-FE-E.3 Engineering Truth finding): this is the ONLY place these
+ * three facts are ever returned to the frontend. Neither TherapistSessionItemV2
+ * (the get_therapist_sessions list schema) nor the therapist assigned-row detail
+ * schema carries non_execution_reason_code/text, and non-execution does not
+ * mutate row status server-side — so this result cannot be durably re-displayed
+ * after the query cache refetches. See TherapistDashboardScreen.tsx for how
+ * this is rendered honestly (transient, not persisted-and-faked).
+ */
+export interface RecordSessionNonExecutionResponse {
+  id: string;
+  non_execution_reason_code: SessionNonExecutionReasonCode | null;
+  non_execution_reason_text: string | null;
+  status: string | null;
+}

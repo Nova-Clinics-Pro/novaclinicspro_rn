@@ -9,6 +9,7 @@ const mockUseRegistrationStatus = jest.fn();
 const mockUseOnboardingStatusQuery = jest.fn();
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace }) }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('../../core/localization/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -32,40 +33,109 @@ const user = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const registrationStatus = (overrides: Record<string, unknown> = {}) => ({
+  status: 'pending_review',
+  action_required: false,
+  updated_at: '2026-10-19T00:00:00Z',
+  ...overrides,
+});
+
 describe('root registration lifecycle routing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false, currentUser: user(), logout: jest.fn() });
     mockUseOnboardingStatusQuery.mockReturnValue({ data: undefined, isLoading: false });
+    mockUseRegistrationStatus.mockReturnValue({ data: undefined, isLoading: false, error: null });
   });
 
-  it('routes a pending registration with no tenant to the dedicated review state, never no-clinic', async () => {
-    mockUseRegistrationStatus.mockReturnValue({
-      data: { status: 'registered', application_id: 'application-1', application_status: 'pending_review' },
+  it('routes an authenticated tenant in onboarding to its existing setup journey and does not request applicant status', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
       isLoading: false,
+      currentUser: user({ tenantId: 'tenant-1', applicationStatus: 'onboarding' }),
+      logout: jest.fn(),
     });
-    const screen = render(<Index />);
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/onboarding/pending-review?applicationId=application-1'));
-    expect(screen.queryByText('applicationStatus.noClinic.title')).toBeNull();
-  });
-
-  it('keeps no-clinic for an authenticated user with neither tenant nor registration', () => {
-    mockUseRegistrationStatus.mockReturnValue({ data: { status: 'no_applications' }, isLoading: false });
-    const screen = render(<Index />);
-
-    expect(screen.getByText('applicationStatus.noClinic.title')).toBeTruthy();
-    expect(mockReplace).not.toHaveBeenCalled();
-  });
-
-  it.each(['approved', 'onboarding'] as const)('routes %s registration through its authoritative onboarding tenant', async application_status => {
-    mockUseRegistrationStatus.mockReturnValue({
-      data: { status: 'registered', application_id: 'application-1', application_status, tenant_id: 'tenant-1' },
-      isLoading: false,
-    });
     render(<Index />);
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/onboarding/setup-wizard?tenantId=tenant-1'));
+    expect(mockUseRegistrationStatus).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+  });
+
+  it('routes a tenantless approved applicant to Choice only from a valid server-selected continuation', async () => {
+    mockUseRegistrationStatus.mockReturnValue({
+      data: registrationStatus({
+        status: 'approved',
+        continuation: {
+          kind: 'approved_choice',
+          application_id: '550e8400-e29b-41d4-a716-446655440000',
+          tenant_name: 'Nova Clinic',
+        },
+      }),
+      isLoading: false,
+      error: null,
+    });
+
+    render(<Index />);
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/onboarding/choice'));
+  });
+
+  it('does not route approval without continuation to Choice', () => {
+    mockUseRegistrationStatus.mockReturnValue({
+      data: registrationStatus({ status: 'approved' }),
+      isLoading: false,
+      error: null,
+    });
+
+    const screen = render(<Index />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByText('applicationStatus.noClinic.title')).toBeTruthy();
+  });
+
+  it.each([
+    ['pending_review', '/onboarding/pending-review'],
+    ['rejected', '/onboarding/rejected'],
+  ])('preserves the safe %s applicant destination without application IDs', async (status, route) => {
+    mockUseRegistrationStatus.mockReturnValue({
+      data: registrationStatus({ status }),
+      isLoading: false,
+      error: null,
+    });
+
+    render(<Index />);
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(route));
+  });
+
+  it.each(['provisioning_pending', 'provisioning_in_progress', 'provisioning_completed', 'provisioning_recovery_required'])(
+    'does not fabricate tenant context for %s',
+    status => {
+      mockUseRegistrationStatus.mockReturnValue({
+        data: registrationStatus({ status }),
+        isLoading: false,
+        error: null,
+      });
+
+      const screen = render(<Index />);
+
+      expect(mockReplace).not.toHaveBeenCalled();
+      expect(screen.getByText('applicationStatus.noClinic.title')).toBeTruthy();
+    },
+  );
+
+  it('does not navigate while registration status is loading or unavailable after an error', () => {
+    mockUseRegistrationStatus.mockReturnValue({ data: undefined, isLoading: true, error: null });
+    const loading = render(<Index />);
+    expect(loading.getByText('applicationStatus.loading')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+    loading.unmount();
+
+    mockUseRegistrationStatus.mockReturnValue({ data: undefined, isLoading: false, error: new Error('unavailable') });
+    const failed = render(<Index />);
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(failed.getByText('applicationStatus.noClinic.title')).toBeTruthy();
   });
 
   it('routes an active tenant session to its dashboard', async () => {
@@ -79,5 +149,23 @@ describe('root registration lifecycle routing', () => {
 
     render(<Index />);
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/clinic-admin'));
+  });
+
+  it('routes a hydrated Doctor tenant to the Doctor dashboard without no-clinic fallback', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      currentUser: user({
+        tenantId: 'tenant-doctor',
+        applicationStatus: 'active',
+        roles: ['DOCTOR'],
+      }),
+      logout: jest.fn(),
+    });
+    const screen = render(<Index />);
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/doctor'));
+    expect(screen.queryByText('applicationStatus.noClinic.title')).toBeNull();
+    expect(mockUseRegistrationStatus).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 });

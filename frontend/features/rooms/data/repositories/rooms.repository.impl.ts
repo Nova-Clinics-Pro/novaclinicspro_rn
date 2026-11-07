@@ -10,6 +10,7 @@ import {
   createRoomApi,
   updateRoomApi,
   deleteRoomApi,
+  listOnboardingRoomsApi,
 } from '../datasources/rooms.api';
 import {
   RoomCreate,
@@ -17,6 +18,7 @@ import {
   RoomResponse,
   ListRoomsParams,
   PaginatedRoomsResponse,
+  OnboardingRoomSourceItem,
 } from '../models/rooms.dtos';
 import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
@@ -32,6 +34,7 @@ export const roomsKeys = {
   details: () => [...roomsKeys.all, 'detail'] as const,
   detail: (tenantId: string, roomId: string) =>
     [...roomsKeys.details(), tenantId, roomId] as const,
+  onboarding: (tenantId: string) => [...roomsKeys.all, 'onboarding', tenantId] as const,
 };
 
 // ============================================
@@ -53,6 +56,20 @@ export const useRoomsListQuery = (
     ...options,
   });
 };
+
+/** Read rooms for the onboarding form while preserving its legacy fetch policy. */
+export const useOnboardingRoomsQuery = (tenantId: string) =>
+  useQuery<OnboardingRoomSourceItem[], Error>({
+    queryKey: roomsKeys.onboarding(tenantId),
+    queryFn: () => listOnboardingRoomsApi(tenantId),
+    enabled: !!tenantId,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
 /**
  * Hook to get a single room

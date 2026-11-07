@@ -258,12 +258,24 @@ Chief complaint  ⚠ save failed   [ Retry ]     ← SectionSaveStatus='error'; 
 └─────────────┘
 ```
 
-### W23 · Long patient history
+### W23 · Long patient history *(amended v1.1, 2026-07-18 — FR-HIST-1/2)*
 
 ```
-▸ History / Timeline (42 events)  [ search ]  [ filter: this episode ▾ ]
+▸ History / Timeline  [ search ]  [ filter: this episode ▾ ]
    virtualized ClinicalTimeline; default filtered to active episode (no cross-episode leak)
+
+   🩺 Consultation · Dr. Sharma · 12 Jul                                  ▸
+   📋 Treatment Review · Dr. Sharma · 8 Jul                               ▸
+   💊 Treatment Plan — Lower Back Pain · IN_THERAPY · 6/10 completed  [ ▾ collapse ]
+        └ Session 6 · 5 Jul · Anjali · completed
+        └ Session 5 · 3 Jul · Anjali · completed
+        └ Session 4 · 1 Jul · missed — patient no-show
+        └ … (backend-provided aggregate; frontend renders, does not compute)
+   🩺 Consultation · Dr. Sharma · 22 Jun                                  ▸
+   💊 Treatment Plan — Prior Course · TREATMENT_COMPLETE · 8/8            [ ▸ expand ]
+   ⚠ Legacy Treatment Sessions — Plan association unavailable             [ ▸ expand ]
 ```
+**Backend-owned:** every icon/label/count above is the `history_items[]` contract (design.md §2.1a) — the frontend performs no classification or aggregation (FR-HIST-1 AC 11-13). Consultation/Treatment-Review/Treatment-Plan/Legacy are **distinct icons + labels**, never colour-alone. Each Plan group is independently collapsible (local UI state only); completed/superseded Plans remain visible, not hidden.
 
 ### W24 · Multiple active/historical treatment plans
 

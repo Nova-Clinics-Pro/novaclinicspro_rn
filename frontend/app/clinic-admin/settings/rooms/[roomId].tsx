@@ -20,14 +20,19 @@ import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import {
   useRoomDetailQuery,
   useUpdateRoomMutation,
-  useDeleteRoomMutation,
 } from '../../../../features/rooms/data/repositories/rooms.repository.impl';
 import { ROOM_TYPES, RoomType, getRoomTypeLabel } from '../../../../features/rooms/data/models/rooms.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../../features/auth/presentation/providers/auth.store';
 
 export default function RoomDetailScreen() {
+  const { t } = useTranslation();
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const { currentUser } = useAuthStore();
@@ -45,18 +50,6 @@ export default function RoomDetailScreen() {
   });
 
   const updateMutation = useUpdateRoomMutation(tenantId, roomId || '');
-  const deleteMutation = useDeleteRoomMutation(tenantId);
-
-  // Initialize form when data loads
-  React.useEffect(() => {
-    if (roomQuery.data) {
-      setFormData({
-        name: roomQuery.data.name,
-        capacity: roomQuery.data.capacity.toString(),
-        roomType: roomQuery.data.room_type,
-      });
-    }
-  }, [roomQuery.data]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -71,41 +64,19 @@ export default function RoomDetailScreen() {
         room_type: formData.roomType,
       });
       setIsEditing(false);
-      Alert.alert('Success', 'Room updated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update room');
+      Alert.alert(t('common.success'), 'Room updated successfully');
+    } catch {
+      Alert.alert(t('common.error'), 'Failed to update room');
     }
-  };
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Room',
-      'Are you sure you want to delete this room?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync(roomId || '');
-              router.back();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete room');
-            }
-          },
-        },
-      ]
-    );
   };
 
   const handleToggleActive = async () => {
     const newStatus = !roomQuery.data?.is_active;
     try {
       await updateMutation.mutateAsync({ is_active: newStatus });
-      Alert.alert('Success', `Room ${newStatus ? 'activated' : 'deactivated'}`);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update room status');
+      Alert.alert(t('common.success'), `Room ${newStatus ? 'activated' : 'deactivated'}`);
+    } catch {
+      Alert.alert(t('common.error'), 'Failed to update room status');
     }
   };
 
@@ -114,7 +85,7 @@ export default function RoomDetailScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
           title="Room Details"
-          subtitle="Loading..."
+          subtitle={t('common.loading')}
           onBackPress={() => router.back()}
         />
         <View style={styles.loadingContainer}>
@@ -129,7 +100,7 @@ export default function RoomDetailScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
           title="Room Details"
-          subtitle="Error"
+          subtitle={t('common.error')}
           onBackPress={() => router.back()}
         />
         <View style={styles.errorContainer}>
@@ -159,7 +130,7 @@ export default function RoomDetailScreen() {
               { backgroundColor: room.is_active ? '#10B981' : '#EF4444' }
             ]} />
             <Text style={styles.statusText}>
-              {room.is_active ? 'Active' : 'Inactive'}
+              {room.is_active ? t('common.active') : t('common.inactive')}
             </Text>
           </View>
           <TouchableOpacity
@@ -177,7 +148,14 @@ export default function RoomDetailScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Room Details</Text>
             {!isEditing && (
-              <TouchableOpacity onPress={() => setIsEditing(true)}>
+              <TouchableOpacity onPress={() => {
+                setFormData({
+                  name: room.name,
+                  capacity: room.capacity.toString(),
+                  roomType: room.room_type,
+                });
+                setIsEditing(true);
+              }}>
                 <Ionicons name="pencil" size={20} color="#2F6F4E" />
               </TouchableOpacity>
             )}
@@ -258,7 +236,7 @@ export default function RoomDetailScreen() {
                   });
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.saveButton, updateMutation.isPending && styles.disabledButton]}
@@ -279,7 +257,7 @@ export default function RoomDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -314,7 +292,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -354,7 +332,7 @@ const styles = StyleSheet.create({
     color: '#10B981',
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -447,7 +425,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     ...typography.body2,
-    color: '#FFFFFF',
+    color: colors.text.onPrimary,
     fontWeight: '600',
   },
   dangerSection: {

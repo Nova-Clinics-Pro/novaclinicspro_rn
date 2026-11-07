@@ -5,9 +5,8 @@ import { PrescriptionModule } from '../../../features/episodes/presentation/comp
 import { WorkspaceProvider } from '../../../features/episodes/presentation/context/ClinicalWorkspaceContext';
 import { WorkspaceSaveStatusProvider } from '../../../features/episodes/presentation/context/WorkspaceSaveStatusContext';
 import { useEpisodeWorkspaceData } from '../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData';
-import { createPrescriptionApi, updatePrescriptionApi } from '../../../features/prescriptions/data/datasources/prescriptions.api';
+import { createPrescriptionApi, updatePrescriptionApi, listPrescriptionsApi } from '../../../features/prescriptions/data/datasources/prescriptions.api';
 import { prescriptionsKeys } from '../../../features/prescriptions/data/repositories/prescriptions.repository.impl';
-import { axiosClient } from '../../../core/api/axiosClient';
 
 // R3A · T-B.2 — PrescriptionModule's own tests. Migrated from
 // useConsultationWorkspace.test.tsx (load/save POST-then-PATCH),
@@ -16,6 +15,18 @@ import { axiosClient } from '../../../core/api/axiosClient';
 // (flag-ON invalidation), and freshnessFeatureFlag.test.tsx (flag-OFF) —
 // that state now lives in PrescriptionModule, unchanged in substance, only
 // exercised via the module's rendered UI instead of the hook.
+//
+// R7 · T-0.2 (ED-ARCH-001): the module no longer imports `axiosClient` or
+// the datasource module directly — it now goes through
+// `usePrescriptionByAppointmentQuery`/`useCreatePrescriptionMutation`/
+// `useUpdatePrescriptionMutation` (`prescriptions.repository.impl.ts`).
+// These tests mock at the true datasource boundary those hooks call
+// internally (`listPrescriptionsApi`/`createPrescriptionApi`/
+// `updatePrescriptionApi`) rather than the hooks themselves, so the real
+// repository/query-key/invalidation layer — including this task's own
+// `onSuccess` override — is genuinely exercised, not bypassed. Mocking the
+// forbidden `axiosClient` import (removed by this task) would no longer be
+// meaningful; every remaining assertion here is unchanged in substance.
 //
 // Deliberately does NOT import tests/features/doctorDashboard/setup, for the
 // same reason caseSheetModule.test.tsx doesn't — its mocked useQueryClient()
@@ -34,9 +45,7 @@ jest.mock('../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData
 jest.mock('../../../features/prescriptions/data/datasources/prescriptions.api', () => ({
   createPrescriptionApi: jest.fn(),
   updatePrescriptionApi: jest.fn(),
-}));
-jest.mock('../../../core/api/axiosClient', () => ({
-  axiosClient: { get: jest.fn(), post: jest.fn() },
+  listPrescriptionsApi: jest.fn(),
 }));
 jest.mock('../../../core/theme/useClinicTheme', () => ({
   useClinicTheme: () => ({
@@ -129,7 +138,11 @@ const renderModule = () =>
 // rather than calling onChange directly (no longer exposed outside the module).
 const addMedicationNamed = (utils: ReturnType<typeof renderModule>, name: string) => {
   fireEvent.press(utils.getByText('Add Medication'));
-  fireEvent.changeText(utils.getByPlaceholderText('name'), name);
+  // getAllByPlaceholderText + last (not getByPlaceholderText): a fixture
+  // with a pre-existing medication row also has a "name" placeholder, so
+  // more than one can match — the newly-added row is always the last one.
+  const nameFields = utils.getAllByPlaceholderText('name');
+  fireEvent.changeText(nameFields[nameFields.length - 1], name);
 };
 
 describe('PrescriptionModule (R3A · T-B.2)', () => {
@@ -140,12 +153,13 @@ describe('PrescriptionModule (R3A · T-B.2)', () => {
     (useEpisodeWorkspaceData as jest.Mock).mockReturnValue(baseWorkspaceData);
     (createPrescriptionApi as jest.Mock).mockResolvedValue({ id: 'rx-1', prescription_data: { medications: [] } });
     (updatePrescriptionApi as jest.Mock).mockResolvedValue({ id: 'rx-1', prescription_data: { medications: [] } });
-    (axiosClient.get as jest.Mock).mockResolvedValue({ data: { items: [] } });
+    (listPrescriptionsApi as jest.Mock).mockResolvedValue({ items: [], total: 0, skip: 0, limit: 50 });
   });
 
   it('loads an existing prescription on mount, then PATCHes it on save', async () => {
-    (axiosClient.get as jest.Mock).mockResolvedValue({
-      data: { items: [{ id: 'rx-existing', prescription_data: { medications: [{ name: 'A', dosage: '1', frequency: 'daily', duration: '7d' }] } }] },
+    (listPrescriptionsApi as jest.Mock).mockResolvedValue({
+      items: [{ id: 'rx-existing', prescription_data: { medications: [{ name: 'A', dosage: '1', frequency: 'daily', duration: '7d' }] } }],
+      total: 1, skip: 0, limit: 50,
     });
     const utils = renderModule();
     await waitFor(() => expect(utils.getByDisplayValue('A')).toBeTruthy());
@@ -169,7 +183,7 @@ describe('PrescriptionModule (R3A · T-B.2)', () => {
       await (fireEvent.press(utils.getByText('Save Prescription')) as unknown as Promise<void>)?.catch(() => {});
     });
 
-    expect(utils.getByText('rx failed')).toBeTruthy();
+    expect(utils.getByText('Save failed')).toBeTruthy();
     // Draft is preserved, not cleared, after the failed save.
     expect(utils.getByDisplayValue('Amoxicillin')).toBeTruthy();
   });
@@ -198,11 +212,15 @@ describe('PrescriptionModule (R3A · T-B.2)', () => {
 
     it('exposes an error message when the save fails', async () => {
       (updatePrescriptionApi as jest.Mock).mockRejectedValue(new Error('network down'));
-      (axiosClient.get as jest.Mock).mockResolvedValue({
-        data: { items: [{ id: 'rx-1', prescription_data: { medications: [] } }] },
+      (listPrescriptionsApi as jest.Mock).mockResolvedValue({
+        items: [{ id: 'rx-1', prescription_data: { medications: [{ name: 'Existing', dosage: '', frequency: '', duration: '' }] } }],
+        total: 1, skip: 0, limit: 50,
       });
       const utils = renderModule();
-      await waitFor(() => expect(useEpisodeWorkspaceData).toHaveBeenCalled());
+      // Wait for the async query load (T-0.2: was a synchronous-scheduled
+      // axios call; now a real React Query fetch) to resolve into state
+      // BEFORE interacting — otherwise Save fires CREATE, not UPDATE.
+      await waitFor(() => expect(utils.getByDisplayValue('Existing')).toBeTruthy());
 
       addMedicationNamed(utils, 'Ibuprofen');
       // See the "preserves the draft after a save failure" test above for
@@ -211,7 +229,7 @@ describe('PrescriptionModule (R3A · T-B.2)', () => {
         await (fireEvent.press(utils.getByText('Save Prescription')) as unknown as Promise<void>)?.catch(() => {});
       });
 
-      expect(utils.getByText('network down')).toBeTruthy();
+      expect(utils.getByText('Save failed')).toBeTruthy();
     });
   });
 
@@ -289,11 +307,14 @@ describe('PrescriptionModule (R3A · T-B.2)', () => {
     });
 
     it('prescription UPDATE primes the detail cache and invalidates lists + the episode/appointment key', async () => {
-      (axiosClient.get as jest.Mock).mockResolvedValue({
-        data: { items: [{ id: 'rx-1', prescription_data: { medications: [] } }] },
+      (listPrescriptionsApi as jest.Mock).mockResolvedValue({
+        items: [{ id: 'rx-1', prescription_data: { medications: [{ name: 'Existing', dosage: '', frequency: '', duration: '' }] } }],
+        total: 1, skip: 0, limit: 50,
       });
       const utils = renderModule();
-      await waitFor(() => expect(useEpisodeWorkspaceData).toHaveBeenCalled());
+      // See "exposes an error message when the save fails" above — must wait
+      // for the real query load before interacting, or Save fires CREATE.
+      await waitFor(() => expect(utils.getByDisplayValue('Existing')).toBeTruthy());
 
       const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
       const setDataSpy = jest.spyOn(queryClient, 'setQueryData');

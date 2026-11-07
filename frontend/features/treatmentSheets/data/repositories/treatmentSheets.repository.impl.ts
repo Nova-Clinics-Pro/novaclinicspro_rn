@@ -14,6 +14,7 @@ import {
   printTreatmentSheetApi,
   archiveTreatmentSheetApi,
   updateTreatmentSheetRowApi,
+  updateAllTreatmentSheetRowsApi,
   completeTreatmentSheetRowApi,
 } from '../datasources/treatmentSheets.api';
 import {
@@ -26,6 +27,10 @@ import {
   TreatmentSheetSyncResponse,
   TreatmentSheetPrintResponse,
 } from '../models/treatmentSheets.dtos';
+import { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
+import { TreatmentOperationError } from '../../domain/errors/treatmentOperationError';
+
+export { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
 
 // ============================================
 // QUERY KEYS
@@ -50,9 +55,9 @@ export const treatmentSheetsKeys = {
 export const useTreatmentSheetDetailQuery = (
   treatmentSheetId: string,
   tenantId: string,
-  options?: Omit<UseQueryOptions<TreatmentSheetResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<TreatmentSheetResponse, TreatmentOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<TreatmentSheetResponse, Error>({
+  return useQuery<TreatmentSheetResponse, TreatmentOperationError>({
     queryKey: treatmentSheetsKeys.detail(treatmentSheetId),
     queryFn: () => getTreatmentSheetApi(treatmentSheetId, tenantId),
     enabled: !!treatmentSheetId && !!tenantId,
@@ -193,24 +198,78 @@ export const useArchiveTreatmentSheetMutation = (
 };
 
 /**
- * Hook to update a treatment sheet row
+ * Hook to update a treatment sheet row.
+ *
+ * R7 · T-0.7 (ED-ARCH-001): re-shaped from its original
+ * `(tenantId, rowId, treatmentSheetId, options?)` signature — previously
+ * exported but never actually consumed anywhere in the codebase (verified:
+ * zero call sites) — to accept `rowId` as a mutate-time variable instead of
+ * a hook-instantiation param, so `useTreatmentSheetRows` (which updates
+ * whichever row a doctor is currently editing, chosen at call time from a
+ * list) can reuse ONE hook instance rather than needing one hook call per
+ * row (Rules of Hooks). Removed the pre-existing default `onSuccess`
+ * (never exercised by any real caller) — the actual consumer already
+ * refetches the whole sheet itself after a successful save; adding a
+ * second, independent cache write here would be a new, unrequested side
+ * effect not present before this task.
+ *
+ * T-FE-E.2 (FR-TS-3, FR-SCH-2): `updateTreatmentSheetRowApi` no longer
+ * takes `tenantId` (its URL never carried tenant scoping — see that
+ * function's own docstring for the route-mismatch defect this closes);
+ * `tenantId` stays a parameter here unchanged so the one existing caller
+ * (`useTreatmentSheetRows.ts`) needs no signature change, it is simply no
+ * longer threaded into the datasource call. `expectedVersion` is new and
+ * optional -- an existing caller that omits it gets the exact prior
+ * behavior (no `If-Match` sent).
  */
 export const useUpdateTreatmentSheetRowMutation = (
   tenantId: string,
-  rowId: string,
   treatmentSheetId: string,
-  options?: UseMutationOptions<TreatmentSheetResponse, Error, TreatmentSheetRowUpdateRequest>
+  options?: UseMutationOptions<
+    TreatmentSheetResponse,
+    SessionInstructionsError,
+    { rowId: string; payload: TreatmentSheetRowUpdateRequest; expectedVersion?: number }
+  >
 ) => {
-  const queryClient = useQueryClient();
-
-  return useMutation<TreatmentSheetResponse, Error, TreatmentSheetRowUpdateRequest>({
-    mutationFn: (payload) => updateTreatmentSheetRowApi(tenantId, rowId, payload),
-    onSuccess: (data) => {
-      queryClient.setQueryData(treatmentSheetsKeys.detail(treatmentSheetId), data);
-    },
+  return useMutation<
+    TreatmentSheetResponse,
+    SessionInstructionsError,
+    { rowId: string; payload: TreatmentSheetRowUpdateRequest; expectedVersion?: number }
+  >({
+    mutationFn: ({ rowId, payload, expectedVersion }) => updateTreatmentSheetRowApi(rowId, payload, expectedVersion),
     ...options,
   });
 };
+
+/**
+ * Hook to bulk-update every row of a treatment sheet in one call.
+ *
+ * R7 · T-0.7 (ED-ARCH-001): new — no hook wrapped
+ * `updateAllTreatmentSheetRowsApi` before this task (its sole caller,
+ * `useTreatmentSheetRows`, called the datasource function directly). No
+ * default `onSuccess`, same reasoning as
+ * `useUpdateTreatmentSheetRowMutation` above.
+ */
+export const useUpdateAllTreatmentSheetRowsMutation = (
+  tenantId: string,
+  treatmentSheetId: string,
+  options?: UseMutationOptions<TreatmentSheetResponse, SessionInstructionsError, Array<{ id: string } & TreatmentSheetRowUpdateRequest>>
+) => {
+  return useMutation<TreatmentSheetResponse, SessionInstructionsError, Array<{ id: string } & TreatmentSheetRowUpdateRequest>>({
+    mutationFn: (rows) => updateAllTreatmentSheetRowsApi(tenantId, treatmentSheetId, rows),
+    ...options,
+  });
+};
+
+// Lifecycle (pause/resume/cancel) hooks live in
+// `treatmentSheetLifecycle.repository.impl.ts` — a separate file, not this
+// one (R7 · T-0.7 finding: co-locating them here made every consumer of
+// THIS file's row/create/archive hooks transitively import
+// `lifecycleApi.ts` → `axiosClient` → `supabaseClient`, breaking tests that
+// mock only the row-level datasource. Split, mirroring the existing
+// `treatmentOrders.repository.impl.ts` precedent of a separate file per
+// distinct sub-concern within the same feature, not a second repository
+// for the same entity).
 
 /**
  * Hook to complete a treatment sheet row

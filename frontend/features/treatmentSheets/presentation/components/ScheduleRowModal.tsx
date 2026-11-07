@@ -30,6 +30,7 @@ import CrossPlatformDateTimePicker, {
 import { useStaffListQuery } from '../../../staff/data/repositories/staff.repository.impl';
 import { useScheduleRowMutation } from '../../data/repositories/treatmentOrders.repository.impl';
 import { TreatmentRowOrderResponse } from '../../data/models/treatmentOrders.dtos';
+import { isTreatmentVersionConflict, treatmentErrorMessage } from '../../application/treatmentErrorPresentation';
 
 // ============================================
 // PROPS
@@ -145,25 +146,15 @@ export const ScheduleRowModal: React.FC<ScheduleRowModalProps> = ({
         },
       });
       onScheduled();
-    } catch (err: any) {
-      const is409 =
-        err?.response?.status === 409 ||
-        err?.response?.data?.detail?.error === 'VERSION_CONFLICT' ||
-        err?.response?.data?.error === 'VERSION_CONFLICT';
-
-      if (is409) {
+    } catch (error: unknown) {
+      if (isTreatmentVersionConflict(error)) {
         Alert.alert(
           'Plan Updated',
           'This treatment plan was updated elsewhere. Refreshing…',
           [{ text: 'OK', onPress: onVersionConflict }]
         );
       } else {
-        const msg =
-          err?.response?.data?.detail?.message ||
-          err?.response?.data?.message ||
-          err?.message ||
-          'Failed to schedule row.';
-        Alert.alert('Error', msg);
+        Alert.alert('Error', treatmentErrorMessage(error, 'Failed to schedule row.'));
       }
     }
   };

@@ -6,9 +6,9 @@
  * Can be swapped for FCM or other providers by implementing IPushNotificationService.
  */
 
-import * as Notifications from 'expo-notifications';
+import type * as NotificationTypes from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -30,8 +30,18 @@ const STORAGE_KEYS = {
   NOTIFICATION_HISTORY: '@NovaClinicsPro:notificationHistory',
 };
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
+// Expo Go must not evaluate expo-notifications: its Android remote-push
+// initialization is unsupported, including when imported by auth/logout.
+export const nativeNotificationsAvailable =
+  Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+const Notifications: typeof NotificationTypes | null = nativeNotificationsAvailable
+  // Metro needs a literal conditional require so native initialization stays gated.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  ? require('expo-notifications')
+  : null;
+
+// Preserve native-build handler registration and let unexpected native errors surface.
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
@@ -46,13 +56,14 @@ Notifications.setNotificationHandler({
  */
 export class ExpoPushNotificationService implements IPushNotificationService {
   private pushToken: string | null = null;
-  private notificationReceivedListener: Notifications.Subscription | null = null;
-  private notificationResponseListener: Notifications.Subscription | null = null;
+  private notificationReceivedListener: NotificationTypes.Subscription | null = null;
+  private notificationResponseListener: NotificationTypes.Subscription | null = null;
 
   /**
    * Initialize the push notification service
    */
   async initialize(): Promise<PushPermissionStatus> {
+    if (!Notifications) return 'denied';
     // Configure notification channel for Android
     if (Platform.OS === 'android') {
       await this.setupAndroidChannels();
@@ -73,6 +84,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Set up Android notification channels
    */
   private async setupAndroidChannels(): Promise<void> {
+    if (!Notifications) return;
     // Default channel for general notifications
     await Notifications.setNotificationChannelAsync('default', {
       name: 'General',
@@ -117,6 +129,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Request push notification permissions
    */
   async requestPermissions(): Promise<PushPermissionStatus> {
+    if (!Notifications) return 'denied';
     if (!Device.isDevice) {
       console.log('Push notifications require a physical device');
       return 'denied';
@@ -136,6 +149,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Get current permission status
    */
   async getPermissionStatus(): Promise<PushPermissionStatus> {
+    if (!Notifications) return 'denied';
     const { status } = await Notifications.getPermissionsAsync();
     return this.mapExpoStatus(status);
   }
@@ -143,7 +157,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
   /**
    * Map Expo permission status to our enum
    */
-  private mapExpoStatus(status: Notifications.PermissionStatus): PushPermissionStatus {
+  private mapExpoStatus(status: NotificationTypes.PermissionStatus): PushPermissionStatus {
     switch (status) {
       case 'granted':
         return 'granted';
@@ -158,6 +172,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Get push token for this device
    */
   async getPushToken(): Promise<string | null> {
+    if (!Notifications) return null;
     if (this.pushToken) {
       return this.pushToken;
     }
@@ -205,6 +220,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Note: This requires backend API support
    */
   async registerDevice(token: string, staffId: string, tenantId: string): Promise<void> {
+    if (!Notifications) return;
     // Store registration locally for now
     // TODO: When backend API is available, send registration to server
     const registrationData = {
@@ -253,6 +269,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Set up notification received handler
    */
   onNotificationReceived(handler: NotificationReceivedHandler): () => void {
+    if (!Notifications) return () => {};
     this.notificationReceivedListener = Notifications.addNotificationReceivedListener(
       (notification) => {
         const data = notification.request.content.data as unknown as PushNotificationData;
@@ -284,6 +301,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Set up notification response handler (when user taps)
    */
   onNotificationResponse(handler: NotificationResponseHandler): () => void {
+    if (!Notifications) return () => {};
     this.notificationResponseListener = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const notification = response.notification;
@@ -316,6 +334,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
     content: LocalNotificationContent,
     trigger: NotificationTriggerConfig
   ): Promise<string> {
+    if (!Notifications) throw new Error('Native notifications are unavailable in Expo Go');
     const expoTrigger = this.mapTriggerConfig(trigger);
 
     const notificationId = await Notifications.scheduleNotificationAsync({
@@ -337,7 +356,8 @@ export class ExpoPushNotificationService implements IPushNotificationService {
   /**
    * Map trigger config to Expo format
    */
-  private mapTriggerConfig(trigger: NotificationTriggerConfig): Notifications.NotificationTriggerInput {
+  private mapTriggerConfig(trigger: NotificationTriggerConfig): NotificationTypes.NotificationTriggerInput {
+    if (!Notifications) return null;
     switch (trigger.type) {
       case 'date':
         return {
@@ -366,6 +386,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Cancel a scheduled notification
    */
   async cancelScheduledNotification(notificationId: string): Promise<void> {
+    if (!Notifications) return;
     await Notifications.cancelScheduledNotificationAsync(notificationId);
   }
 
@@ -373,6 +394,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Cancel all scheduled notifications
    */
   async cancelAllScheduledNotifications(): Promise<void> {
+    if (!Notifications) return;
     await Notifications.cancelAllScheduledNotificationsAsync();
   }
 
@@ -380,6 +402,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Get badge count
    */
   async getBadgeCount(): Promise<number> {
+    if (!Notifications) return 0;
     return await Notifications.getBadgeCountAsync();
   }
 
@@ -387,6 +410,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Set badge count
    */
   async setBadgeCount(count: number): Promise<void> {
+    if (!Notifications) return;
     await Notifications.setBadgeCountAsync(count);
   }
 
@@ -394,6 +418,7 @@ export class ExpoPushNotificationService implements IPushNotificationService {
    * Clear all delivered notifications
    */
   async clearAllNotifications(): Promise<void> {
+    if (!Notifications) return;
     await Notifications.dismissAllNotificationsAsync();
   }
 

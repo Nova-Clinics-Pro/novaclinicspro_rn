@@ -1,0 +1,17 @@
+{
+  "name": "novaclinics-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Cross-platform UAT automation for NovaClinics (shared scenarios, Playwright web, Maestro Android, unified reporting)",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "web": "playwright test -c web/playwright.config.ts",
+    "report:merge": "tsx reporting/merge-results.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@types/node": "20.17.10",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2"
+  }
+}

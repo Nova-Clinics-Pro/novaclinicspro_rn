@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
-import { axiosClient } from '../../../../../core/api/axiosClient';
+import { useOnboardingOperatingHoursQuery } from '../../../../operatingHours/data/repositories/operatingHours.repository.impl';
 import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
 import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
 
@@ -28,77 +28,74 @@ interface DaySchedule {
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+const createDefaultSchedule = (): DaySchedule[] =>
+  DAYS.map((day) => ({
+    day,
+    is_open: day !== 'Sunday',
+    open_time: '09:00',
+    close_time: '18:00',
+  }));
+
 export function OperatingHoursScreen({ tenantId, isWizardMode = false, onSuccess }: OperatingHoursScreenProps) {
+  const theme = useClinicTheme();
+  const hoursQuery = useOnboardingOperatingHoursQuery(tenantId);
+
+  if (hoursQuery.isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary.default} />
+        <Text style={[theme.typography.body2, { color: theme.colors.text.secondary, marginTop: theme.spacing.md }]}>
+          Loading operating hours...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <OperatingHoursConfirmation
+      key={tenantId}
+      tenantId={tenantId}
+      isWizardMode={isWizardMode}
+      onSuccess={onSuccess}
+      sourceSchedule={hoursQuery.data}
+    />
+  );
+}
+
+interface OperatingHoursConfirmationProps extends OperatingHoursScreenProps {
+  sourceSchedule?: DaySchedule[];
+}
+
+function OperatingHoursConfirmation({
+  tenantId,
+  isWizardMode = false,
+  onSuccess,
+  sourceSchedule,
+}: OperatingHoursConfirmationProps) {
   const theme = useClinicTheme();
   const router = useRouter();
   const submitStepMutation = useSubmitStepMutation(tenantId, 'operating_hours');
-  
-  const [loading, setLoading] = useState(true);
-  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
-  const [draftRestored, setDraftRestored] = useState(false);
   const { setOperatingHours, getStepData } = useWizardStore();
+  const draft = getStepData('operating_hours');
+  const hasSourceSchedule = Boolean(sourceSchedule?.length);
+  const [schedule] = useState<DaySchedule[]>(() =>
+    hasSourceSchedule
+      ? sourceSchedule!
+      : draft?.schedule && Array.isArray(draft.schedule)
+        ? draft.schedule
+        : createDefaultSchedule()
+  );
+  const [draftRestored, setDraftRestored] = useState(
+    !hasSourceSchedule && Boolean(draft?.schedule && Array.isArray(draft.schedule))
+  );
 
   useEffect(() => {
-    fetchOperatingHours();
-  }, [tenantId]);
+    const timeout = setTimeout(() => {
+      setOperatingHours({ schedule });
+    }, 500);
 
-  useEffect(() => {
-    if (!loading) {
-      const timeout = setTimeout(() => {
-        setOperatingHours({ schedule });
-      }, 500);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [loading, schedule, setOperatingHours]);
-
-  const fetchOperatingHours = async () => {
-    try {
-      setLoading(true);
-      console.log('[OperatingHoursScreen] Fetching operating hours for tenant:', tenantId);
-      
-      // Try to fetch existing operating hours
-      const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/operating-hours`);
-      console.log('[OperatingHoursScreen] Operating hours response:', JSON.stringify(response.data, null, 2));
-      
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-        setSchedule(response.data);
-      } else {
-        const draft = getStepData('operating_hours');
-        if (draft?.schedule && Array.isArray(draft.schedule)) {
-          setSchedule(draft.schedule);
-          setDraftRestored(true);
-          return;
-        }
-
-        // No operating hours set yet, show default schedule
-        setSchedule(DAYS.map(day => ({
-          day,
-          is_open: day !== 'Sunday',
-          open_time: '09:00',
-          close_time: '18:00',
-        })));
-      }
-    } catch (error: any) {
-      console.error('[OperatingHoursScreen] Error fetching operating hours:', error);
-      const draft = getStepData('operating_hours');
-      if (draft?.schedule && Array.isArray(draft.schedule)) {
-        setSchedule(draft.schedule);
-        setDraftRestored(true);
-        return;
-      }
-
-      // If API fails, show default schedule
-      setSchedule(DAYS.map(day => ({
-        day,
-        is_open: day !== 'Sunday',
-        open_time: '09:00',
-        close_time: '18:00',
-      })));
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => clearTimeout(timeout);
+  }, [schedule, setOperatingHours]);
 
   const handleConfirm = async () => {
     try {
@@ -132,17 +129,6 @@ export function OperatingHoursScreen({ tenantId, isWizardMode = false, onSuccess
       Alert.alert('Error', error.message || 'Failed to save operating hours');
     }
   };
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background.default, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary.default} />
-        <Text style={[theme.typography.body2, { color: theme.colors.text.secondary, marginTop: theme.spacing.md }]}>
-          Loading operating hours...
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <ScrollView

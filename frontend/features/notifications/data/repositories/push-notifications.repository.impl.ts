@@ -21,6 +21,14 @@ import {
   TestNotificationRequest,
 } from '../datasources/push-notifications.api';
 
+/** Non-React command boundary used by the device lifecycle coordinator. */
+export const notificationRepository = {
+  registerDevice: registerDeviceApi,
+  unregisterDevice: unregisterDeviceApi,
+  getPreferences: getPreferencesApi,
+  updatePreferences: updatePreferencesApi,
+};
+
 // Query keys
 export const pushNotificationKeys = {
   all: ['push-notifications'] as const,

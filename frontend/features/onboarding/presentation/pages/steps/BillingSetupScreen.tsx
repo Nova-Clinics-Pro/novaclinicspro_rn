@@ -17,8 +17,11 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
-import { useSubmitStepMutation } from '../../../data/repositories/onboarding.repository.impl';
-import { axiosClient } from '../../../../../core/api/axiosClient';
+import {
+  useBillingSettingsQuery,
+  useSaveBillingSettingsMutation,
+  useSubmitStepMutation,
+} from '../../../data/repositories/onboarding.repository.impl';
 import { clearStepDraftAndSync, useWizardStore } from '../../stores/wizard.store';
 import { RestoredDraftIndicator } from '../../components/RestoredDraftIndicator';
 import { DraftRevisionEvidence, StepConflictError } from '../../../domain/entities/step-revision.entity';
@@ -45,10 +48,37 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
   const restoredSnapshotRef = useRef<string | null>(null);
 
   const submitStepMutation = useSubmitStepMutation(tenantId, 'financials_and_tax');
+  const billingSettingsQuery = useBillingSettingsQuery(tenantId);
+  const saveBillingSettingsMutation = useSaveBillingSettingsMutation(tenantId);
 
   useEffect(() => {
-    fetchBillingSettings();
-  }, [tenantId]);
+    if (!billingSettingsQuery.isLoading && billingSettingsQuery.data) {
+      const settings = billingSettingsQuery.data;
+      setTaxEnabled(settings.taxEnabled);
+      setTaxRate(settings.taxRate);
+      setInvoicePrefix(settings.invoicePrefix);
+      initialSnapshotRef.current = JSON.stringify({
+        taxEnabled: settings.taxEnabled,
+        taxRate: settings.taxRate,
+        invoicePrefix: settings.invoicePrefix,
+      });
+      if (!settings.hasServerBillingSettings) {
+        const zustandData = getStepData('financials_and_tax');
+        if (zustandData) {
+          setTaxEnabled(zustandData.tax_enabled);
+          setTaxRate(String(zustandData.tax_rate));
+          setInvoicePrefix(zustandData.invoice_prefix);
+          restoredSnapshotRef.current = JSON.stringify({
+            taxEnabled: zustandData.tax_enabled,
+            taxRate: String(zustandData.tax_rate),
+            invoicePrefix: zustandData.invoice_prefix,
+          });
+          setDraftRestored(true);
+        }
+      }
+      setLoading(false);
+    }
+  }, [billingSettingsQuery.isLoading, billingSettingsQuery.data, getStepData]);
 
   // Save to Zustand whenever form data changes
   useEffect(() => {
@@ -70,100 +100,6 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       return () => clearTimeout(timeout);
     }
   }, [taxEnabled, taxRate, invoicePrefix, loading, setBilling, draftRestored, draftBaseEvidence]);
-
-  const fetchBillingSettings = async () => {
-    try {
-      setLoading(true);
-      console.log('[BillingSetupScreen] Fetching billing settings for tenant:', tenantId);
-      
-      // Track loaded values to set snapshot correctly
-      let loadedTaxEnabled = false;
-      let loadedTaxRate = '0';
-      let loadedInvoicePrefix = 'INV';
-      let hasServerBillingSettings = false;
-      
-      // Try to fetch existing billing settings from tenant
-      try {
-        const response = await axiosClient.get(`/api/v1/tenants/${tenantId}`);
-        console.log('[BillingSetupScreen] Tenant response:', JSON.stringify(response.data, null, 2));
-        
-        // Check for billing settings in tenant data
-        if (response.data.tax_enabled !== undefined) {
-          loadedTaxEnabled = response.data.tax_enabled;
-          hasServerBillingSettings = true;
-          setTaxEnabled(loadedTaxEnabled);
-        }
-        if (response.data.tax_rate !== undefined) {
-          loadedTaxRate = String(response.data.tax_rate);
-          hasServerBillingSettings = true;
-          setTaxRate(loadedTaxRate);
-        }
-        if (response.data.invoice_prefix) {
-          loadedInvoicePrefix = response.data.invoice_prefix;
-          hasServerBillingSettings = true;
-          setInvoicePrefix(loadedInvoicePrefix);
-        }
-        
-        console.log('[BillingSetupScreen] Loaded billing settings from tenant');
-      } catch (error: any) {
-        console.error('[BillingSetupScreen] Error fetching tenant data:', error);
-        
-        // Try alternative endpoint for billing settings
-        try {
-          const settingsResponse = await axiosClient.get(`/api/v1/clinic/${tenantId}/settings`);
-          if (settingsResponse.data.billing) {
-            const billing = settingsResponse.data.billing;
-            if (billing.tax_enabled !== undefined) {
-              loadedTaxEnabled = billing.tax_enabled;
-              hasServerBillingSettings = true;
-              setTaxEnabled(loadedTaxEnabled);
-            }
-            if (billing.tax_rate !== undefined) {
-              loadedTaxRate = String(billing.tax_rate);
-              hasServerBillingSettings = true;
-              setTaxRate(loadedTaxRate);
-            }
-            if (billing.invoice_prefix) {
-              loadedInvoicePrefix = billing.invoice_prefix;
-              hasServerBillingSettings = true;
-              setInvoicePrefix(loadedInvoicePrefix);
-            }
-            console.log('[BillingSetupScreen] Loaded billing settings from settings endpoint');
-          }
-        } catch (settingsError) {
-          console.log('[BillingSetupScreen] Using default billing settings');
-        }
-      }
-      
-      // Set initial snapshot with actual loaded values
-      initialSnapshotRef.current = JSON.stringify({
-        taxEnabled: loadedTaxEnabled,
-        taxRate: loadedTaxRate,
-        invoicePrefix: loadedInvoicePrefix,
-      });
-
-      if (!hasServerBillingSettings) {
-        const zustandData = getStepData('financials_and_tax');
-        if (zustandData) {
-          console.log('[BillingSetupScreen] Restoring billing settings draft');
-          setTaxEnabled(zustandData.tax_enabled);
-          setTaxRate(String(zustandData.tax_rate));
-          setInvoicePrefix(zustandData.invoice_prefix);
-          const restoredSnapshot = JSON.stringify({
-            taxEnabled: zustandData.tax_enabled,
-            taxRate: String(zustandData.tax_rate),
-            invoicePrefix: zustandData.invoice_prefix,
-          });
-          restoredSnapshotRef.current = restoredSnapshot;
-          setDraftRestored(true);
-        }
-      }
-    } catch (error: any) {
-      console.error('[BillingSetupScreen] Error in fetchBillingSettings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const validateForm = (): boolean => {
     if (taxEnabled && (!taxRate || parseFloat(taxRate) < 0 || parseFloat(taxRate) > 100)) {
@@ -211,7 +147,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
     try {
       // First, save billing settings to tenant record
       console.log('[BillingSetupScreen] Saving billing settings to tenant...');
-      await axiosClient.patch(`/api/v1/tenants/${tenantId}`, {
+      await saveBillingSettingsMutation.mutateAsync({
         tax_enabled: taxEnabled,
         tax_rate: taxEnabled ? parseFloat(taxRate) : 0,
         invoice_prefix: invoicePrefix,
@@ -260,7 +196,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       }
       throw error;
     }
-  }, [loading, taxEnabled, taxRate, invoicePrefix, tenantId, submitStepMutation, isWizardMode, onSuccess, router, validateForm]);
+  }, [loading, taxEnabled, taxRate, invoicePrefix, submitStepMutation, saveBillingSettingsMutation, isWizardMode, onSuccess, router, validateForm]);
 
   // Register/update the save handler with wizard whenever it changes
   useEffect(() => {

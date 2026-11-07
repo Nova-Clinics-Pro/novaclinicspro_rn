@@ -11,6 +11,32 @@ export function consultationRoute(episodeId: string, appointmentId: string, clie
   return `/clinic-admin/episodes/${episodeId}/consultation?appointmentId=${appointmentId}&clientId=${clientId}`;
 }
 
+export type CosWorkspaceStep =
+  | 'assessment'
+  | 'case_sheet'
+  | 'prescription'
+  | 'treatment_recommendation'
+  | 'completion';
+
+/**
+ * Canonical Episode Workspace destination.
+ *
+ * The workspace owns the `cos_v1` presentation decision. Callers only carry
+ * the explicit clinical identity needed by either workspace implementation.
+ */
+export function episodeWorkspaceRoute(
+  episodeId: string,
+  appointmentId: string,
+  clientId: string,
+  mode?: 'admin' | 'doctor',
+  step?: CosWorkspaceStep,
+): string {
+  const params = new URLSearchParams({ appointmentId, clientId });
+  if (mode) params.set('mode', mode);
+  if (step) params.set('step', step);
+  return `/clinic-admin/episodes/${episodeId}/workspace?${params.toString()}`;
+}
+
 export function startConsultationRoute(appointmentId: string, clientId: string): string {
   return `/clinic-admin/appointments/${appointmentId}/start-consultation?clientId=${clientId}`;
 }

@@ -24,16 +24,30 @@
  * path (e.g. the casesheet bridge failing) needs a direct, awaitable handle
  * — the same reasoning that makes CaseSheetModule's ref useful, applied here
  * for test verification rather than a production coordination need.
+ *
+ * R7 · T-0.4 (ED-ARCH-001): the write path imported `sendToSchedulingApi`/
+ * `createTreatmentRecommendationApi` directly from the datasource layer.
+ * Repointed to `useCreateTreatmentRecommendationMutation`/
+ * `useSendTreatmentOrderToSchedulingMutation` (`treatmentOrders.repository
+ * .impl.ts`) — new, minimal `useMutation` wrappers, since no existing hook
+ * covered either call with a throw-based, awaitable, response-returning
+ * contract (the existing `useSendToSchedulingMutation` in the same file is
+ * a local status-machine hook built for the standalone Treatment Sheet
+ * screens and swallows errors into its own state instead of rejecting).
+ * The shared post-call invalidation logic below (unconditional
+ * `refetchEpisode()`, then `isFreshnessV1Enabled`-gated
+ * `invalidateTreatmentOrderSurfaces` vs. `refetchTreatmentSheet()`) is
+ * unchanged — both branches already converged on it before this task.
  */
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { isFreshnessV1Enabled, useFeatures } from '../../../../../core/hooks/useFeatures';
 import {
-  sendToSchedulingApi,
-  createTreatmentRecommendationApi,
-} from '../../../../treatmentSheets/data/datasources/treatmentOrders.api';
-import { invalidateTreatmentOrderSurfaces } from '../../../../treatmentSheets/data/repositories/treatmentOrders.repository.impl';
+  invalidateTreatmentOrderSurfaces,
+  useCreateTreatmentRecommendationMutation,
+  useSendTreatmentOrderToSchedulingMutation,
+} from '../../../../treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import { useEpisodeContext, usePatientContext, useVisitContext } from '../../context/ClinicalWorkspaceContext';
 import { useReportSaveStatus } from '../../context/WorkspaceSaveStatusContext';
 import {
@@ -44,6 +58,7 @@ import {
 } from '../../hooks/useConsultationWorkspace';
 import { TreatmentRecommendationSection } from './TreatmentRecommendationSection';
 import { renderSection } from './sectionRenderer';
+import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
 
 const DEFAULT_TREATMENT_DRAFT: TreatmentRecommendationDraft = {
   recommendedTherapy: '',
@@ -191,6 +206,9 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
     }
   }, [episodeDetails, remoteTreatmentSheetId, treatmentSheet]);
 
+  const createRecommendationMutation = useCreateTreatmentRecommendationMutation(tenantId);
+  const sendToSchedulingMutation = useSendTreatmentOrderToSchedulingMutation();
+
   const updateTreatmentField = useCallback(
     <K extends keyof TreatmentRecommendationDraft>(key: K, value: TreatmentRecommendationDraft[K]) => {
       setTreatmentRecommendation((prev) => {
@@ -255,7 +273,7 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
           throw new Error('Please add consultation notes before sending to scheduling.');
         }
 
-        const order = await createTreatmentRecommendationApi(tenantId, {
+        const order = await createRecommendationMutation.mutateAsync({
           client_id: resolvedClientId,
           episode_id: episodeId,
           appointment_id: appointmentId,
@@ -268,12 +286,16 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
         treatmentSheetIdRef.current = order.id;
         treatmentSheetVersionRef.current = (order as any).version ?? 0;
       } else {
-        const order = await sendToSchedulingApi(sheetId, treatmentSheetVersionRef.current, {
-          order_notes: orderNotes,
-          planned_sessions: plannedSessions,
-          frequency: frequencyLabel,
-          preferred_time_window: startPref,
-          recommended_therapy: draft.recommendedTherapy.trim(),
+        const order = await sendToSchedulingMutation.mutateAsync({
+          sheetId,
+          version: treatmentSheetVersionRef.current,
+          payload: {
+            order_notes: orderNotes,
+            planned_sessions: plannedSessions,
+            frequency: frequencyLabel,
+            preferred_time_window: startPref,
+            recommended_therapy: draft.recommendedTherapy.trim(),
+          },
         });
         treatmentSheetVersionRef.current = (order as any).version ?? treatmentSheetVersionRef.current;
       }
@@ -287,14 +309,25 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
       } else {
         refetchTreatmentSheet();
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? err?.message ?? 'Failed to send to scheduling';
-      setTreatmentSaveError(msg);
+    } catch (err: unknown) {
+      setTreatmentSaveError(toClinicalWorkspaceError(err, 'Failed to send to scheduling').message);
       throw err;
     } finally {
       setIsTreatmentSaving(false);
     }
-  }, [tenantId, resolvedClientId, appointmentId, episodeId, ensureCasesheetExists, refetchEpisode, refetchTreatmentSheet, queryClient, features]);
+  }, [
+    tenantId,
+    resolvedClientId,
+    appointmentId,
+    episodeId,
+    ensureCasesheetExists,
+    refetchEpisode,
+    refetchTreatmentSheet,
+    queryClient,
+    features,
+    createRecommendationMutation,
+    sendToSchedulingMutation,
+  ]);
 
   // Own unmount-flush — moves with this module (design §6.4).
   useEffect(() => {

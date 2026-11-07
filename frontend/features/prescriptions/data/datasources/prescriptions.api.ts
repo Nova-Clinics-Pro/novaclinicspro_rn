@@ -7,6 +7,8 @@
  */
 
 import { axiosClient } from '../../../../core/api/axiosClient';
+import { isAxiosError } from 'axios';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 import {
   PrescriptionCreateRequest,
   PrescriptionUpdateRequest,
@@ -17,6 +19,7 @@ import {
   ListPrescriptionsParams,
   PrescriptionPrintResponse,
 } from '../models/prescriptions.dtos';
+import { LivingDocumentVersionListResponse, PrescriptionSignedVersionSnapshot } from '../../../livingDocuments/data/models/livingDocuments.dtos';
 
 /**
  * List prescriptions (tenant-scoped, can filter by client)
@@ -33,11 +36,12 @@ export const listPrescriptionsApi = async (
     from_date: undefined,
     to_date: undefined,
   };
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/prescriptions`,
-    { params: requestParams }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions`, { params: requestParams });
+    return response.data;
+  } catch (error) {
+    throw normalizePrescriptionLoadError(error);
+  }
 };
 
 /**
@@ -48,10 +52,14 @@ export const getPrescriptionApi = async (
   tenantId: string,
   prescriptionId: string
 ): Promise<PrescriptionResponse> => {
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}`
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(
+      `/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}`
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizePrescriptionLoadError(error);
+  }
 };
 
 /**
@@ -62,11 +70,15 @@ export const createPrescriptionApi = async (
   tenantId: string,
   payload: PrescriptionCreateRequest
 ): Promise<PrescriptionResponse> => {
-  const response = await axiosClient.post(
-    `/api/v1/clinic/${tenantId}/prescriptions`,
-    payload
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.post(
+      `/api/v1/clinic/${tenantId}/prescriptions`,
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizePrescriptionCreateError(error);
+  }
 };
 
 /**
@@ -78,11 +90,46 @@ export const updatePrescriptionApi = async (
   prescriptionId: string,
   payload: PrescriptionUpdateRequest
 ): Promise<PrescriptionResponse> => {
-  const response = await axiosClient.patch(
-    `/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}`,
-    payload
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.patch(
+      `/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}`,
+      payload
+    );
+    return response.data;
+  } catch (error) {
+    throw normalizePrescriptionUpdateError(error);
+  }
+};
+
+type PrescriptionErrorEnvelope = {
+  detail?: { error?: unknown; prescription_id?: unknown } | unknown;
+  error_code?: unknown;
+};
+
+const prescriptionErrorFacts = (error: unknown) => {
+  const envelope = isAxiosError(error) ? error.response?.data as PrescriptionErrorEnvelope | undefined : undefined;
+  const detail = envelope?.detail && typeof envelope.detail === 'object'
+    ? envelope.detail as { error?: unknown; prescription_id?: unknown }
+    : undefined;
+  return { status: isAxiosError(error) ? error.response?.status : undefined, code: detail?.error ?? envelope?.error_code, existingPrescriptionId: detail?.prescription_id };
+};
+
+export const normalizePrescriptionLoadError = (error: unknown): PrescriptionOperationError =>
+  new PrescriptionOperationError(prescriptionErrorFacts(error).status === 401 ? 'AUTHENTICATION_REQUIRED' : 'LOAD_FAILED');
+
+export const normalizePrescriptionCreateError = (error: unknown): PrescriptionOperationError => {
+  const facts = prescriptionErrorFacts(error);
+  if (facts.code === 'PRESCRIPTION_ALREADY_EXISTS' && typeof facts.existingPrescriptionId === 'string') {
+    return new PrescriptionOperationError('ALREADY_EXISTS', facts.existingPrescriptionId);
+  }
+  return new PrescriptionOperationError(facts.code === 'EPISODE_MISMATCH' ? 'EPISODE_MISMATCH' : 'SAVE_FAILED');
+};
+
+export const normalizePrescriptionUpdateError = (error: unknown): PrescriptionOperationError => {
+  const facts = prescriptionErrorFacts(error);
+  if (facts.status === 403) return new PrescriptionOperationError('PERMISSION_DENIED');
+  if (facts.status === 409) return new PrescriptionOperationError('FINALIZED');
+  return new PrescriptionOperationError('SAVE_FAILED');
 };
 
 /**
@@ -127,3 +174,15 @@ export const getPrescriptionPrintApi = async (
   );
   return response.data;
 };
+
+export const listPrescriptionVersionsApi = async (tenantId: string, prescriptionId: string): Promise<LivingDocumentVersionListResponse> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions`)).data;
+
+export const getPrescriptionVersionApi = async (tenantId: string, prescriptionId: string, versionId: string): Promise<PrescriptionSignedVersionSnapshot> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions/${versionId}`)).data;
+
+export const printPrescriptionVersionApi = async (tenantId: string, prescriptionId: string, versionId: string): Promise<string> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions/${versionId}/print`, { responseType: 'text' })).data;
+
+export const amendPrescriptionApi = async (tenantId: string, prescriptionId: string): Promise<PrescriptionResponse> =>
+  (await axiosClient.post(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/amend`)).data;

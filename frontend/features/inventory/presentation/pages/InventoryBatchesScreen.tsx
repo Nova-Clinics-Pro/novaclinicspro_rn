@@ -252,7 +252,7 @@ export const InventoryBatchesScreen: React.FC = () => {
           </View>
           <ScrollView style={styles.modalContent}>
             <BatchForm
-              onSubmit={handleCreateBatch}
+              onSubmit={(data) => handleCreateBatch(data as BatchCreateRequest)}
               isLoading={createMutation.isPending}
             />
           </ScrollView>

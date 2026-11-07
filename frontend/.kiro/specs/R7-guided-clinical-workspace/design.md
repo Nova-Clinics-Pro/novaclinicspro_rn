@@ -56,6 +56,30 @@ State codes + **localization keys**; **never** colours, icons, layout, or UI lab
 
 **Why one aggregate read, not enriched per-entity responses.** Considered: additively enriching each existing response and letting the frontend stitch. **Rejected** — stitching *is* frontend derivation (P2/P3 violation) and reintroduces ED-ARCH-006. One aggregate is the only option consistent with DP-15.
 
+### 2.1a Clinical Workspace Aggregate & Hierarchical History Projection *(amended v1.1, 2026-07-18)*
+**Implements:** FR-HIST-1, FR-HIST-2 · **Principles:** P1, P2, P3, P9 · **AC:** AC-1, AC-4, AC-5 · **Decisions:** D10
+
+`T-BE-A.1`/`T-BE-A.2` already establish the **Clinical Workspace aggregate** (`app/application/services/clinical_workspace_service.py` + `app/api/v1/routers/clinical_workspace_router.py`) as a distinct capability from §2.1's Workflow Resolver — it assembles `WorkspaceFactsSnapshot` (the resolver's *input*) via repositories only. This amendment gives it a second read: **the hierarchical history projection**, on the same service/router, not a second aggregate (FR-HIST-2's own instruction — "do not create an independent competing history aggregate").
+
+**Encounter classification (pure, deterministic).** Derived from **verified existing signals** — `appointment_type` (`"consultation"`/`"THERAPY"`/`"therapy"` values ✅) plus `treatment_lifecycle_resolver`'s `NEEDS_CLINICAL_REVIEW`/`UNDER_CLINICAL_REVIEW` states (the closest existing anchor for "Treatment Review," per `R7-HISTORY-HIERARCHY-AMENDMENT.md` §3) — **not a new field**. Classification logic belongs in the pure domain layer (candidate: a small classifier alongside or within `clinical_workflow_resolver.py`'s existing reuse of `treatment_lifecycle_resolver` — exact placement is an implementation-time decision, not fixed here).
+
+**Plan-to-session association.** Reuses `T-BE-D.4`'s Plan service and `T-BE-E.1`'s stable Session identity — **this projection cannot return real Plan groups before both exist** (§7 Sequencing, below). Association keys on stable identifiers only (Session→Plan FK, once `T-BE-D`/`T-BE-E` land) — never inferred from date/name/proximity (FR-HIST-2 AC 6).
+
+**Deduplication.** A therapy appointment and its Session/`treatment_sheet_row` must resolve to **one** history item, not two — the aggregate's own responsibility (FR-HIST-2 AC 1/2), preventing the exact double-representation `R7-HISTORY-HIERARCHY-AMENDMENT.md` §1 verified in the current flat list.
+
+**Session-count correction.** Completed/scheduled/not-completed/cancelled counts are computed **backend-side** from actual execution facts (`treatment_sheet_row.status`/`completed_at`), replacing the verified-incorrect frontend formula (`useClinicalTimelineData`'s `session_date`-presence check, which counts *scheduled*, not *completed*, rows — see ED-DEP-7/ED-ARCH-007).
+
+**Legacy fallback (no fabricated grouping).** `treatment_sheet_row.treatment_sheet_id` is `NOT NULL` — legacy sessions are never orphaned from their Treatment Sheet, but Sheet-to-Plan **cardinality is unverified** (design note, not resolved here — see `R7-HISTORY-HIERARCHY-AMENDMENT.md` §8/§16 for the required data audit). Until verified, unassociated sessions classify as `LEGACY_TREATMENT_SESSIONS` (exact code TBD at implementation, following existing convention) — never backfilled by guessing.
+
+**Contract (semantics only — AC-4).**
+```
+history_items[]: { item_type: consultation | treatment_review | treatment_plan | legacy_treatment_sessions,
+                    ...type-specific fields, session_counts{} for treatment_plan, sessions[] nested }
+```
+No colours/icons/layout/UI labels — same semantics-only discipline as §2.1's workflow contract.
+
+**Why extend, not fork (FR-HIST-2's own rule).** A second aggregate would let two backend paths answer "what happened for this patient" — the exact DP-15 violation §2.1 already rejected once for enriched-per-entity stitching. One aggregate, two reads (facts snapshot + history projection), is the only option consistent with the precedent this design already set.
+
 ### 2.2 Case Sheet — Episode binding, current-Visit attribution, atomicity
 **Implements:** FR-CS-1, FR-CS-2, FR-CS-3, FR-CS-4, FR-CS-5, FR-CS-6 · **Decisions:** D1, F-1 · **Principles:** P4, P5
 
@@ -80,6 +104,15 @@ State codes + **localization keys**; **never** colours, icons, layout, or UI lab
 
 **(f) `appointment_id` (FR-CS-2 AC 12).** Retained; meaning documented as **creation provenance only**; never read for current-visit attribution. Nullability untouched; `episode_id` non-null migration deferred behind a data audit (**ETX-2**).
 
+**(g) Contribution content snapshots (FR-CS-5, FR-CS-6) — Decision 12 amendment (T-BE-E.1a, v1.3, 2026-07-25).**
+> **Verified gap this closes.** `TenantCasesheetContribution` was attribution-only (`id, tenant_id, casesheet_id, visit_id, staff_id, contributed_at, correlation_id, payload_hash`) — no content field existed anywhere, by the original Decision "holds NO clinical content" (Phase 2 · T-B.2, ADR-P2-03). `TenantCasesheet.data_json` is a single mutable document, overwritten in place on every update. Without amendment, FR-CS-5 ("prior visits' notes visibly retained... never overwritten") has no persisted fact to render.
+
+**Amendment.** `TenantCasesheetContribution` gains one additive, nullable `content_snapshot` JSONB column — the exact validated `data_json` at the moment of that contribution, stored inside the SAME atomic transaction (d) already performs (no new transactional machinery). DO-2's core invariant is unchanged: `TenantCasesheet.data_json` remains the sole current, editable document; the snapshot is never independently editable and is never treated as a second Case Sheet. See Decision 12 (`R7-OWNER-RATIFICATION.md`) for the full ratified interpretation.
+
+**Read path.** One additive read method (`list_by_casesheet`, already existed at the repository layer) exposed through the existing Case Sheet router/service — no new aggregate, no Clinical Workspace history endpoint. Legacy rows keep `content_snapshot = NULL`, returned with an explicit `content_available = false`, never backfilled or reconstructed from current `data_json`.
+
+**Idempotency (e) interaction.** `payload_hash` is computed from the same `data_json` that becomes `content_snapshot` — consistency between the two is automatic, not a separately maintained invariant. A retry with a mismatched hash is rejected exactly as (e) already specifies; no second idempotency mechanism is introduced.
+
 ### 2.3 Treatment Plan — first-class persisted, versioned entity
 **Implements:** FR-TP-1, FR-TP-2, FR-TP-3 · **Decision:** Treatment Plan resolution · **Principles:** P1, P3, P6
 
@@ -93,8 +126,11 @@ app/domain/repositories/i_treatment_plan_repository.py         ← NEW (interfac
 app/infrastructure/repositories/sqlalchemy_treatment_plan_repository.py ← NEW
 app/application/services/treatment_plan_service.py             ← NEW
 app/infrastructure/db/migrations/versions/<rev>_r7_treatment_plan.py ← NEW (additive)
+app/infrastructure/db/migrations/versions/<rev>_r7_recommendation_source_identity.py ← NEW (additive, T-BE-D.3a)
 ```
 Registered on the UoW alongside existing repos (convention ✅). `tenant_` prefix — the plan is tenant-owned (verified convention: `org_` = platform, `tenant_` = tenant).
+
+**Recommendation source identity (Decision 11, T-BE-D.3a — prerequisite, blocks T-BE-D.4).** `originating_recommendation_id` references a `TenantTreatmentSheet.id` explicitly marked `creation_source = RECOMMENDATION` (see §2.8) — never inferred from lifecycle state. Enforced at the database level: a tenant-scoped partial unique index on `(tenant_id, originating_recommendation_id) WHERE originating_recommendation_id IS NOT NULL` guarantees at most one Plan per Recommendation (FR-TR-1 AC1).
 
 **Shape (design intent; exact DDL is an implementation task):** identity · tenant · patient · episode · originating recommendation · authoring clinician · therapies · approximate/authorized session count · frequency · **scheduling intent** · preferred interval · sequencing pattern · review milestones · completion criteria · course precautions · therapist requirements · **status** · **document version** · **superseded-by** · provenance timestamps. **No date columns for committed sessions** — FR-TP-1 AC: the Plan contains no schedule.
 
@@ -121,12 +157,12 @@ Registered on the UoW alongside existing repos (convention ✅). `tenant_` prefi
 ### 2.5 Billing visibility
 **Implements:** FR-BILL-1, FR-BILL-2 · **Decision:** D6
 
-Additive **read** contract composing the **verified existing spine**: `TenantClinicalService.visit_id` (`nullable=False` ✅) → `TenantInvoiceLine.clinical_service_id` ✅ → invoice → payment. **No new billing write path in R7.** Capability-gated. Completion returns a **warning** for unbilled services (FR-BILL-2); **no hard block is hard-coded** — any blocking tenant policy is explicit configuration **[VP]**, not R7 code.
+`T-BE-F.1` is the additive **read** contract composing the verified existing spine: `TenantClinicalService.visit_id` (`nullable=False` ✅) → `TenantInvoiceLine.clinical_service_id` ✅ → invoice → payment. F.1 itself adds no billing write path. The separately ratified `T-BE-F.1a` governs use of the existing invoice-create path from R7: frontend provides `appointment_id` only; backend resolves authenticated tenant → appointment → client → active Visit, validates all relationships and any clinical-service attribution, and enforces effective `billing.invoicing` **and** the applicable canonical `invoice.*` permission. `T-FE-E.4` composes the resulting billing presentation/affordance; `T-FE-E.6` retains broader role/capability composition. Completion returns a **warning** for unbilled services (FR-BILL-2); it is never a frontend hard block, and backend completion readiness remains authoritative. See `R7-BILLING-ACTIONABILITY-RATIFICATION.md`.
 
 ### 2.6 Living documents
 **Implements:** FR-LD-1, FR-LD-2, FR-LD-3 · **Decision:** D2 · **Principle:** P6
 
-Version/supersession representation **[VP]** — deliberately not fixed here; it is a schema change requiring its own approval, and R7 core ships without amendment (Group G defers cleanly). Design constraints that are **not** deferred: a `SIGNED` version is never mutated; a superseded version is retained, renderable exactly as signed, and visibly marked; prints identify the version; amendment records author/reason/timestamp and requires a distinct permission (**ETX-1**).
+Version/supersession representation was originally **[VP]**; its ownership semantics are now ratified by `R7-OWNER-RATIFICATION.md` Decision 13 (2026-10-02). Stable document identity, complete immutable domain-owned signed snapshots, and content-free generic lineage are distinct. The exact pre-adoption table/FK design remains T-BE-G.1 work. Design constraints: a `SIGNED` version is never mutated; a superseded version is retained, renderable exactly as signed, and visibly marked; prints identify the version; amendment records author/reason/timestamp and requires a distinct permission (**ETX-1**). Generic G1 excludes Treatment Sheet/session execution.
 
 **Rollback caveat (FR-FLAG-1 AC 3).** Supersession is **data-shaped**: a flag rolls back code, not records. Group G requires its own rollback plan — this is the one place R7's "flag-off = no data effect" posture does not hold, and the design says so rather than implying otherwise.
 
@@ -143,11 +179,13 @@ Version/supersession representation **[VP]** — deliberately not fixed here; it
 **[R8] integration point only.** Dispensing fulfilment (`NOT_STARTED → PARTIALLY_DISPENSED → DISPENSED`) is a **separate domain object with its own lifecycle** — never merged into the document lifecycle. Copy-forward (FR-RX-2) is **not built in R7**; its reconciliation gate cannot check anything until R8 models allergies/medications (F-2).
 
 ### 2.8 Treatment Recommendation
-**Implements:** FR-TR-1 · **Decision:** D8 · **Principle:** P8
+**Implements:** FR-TR-1 · **Decision:** D8, "R7 Treatment Recommendation source identity" (Decision 11) · **Principle:** P8
 
-**Reuse.** Existing recommendation routers/services ✅ and `TreatmentRecommendationModule` ✅ (post-remediation). No new entity.
+**Reuse.** Existing recommendation routers/services ✅ (`POST /clinic/{tenant_id}/treatment-recommendations`) and `TreatmentRecommendationModule` ✅ (post-remediation). No new entity.
 
-**Design boundary.** The Recommendation answers *"should this patient receive a course?"* and **does not own the course design** — that is the Plan (§2.3). It carries no committed dates. The Recommendation → Plan edge is **one-directional**: a Recommendation may lead to **one** approved Plan (FR-TR-1 AC 1); the Plan records its originating Recommendation (§2.3 shape).
+**Storage representation (Decision 11, T-BE-D.3a — corrects an earlier assumption in this section).** Recommendation has no independent backend entity or ID space of its own — `tenant_treatment_proposals` was removed pre-R7. The Recommendation-creation endpoint's own `TenantTreatmentSheet`/Treatment Order row **is** the storage representation; its `id` is the Recommendation's provenance identity. This row is explicitly discriminated from an ordinary directly-created sheet by `creation_source = RECOMMENDATION` (T-BE-D.3a) — `is_order`/`state` alone are NOT sufficient discriminators, since a second, independent live endpoint (`send-to-scheduling`) reaches the identical `is_order=True`/`state=ORDERED` state on ordinary sheets. This is a legacy-source representation for R7 MVP, not a claim that Recommendation and Plan are one entity.
+
+**Design boundary.** The Recommendation answers *"should this patient receive a course?"* and **does not own the course design** — that is the Plan (§2.3). It carries no committed dates. The Recommendation → Plan edge is **one-directional**: a Recommendation may lead to **one** approved Plan (FR-TR-1 AC 1, enforced by T-BE-D.3a's partial unique index on `tenant_treatment_plans (tenant_id, originating_recommendation_id)`); the Plan records its originating Recommendation (§2.3 shape).
 
 **Handoff.** The doctor→admin handoff is not new mechanism: it is the existing lifecycle status ✅ surfaced as `waiting_role` by §2.1 (FR-WFA-2), so the originating role can see the ball is in another court.
 
@@ -180,7 +218,7 @@ Version/supersession representation **[VP]** — deliberately not fixed here; it
 
 ## 3. Frontend Design
 
-**Implements:** FR-COS-1, FR-COS-2, FR-VCC-1, FR-VCC-2, FR-VCC-3, FR-VCC-4, FR-MOB-1, FR-MOB-2, FR-REC-2, FR-RBAC-1 · **Principles:** P9 · **AC:** AC-2
+**Implements:** FR-COS-1, FR-COS-2, FR-VCC-1, FR-VCC-2, FR-VCC-3, FR-VCC-4, FR-MOB-1, FR-MOB-2, FR-REC-2, FR-RBAC-1, FR-HIST-1 *(amended v1.1)* · **Principles:** P9 · **AC:** AC-2
 
 ```
 app/clinic-admin/episodes/[episodeId]/workspace.tsx      ← EXISTING route (reused, not replaced)
@@ -204,6 +242,8 @@ app/clinic-admin/episodes/[episodeId]/workspace.tsx      ← EXISTING route (reu
 
 **Role composition (FR-RBAC-1).** `episodeWorkspaceConfigByRole` ✅ extends 2→5 roles **as config**. It may hide a CTA; it is **never** the authority — actionability comes from backend `blocking_factors`/`waiting_role` (FR-WFA-2).
 
+**Hierarchical history (FR-HIST-1, amended v1.1).** `ClinicalTimeline`/`useClinicalTimelineData` are **modified, not replaced**: the hook stops assembling five independent flat queries and instead consumes §2.1a's `history_items[]` contract directly; it **stops computing `completedSessionCount` locally** (the corrected, backend-derived count arrives on the `treatment_plan` item). `ClinicalTimeline.tsx`'s rendering gains: collapsed/expanded Plan-group state (local UI state only, per FR-HIST-1's own rule), a `treatment_review`/`legacy_treatment_sessions` visual treatment alongside the existing `consultation`/`treatment_plan` types, and per-type icon+label distinction — extending the file's already-theme-compliant pattern (`useClinicTheme()`, verified during T--1.1's theme review), not introducing a new styling system. **No second frontend-derived timeline model is created** — this is the same file, corrected.
+
 ---
 
 ## 4. Contracts (semantics only)
@@ -214,6 +254,7 @@ app/clinic-admin/episodes/[episodeId]/workspace.tsx      ← EXISTING route (reu
 | Workspace context (read) | FR-VCC-1..4 | patient/episode/visit context · what-changed signals (8, R7 scope) · verified safety signals only | allergy/interaction/renal panels (F-2) |
 | Billing visibility (read) | FR-BILL-1 | charges · invoice status · payment status · outstanding | write operations (R7) |
 | Case sheet write | FR-CS-2/3/4 | + explicit current `visit_id` **[VP transport]** | inference from `appointment_id` |
+| History hierarchy (read) *[amended v1.1]* | FR-HIST-1/2 | `history_items[]`: consultation \| treatment_review \| treatment_plan{session_counts, sessions[]} \| legacy_treatment_sessions | colours · icons · layout · UI labels · any frontend-computable aggregate (AC-4) |
 
 All state codes travel with **localization keys**; the frontend renders the label (R5/R6 precedent ✅).
 
@@ -256,10 +297,11 @@ ED-ARCH-001 remediation (reused modules)  ─┐
 Case sheet F-1 (service)  ─────────────────┘
 Workflow intelligence (resolver+service) ──► FE renders pills/recommendation (hard dependency)
 Treatment Plan entity (+migration) ────────► Sessions/scheduling ──► FE treatment experience
+                                           └─► History hierarchy projection ──► FE hierarchical history [amended v1.1]
 Billing read ──────────────────────────────► FE billing stage
 Supersession (schema, deferrable) ─────────► amendment surfaces
 ```
-**Hard rule:** no interim frontend reconstruction while a backend contract is pending (D9). If the contract is late, the frontend waits — it does not derive.
+**Hard rule:** no interim frontend reconstruction while a backend contract is pending (D9). If the contract is late, the frontend waits — it does not derive. **The history hierarchy is a hard consumer of Treatment Plan** (§2.1a) — its Plan-grouping half cannot ship, even partially, before `T-BE-D`/`T-BE-E` complete; the consultation/treatment-review half does not share this dependency and may proceed independently.
 
 ---
 
@@ -267,9 +309,9 @@ Supersession (schema, deferrable) ─────────► amendment surfa
 
 Every design section names the requirements it implements (headers above). Reverse coverage, and requirement→task-group mapping, are maintained in [`requirements-traceability-matrix.md`](requirements-traceability-matrix.md) — not duplicated here.
 
-**Design decisions that are deliberately deferred (each owned by a requirement's [VP] or an ETX):** case-sheet write transport (FR-CS-2) · idempotency key (FR-CS-4) · Plan status spelling (FR-TP-2) · `Missed` spelling (FR-TS-5) · supersession representation (FR-LD-1) · appointment purpose existence (**ETX-3**) · permission codes (**ETX-1**) · capability-change-mid-episode (**ETX-4**) · legacy `treatment_plan` column disposition (**ETX-5**).
+**Design decisions that are deliberately deferred (each owned by a requirement's [VP] or an ETX):** case-sheet write transport (FR-CS-2) · idempotency key (FR-CS-4) · Plan status spelling (FR-TP-2) · `Missed` spelling (FR-TS-5) · supersession representation (FR-LD-1) · appointment purpose existence (**ETX-3**) · permission codes (**ETX-1**) · legacy `treatment_plan` column disposition (**ETX-5**). **`ETX-4` (capability-change-mid-episode) is resolved** — the owner-approved capability-loss policy is frozen and implemented through the clarified `T-BE-B.1`/`T-BE-B.2`/`T-FE-E.6` acceptance criteria ([R7-CAPABILITY-CHANGE-MID-EPISODE-VERIFICATION.md](R7-CAPABILITY-CHANGE-MID-EPISODE-VERIFICATION.md)).
 
-**This design adds no scope absent from requirements v1.0.** Where it says "Small" or "subtractive," that is a verified finding, not an estimate.
+**This design adds no scope absent from requirements v1.1.** Where it says "Small" or "subtractive," that is a verified finding, not an estimate. **v1.1 amendment (2026-07-18):** §2.1a and the FR-HIST-1 paragraph of §3 are the only sections added; nothing else in this document was reopened.
 
 ---
 

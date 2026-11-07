@@ -17,6 +17,7 @@ import {
   cancelLeaveApi,
   searchStaffApi,
   listAllStaffLeaveApi,
+  listOnboardingStaffApi,
 } from '../datasources/staff.api';
 import {
   StaffCreate,
@@ -30,6 +31,7 @@ import {
   ListStaffLeaveParams,
   PaginatedStaffResponse,
   PaginatedLeaveResponse,
+  OnboardingStaffSourceItem,
 } from '../models/staff.dtos';
 import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/repositories/onboardingFreshness';
 
@@ -47,6 +49,7 @@ export const staffKeys = {
     [...staffKeys.details(), tenantId, staffId] as const,
   search: (tenantId: string, query: string) =>
     [...staffKeys.all, 'search', tenantId, query] as const,
+  onboarding: (tenantId: string) => [...staffKeys.all, 'onboarding', tenantId] as const,
   // Leave keys
   leaves: () => [...staffKeys.all, 'leaves'] as const,
   leaveList: (tenantId: string, staffId: string, params?: ListStaffLeaveParams) =>
@@ -72,6 +75,20 @@ export const useStaffListQuery = (
     ...options,
   });
 };
+
+/** Read staff for onboarding while preserving its legacy one-request-per-mount policy. */
+export const useOnboardingStaffQuery = (tenantId: string) =>
+  useQuery<OnboardingStaffSourceItem[], Error>({
+    queryKey: staffKeys.onboarding(tenantId),
+    queryFn: () => listOnboardingStaffApi(tenantId),
+    enabled: !!tenantId,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
 /**
  * Hook to get a single staff member

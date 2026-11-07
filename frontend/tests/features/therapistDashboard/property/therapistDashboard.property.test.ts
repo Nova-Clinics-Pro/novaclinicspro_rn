@@ -39,8 +39,8 @@ describe('Property 5: Session card Complete button visibility matches status', (
         fc.property(statusArb, (status) => {
           const isVisible = canCompleteSession(status);
 
-          // The button should be visible only for in_progress and scheduled
-          if (status === 'in_progress' || status === 'scheduled') {
+          // Completion is available only once the therapist has started the session.
+          if (status === 'in_progress') {
             expect(isVisible).toBe(true);
           } else {
             expect(isVisible).toBe(false);
@@ -68,7 +68,7 @@ describe('Property 5: Session card Complete button visibility matches status', (
   it(
     'Complete button IS visible for completable statuses',
     () => {
-      const completableStatusArb = fc.constantFrom('in_progress', 'scheduled');
+      const completableStatusArb = fc.constantFrom('in_progress');
 
       fc.assert(
         fc.property(completableStatusArb, (status) => {
@@ -103,8 +103,8 @@ describe('Property 5: Session card Complete button visibility matches status', (
         fc.property(fc.string(), (status) => {
           const result = canCompleteSession(status);
           if (result === true) {
-            // If it returned true, it must be one of the two completable statuses
-            expect(['in_progress', 'scheduled']).toContain(status);
+            // If it returned true, it must be the started-session status.
+            expect(['in_progress', 'IN_PROGRESS']).toContain(status);
           }
         }),
         { numRuns: 100 }

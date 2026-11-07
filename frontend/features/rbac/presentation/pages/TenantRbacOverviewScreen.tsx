@@ -29,6 +29,7 @@ import {
   useTenantUserRolesQuery,
 } from '../../data/repositories/rbac.repository.impl';
 import { useTenantQuery } from '../../../tenants/data/repositories/tenants.repository.impl';
+import { useOrganizationTenantScope } from '../../../tenants/presentation/hooks/useOrganizationTenantScope';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 
@@ -37,10 +38,11 @@ export const TenantRbacOverviewScreen: React.FC = () => {
   const { tenantId } = useLocalSearchParams<{ tenantId: string }>();
   const { colors } = useRbacTheme();
   const { createQueryErrorHandler } = useApiErrorHandler();
+  const { organizationId } = useOrganizationTenantScope();
 
   // Fetch tenant info
-  const tenantQuery = useTenantQuery(tenantId || '', {
-    enabled: !!tenantId,
+  const tenantQuery = useTenantQuery(organizationId, tenantId || '', {
+    enabled: Boolean(tenantId && organizationId),
   });
 
   // Fetch RBAC data

@@ -111,13 +111,23 @@ export const mapRegistrationSubmissionError = (error: unknown): RegistrationSubm
   return new RegistrationSubmissionError('UNEXPECTED', status, domainCode);
 };
 
+const MAX_IDEMPOTENCY_KEY_LENGTH = 255;
+
 export const registerClinicOwnerApi = async (
-  payload: ClinicOwnerRegistrationRequest
+  payload: ClinicOwnerRegistrationRequest,
+  idempotencyKey: string
 ): Promise<ClinicOwnerRegistrationResponse> => {
+  // The backend requires a non-empty key of at most 255 characters and answers 400 otherwise;
+  // fail before sending a request that cannot succeed.
+  const key = typeof idempotencyKey === 'string' ? idempotencyKey.trim() : '';
+  if (!key || key.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
+    throw new RegistrationSubmissionError('UNEXPECTED');
+  }
   try {
     const response = await axiosClient.post(
       '/api/v1/auth/register-clinic-owner',
-      payload
+      payload,
+      { headers: { 'Idempotency-Key': key } }
     );
     return response.data;
   } catch (error) {
@@ -125,11 +135,9 @@ export const registerClinicOwnerApi = async (
   }
 };
 
-export const getRegistrationStatusApi = async (
-  userId: string
-): Promise<RegistrationStatusResponse> => {
+export const getRegistrationStatusApi = async (): Promise<RegistrationStatusResponse> => {
   const response = await axiosClient.get<RegistrationStatusResponse>(
-    `/api/v1/auth/registration-status/${userId}`
+    '/api/v1/auth/registration-status/me'
   );
   return response.data;
 };

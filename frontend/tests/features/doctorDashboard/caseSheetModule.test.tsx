@@ -38,6 +38,11 @@ jest.mock('../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData
 jest.mock('../../../features/casesheets/data/datasources/casesheets.api', () => ({
   createCasesheetApi: jest.fn(),
   updateCasesheetApi: jest.fn(),
+  // T-FE-E.1b: CaseSheetModule now also composes CaseSheetContributionHistory,
+  // which fetches contribution history through this datasource's repository
+  // hook -- keep it resolved so these pre-existing tests never hit a real
+  // network call.
+  getCasesheetContributionsApi: jest.fn().mockResolvedValue({ casesheet_id: '', episode_id: '', contributions: [] }),
 }));
 // Full theme shape (mirrors tests/features/doctorDashboard/setup.ts's own
 // theme object) — CaseSheetModule's section children read many color/
@@ -72,6 +77,9 @@ jest.mock('../../../core/theme/useClinicTheme', () => ({
       caption: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
       button: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
     },
+    radii: { small: 4, medium: 8, large: 16, pill: 999 },
+    borderWidths: { thin: 1 },
+    sizes: { touchTarget: 44, iconSmall: 16, iconMedium: 24, iconLarge: 32 },
   }),
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));

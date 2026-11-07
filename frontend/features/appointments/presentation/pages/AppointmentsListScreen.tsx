@@ -27,6 +27,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { episodeWorkspaceRoute } from '../../../doctorDashboard/application/consultationRoutes';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
@@ -373,7 +374,7 @@ export const AppointmentsListScreen: React.FC = () => {
       // This is the flattened navigation: Appointments → EpisodeWorkspace (no intermediate screens)
       if (appointment.episode_id) {
         router.push(
-          `/clinic-admin/episodes/${appointment.episode_id}/workspace?mode=admin&clientId=${appointment.client_id}` as any
+          episodeWorkspaceRoute(appointment.episode_id, appointment.id, appointment.client_id, 'admin') as any
         );
       } else {
         // No episode yet — go to appointment detail to create/link one
@@ -499,7 +500,7 @@ export const AppointmentsListScreen: React.FC = () => {
               onCancel={handleCancel}
               onReschedule={handleReschedule}
               onViewEpisode={(episodeId) => {
-                router.push(`/clinic-admin/episodes/${episodeId}/workspace?mode=admin&clientId=${item.client_id}` as any);
+                router.push(episodeWorkspaceRoute(episodeId, item.id, item.client_id, 'admin') as any);
               }}
               onViewAllEpisodes={(clientId) => {
                 router.push(`/clinic-admin/clients/${clientId}/episodes` as any);

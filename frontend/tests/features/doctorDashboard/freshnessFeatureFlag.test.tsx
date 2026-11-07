@@ -22,8 +22,9 @@ describe('consultation.tsx conditional remount (T-A.6, RB-1, source inspection)'
   );
 
   it('reads the freshness flag via useFeatures/isFreshnessV1Enabled', () => {
-    expect(source).toContain("import { useFeatures, isFreshnessV1Enabled } from '../../../../core/hooks/useFeatures';");
-    expect(source).toContain('const freshnessEnabled = isFreshnessV1Enabled(useFeatures());');
+    expect(source).toContain("import { useFeatures, isCosV1Enabled, isFreshnessV1Enabled } from '../../../../core/hooks/useFeatures';");
+    expect(source).toContain('const features = useFeatures();');
+    expect(source).toContain('const freshnessEnabled = isFreshnessV1Enabled(features);');
   });
 
   it('the key prop is undefined (no forced remount) when the flag is ON, and the old episode:appointment key when OFF', () => {

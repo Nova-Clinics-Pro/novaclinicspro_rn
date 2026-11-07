@@ -90,9 +90,8 @@ export const StaffDetailScreen: React.FC = () => {
         await updateMutation.mutateAsync(data);
         setShowEditModal(false);
         Alert.alert('Success', 'Staff member updated successfully');
-      } catch (err: any) {
-        const message = err?.response?.data?.error || err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Failed to update staff';
-        Alert.alert('Error', message);
+      } catch {
+        Alert.alert('Error', 'Failed to update staff');
       }
     },
     [updateMutation]
@@ -113,9 +112,8 @@ export const StaffDetailScreen: React.FC = () => {
             try {
               await updateMutation.mutateAsync({ is_active: !staff?.is_active });
               Alert.alert('Success', `Staff member ${action}d successfully`);
-            } catch (err: any) {
-              const message = err?.response?.data?.error || err?.response?.data?.message || err?.response?.data?.detail || err?.message || `Failed to ${action} staff`;
-              Alert.alert('Error', message);
+            } catch {
+              Alert.alert('Error', `Failed to ${action} staff`);
             }
           },
         },
@@ -137,9 +135,8 @@ export const StaffDetailScreen: React.FC = () => {
               await deleteMutation.mutateAsync(staffId || '');
               Alert.alert('Success', 'Staff member deleted');
               router.back();
-            } catch (err: any) {
-              const message = err?.response?.data?.error || err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Failed to delete staff';
-              Alert.alert('Error', message);
+            } catch {
+              Alert.alert('Error', 'Failed to delete staff');
             }
           },
         },
@@ -153,9 +150,8 @@ export const StaffDetailScreen: React.FC = () => {
         await createLeaveMutation.mutateAsync(data);
         setShowLeaveModal(false);
         Alert.alert('Success', 'Leave request submitted');
-      } catch (err: any) {
-        const message = err?.response?.data?.error || err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Failed to submit leave request';
-        Alert.alert('Error', message);
+      } catch {
+        Alert.alert('Error', 'Failed to submit leave request');
       }
     },
     [createLeaveMutation]
@@ -186,7 +182,7 @@ export const StaffDetailScreen: React.FC = () => {
           <Ionicons name="alert-circle" size={64} color={colors.error.main} />
           <Text style={styles.errorTitle}>Could not load staff</Text>
           <Text style={styles.errorText}>
-            {error?.message || 'Staff member not found'}
+            Staff member not found
           </Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
             <Text style={styles.retryButtonText}>Retry</Text>

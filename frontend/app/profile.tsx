@@ -4,6 +4,7 @@
  * Uses /auth/me data to display profile details
  */
 
+import { ProtectedRoute } from '../core/components/ProtectedRoute';
 import React from 'react';
 import {
   View,
@@ -22,7 +23,7 @@ import { typography } from '../core/theme/typography';
 import { useAuth } from '../features/auth/presentation/hooks/useAuth';
 import { isClinicOwner } from '../features/auth/domain/entities/auth.entity';
 
-export default function ProfileScreen() {
+function ProfileScreen() {
   const router = useRouter();
   const { currentUser, isLoading } = useAuth();
 
@@ -513,3 +514,12 @@ const styles = StyleSheet.create({
     color: colors.error.main,
   },
 });
+
+/** Authenticated route: anonymous visitors are redirected to /login (backend remains authoritative). */
+export default function ProfileScreenGuarded() {
+  return (
+    <ProtectedRoute>
+      <ProfileScreen />
+    </ProtectedRoute>
+  );
+}

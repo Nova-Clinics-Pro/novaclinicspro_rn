@@ -13,6 +13,23 @@
  * by a full grep of useConsultationWorkspace.ts before writing this file).
  * Its own unmount-flush (dirty-ref check + save) moves with it, exactly as
  * CaseSheetModule's did (design §6.4).
+ *
+ * R7 · T-0.2 (ED-ARCH-001): the read path previously called `axiosClient.get`
+ * directly and the write path imported `createPrescriptionApi`/
+ * `updatePrescriptionApi` from the datasource layer — both bypassing the
+ * governed Presentation → Application → Domain → Infrastructure direction.
+ * Repointed to `usePrescriptionByAppointmentQuery`/`useCreatePrescriptionMutation`/
+ * `useUpdatePrescriptionMutation` (`prescriptions.repository.impl.ts`) — the
+ * exact same application-layer hooks the standalone Prescription screens
+ * already use. `usePrescriptionByAppointmentQuery`'s own docstring notes it
+ * was built to "match the exact request the consultation workspace
+ * currently issues manually" and was "not yet consumed by the workspace" —
+ * this task is that wiring. Cache invalidation is reproduced exactly
+ * (hook-level `onSuccess` override, not the call-time additive form) so the
+ * existing `isFreshnessV1Enabled` gate continues to suppress ALL
+ * invalidation when the flag is off, matching prior behavior precisely
+ * rather than letting the hooks' own always-on internal invalidation leak
+ * through.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,15 +37,20 @@ import { Text, TouchableOpacity } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { isFreshnessV1Enabled, useFeatures } from '../../../../../core/hooks/useFeatures';
-import { createPrescriptionApi, updatePrescriptionApi } from '../../../../prescriptions/data/datasources/prescriptions.api';
-import { prescriptionsKeys } from '../../../../prescriptions/data/repositories/prescriptions.repository.impl';
+import {
+  prescriptionsKeys,
+  usePrescriptionByAppointmentQuery,
+  useCreatePrescriptionMutation,
+  useUpdatePrescriptionMutation,
+} from '../../../../prescriptions/data/repositories/prescriptions.repository.impl';
 import { PrescriptionData } from '../../../../prescriptions/data/models/prescriptions.dtos';
-import { axiosClient } from '../../../../../core/api/axiosClient';
 import { useEpisodeContext, usePatientContext, useVisitContext } from '../../context/ClinicalWorkspaceContext';
 import { useReportSaveStatus } from '../../context/WorkspaceSaveStatusContext';
 import { SectionKey, SectionProgress, SectionProgressStatus, SectionSaveStatus } from '../../hooks/useConsultationWorkspace';
 import { PrescriptionEditingCore } from '../../../../prescriptions/presentation/components/PrescriptionEditingCore';
 import { renderSection } from './sectionRenderer';
+import { PrescriptionVersionPanel } from '../../../../prescriptions/presentation/components/PrescriptionVersionPanel';
+import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
 
 // R3B (T-B.4, ADR-R3B-05): fixed set — reproduces PrescriptionSection's own
 // pre-T-B.4 advice-field behavior bit-for-bit (T-0.3 baseline). The
@@ -53,9 +75,10 @@ function computePrescriptionStatus(prescriptionId: string | null, prescriptionNo
 export interface PrescriptionModuleProps {
   expandedSections: Set<SectionKey>;
   onToggleSection: (key: SectionKey) => void;
+  permissions?: string[];
 }
 
-export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expandedSections, onToggleSection }) => {
+export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expandedSections, onToggleSection, permissions = [] }) => {
   const queryClient = useQueryClient();
   const { colors, spacing, typography } = useClinicTheme();
   const features = useFeatures();
@@ -68,6 +91,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
   const [isPrescriptionSaving, setIsPrescriptionSaving] = useState(false);
   const [prescriptionSaveError, setPrescriptionSaveError] = useState<string | null>(null);
   const [prescriptionNotRequired, setPrescriptionNotRequired] = useState(false);
+  const [prescriptionStatus, setPrescriptionStatus] = useState<string | null>(null);
   const prescriptionIdRef = useRef<string | null>(null);
   const prescriptionDataRef = useRef<PrescriptionData>(EMPTY_PRESCRIPTION_DATA);
   const prescriptionDirtyRef = useRef(false);
@@ -90,56 +114,79 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
     reportSaveStatus('prescription', saveStatus);
   }, [saveStatus, reportSaveStatus]);
 
-  // Load existing prescription for this appointment on mount (unchanged
-  // from useConsultationWorkspace.ts).
+  // Reset local edit state whenever the active appointment changes (unchanged
+  // reset semantics from useConsultationWorkspace.ts — only the load source
+  // below changed, T-0.2).
   useEffect(() => {
     if (!tenantId || !appointmentId) return;
-
-    let cancelled = false;
-
     setPrescriptionId(null);
     prescriptionIdRef.current = null;
     setPrescriptionData(EMPTY_PRESCRIPTION_DATA);
     prescriptionDataRef.current = EMPTY_PRESCRIPTION_DATA;
     setPrescriptionNotRequired(false);
+    setPrescriptionStatus(null);
     setPrescriptionSaveError(null);
     prescriptionDirtyRef.current = false;
-
-    const load = async () => {
-      try {
-        const result = await axiosClient.get(
-          `/api/v1/clinic/${tenantId}/prescriptions`,
-          { params: { appointment_id: appointmentId, episode_id: episodeId } },
-        );
-        if (cancelled) return;
-
-        const items = result.data?.items ?? result.data ?? [];
-        if (Array.isArray(items) && items.length > 0) {
-          const first = items[0];
-          setPrescriptionId(first.id);
-          prescriptionIdRef.current = first.id;
-          const loaded = first.prescription_data ?? EMPTY_PRESCRIPTION_DATA;
-          setPrescriptionData(loaded);
-          prescriptionDataRef.current = loaded;
-        }
-      } catch {
-        // No prescription found — start fresh
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
   }, [tenantId, appointmentId, episodeId]);
 
+  // Load existing prescription for this appointment via the governed
+  // application-layer hook (T-0.2 · ED-ARCH-001 — was a direct
+  // `axiosClient.get`). Query-key scoping (`prescriptionsKeys.byAppointment`)
+  // means React Query itself supersedes any in-flight request when
+  // appointmentId changes — no manual cancellation flag needed.
+  const prescriptionByAppointmentQuery = usePrescriptionByAppointmentQuery(tenantId, episodeId, appointmentId);
+
+  useEffect(() => {
+    const items = prescriptionByAppointmentQuery.data?.items ?? [];
+    if (items.length > 0) {
+      const first = items[0];
+      setPrescriptionId(first.id);
+      prescriptionIdRef.current = first.id;
+      const loaded = first.prescription_data ?? EMPTY_PRESCRIPTION_DATA;
+      setPrescriptionData(loaded);
+      prescriptionDataRef.current = loaded;
+      setPrescriptionStatus(first.status);
+    }
+    // No prescription found (empty items, or the query errored) — start
+    // fresh, matching the prior direct-call's catch-all behavior exactly.
+  }, [prescriptionByAppointmentQuery.data]);
+
+  // Both mutations override the hook's own default `onSuccess` (rather than
+  // the additive call-time form) so the existing `isFreshnessV1Enabled` gate
+  // continues to suppress ALL cache writes when the flag is off — matching
+  // today's exact behavior instead of letting the hooks' own always-on
+  // internal invalidation leak through unconditionally.
+  const createMutation = useCreatePrescriptionMutation(tenantId, {
+    onSuccess: (response) => {
+      if (isFreshnessV1Enabled(features)) {
+        queryClient.setQueryData(prescriptionsKeys.detail(tenantId, response.id), response);
+        queryClient.invalidateQueries({ queryKey: prescriptionsKeys.lists() });
+        queryClient.invalidateQueries({
+          queryKey: prescriptionsKeys.byAppointment(tenantId, episodeId, appointmentId),
+        });
+      }
+    },
+  });
+  const updateMutation = useUpdatePrescriptionMutation(tenantId, prescriptionId ?? '', {
+    onSuccess: (response) => {
+      if (isFreshnessV1Enabled(features)) {
+        queryClient.setQueryData(prescriptionsKeys.detail(tenantId, prescriptionId ?? ''), response);
+        queryClient.invalidateQueries({ queryKey: prescriptionsKeys.lists() });
+        queryClient.invalidateQueries({
+          queryKey: prescriptionsKeys.byAppointment(tenantId, episodeId, appointmentId),
+        });
+      }
+    },
+  });
+
   const savePrescription = useCallback(async (): Promise<void> => {
+    if (prescriptionStatus === 'SIGNED') return;
     setIsPrescriptionSaving(true);
     setPrescriptionSaveError(null);
     setSectionSaveStatus('saving');
     try {
       if (!prescriptionIdRef.current) {
-        const response = await createPrescriptionApi(tenantId, {
+        const response = await createMutation.mutateAsync({
           client_id: resolvedClientId,
           prescription_data: prescriptionDataRef.current,
           appointment_id: appointmentId,
@@ -147,36 +194,21 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
         });
         setPrescriptionId(response.id);
         prescriptionIdRef.current = response.id;
-        if (isFreshnessV1Enabled(features)) {
-          queryClient.setQueryData(prescriptionsKeys.detail(tenantId, response.id), response);
-          queryClient.invalidateQueries({ queryKey: prescriptionsKeys.lists() });
-          queryClient.invalidateQueries({
-            queryKey: prescriptionsKeys.byAppointment(tenantId, episodeId, appointmentId),
-          });
-        }
       } else {
-        const response = await updatePrescriptionApi(tenantId, prescriptionIdRef.current, {
+        await updateMutation.mutateAsync({
           prescription_data: prescriptionDataRef.current,
         });
-        if (isFreshnessV1Enabled(features)) {
-          queryClient.setQueryData(prescriptionsKeys.detail(tenantId, prescriptionIdRef.current), response);
-          queryClient.invalidateQueries({ queryKey: prescriptionsKeys.lists() });
-          queryClient.invalidateQueries({
-            queryKey: prescriptionsKeys.byAppointment(tenantId, episodeId, appointmentId),
-          });
-        }
       }
       prescriptionDirtyRef.current = false;
       setSectionSaveStatus('saved');
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? err?.message ?? 'Save failed';
-      setPrescriptionSaveError(msg);
+    } catch (err: unknown) {
+      setPrescriptionSaveError(toClinicalWorkspaceError(err, 'Save failed').message);
       setSectionSaveStatus('error');
       throw err;
     } finally {
       setIsPrescriptionSaving(false);
     }
-  }, [tenantId, resolvedClientId, appointmentId, episodeId, queryClient, setSectionSaveStatus, features]);
+  }, [tenantId, resolvedClientId, appointmentId, episodeId, queryClient, setSectionSaveStatus, features, createMutation, updateMutation, prescriptionStatus]);
 
   const markPrescriptionNotRequired = useCallback(() => {
     setPrescriptionNotRequired(true);
@@ -203,6 +235,11 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
     () => ({ status: computePrescriptionStatus(prescriptionId, prescriptionNotRequired), saveStatus }),
     [prescriptionId, prescriptionNotRequired, saveStatus],
   );
+
+  const signedSource = prescriptionStatus === 'SIGNED';
+  if (signedSource && prescriptionId) {
+    return <PrescriptionVersionPanel tenantId={tenantId} prescriptionId={prescriptionId} signed canAmend={permissions.includes('prescription.amend')} onAmended={() => prescriptionByAppointmentQuery.refetch()} />;
+  }
 
   return (
     <>
@@ -241,6 +278,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
           }
         />,
       )}
+      {prescriptionId && <PrescriptionVersionPanel tenantId={tenantId} prescriptionId={prescriptionId} signed={false} canAmend={false} onAmended={() => prescriptionByAppointmentQuery.refetch()} />}
     </>
   );
 };

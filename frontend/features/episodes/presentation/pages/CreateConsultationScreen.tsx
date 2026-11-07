@@ -16,17 +16,22 @@ import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { formatDateTime, toISODateString } from '../../../../core/utils/dateTimeUtils';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { useAppointmentDetailQuery } from '../../../appointments/data/repositories/appointments.repository.impl';
-import { createEpisodeApi } from '../../data/datasources/episodes.api';
-import { consultationRoute } from '../../../doctorDashboard/application/consultationRoutes';
+import { useCreateEpisodeMutation } from '../../data/repositories/episodes.repository.impl';
+import {
+  consultationRoute,
+  episodeWorkspaceRoute,
+} from '../../../doctorDashboard/application/consultationRoutes';
 
 interface CreateConsultationScreenProps {
   appointmentId: string;
   clientId: string;
+  destination?: 'consultation' | 'workspace';
 }
 
 export const CreateConsultationScreen: React.FC<CreateConsultationScreenProps> = ({
   appointmentId,
   clientId,
+  destination = 'workspace',
 }) => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -34,6 +39,7 @@ export const CreateConsultationScreen: React.FC<CreateConsultationScreenProps> =
   const tenantId = selectedClinicId || currentUser?.tenantId || '';
   const { colors, spacing, typography } = useClinicTheme();
   const { data: appointment } = useAppointmentDetailQuery(tenantId, appointmentId);
+  const createEpisodeMutation = useCreateEpisodeMutation();
   const [chiefComplaint, setChiefComplaint] = useState('');
   const [caseStartDate, setCaseStartDate] = useState(toISODateString(new Date()));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,12 +56,15 @@ export const CreateConsultationScreen: React.FC<CreateConsultationScreenProps> =
     setApiError(null);
     setIsSubmitting(true);
     try {
-      const episode = await createEpisodeApi(tenantId, {
-        client_id: clientId,
-        title,
-        appointment_id: appointmentId,
-        start_date: caseStartDate,
-      } as any);
+      const episode = await createEpisodeMutation.mutateAsync({
+        tenantId,
+        data: {
+          client_id: clientId,
+          title,
+          appointment_id: appointmentId,
+          start_date: caseStartDate,
+        } as any,
+      });
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['appointments', 'detail', tenantId, appointmentId] }),
         queryClient.invalidateQueries({ queryKey: ['appointments', 'list'] }),
@@ -65,9 +74,12 @@ export const CreateConsultationScreen: React.FC<CreateConsultationScreenProps> =
         queryClient.invalidateQueries({ queryKey: ['client-episodes', tenantId, clientId] }),
         queryClient.invalidateQueries({ queryKey: ['staffDashboards'] }),
       ]);
-      router.replace(consultationRoute(episode.id, appointmentId, clientId) as any);
-    } catch (error: any) {
-      setApiError(error?.response?.data?.detail ?? error?.message ?? 'Failed to start consultation.');
+      const nextRoute = destination === 'workspace'
+        ? episodeWorkspaceRoute(episode.id, appointmentId, clientId, 'doctor', 'assessment')
+        : consultationRoute(episode.id, appointmentId, clientId);
+      router.replace(nextRoute as any);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Failed to start consultation.');
     } finally {
       setIsSubmitting(false);
     }

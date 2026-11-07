@@ -1,31 +1,103 @@
-// This file still imports useConsultationWorkspace.ts for buildSectionConfig,
-// and that file's own top-level imports (useEpisodeWorkspaceData, useFeatures)
-// both transitively pull in the real axios/supabase client chain (which
-// throws on missing env vars during module evaluation) unless mocked here —
-// same guard every sibling module test file (caseSheetModule.test.tsx etc.)
-// already applies.
+/**
+ * T-0.9 (ED-ARCH-006) target-boundary tests — replaces the pre-T-0.9 suite
+ * that characterized `buildSectionConfig`'s Ayurveda-based workflow-stage
+ * gating (a frontend clinical-workflow-assembly authority, competing with
+ * the backend's own `clinical_workflow_resolver.py`, a DP-15 violation).
+ * `buildSectionConfig` is removed outright, not renamed or relocated —
+ * these tests prove the target reality (no FE assembly), not a defect
+ * being merely documented.
+ */
 jest.mock('../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData', () => ({
   useEpisodeWorkspaceData: jest.fn(),
 }));
-jest.mock('../../../core/hooks/useFeatures', () => ({
-  useFeatures: jest.fn(),
-  isAyurvedaClinic: (value: any) => value.clinic_type === 'ayurveda',
-  isFreshnessV1Enabled: (value: any) => !!value.freshness_v1_enabled,
-}));
 
-import { buildSectionConfig } from '../../../features/episodes/presentation/hooks/useConsultationWorkspace';
+import * as fs from 'fs';
+import * as path from 'path';
+import { renderHook } from '@testing-library/react-native';
+import { useEpisodeWorkspaceData } from '../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData';
+import { useConsultationWorkspace } from '../../../features/episodes/presentation/hooks/useConsultationWorkspace';
 
-// R3A · T-B.1/T-B.2/T-B.3: casesheet-, prescription-, and treatment-
-// recommendation-specific coverage moved to caseSheetModule.test.tsx,
-// prescriptionModule.test.tsx, and treatmentRecommendationModule.test.tsx
-// respectively — all three now live in their own modules, not this hook.
-// What remains here is buildSectionConfig, still exported from this file
-// unchanged (design.md §9.A/§9.B — sectionConfig continues to determine
-// which sections are active, independent of any one module's own state).
+const HOOK_SOURCE_PATH = path.resolve(
+  __dirname,
+  '../../../features/episodes/presentation/hooks/useConsultationWorkspace.ts',
+);
+const source = fs.readFileSync(HOOK_SOURCE_PATH, 'utf8');
 
-describe('useConsultationWorkspace', () => {
-  it('buildSectionConfig omits ayurvedicAssessment for a non-Ayurveda clinic, includes it for Ayurveda', () => {
-    expect(buildSectionConfig({ clinic_type: 'general' } as any).activeSections).not.toContain('ayurvedicAssessment');
-    expect(buildSectionConfig({ clinic_type: 'ayurveda' } as any).activeSections).toContain('ayurvedicAssessment');
+const workspaceData = {
+  episodeDetails: { episode: { id: 'episode-1', title: 'Back pain' } },
+  isEpisodeLoading: false,
+  isEpisodeError: false,
+  refetchEpisode: jest.fn(),
+  clientName: 'Maya Rao',
+};
+
+describe('useConsultationWorkspace — regression (unaffected by T-0.9)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useEpisodeWorkspaceData as jest.Mock).mockReturnValue(workspaceData);
+  });
+
+  it('passes episode workspace data through unchanged', () => {
+    const { result } = renderHook(() =>
+      useConsultationWorkspace({ tenantId: 't1', episodeId: 'episode-1', appointmentId: 'a1', clientId: 'client-1' }),
+    );
+
+    expect(useEpisodeWorkspaceData).toHaveBeenCalledWith('t1', 'episode-1', 'client-1');
+    expect(result.current.episodeDetails).toBe(workspaceData.episodeDetails);
+    expect(result.current.isEpisodeLoading).toBe(false);
+    expect(result.current.isEpisodeError).toBe(false);
+    expect(result.current.clientName).toBe('Maya Rao');
+    expect(typeof result.current.refetchEpisode).toBe('function');
+  });
+
+  it('surfaces loading and error states unchanged', () => {
+    (useEpisodeWorkspaceData as jest.Mock).mockReturnValue({ ...workspaceData, isEpisodeLoading: true, isEpisodeError: true });
+    const { result } = renderHook(() =>
+      useConsultationWorkspace({ tenantId: 't1', episodeId: 'episode-1', appointmentId: 'a1', clientId: 'client-1' }),
+    );
+    expect(result.current.isEpisodeLoading).toBe(true);
+    expect(result.current.isEpisodeError).toBe(true);
+  });
+});
+
+describe('useConsultationWorkspace — architecture: no frontend workflow assembly remains (T-0.9 AC 1/2/4)', () => {
+  it('no longer exports buildSectionConfig, ConsultationSectionConfig, or a computed sectionConfig field', () => {
+    const hookModule = require('../../../features/episodes/presentation/hooks/useConsultationWorkspace');
+    expect(hookModule.buildSectionConfig).toBeUndefined();
+    expect(source).not.toMatch(/\bbuildSectionConfig\b/);
+    expect(source).not.toMatch(/\bConsultationSectionConfig\b/);
+    expect(source).not.toMatch(/\bsectionConfig\b/);
+  });
+
+  it('computes no activeSections array — no canonical clinical stage order remains', () => {
+    expect(source).not.toMatch(/\bactiveSections\b/);
+    expect(source).not.toMatch(/\bspecialtySections\b/);
+  });
+
+  it('does not import useFeatures/isAyurvedaClinic — no clinic-type-driven workflow-presence gating remains', () => {
+    expect(source).not.toMatch(/isAyurvedaClinic/);
+    expect(source).not.toMatch(/from ['"].*core\/hooks\/useFeatures['"]/);
+  });
+
+  it('the hook output carries no next-action, recommendation, or completion-readiness field', () => {
+    for (const forbidden of ['recommendedAction', 'nextAction', 'completionReadiness', 'canComplete', 'clinicallyReady']) {
+      expect(source).not.toMatch(new RegExp(`\\b${forbidden}\\b`));
+    }
+  });
+
+  it('SectionProgress remains a presentation-only shape (status/saveStatus), not a clinical-completion answer', () => {
+    expect(source).toContain('export interface SectionProgress');
+    expect(source).toContain('status: SectionProgressStatus');
+    expect(source).toContain('saveStatus: SectionSaveStatus');
+    // Never expanded into a clinical-truth field on this same interface.
+    expect(source).not.toMatch(/interface SectionProgress[^}]*visitComplete/s);
+    expect(source).not.toMatch(/interface SectionProgress[^}]*prescriptionRequired/s);
+  });
+
+  it('still exports the shared SectionKey-family types every module depends on (unchanged by this task)', () => {
+    const hookModule = require('../../../features/episodes/presentation/hooks/useConsultationWorkspace');
+    expect(hookModule.useConsultationWorkspace).toBeDefined();
+    expect(source).toContain('export type SectionKey');
+    expect(source).toContain('export interface TreatmentRecommendationDraft');
   });
 });

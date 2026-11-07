@@ -9,7 +9,8 @@
  * 4. Password is updated via Supabase
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as Linking from 'expo-linking';
 import {
   View,
   Text,
@@ -23,11 +24,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { supabase } from '../core/api/supabaseClient';
+import { authSessionService } from '../features/auth/application/auth-session.service';
+import { parsePasswordRecoveryCallback, INVALID_RECOVERY_LINK } from '../features/auth/presentation/recovery-links';
 import { useClinicTheme } from '../core/theme/useClinicTheme';
 import { spacing } from '../core/theme/spacing';
 
@@ -52,10 +54,13 @@ type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 export default function ResetPasswordScreen() {
   const theme = useClinicTheme();
   const router = useRouter();
-  const params = useLocalSearchParams();
   
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const verification = useRef<Promise<void> | null>(null);
+  const webCallback = useRef<string | null>(null);
+  const linkingUrl = Linking.useLinkingURL();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -73,80 +78,42 @@ export default function ResetPasswordScreen() {
     },
   });
 
-  // Verify the session from the URL parameters
+  // Do not log callback URLs. Strip browser credentials before provider work.
+  // Expo's linking hook supplies both cold-start and warm native callbacks.
   useEffect(() => {
-    const verifySession = async () => {
-      try {
-        setIsVerifying(true);
-        setError(null);
-
-        // Check if we have a valid session from the reset link
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          throw sessionError;
-        }
-
-        // If no session, the link may be invalid or expired
-        if (!session) {
-          // Try to get session from URL hash (for web)
-          if (Platform.OS === 'web') {
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const accessToken = hashParams.get('access_token');
-            const refreshToken = hashParams.get('refresh_token');
-            const type = hashParams.get('type');
-
-            if (type === 'recovery' && accessToken && refreshToken) {
-              const { error: setError } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              });
-
-              if (setError) {
-                throw setError;
-              }
-            } else {
-              throw new Error('Invalid or expired reset link');
-            }
-          } else {
-            throw new Error('Invalid or expired reset link');
-          }
-        }
-      } catch (err) {
-        console.error('Session verification error:', err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Invalid or expired reset link. Please request a new password reset.'
-        );
-      } finally {
-        setIsVerifying(false);
-      }
-    };
-
-    verifySession();
-  }, []);
+    let disposed = false;
+    let callback = linkingUrl;
+    if (Platform.OS === 'web') {
+      webCallback.current ??= window.location.href;
+      callback = webCallback.current;
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    try {
+      if (!callback) throw new Error(INVALID_RECOVERY_LINK);
+      const credentials = parsePasswordRecoveryCallback(callback);
+      verification.current ??= authSessionService.establishRecoverySession(credentials);
+    } catch {
+      setError(INVALID_RECOVERY_LINK);
+      setIsVerifying(false);
+      return;
+    }
+    void verification.current.then(() => {
+      if (!disposed) { setRecoveryReady(true); setError(null); }
+    }).catch(() => {
+      if (!disposed) setError(INVALID_RECOVERY_LINK);
+    }).finally(() => { if (!disposed) setIsVerifying(false); });
+    return () => { disposed = true; };
+  }, [linkingUrl]);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Update the password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: data.password,
-      });
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Sign out to clear the recovery session
-      await supabase.auth.signOut();
+      await authSessionService.completePasswordRecovery(data.password);
 
       setSuccess(true);
     } catch (err) {
-      console.error('Password update error:', err);
       setError(
         err instanceof Error
           ? err.message
@@ -172,7 +139,7 @@ export default function ResetPasswordScreen() {
   }
 
   // Invalid/expired link error state
-  if (error && !success) {
+  if (error && !success && !recoveryReady) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.default }]}>
         <View style={styles.centerContainer}>

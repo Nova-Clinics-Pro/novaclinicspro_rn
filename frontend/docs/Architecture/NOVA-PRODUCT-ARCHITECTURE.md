@@ -565,3 +565,1819 @@ accepted Platform Foundation and this module map rather than redesign either.
 > requirements, design, or implementation evidence appears inconsistent, stop.
 > Identify the owning authority and approve the upstream correction before code.
 > Never resolve a governance conflict by silently choosing the easiest document.
+
+
+## Package D — bounded localization verification (2026-10-26)
+
+This is implementation evidence for the original A–F design-system/localization
+refactoring scope, not a new language policy or declaration of Package D closure.
+Authority: the existing pre-merge audit's localization findings and remediation
+13 (restore English/Hindi parity), this document's cross-cutting localization
+rule (§8), `CLAUDE.md` §4, and the owner's bounded Package D execution directive.
+No standalone approved Package D requirements/design/task register was found in
+the inspected existing spec locations; none was fabricated or duplicated.
+
+### Locale scope and preserved behavior
+
+Dedicated frontend catalogs exist for `en-US` and `hi-IN`. Configuration retains
+eight choices: `en-US`, `en-IN`, `hi-IN`, `ta-IN`, `te-IN`, `kn-IN`, `ml-IN`,
+`mr-IN`. `en-IN` aliases English; the other choices without catalogs continue
+using the existing English fallback. Configuration does not prove translation
+coverage for those languages. No locale was added, removed, relabeled or
+reclassified, and no provider, onboarding or clinical workflow was changed.
+
+### Requirements-to-code-to-test evidence
+
+| Existing requirement/finding | Bounded implementation | Verification |
+| --- | --- | --- |
+| Restore English/Hindi key parity; original audit: 185 missing Hindi keys | `core/localization/translations/hi-IN.json`: 185 Hindi leaves added; 40 reuse unambiguous existing translations; all 1,295 pre-existing Hindi values preserved | `tests/core/localization/i18n.test.ts`: complete leaf-key, nonempty-value and interpolation parity; independent JSON audit: 1,480 keys each, zero missing/extra keys, duplicate keys or parameter mismatches |
+| Preserve interpolation and translation lookup contracts | No `i18n.ts` change; restored session counts, visit numbers and completion-reason copy | Runtime tests exercise Hindi interpolation, absent parameter preservation and unknown-key reporting |
+| Preserve approved locale/fallback choices | No locale or resource-map edits | Tests cover all seven existing English/alias/fallback choices, stored preference identity, Hindi device-language matching and unknown-locale rejection |
+| Central theme token contract | No theme replacement or style changes | Existing `tests/core/theme/designTokens.test.ts` passes |
+| Presentation must not own transport | No presentation or transport edits | Existing `tests/architecture/b1-presentation-boundary-guard.test.ts`: 2 passed |
+
+Clean baseline: `1b463580af91c64edf23557af3bfdb92690dc9b2`, including the
+preserved Package A/C frontend work. Branch: `codex/package-d-localization-parity`.
+
+Offline commands run from `frontend/` using existing dependencies:
+
+- Jest with external native-preset-preserving overlay, pre-import network/process
+  guard, `--runInBand --no-cache --watchman=false --runTestsByPath` for
+  `tests/core/localization/i18n.test.ts`, `tests/core/theme/designTokens.test.ts`,
+  `tests/onboarding/tg23-conflict-localization.test.ts` and
+  `tests/onboarding/commercial-retention.localization.test.ts`:
+  **4 suites, 24 passed**, zero failed/skipped, exit 0.
+- Same guarded runner for the B1 architecture ratchet: **1 suite, 2 passed**,
+  exit 0. No guard-violation markers were emitted.
+- `tsc --noEmit --project tsconfig.production.json`: passed.
+- Scoped ESLint of the new localization test: passed without diagnostics.
+
+Environment: Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, TypeScript 6.0.3.
+The first invocation could not find the new test because it was initially
+written under an extra `frontend/` directory in the isolated worktree. Placement
+was corrected; no tests or assertions were weakened. The subsequent results
+above supersede that runner-path failure.
+
+### Remaining theme and acceptance gates
+
+The original audit identified seven screen-level color-token bypass candidates.
+A bounded TypeScript AST audit on this baseline confirms:
+
+| Existing audit path (relative to frontend) | Hex-color literal count |
+| --- | ---: |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | 100 |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | 58 |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | 51 |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | 46 |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | 39 |
+| `app/clinic-admin/settings/treatments/[treatmentId].tsx` | 42 |
+| `app/clinic-admin/settings/rooms/[roomId].tsx` | 36 |
+
+These 372 literal occurrences are candidates, not 372 proven independent
+violations. All seven import spacing/typography without the clinic-aware color
+hook; neither literal counting nor token tests prove centralized visual
+coverage. No direct inline object `style={{...}}` was found in those seven
+files; this does not close the original app-wide static/dynamic-style audit.
+Their existing styles and behavior were preserved. Theme-token migration,
+remaining hardcoded user-visible text, Hindi layout/accessibility review and
+package-level acceptance remain open. Do not infer full locale UX coverage or
+Package D completion from catalog parity.
+
+No new languages, frozen requirements, database, backend, dependency, CI,
+Commercial Platform, migration or deployment changes are part of this slice.
+Git inclusion is a separate owner gate; this evidence does not authorize a
+commit, push, merge or release.
+
+
+## Package D — Room Detail semantic-token slice (2026-10-28)
+
+Authority: owner-approved bounded theme execution following localization commit
+`7809e505c160bb69a67b2bc066eaefcb558c096e`. This slice does not reopen Package A,
+C, localization, clinic policy or canonical feature ownership.
+
+| Approved role | Implementation in `app/clinic-admin/settings/rooms/[roomId].tsx` | Test evidence |
+| --- | --- | --- |
+| Status-card surface | `statusCard.backgroundColor = colors.surface.default` | All four current clinic themes retain white; custom palette rerender updates the enclosing status-card surface |
+| Detail-section surface | `section.backgroundColor = colors.surface.default` | Same palette and rerender assertions for the room form section |
+| Primary-action foreground | `saveButtonText.color = colors.text.onPrimary` | All four current themes retain white; token changes propagate while unsaved edits are retained |
+
+The component reads the existing `useClinicTheme` hook and memoizes its existing
+style construction by `colors`. Only those three style values change. Reversing
+the two imports, two hook/style-wiring statements, style-factory signature and
+three substitutions reconstructs the parent source byte-for-byte. Query and
+mutation hooks, tenant/room arguments, validation, payloads, navigation, status
+and category behavior, all other style values, labels and accessibility props
+are unchanged. No new palette or dark-mode infrastructure is introduced.
+
+`tests/features/rooms/RoomDetailScreen.theme.test.tsx` adds eight cases (four
+clinic palettes, reactive palette rerender, validation/save/back navigation,
+status mutation and loading/error branches). It uses existing feature mocks;
+no browser mocks, real persistence, network calls or authorization claims are
+introduced. The first test run revealed a brittle renderer-parent lookup;
+the test now asserts the nearest enclosing surface rather than fixed wrapper
+depth. Production behavior was not changed to satisfy that lookup.
+
+Final guarded verification on 2026-10-28:
+
+- Room Detail test, existing `tests/core/theme/designTokens.test.ts` and existing
+  `tests/architecture/b1-presentation-boundary-guard.test.ts`:
+  **3 suites, 16 passed**, zero failed/skipped, exit 0 (4.097 seconds).
+- Production `tsc --noEmit --project tsconfig.production.json`: passed.
+- Scoped ESLint for the route and new test: passed without diagnostics; no lint
+  suppression or rule changes. Mock factories use typed `jest.requireActual`.
+- Guards installed before third-party imports; native-preset platform settings
+  preserved in the external runner; no network/process violation markers.
+- Existing Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, TypeScript 6.0.3; no install.
+
+### Read-only remaining classification
+
+The seven-screen historical count falls from 372 to **369** hex literals;
+Room Detail falls from 36 to **33**. This is a count of candidates, not a claim
+that all remaining occurrences are interchangeable theme violations.
+
+Further appearance-preserving surface groups, subject to exact scope review:
+
+| Screen owner | Existing white roles and potential existing semantic owner |
+| --- | --- |
+| Operating Hours | `input`, `summaryCard`, `dayCard`: surface; `modalContent`, `applyingContent`: modal surface. The root `container` is different: replacing white with the current Ayurveda background token changes appearance and is not an automatic substitution. |
+| Appointment Rules | `ruleCard`: surface; `modalContent`: elevated modal surface |
+| Rooms list | `statBadge`, `roomCard`: surface; `modalContainer`: modal surface |
+| Templates | `tabsContainer`, `templateCard`: surfaces |
+| Treatments list | `searchContainer`, `statCard`, `treatmentCard`: surfaces |
+| Treatment Detail | `statusCard`, `section`: surfaces; separate from treatment state/lifecycle ownership |
+
+Current clinic `surface.default` and `surface.elevated` values are white for all
+four palettes, but the proper role must be selected by the owning component,
+not hex equality alone. This table authorizes no additional edits.
+
+Retained intentional behavior: runtime category-color/opacity composition and
+status differentiation. Their fixed palette ownership is not thereby declared
+an accepted permanent exception. Room-type palettes, metadata-provided rule and
+template colors, shadow paint without a dedicated semantic token, gray/border
+values that differ from active tokens, root-background changes and any new
+contrast/visual behavior require separate classification or approval. No
+artwork or mandatory third-party hex-value exemption was established.
+
+Package D-wide theme, static-style, hardcoded-copy and visual/accessibility
+acceptance remains open. Current clinic-theme tests do not establish system
+dark-mode support. Git inclusion of this exact source/test/evidence unit remains
+a separate owner approval; no commit, push, merge or release is implied.
+
+## Package D — 17 settings-surface substitutions (2026-10-28)
+
+Authority: the owner's approved Package D Theme Commit and Next Remediation
+Batch. The preceding Room Detail unit is now preserved in local commit
+`f3c64259f8e4c74a5af6094655d9324a1e85d124`, parent
+`7809e505c160bb69a67b2bc066eaefcb558c096e`, with exactly its route, theme test and
+this document. Phase 2 below remains uncommitted and requires separate Git
+inclusion approval. No original dirty B27 checkout was used as an integration
+destination.
+
+### Exact approved requirement-to-implementation mapping
+
+All properties below are `backgroundColor`, previously `#FFFFFF`. Existing
+`surface.default` and `surface.elevated` are both `#FFFFFF` in AYURVEDA,
+GENERAL_MEDICINE, DENTAL and PHYSIOTHERAPY. Ownership distinguishes an ordinary
+card/control surface from an elevated modal or operation overlay; hex equality
+alone is not authority for other substitutions.
+
+| Owning path relative to frontend | `colors.surface.default` | `colors.surface.elevated` |
+| --- | --- | --- |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | `timeInputStyles.input`, `styles.summaryCard`, `styles.dayCard` | `styles.modalContent`, `styles.applyingContent` |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | `styles.ruleCard` | `styles.modalContent` |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | `styles.statBadge`, `styles.roomCard` | `styles.modalContainer` |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | `styles.tabsContainer`, `styles.templateCard` | None |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | `styles.searchContainer`, `styles.statCard`, `styles.treatmentCard` | None |
+| `app/clinic-admin/settings/treatments/[treatmentId].tsx` | `styles.statusCard`, `styles.section` | None |
+
+The earlier Operating Hours candidate named `input` is specifically the
+`TimeInput` component's style, not an unrelated global input. The Rooms modal
+surface belongs to `modalContainer`; `modalContent` has no background property.
+The six files use the existing `useClinicTheme` hook and memoized style
+factories keyed by `colors`. Existing style consumers, including nested cards,
+inputs and tabs, subscribe before any conditional return. No new shared theme
+abstraction, palette or system dark-mode infrastructure is added.
+
+Exact source reconstruction against the committed Phase 1 parent confirms only
+17 value substitutions, the two theme imports per file, factory declarations
+and component hook/style wiring. The Templates expression component is wrapped
+in a block to bind its styles. Repository calls, query/mutation arguments,
+validation, local state/effects, callbacks, navigation, labels and accessibility
+props remain unchanged. Existing selected-status fills, closed/inactive-card
+styles, room-type colors, template/rule metadata colors and dosha colors retain
+their precedence and values.
+
+### Verification and evidence scope
+
+`tests/core/theme/settingsSurfaces.test.tsx` adds 31 cases:
+
+- Six screen owners across four real clinic palettes (24 cases).
+- Six distinct default/elevated sentinel-palette rerenders; open modal state and
+  existing room-name/search input survive rerenders without mutation calls.
+- One pending Operating Hours apply-to-all operation: the overlay follows the
+  elevated token on rerender, then the existing seven day-specific payloads
+  finish through mocked mutations. No persistence or clinical execution occurs.
+
+The first focused run was 26 passed / 5 failed: the new Templates assertion
+looked at the active tab's retained green fill instead of its enclosing strip.
+Only the test lookup was corrected; the selected-tab fill is now separately
+asserted to remain unchanged. This was a test assertion error, not evidence for
+a production color change.
+
+Final guarded local command used explicit paths with Jest `--runInBand
+--no-cache --watchman=false`, the existing external preset-preserving runner
+and a pre-import network/process guard. The six suites were:
+
+- `tests/core/theme/settingsSurfaces.test.tsx`: 31 passed.
+- `tests/features/rooms/RoomDetailScreen.theme.test.tsx`: 8 passed.
+- `tests/core/theme/designTokens.test.ts`: 6 passed.
+- `tests/architecture/b1-presentation-boundary-guard.test.ts`: 2 passed.
+- `tests/treatments/TreatmentsScreen.multiday.test.tsx`: 3 passed.
+- `tests/treatments/treatment-category-contract.test.ts`: 5 passed.
+
+**55 passed, 0 failed/skipped, 6 suites, exit 0, 7.151 seconds**; no warnings or
+guard-violation markers. Production `tsc --noEmit --project
+tsconfig.production.json` passed, exit 0. Scoped ESLint returned exit 1:
+**5 inherited errors and 10 inherited warnings**, with matching rule/severity/
+message signatures when each source file was linted from committed HEAD via
+stdin. Errors are the existing effect/state rules (Operating Hours and
+Appointment Rules) and two existing unescaped quotes (Operating Hours). No new
+source diagnostics; the new test has zero diagnostics. No lint suppression,
+rule changes or unrelated fixes were made.
+
+Environment: Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, React 19.2.3,
+React Native 0.86.3, React Native Testing Library 13.3.3, TypeScript 6.0.3 and
+ESLint 9.31.0, all previously installed. The external runner retains the Expo
+preset's ios/native haste settings and adds only `forceNodeFilesystemAPI`.
+The JavaScript guard blocks standard network/process APIs; it is not OS-level
+isolation. Temporary dependency linkage is removed after checks. No database,
+backend, dependency installation, CI or palette changes occur.
+
+### Remaining Package D boundaries
+
+The seven-screen literal count is now **352** (Operating Hours 95, Appointment
+Rules 56, Rooms 48, Templates 44, Treatments 36, Treatment Detail 40, Room Detail
+33), down from 369 before this batch. These are remaining literal occurrences,
+not 352 independently confirmed defects. All 17 approved white properties have
+been resolved; no candidate was rejected for lack of a mapping or changed
+current-palette value.
+
+Confirmed retained behavior includes status/category/metadata/dosha color
+composition and selected-state overrides. Fixed accent foregrounds, root
+backgrounds, borders/gray values, shadows and remaining white foregrounds still
+need role-by-role classification; those occurrences are not approved as a
+blanket substitution set. Some current token values differ from these literals,
+so replacement could change appearance. Intentional retention in this batch is
+not a permanent architecture exemption. No artwork or third-party exemption is
+newly established.
+
+Package D-wide app audit, remaining hardcoded copy, visual/accessibility and
+package acceptance remain open. Tests establish these bounded mocked component
+contracts, not live workflows, screenshot equivalence or system dark-mode
+support. Next gate: owner review of exactly six source files, this evidence
+update and the new test, followed by separate local commit authorization. The
+new test is untracked and not ignored; it must be explicitly included with that
+unit. No Phase 2 commit, push, merge, destination adoption or deployment is
+performed.
+
+
+## Package D — final bounded implementation and acceptance assessment (2026-10-28)
+
+Authority: the owner's Package D Final Bounded Closure directive and existing
+§8/§9 theme, localization and accessibility requirements; approved baseline
+`6f315c83a0e1ec728f8a1972a83ce13f7f2ecca5`. The preceding 17-substitution
+artifact is now committed at that baseline, parent
+`f3c64259f8e4c74a5af6094655d9324a1e85d124`; its earlier uncommitted statements
+above describe the historical pre-commit evidence. This new slice remains
+uncommitted. No separate Package D acceptance specification/register was found
+in the established spec locations, so no replacement framework is introduced.
+
+### Exact implementation boundary
+
+Only the approved three foreground colors change: Operating Hours
+`styles.saveButtonText.color`, Appointment Rules `styles.saveButtonText.color`,
+and Rooms `styles.submitButtonText.color` now use `colors.text.onPrimary`.
+All four existing palettes supply `#FFFFFF`, preserving current appearance.
+All other color literals and all palette definitions remain unchanged.
+
+Seven audited screens now reuse existing translation keys through the existing
+`useTranslation` hook. Only exact existing English values with matching
+semantic ownership and already-present Hindi values were substituted; no
+catalog, locale configuration, fallback, metadata enumeration, validation rule,
+API call, payload, navigation or entitlement change was made. Relevant callback
+dependencies include `t` so closures follow the existing locale hook. The
+Operating Hours TimeInput label `Close` denotes closing time, not the common
+close-dialog action; it is deliberately not mapped by lexical equality. The
+label `Closed` is not bound to an episode-lifecycle key merely because its
+English text matches.
+
+| Source path relative to frontend | Reused-key sites | Foreground role |
+| --- | ---: | --- |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | 16 | `saveButtonText.color` → `text.onPrimary` |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | 8 | `saveButtonText.color` → `text.onPrimary` |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | 5 | `submitButtonText.color` → `text.onPrimary` |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | 7 | No color change |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | 10 | No color change |
+| `app/clinic-admin/settings/treatments/[treatmentId].tsx` | 13 | No color change |
+| `app/clinic-admin/settings/rooms/[roomId].tsx` | 9 | No color change |
+
+There are **68 reused-key sites** (52 direct JSX/attribute/alert strings and
+16 conditional-text or alert-button labels). Common Cancel/Confirm/Save/Update,
+Delete/OK, Retry, Active/Inactive, Error/Success, Loading, Duration, Description
+and Created keys retain their existing English values. Existing treatment
+Price, Contraindications and Vata/Pitta/Kapha label keys and the existing
+Operating Hours step-label key are reused for those same concepts. No clinical
+terminology or new translation is invented.
+
+`tests/core/theme/settingsSurfaces.test.tsx` retains its original 31 cases,
+extends the four-palette and sentinel-rerender assertions to all three new
+foreground roles, and adds six English/Hindi screen-rendering cases.
+`tests/features/rooms/RoomDetailScreen.theme.test.tsx` retains its eight cases
+and adds a Hindi status/cancel rendering and retained-edit case. Tests restore
+English between cases. Existing navigation, validation/save/status assertions
+and mocked apply-to-all payload assertions remain active.
+
+### Seven-screen remaining color classification
+
+This is an occurrence classification, not a replacement authorization. The
+three substitutions reduce the previous 352 occurrences to **349**. Confirmed
+same-value semantic violations are identified separately from intentional
+state/category paint and unresolved mappings. The latter category includes
+fixed brand/foreground/root/border/control/feedback/shadow colors: some token
+values differ across palettes, and a visually equivalent substitute or
+permanent exception has not been approved. Classification of those mappings is
+reasoned from source ownership, not screenshot or product acceptance.
+
+| Screen | Confirmed semantic violations | Retained status/category | Requires mapping/visual/product decision | Total |
+| --- | ---: | ---: | ---: | ---: |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | 3 | 11 | 80 | 94 |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | 1 | 0 | 54 | 55 |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | 1 | 13 | 33 | 47 |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | 2 | 0 | 42 | 44 |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | 1 | 6 | 29 | 36 |
+| `app/clinic-admin/settings/treatments/[treatmentId].tsx` | 0 | 6 | 34 | 40 |
+| `app/clinic-admin/settings/rooms/[roomId].tsx` | 0 | 6 | 27 | 33 |
+
+**Eight confirmed unresolved occurrences**, all outside this directive's three
+color substitutions:
+
+- `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx:188`: `timePickerStyles.container.backgroundColor` → `surface.elevated`; currently white.
+- `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx:277`: `confirmBtnText.color` → `text.onPrimary`; currently white.
+- `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx:716`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+- `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx:270`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+- `features/rooms/presentation/pages/RoomsScreen.tsx:216`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+- `features/templates/presentation/pages/TemplatesScreen.tsx:398`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+- `features/templates/presentation/pages/TemplatesScreen.tsx:439`: `typeTabTextActive.color` → `text.onPrimary`; currently white.
+- `features/treatments/presentation/pages/TreatmentsScreen.tsx:307`: primary-action icon/spinner `color` → `text.onPrimary`; currently white.
+
+Intentional state/category classification covers explicit room-type palette
+entries/fallbacks, active/inactive/open/closed differentiation, selected
+active/inactive statistics, inactive badges and activation/status-action
+styles. No category, dosha, metadata or status palette is changed. Their
+retention does not ratify a permanent exemption from central-theme governance.
+The other 299 occurrences require a role/appearance decision; they are not
+reported as 299 proven bugs. Existing static inline dynamic-state composition
+is retained. App-wide static-style/sizing classification remains incomplete;
+this seven-screen slice does not close the original wider audit.
+
+### Exact unresolved direct-copy requirements
+
+The following **132 remaining direct-copy sites** were inspected in the seven
+screens. Line references identify this uncommitted artifact. They require an
+approved key/English-Hindi wording disposition; they are not all unique strings
+or proof that every similar phrase is absent elsewhere in the catalogs. No
+cross-domain, case-different or approximate translation was silently selected.
+These are direct JSX text, title/subtitle/placeholder/accessibility attributes
+and literal alert arguments; the inventory does not claim exhaustive coverage
+of interpolated strings, imported metadata or other screens.
+
+**`features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` — 31 direct sites:**
+
+- L113 (text): "Hour".
+- L139 (text): "Min".
+- L412 (text): "Break:".
+- L419 (text): "Clinic closed on this day".
+- L421 (text): "Tap to configure hours".
+- L522 (alert): "Validation Error".
+- L543 (alert): "Delete Operating Hours".
+- L559 (alert): "Validation Error".
+- L564 (alert): "Apply to All Days".
+- L565 (alert): "This will copy the current times to all other days. Existing hours will be replaced.".
+- L604 (text): "Clinic Open".
+- L641 (text): "Include Break".
+- L653 (text): "Break Time".
+- L679 (text): "Apply to All Days".
+- L688 (text): "The clinic will be marked as closed on".
+- L688 (text): ". No appointments will be available.".
+- L823 (alert): "Operating hours saved successfully".
+- L836 (alert): "Operating hours deleted".
+- L874 (alert): "Applied hours to all days".
+- L896 (subtitle): "No clinic selected".
+- L901 (text): "No clinic context available".
+- L902 (text): "Please select a clinic first".
+- L933 (text): "Configured".
+- L938 (text): "Open Days".
+- L945 (text): "Closed".
+- L951 (text): "Weekly Schedule".
+- L952 (text): "Tap any day to configure operating hours".
+- L957 (text): "Loading schedule...".
+- L962 (text): "Failed to load schedule".
+- L984 (text): "Operating hours define when your clinic accepts appointments. Use \"Apply to All Days\" to quickly set the same hours for every day.".
+- L994 (text): "Applying to all days...".
+
+**`features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` — 22 direct sites:**
+
+- L86 (text): "Custom".
+- L147 (alert): "Reset to Default".
+- L192 (text): "Advanced configuration".
+- L194 (text): "Contact support to customize complex rules".
+- L230 (text): "Organization default:".
+- L243 (text): "Your Setting".
+- L257 (text): "Reset".
+- L331 (alert): "Rule updated successfully".
+- L345 (alert): "Rule reset to default".
+- L385 (title): "Appointment Rules".
+- L386 (subtitle): "Configure scheduling".
+- L391 (text): "No clinic context available".
+- L392 (text): "Please select a clinic first".
+- L401 (title): "Appointment Rules".
+- L423 (text): "Customize scheduling rules for your clinic. Changes override organization defaults.".
+- L430 (text): "Loading rules...".
+- L435 (text): "Failed to load rules".
+- L443 (text): "No Rules Configured".
+- L445 (text): "Appointment rules will appear here once your organization configures them.".
+- L453 (text): "Time & Duration".
+- L463 (text): "Booking Constraints".
+- L473 (text): "Assignment & Matching".
+
+**`features/rooms/presentation/pages/RoomsScreen.tsx` — 17 direct sites:**
+
+- L84 (text): "Capacity:".
+- L144 (alert): "Validation Error".
+- L144 (alert): "Room name is required".
+- L156 (alert): "Room created successfully".
+- L158 (alert): "Failed to create room".
+- L173 (title): "Rooms & Resources".
+- L174 (subtitle): "No clinic selected".
+- L179 (text): "No clinic context available".
+- L188 (title): "Rooms & Resources".
+- L214 (accessibilityLabel): "Add new room".
+- L237 (text): "No rooms configured".
+- L238 (text): "Add rooms to manage your clinic spaces".
+- L256 (text): "Add New Room".
+- L265 (text): "Room Name *".
+- L268 (placeholder): "e.g., Therapy Room 1".
+- L277 (text): "Capacity".
+- L290 (text): "Room Type".
+
+**`features/templates/presentation/pages/TemplatesScreen.tsx` — 22 direct sites:**
+
+- L99 (text): "Default".
+- L110 (text): "variables".
+- L196 (alert): "Cannot Delete".
+- L196 (alert): "Default templates cannot be deleted.".
+- L201 (alert): "Delete Template".
+- L211 (alert): "Template deleted".
+- L226 (alert): "Create Template".
+- L227 (alert): "Template creation will be available soon. Contact support for custom templates.".
+- L264 (title): "Document Templates".
+- L265 (subtitle): "Manage templates".
+- L270 (text): "No clinic context available".
+- L271 (text): "Please select a clinic first".
+- L280 (title): "Document Templates".
+- L318 (text): "Loading templates...".
+- L323 (text): "Failed to load templates".
+- L333 (text): "Your Templates".
+- L348 (text): "Available Template Types".
+- L350 (text): "Create templates for these document types".
+- L366 (text): "No Templates".
+- L380 (text): "About Templates".
+- L382 (text): "Templates define the format and content of your clinic documents. Use variables like".
+- L383 (text): "to insert dynamic data.".
+
+**`features/treatments/presentation/pages/TreatmentsScreen.tsx` — 8 direct sites:**
+
+- L214 (alert): "Delete Treatment".
+- L224 (alert): "Treatment deleted successfully".
+- L226 (alert): "Failed to delete treatment".
+- L266 (title): "Treatments".
+- L267 (subtitle): "No clinic selected".
+- L272 (text): "No clinic context available".
+- L281 (title): "Treatments & Services".
+- L305 (accessibilityLabel): "Add new treatment".
+
+**`app/clinic-admin/settings/treatments/[treatmentId].tsx` — 17 direct sites:**
+
+- L81 (alert): "Failed to update status".
+- L95 (alert): "Treatment updated successfully".
+- L97 (alert): "Failed to update treatment".
+- L105 (title): "Treatment Details".
+- L110 (text): "Loading treatment...".
+- L120 (title): "Treatment Details".
+- L126 (text): "Failed to load treatment".
+- L172 (text): "Overview".
+- L203 (text): "Ayurvedic Properties".
+- L209 (text): "Balances Vata".
+- L221 (text): "Balances Pitta".
+- L233 (text): "Balances Kapha".
+- L244 (text): "No Ayurvedic properties specified".
+- L273 (text): "Details".
+- L281 (text): "Last Updated".
+- L287 (text): "ID".
+- L304 (title): "Edit Treatment".
+
+**`app/clinic-admin/settings/rooms/[roomId].tsx` — 15 direct sites:**
+
+- L56 (alert): "Validation Error".
+- L56 (alert): "Room name is required".
+- L67 (alert): "Room updated successfully".
+- L69 (alert): "Failed to update room".
+- L79 (alert): "Failed to update room status".
+- L87 (title): "Room Details".
+- L92 (text): "Loading room details...".
+- L102 (title): "Room Details".
+- L108 (text): "Failed to load room".
+- L149 (text): "Room Details".
+- L166 (text): "Room Name".
+- L172 (placeholder): "Room name".
+- L181 (text): "Capacity".
+- L191 (text): "person(s)".
+- L197 (text): "Room Type".
+
+
+Additional explicit dependencies needing wording/key review include the
+English DAYS_OF_WEEK labels/formatters, room-type labels, rule metadata,
+template-type tabs/metadata, dynamic capacity/search/count text, alert-confirm
+bodies, activation/deactivation and save/create-progress wording, dosha
+sentences, and fallback descriptions. Existing user-provided names/content are
+data and must not be translated as UI copy. Shared DTO/metadata files and
+catalogs were not modified. Full Hindi workflow coverage is therefore **not
+satisfied**, despite complete catalog parity.
+
+### Verification, accessibility and limits
+
+Guarded local verification used the established external Jest overlay retaining
+Expo ios/native haste configuration with `forceNodeFilesystemAPI`, explicit
+paths, `--runInBand --no-cache --watchman=false`, and the existing network/process
+guard required before Jest/third-party imports. Final results:
+
+| Existing/focused suite | Passed |
+| --- | ---: |
+| `tests/core/theme/settingsSurfaces.test.tsx` | 37 |
+| `tests/features/rooms/RoomDetailScreen.theme.test.tsx` | 9 |
+| `tests/core/theme/designTokens.test.ts` | 6 |
+| `tests/core/localization/i18n.test.ts` | 15 |
+| `tests/architecture/b1-presentation-boundary-guard.test.ts` | 2 |
+| `tests/treatments/TreatmentsScreen.multiday.test.tsx` | 3 |
+| `tests/treatments/treatment-category-contract.test.ts` | 5 |
+| `tests/onboarding/tg23-conflict-localization.test.ts` | 2 |
+| `tests/onboarding/commercial-retention.localization.test.ts` | 1 |
+
+**80 passed; zero failed/skipped; nine suites; exit 0; 7.332 seconds.** No warnings
+or guard-violation markers in the final run. An intermediate syntax check
+caught an unbraced translation expression in a time-input label attribute; the
+attribute was restored unchanged before this final run. Two newly translated
+Template alert-button callbacks gained their required `t` dependencies after
+scoped lint identified the omission. These are corrected preparation errors,
+not inherited application failures or suppressed checks.
+
+Production TypeScript (`tsc --noEmit --project tsconfig.production.json`) passed.
+Scoped ESLint of all seven sources and both edited tests returned exit 1 with
+**five inherited errors and ten inherited warnings**; all seven source
+rule/severity/message signatures match committed baseline lint via stdin.
+Both edited tests have zero diagnostics. Separate debt candidates are the
+Operating Hours/Appointment Rules effect-state findings, Operating Hours
+unescaped quotes, and existing unused symbols. No rule, suppression or unrelated
+source was changed. `git diff --check` passes.
+
+Catalog parity remains 1,480 nonempty English/Hindi leaf keys with matching
+interpolation; existing locale/fallback tests pass. No catalog edit occurred.
+Environment: existing Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, TypeScript
+6.0.3, React 19.2.3, RN 0.86.3, RNTL 13.3.3 and ESLint 9.31.0. No install or
+backend/database operation was performed. The guard is JavaScript-level
+protection, not an OS-level isolation claim.
+
+Offline rendering confirms Hindi glyph strings, retained form/search state,
+existing programmatic room/treatment/day labels and unchanged card button
+roles. Back-action evidence in the Room Detail test is through the existing
+header mock, not proof of native header accessibility. Labels such as `Add new
+room`, `Add new treatment`, dynamic `Edit <day> hours` and room capacity remain
+English. Explicit one-line truncation is present in template names/descriptions,
+treatment names and rule descriptions. No new truncation, font-scaling override
+or layout rule was introduced. Hindi clipping/wrapping, native text metrics,
+large-text behavior, hit targets, contrast, modal focus/order, TalkBack/VoiceOver
+and screenshot equivalence remain **UNVERIFIED**; Jest does not establish them.
+No system dark-mode requirement or new locale scope is inferred.
+
+### Final bounded closure disposition
+
+**Package D is PARTIAL / NOT READY for package-level closure.** The three
+approved foreground corrections and safe existing-key substitutions are
+implemented and offline verified. Remaining implementation: the eight named
+same-value semantic occurrences (needs separate color scope approval), approved
+wording/key coverage for unresolved English UI and shared metadata, and
+classified disposition of the wider token/static-style/sizing findings.
+Remaining acceptance: seven-screen native visual/accessibility/Hindi layout
+checks, regression acceptance and package-owner closure of documented residuals.
+An exception requires explicit owner disposition; counting literals or passing
+mocked tests cannot create that disposition.
+
+Owner disposition requested: authorize a separate exact eight-occurrence color
+batch or explicitly defer it; approve the missing/context-sensitive English and
+Hindi key/copy mappings rather than invent translations; resolve appearance
+changes versus retained exceptions where palette values differ; and authorize
+native visual/accessibility acceptance in an appropriate environment. No such
+remediation, acceptance or release approval is assumed here. No commit, push,
+merge, dirty-checkout adoption or new documentation framework is performed.
+
+## Package D — preservation and final closure batches (2026-10-28)
+
+Authority: owner's Package D Preservation and Final Closure Batches directive.
+Phase 1 is preserved in `fe4ba580c4607b7da42d7d9ddff82bdcbd98fdad`, parent
+`6f315c83a0e1ec728f8a1972a83ce13f7f2ecca5`, message
+`refactor(theme-i18n): localize settings copy and action colors`. Exactly the
+ten approved receipt paths and SHA-256 hashes were checked before staging,
+in staged blobs and in the committed tree. That commit contains the previously
+verified three foreground changes, 68 existing-key substitutions, focused tests
+and this existing evidence document. Worktree was clean after commit; no tests
+were rerun to claim post-commit evidence for Phase 1. The historical 80-pass
+result above belongs to that artifact. Prior uncommitted/approval statements
+above describe the earlier checkpoint, not the current preservation status.
+
+### Phase 2 — reviewed eight-occurrence implementation
+
+All eight previously named occurrences have verified semantic owners and retain
+`#FFFFFF` in AYURVEDA, GENERAL_MEDICINE, DENTAL and PHYSIOTHERAPY. Only these
+color values were changed; the remaining 299 undecided color occurrences and
+42 retained status/category occurrences were not modified.
+
+| Source owner relative to frontend | Exact mapping | Focused verification |
+| --- | --- | --- |
+| `features/operatingHours/presentation/pages/OperatingHoursScreen.tsx` | `timePickerStyles.container.backgroundColor` → `colors.surface.elevated`; `timePickerStyles.confirmBtnText.color` and pending-save `ActivityIndicator.color` → `colors.text.onPrimary` | Four clinic palettes; picker surface/confirm and pending-spinner rerenders; selected time survives and is confirmed without persistence |
+| `features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx` | Pending-save `ActivityIndicator.color` → `colors.text.onPrimary` | Four clinic palettes and pending-spinner palette rerender; no mutation |
+| `features/rooms/presentation/pages/RoomsScreen.tsx` | Add-room `Ionicons.color` → `colors.text.onPrimary` | Existing four-palette and sentinel-rerender cases extended to the add icon |
+| `features/templates/presentation/pages/TemplatesScreen.tsx` | FAB `Ionicons.color` and `styles.typeTabTextActive.color` → `colors.text.onPrimary` | Existing four-palette and sentinel-rerender cases extended to both roles; selected-tab background retains its previous value |
+| `features/treatments/presentation/pages/TreatmentsScreen.tsx` | Add-treatment `Ionicons.color` → `colors.text.onPrimary` | Existing four-palette and sentinel-rerender cases extended to the add icon |
+
+TimePickerModal now uses the existing theme hook and memoizes its existing
+style factory by `colors`, following the same local convention as the previous
+slices. No time selection, time option, validation, query, mutation, navigation,
+status/category/dosha/metadata palette or business lifecycle is changed.
+Exact source reconstruction verifies the eight substitutions plus this local
+hook/factory wiring. The only additional source edit is the existing-key label
+reuse below. No palette, fallback, locale, dependency or shared metadata file
+changes occur.
+
+### Remaining 132-site copy register reconciled
+
+Reinspection of the previous section's exact 132 direct-copy sites found one
+additional approved semantic match after capitalization-normalized review:
+`app/clinic-admin/settings/treatments/[treatmentId].tsx` now uses
+`t('treatments.form.sections.ayurvedicProperties')` for the existing Ayurvedic
+section heading. This is the same treatment concept and the same existing
+English/Hindi catalog entry used by the treatment form; it introduces no
+clinical terminology. English deliberately follows the catalog's existing
+`Ayurvedic properties` capitalization instead of `Ayurvedic Properties`;
+Hindi follows the existing `आयुर्वेदिक गुण`. This is an explicit label-casing
+change, not a claim of byte-identical English presentation. No new key or
+translation is invented. English/Hindi component rendering is covered with
+Ayurveda feature availability and synthetic dosha data; clinical gating is
+unchanged.
+
+| Screen | Previous direct sites | Existing semantic key reused now | Unresolved sites | Existing-key availability / disposition |
+| --- | ---: | ---: | ---: | --- |
+| Operating Hours | 31 | 0 | 31 | 30 have no exact catalog-value match; `Closed` only matches episode-specific keys and must not reuse their lifecycle meaning for clinic hours |
+| Appointment Rules | 22 | 0 | 22 | No exact catalog-value match; approve screen-specific key/copy mappings |
+| Rooms | 17 | 0 | 17 | No exact catalog-value match; approve room labels, validation and create-state copy |
+| Templates | 22 | 0 | 22 | No exact catalog-value match; approve template labels, guidance and dialog wording |
+| Treatments | 8 | 0 | 8 | No exact catalog-value match; approve list/create/delete and clinic-context copy |
+| Treatment Detail | 17 | 1 | 16 | Existing treatment-owned section key reused; other direct strings have no exact match |
+| Room Detail | 15 | 0 | 15 | No exact catalog-value match; approve room detail/loading/error/validation copy |
+
+**131 direct sites remain: 130 without an exact English-value key match and one
+with wrong-domain matches.** This does not prove that no approximate/synonymous
+key exists; changing contextual meaning or wording requires owner disposition.
+The exact prior site lists remain the findings register, with the Ayurvedic
+heading now resolved. Baseline line references in those lists identify their
+historical checkpoint; Operating Hours gains two wiring lines in this batch.
+Dynamic sentences, imported day/room/rule/template metadata, native accessibility
+labels and wider app coverage remain additional dependencies as recorded above.
+No new language, locale requirement or fallback behavior is introduced.
+
+### Verification and acceptance status
+
+`tests/core/theme/settingsSurfaces.test.tsx` retains all 37 existing cases and
+adds 16: four picker palettes, one picker rerender/selection, eight pending-save
+palette cases, two pending-save rerenders and one treatment-owned heading
+English/Hindi case. Existing cases now also assert all three add icons and the
+selected-tab foreground. Test-only pending/feature fixture controls are reset
+between cases; no production dependency or testing architecture is added.
+
+Final guarded run from `frontend/` on 2026-10-28 used the existing external
+preset-preserving overlay, explicit nine-suite path selection, `--runInBand
+--no-cache --watchman=false`, and the existing pre-import network/process guard:
+
+- `tests/core/theme/settingsSurfaces.test.tsx`: **53 passed**.
+- Room Detail theme 9; design tokens 6; localization/i18n 15; B1 architecture
+  guard 2; Treatments multiday 3; treatment category contract 5; TG23 conflict
+  localization 2; commercial-retention localization 1: **43 passed**.
+- Total: **96 passed, 0 failed/skipped, nine suites, exit 0, 6.420 seconds**.
+  No warnings or guard-violation markers in the final log.
+- Production TypeScript passed, exit 0.
+- Scoped ESLint returned exit 1: the same **five inherited errors and ten
+  inherited warnings**, with matching rule/severity/message signatures against
+  the recorded committed-source baseline. The edited test has zero diagnostics.
+  No lint suppression, rule change or unrelated cleanup was performed.
+- `git diff --check` and exact source-boundary reconstruction passed. Catalogs
+  are unchanged; 1,480-key English/Hindi parity and existing fallback contracts
+  pass through the existing localization suite.
+
+Existing Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, React 19.2.3, RN 0.86.3,
+RNTL 13.3.3, TypeScript 6.0.3 and ESLint 9.31.0 were reused. No install, database
+operation or external service was required. The guard restricts standard
+JavaScript network/process paths and is not OS-level isolation. Temporary
+local dependency linkage is removed after verification.
+
+The reviewed eight-confirmed-color implementation gate is resolved. **Package D
+remains PARTIAL for package-wide acceptance**, not because these eight require
+another implementation review, but because approved key/copy coverage is still
+missing and the 299 color/static-style/sizing decisions are not dispositioned.
+There are **341 residual color occurrences**, consisting of the same 42 retained
+status/category and 299 unresolved mapping/appearance occurrences; this count
+does not establish that all are defects or accepted exceptions. No speculative
+replacement was made.
+
+Native Hindi clipping/wrapping, large-text behavior, contrast, hit targets,
+modal focus/order, TalkBack/VoiceOver and screenshot equivalence remain
+**UNVERIFIED**. Offline theme and translated-string rendering tests cannot
+close these gates or establish dark-mode support. Remaining owner actions:
+approve missing/context-sensitive key and English/Hindi copy mappings, decide
+appearance changes versus retained exceptions, and authorize native acceptance
+in an appropriate environment. No additional token discovery or broad redesign
+is implied by this checkpoint.
+
+Phase 2 comprises exactly six source files, the focused settings theme test
+and this evidence update. It is uncommitted and requires separate review and
+local commit approval. No second commit, push, merge, dirty B27 adoption,
+backend/database/CI/skill change or parallel documentation register is created.
+
+## A/C/D native acceptance attempt — 2026-10-29
+
+Owner authorized native acceptance using an existing suitable environment,
+without installs, configuration changes, production services or emulator setup.
+Candidate after evidence preservation: `d1c4033aa920b0993ebb6ee2678e151f504a14f4`
+on codex/af-frontend-integration. The exact environment observations and
+criterion-by-criterion matrix are recorded in the existing
+C-FE-03-CASE-SHEET-EPISODE-CHARACTERIZATION.md native-disposition section.
+
+**Observed:** iOS has CommandLineTools but no Xcode app/simctl found. Android
+SDK/emulator/API 35 AVD definitions exist; read-only enumeration of the existing
+ADB daemon succeeded with zero connected devices. Candidate build outputs in
+the checked APK/ios/build locations are absent; no approved service-isolated
+candidate runtime or physical-device workflow was established. No app launch,
+emulator boot/install, dependency installation, credential access or service/
+database connection was performed. Sandbox Crashpad diagnostics occurred while
+listing AVDs; actual boot capability remains unverified.
+
+**Package D disposition:** native Hindi layout/clipping, large text, theme
+appearance, focus/accessibility and TalkBack/VoiceOver remain BLOCKED; system-dark
+appearance NOT RUN. app.json automatic interface style is not proof of dark-mode
+support. Existing four-palette/token/catalog unit evidence remains historical
+offline proof only. No native PASS/FAIL, screenshots or accessibility outcomes
+were fabricated; no Jest/TypeScript rerun replaced native acceptance. Existing
+131 direct-English and 299 unresolved appearance occurrences are not remediated
+or newly accepted by this task; prior 42 intentional categories remain retained.
+
+Minimal continuation: approve a named existing Android target/candidate build
+and a synthetic/offline workflow avoiding production; authorize any necessary
+boot/build/install separately within the no-dependency-change boundary. iOS
+needs suitable separately approved tooling/device setup. No new copy, palette,
+dark-mode architecture, workflow or documentation framework is introduced.
+This is an uncommitted evidence append; no further commit/push/merge/CI/deployment.
+
+### Android Expo Go UAT notification boundary — 2026-10-29
+
+**Verified current implementation; bounded owner-approved compatibility fix.**
+On consolidated frontend baseline `55a38ad3f3742ea23871c4a460d53c1ae582d9d5`,
+the auth/logout import chain reached a static `expo-notifications` import and
+module-level handler registration before login. `expo-push.service.ts` now uses
+`Constants.executionEnvironment === ExecutionEnvironment.StoreClient` to avoid
+evaluating that native module in Expo Go. Its type-only import is erased at runtime.
+`nativeNotificationsAvailable` explicitly exposes this runtime distinction.
+
+Expo Go returns denied permission results and no push token, never reuses a cached
+native-build token, skips device registration, and provides safe listener/badge/
+cancellation cleanup. Local scheduling explicitly rejects as unavailable rather
+than returning a false success. This bounded adapter disables native notification
+operations in Expo Go, including local scheduling; it does not change notification
+behavior in compatible bare/standalone builds. Local storage cleanup remains safe.
+The lifecycle, auth, tenant, clinical, backend and production configuration sources
+are unchanged. No additional runtime error suppression or LogBox filtering was added.
+
+**Offline verification:** Node 20.19.4, existing Jest/Expo dependencies; 56 tests
+passed across 13 suites, zero failed/skipped, final exit 0. This includes 15 new
+`tests/features/notifications/expoPushRuntimeCompatibility.test.ts` cases; the
+existing notification lifecycle (9), notification presentation boundary (1),
+authSession (5), bootstrapSession.persistence (2), authStoreClearSession (3),
+authTenantHydration (2), unifiedLogout (5), logoutBoundary.characterization (4),
+logoutOrchestration.boundary (3), session-restoration-boundary (3),
+doctorLogoutPlatform (2) and B1 presentation-boundary guard (2) tests.
+Production TypeScript, scoped ESLint on the provider/new test, and diff whitespace
+checks passed. Tests used the existing pre-import network/process guard,
+`NODE_ENV=test`, `--runInBand --watchman=false --no-cache`, and an external overlay
+preserving Expo's iOS/Android/native haste settings. No network/process guard
+violations occurred in the final run.
+
+Runner limitations were kept separate from application results: an initial
+Watchman probe was blocked by the guard; a subsequent all-assertions-passing run
+exited 1 on Expo's lazy-fetch/native-logger teardown. The latter also reproduced
+without the new tests. The successful final test command additionally used the
+installed SDK's `EXPO_PUBLIC_USE_RN_FETCH=1` switch solely in the test environment;
+no repository/runtime configuration was changed and no assertions/errors were
+suppressed. Evidence: `/private/tmp/nova-expo-go-final-results.json` and
+`/private/tmp/nova-expo-go-final.log` (temporary local artifacts).
+
+**Acceptance still unverified:** actual Android Expo Go reload/open, live login
+and logout, and real-device/native push delivery. No application server, backend,
+provider session or database connection was started for this verification.
+Existing testing-secret, account and Data API containment gates remain separate;
+this change does not authorize clinical UAT or database/security changes.
+
+### Password recovery for Android Expo Go — 2026-10-30
+
+**Owner-approved bounded repair; live email acceptance pending.** Forgot Password
+previously supplied `novaclinicspro://reset-password`, while the native project
+registers `frontend`; Expo Go owns neither standalone app scheme. The reset route
+parsed credentials only on web and accepted an unrelated existing provider session.
+The reported localhost fallback is consistent with a missing/mismatched Supabase
+redirect allowlist or a Site-URL-based email template, but the actual Dashboard
+Site URL/allowlist/template could not be read through the available connector.
+Do not report those remote values as inspected or changed.
+
+`features/auth/presentation/recovery-links.ts` now generates `/reset-password` on
+the current browser origin, or on the web equivalent of Expo Go's generated Metro
+host (`exp://HOST:PORT/--/reset-password` becomes
+`http://HOST:PORT/reset-password`; `exps` preserves HTTPS). Standalone/native builds
+use `expo-linking`'s generated registered scheme. No LAN address is hardcoded.
+The existing reset route supplies the dedicated password form, handles cold/warm
+native URLs, rejects provider errors/non-recovery/missing credentials, and removes
+browser callback query/fragment values before asynchronous work. No callback URLs,
+provider token values or password values are logged by the new code.
+
+AuthSessionService requires callback credentials, clears normal app identity,
+establishes the provider-only session through `setSession`, and gates password
+updates until that succeeds. The existing adapter uses `updateUser({password})`.
+Recovery does not hydrate `/auth/me`; AuthProvider skips ordinary bootstrap and
+subscription on `/reset-password`. Leaving an unfinished flow signs out rather
+than converting recovery into application login. Success signs out, clears normal
+state, and consumes the local recovery flow. Supabase remains authoritative for
+email-link single use, expiry and user/password validation. Existing normal auth,
+authorization, tenant, backend and commercial behavior is unchanged.
+
+**Required development Dashboard configuration (owner action; not performed):**
+project `evkcvntjpkxlcxgwychq`, Authentication > URL Configuration: use the current
+reachable web UAT origin as Site URL and add its exact `/reset-password` URL to
+Redirect URLs. At inspection the origin was `http://192.168.1.7:8081`. Update the
+allowlist when the LAN host changes; do not use broad production wildcards.
+Retain the standard recovery email `{{ .ConfirmationURL }}` link, rather than a
+hardcoded Site URL that drops the requested callback. Production web recovery
+requires its approved HTTPS origin; native builds need their generated scheme
+allowlisted separately. Browser recovery deliberately returns the user to Expo Go
+for a fresh login, rather than relying on Expo Go custom-scheme interception.
+
+**Offline evidence:** Node 20.19.4; 81 tests passed, 16 suites, zero failed/skipped,
+exit 0, with existing pre-import network/process restrictions, `NODE_ENV=test`,
+`EXPO_PUBLIC_USE_RN_FETCH=1`, `--watchman=false --runInBand --no-cache` and the
+existing external Expo-preserving Jest overlay. Focused suites cover URL generation
+and error parsing, the actual form and submission, bootstrap ownership, provider
+SDK calls, recovery isolation and the existing login/logout/notification/B1 guards.
+Evidence: `/private/tmp/nova-recovery-final.json` and
+`/private/tmp/nova-recovery-final.log` (temporary artifacts). No existing recovery
+link/token was opened or reused. No emails, Auth-user modifications, Dashboard
+changes, database writes, commercial extensions, service startup or Git commits
+were performed. Real email delivery, allowlist behavior, browser/Expo-Go navigation
+and server-enforced expired/reused-link rejection remain owner-led acceptance gates.
+Production TypeScript and scoped ESLint passed (zero errors; three inherited
+`import/first` warnings in the pre-existing authSession test import layout).
+`git diff --check` passed. After reusing existing reset-request error wording in
+the URL helper, its 15 URL tests were rerun and passed. Prior notification changes,
+local environment files, and the owner's dependency symlink were preserved.
+
+### Recovery-route redirect investigation — 2026-10-30
+
+**Reported phone/browser redirect remains UNVERIFIED; no further production
+change made.** The existing Expo process on port 8081 has its working directory
+in this consolidated frontend. A token-free HTTP GET to `/reset-password`
+returned 200 with the same path and no HTTP redirect. The served web bundle
+contains this worktree's reset route, recovery-link parser and recovery-session
+service; it does not contain the former hardcoded callback scheme.
+
+A fresh Codex browser at `http://192.168.1.7:8081/reset-password` displayed
+**Link Expired / Request New Link / Back to Login** and stayed on the reset
+route. The same was observed with the synthetic `?error_code=otp_expired`
+callback. No real email callback, recovery token, account or password was used.
+These observations do not validate a real provider recovery session or reproduce
+the reported phone failure.
+
+The reset screen is a root Expo Router route, outside protected clinic layouts.
+Root `_layout.tsx` has no login redirect. AuthProvider already skips normal
+bootstrap/subscription at `/reset-password`; the reset screen navigates to login
+only on explicit user actions. Ordinary unauthenticated entry at `app/index.tsx`
+(line 57 at review) and `core/components/ProtectedRoute.tsx` (line 49) deliberately
+redirect to `/login`. Neither is established as the cause of the reported reset
+failure. No authentication guard was disabled or widened. The SDK client keeps
+`detectSessionInUrl: false`; the reset screen captures callback credentials before
+removing them from the address bar and passes them explicitly to the application
+service. Real SIGNED_IN/PASSWORD_RECOVERY event timing and the affected browser's
+initial navigation remain unobserved; do not claim their race was reproduced.
+
+Extended existing `recoveryScreens.test.tsx` with missing-callback and pending
+verification cases, including assertions against both push and replace navigation.
+Extended `recoveryBootstrapGuard.test.tsx` with ordinary protected-route rejection,
+hydration waiting and authenticated rendering. Existing tests retain valid and
+expired callback handling and rejection of a normal session as recovery authority.
+Guarded focused verification: **49/49 tests, eight suites, zero failures/skips,
+exit 0, zero guard violations**. Production TypeScript and scoped ESLint on the
+two changed test files passed. Artifacts outside Git:
+`/private/tmp/nova-recovery-route-investigation.json`, corresponding `.log`,
+`/private/tmp/nova-recovery-route-ts.log`, and
+`/private/tmp/nova-recovery-route-lint.log`.
+
+**Next acceptance:** the owner should request one fresh email and observe the
+callback on the affected phone. Record only origin/path, whether query/fragment
+credential fields are present (names only), visible error text and whether the
+path changes before rendering. Never share the full callback URL, token values
+or password. A real callback still reaching login requires a navigation trace
+before another source correction; stale client state or provider redirect
+configuration is a hypothesis, not a verified cause. Existing remote redirect
+settings and live password update remain unverified. Prior unrelated working
+changes, original B27 worktrees, backend and provider settings remain untouched.
+
+### Actual recovery-email destination evidence — 2026-10-30
+
+**Verified from development-project logs, not a mocked callback:** read-only
+Supabase unified logs for `evkcvntjpkxlcxgwychq` show the successful
+`POST /auth/v1/recover` at `2026-10-30T03:35:36.449Z` supplied exactly
+`http://192.168.1.7:8081/reset-password`. The Android
+`GET /auth/v1/verify` at `03:35:52.034Z` had `type=recovery` but its
+`redirect_to` was exactly `http://localhost:8081`, with no reset path; status 303.
+An adjacent non-Android verification at `03:36:07.272Z` had the same destination.
+The preceding successful request/verification pair at 03:23–03:24 showed the same
+mismatch. Diagnostics selected only timestamps, operation, status, safe redirect
+origin/path or equality checks, user-agent Android boolean and constant auth/error
+codes. No token, full verification URL, email address or password was output.
+
+The corresponding Auth entry records `auth_event.action=login` at 03:35:52.
+This is provider-side verification evidence, not proof of a frontend
+PASSWORD_RECOVERY event or a successfully initialized reset screen. The intended
+callback was already different in the verification request. The exact Dashboard
+allowlist/template cause was not independently read: the available connector has
+no Auth-configuration operation and the browser Dashboard required sign-in.
+Allowlist fallback versus template substitution must not be reported as directly
+inspected. Gmail wrapping was not inspected and is not established as the cause.
+
+The owner subsequently reported changing Site URL to
+`http://192.168.1.7:8081`, and confirmed the exact `/reset-password` Redirect URL
+and `{{ .ConfirmationURL }}` recovery template were configured. These settings
+are owner-reported. Site URL alone targets the root; ordinary unauthenticated root
+routing at `app/index.tsx:57` intentionally leads to login. The physical browser's
+first pathname, any subsequent navigation and recovery-session establishment
+remain UNVERIFIED; the root redirect is a code-path explanation, not an observed
+phone trace. No guard or production recovery source was changed in this task.
+
+The existing Expo process was confirmed to originate in the consolidated frontend
+at HEAD `55a38ad3f3742ea23871c4a460d53c1ae582d9d5` with the preserved uncommitted
+recovery changes. A token-free reset request returned HTTP 200. A later bundle
+request lost its connection and the listener ceased; the cause was not determined.
+Expo was restarted from the same frontend with `EXPO_OFFLINE=1`, the existing
+Node 20.19.4 executable and `expo start --lan --port 8081`; it advertised
+`exp://192.168.1.7:8081`. No dependencies were installed. ADB listed no connected
+Android phone, so no device trace was captured.
+
+**Live retest BLOCKED:** after the settings correction, the fresh request at
+`2026-10-30T03:44:57.371Z` still supplied the correct LAN reset URL but returned
+HTTP 429; Auth reports `over_email_send_rate_limit`. Do not issue further retries,
+reuse consumed links or change rate limits to manufacture a pass. The configured
+cooldown/next permitted send time was not established. Once permitted, send one
+fresh email and observe its verification destination and reset form on the phone.
+The owner must perform the password entry/update; no remote password was changed.
+
+Existing guarded URL/provider regression selection passed **18/18**, two suites,
+zero failures/skips, exit 0 and zero guard violations. Evidence:
+`/private/tmp/nova-recovery-email-url-regression.json` and corresponding `.log`.
+No new source correction or regression test was warranted for an unconfirmed
+frontend defect; existing callback generation and exact SDK forwarding tests were
+reused. This is not real-email/browser acceptance. No commit, push, database query,
+Auth-setting change by the agent, role change or commercial change was performed.
+
+
+### 2026-10-30 — Super Admin tenant-list denial and truthful dashboard states
+
+**VERIFIED:** The owner reports `/auth/me` HTTP 200 and an organization-scoped
+`/api/v1/org/tenants` HTTP 403 with `clinic_entry.unauthorized`,
+`errors.clinicEntry.unauthorized`, and `retryable: false`. Current router and live
+OpenAPI both require organization context. `OrganizationTenantAdministrationService`
+requires `organization.clinics.list` through
+`OrganizationAuthorizationService.require_permission`; this rejects absent active
+customer membership. Read-only development-project inspection found the intended
+administrator active with authoritative `is_org_admin=true` but zero active
+organization memberships. There are 18 clinic records, 12 active; the 403 is not
+an empty database. The live request's bearer subject was not independently inspected.
+
+**Authority conflict / BLOCKED:** ADR-PF-002 distinguishes platform administration
+from customer membership; E2's historical reuse audit describes global platform
+listing. Current FO-002 implementation and explicit negative tests deliberately
+scope this route to customer organization authorization. B2.7-FO-002 requires
+Security/Organization review. No backend authorization was changed. Platform
+list/detail restoration needs an explicit decision reconciling those contracts;
+a separate audited, read-only platform API using verified identity plus active
+server-side platform authority is the recommended boundary. Customer routes and
+all mutation permissions must remain scoped. Tenant self-service detail also
+retains tenant RBAC and same-tenant checks. The extension-only platform authority
+correction in backend commit c92c593e8c5ffdd18f0ee18dafdc8e419af13752 remains intact;
+it does not authorize broadening other routes.
+
+**Presentation correction:** `app/super-admin/index.tsx` previously displayed four
+hardcoded zero statistics and an unwired recent-onboarding empty state; these now
+show unavailable values using an existing localization key. No statistics query
+was added. `useOrganizationTenantScope.ts` exposes the existing refetch operation.
+`TenantsListScreen.tsx` distinguishes loading, scope failure/mismatch, request
+failure, and a genuine successful empty response; it retries the relevant source
+and shows a localized generic error. Existing API errors already propagated.
+No identity, cache key, query contract, membership or tenant authority changed.
+
+**Verification:** `tests/tenants/tenantListingFailurePresentation.test.tsx` adds
+seven cases for failure/loading/empty states and unavailable dashboard metrics.
+Together with organization scope/API/repository tests and the B1 presentation
+boundary guard: 18 passed across five suites, zero failures/skips, exit 0.
+Production TypeScript passed. Scoped ESLint: zero errors and five inherited unused
+symbol warnings in TenantsListScreen. Existing backend FO-002 and tenant transport
+regressions: 16 passed under guarded CPython 3.11.15, three dependency deprecation
+warnings, zero guard violations. Evidence is in `/private/tmp/nova-tenant-list-frontend.json`,
+`/private/tmp/nova-tenant-list-backend.json`, and corresponding logs; TypeScript and
+lint logs use the same prefix. `git diff --check` passed. No live authenticated
+listing success is claimed. No commercial extension, database write, role change,
+commit or push was performed. Platform listing remains blocked pending the named
+authorization decision; commercial execution retains its separate controlled gate.
+
+
+### 2026-10-30 — Approved platform tenant reads and Super Admin integration
+
+Owner approved a separate, audited, read-only platform tenant list/detail slice.
+This supersedes the preceding authorization-decision hold for that slice; it does
+not broaden customer `/org/tenants`, membership, clinical or platform-write rights.
+
+Backend contract: `GET /api/v1/platform/tenants?offset=0&limit=25` returns items,
+total, active_total, offset, limit; detail is `GET /api/v1/platform/tenants/{id}`.
+Administrative projection is id/code/name/clinic_type/status/is_active/created_at
+and nullable server-resolved organization_id. No contact, clinical, patient,
+prescription, billing or subscription data is exposed. Active clinic total is not
+an active-subscription count. Requests require verified identity and strict active
+database platform privilege, not customer membership or provider metadata.
+
+New domain entity, platform datasource, identity-keyed React Query repository,
+presentation hooks and `PlatformTenantsScreen.tsx` provide paginated read-only
+list/detail UI. Only `/super-admin/tenants` and its detail route select these
+screens. Customer datasource/repository/scope flows and their mutation contracts
+are retained. Caches are keyed by authenticated identity plus page/target and the
+existing logout flow clears them. No alternate tenant authority or writer added.
+Dashboard requests limit=1 and renders `total`, never items.length, as Total
+Clinics. Other statistics and recent onboarding remain unavailable. Loading,
+error/retry, unavailable, populated and successful-empty states remain distinct;
+stale counts are not shown during pending/error states. Added only the platform
+clinic-title key to both English and Hindi catalogs; no fallback policy changed.
+
+Guarded Node 20.19.4 verification: **30 passed / 7 suites**, zero failures/skips,
+including platform UI, transport/cache tests, existing customer scope/API/repository
+regressions and B1 presentation boundary checks. Production TypeScript passed.
+Scoped ESLint passed with no diagnostics on the new platform paths and dashboard.
+No frontend guard-violation marker appeared. Existing customer screen's five
+unused-symbol warnings from the preceding task were not cleaned up. Evidence:
+`/private/tmp/nova-platform-frontend.json` and `.log`,
+`/private/tmp/nova-platform-ts.log`, `/private/tmp/nova-platform-eslint.log`.
+
+Native visual/accessibility and authenticated live listing are UNVERIFIED.
+No services restarted. Live calls require separate permission for the mandatory
+platform audit inserts; no development database writes were performed. Existing
+commercial correction commit is unchanged. No extension, role/membership change,
+commit, push or merge. Existing recovery/Expo notification work was preserved.
+
+
+### 2026-10-30 — Strict platform dashboard architecture audit (append-only correction)
+
+Audited all 16 paths in 7ad1dc4276956556fb25dcd9460f214827752ec8, the exact backend
+c2e8691 commit, shared UI/theme/navigation, B0 ratification and ADR-PF-015. Earlier
+functional passes do not establish strict architecture/theme/navigation acceptance.
+This is an evidence correction, not a rewrite of historical implementation.
+
+| Committed frontend file | Actual responsibility | Strict gate disposition |
+| --- | --- | --- |
+| app/super-admin/index.tsx | Dashboard invokes usePlatformTenants(0,1), uses total not items.length, generic error/loading/unavailable metrics | Correct count semantics; no clinic table/inline Manage; inherited local logout confirmation/static styles plus newly unthemed loading/error text |
+| app/super-admin/tenants/index.tsx | Selects platform list screen | COMPLIANT route adapter |
+| app/super-admin/tenants/[tenantId].tsx | Selects platform read-only detail screen | COMPLIANT adapter; actual screen Back is noncanonical |
+| core/localization/translations/en-US.json | platformTenants.title only | COMPLIANT; no fallback change |
+| core/localization/translations/hi-IN.json | Matching platform title key | COMPLIANT parity; native layout UNVERIFIED |
+| docs/Architecture/NOVA-PRODUCT-ARCHITECTURE.md | Prior evidence sections | Preserved; qualified by this dated correction |
+| features/tenants/data/datasources/platformTenants.api.ts | Sole platform HTTP boundary, shared axiosClient, encoded identifier | Transport placement COMPLIANT; raw response.data typed as domain without a mapping boundary |
+| features/tenants/data/repositories/platformTenants.repository.ts | TanStack query/cache keys, calls datasource | B0 permits repository hooks; strict requested domain repository contract/composition missing |
+| features/tenants/domain/entities/platformTenant.ts | Wire-shaped interface/page with snake_case fields | No domain-to-data import; distinct DTO/domain mapping not implemented |
+| features/tenants/presentation/hooks/usePlatformTenants.ts | Reads canonical authenticated identity; imports concrete query-hook exports | No direct transport; strict contract abstraction missing; do not mislabel B0-permitted hook placement itself forbidden |
+| features/tenants/presentation/hooks/useOrganizationTenantScope.ts | Exposes existing scope refetch | COMPLIANT narrow customer error-retry addition |
+| features/tenants/presentation/pages/PlatformTenantsScreen.tsx | List/detail render, pagination state, route navigation | VERIFIED theme, shared control and navigation deviations; no commercial table/inline Manage |
+| features/tenants/presentation/pages/TenantsListScreen.tsx | Distinguishes customer loading/scope/error/empty state | Narrow error correction; existing custom header/buttons/routes are inherited debt, not a new platform permission |
+| tests/tenants/platformTenantReads.test.tsx | List/detail/dashboard state/count tests | Passing behavioral tests; mocks shared header and theme, not full UI consistency verification |
+| tests/tenants/platformTenantTransport.test.tsx | Namespace/page params, encoded detail, errors, identity-separated query cache | Passing transport/cache tests; no domain mapping contract test |
+| tests/tenants/tenantListingFailurePresentation.test.tsx | Customer scope/error/empty and unavailable dashboard | Passing; shared navigation and strict theme not covered |
+
+Actual list flow: SuperAdminDashboard or PlatformTenantsScreen ->
+presentation/hooks/usePlatformTenants.ts -> data/repositories/platformTenants.repository.ts
+(TanStack useQuery) -> data/datasources/platformTenants.api.ts -> central axiosClient
+-> platform GET -> raw transport body travels back as a PlatformTenant/Page type.
+Detail uses the corresponding usePlatformTenant / usePlatformTenantQuery /
+getPlatformTenantApi path. No screen imports Axios/fetch/datasource; screens do
+not construct API endpoints or decide commercial entitlement.
+
+B0 ARCHITECTURE-RATIFICATION.md:25-43 explicitly permits feature query hooks in
+data/repositories as the approved application/query boundary. Their physical
+location or import by a presentation hook is NOT automatically a violation.
+However this implementation has no domain repository contract, distinct wire DTO,
+mapper or injected repository implementing that contract. It does not meet the
+newly requested stronger contract flow. Existing tenant.entity.ts supplies an
+explicit DTO-to-domain mapping precedent. A compatible correction can retain the
+approved query-hook boundary and add a typed platform read repository/DTO mapper
+below it; do not add a ceremonial duplicate hook layer or a parallel API client.
+
+Verified deviations (new unless otherwise stated):
+
+- PlatformTenantsScreen.tsx:2,10,23-25,39 uses native Button controls, not approved
+  shared themed controls. :20,36 hardcodes padding=16 instead of spacing.md;
+  :21,22,37,38 and error/loading states omit central typography or text color.
+  No hex/RGB literal exists in this new screen; literal padding and native
+  defaults still violate the strict token gate. Replace with approved shared
+  components and theme spacing/typography/color/radii/sizes, not a local palette.
+  Required tests: theme rerender across existing palettes, states/text/accessibility,
+  token guard and supported responsive/native observations.
+- :23 interpolates a UI route locally; :39 implements an ad hoc native Back.
+  List has no shared Back header, while super-admin/_layout.tsx:23 hides stack
+  headers. There is no shell-provided Back to inherit. Reuse DashboardHeader's
+  onBackPress and a governed feature route builder, with safe back/root behavior.
+  Required tests: shared Back invoked once, no duplicate header/control, no root
+  Back, unchanged protected-route handling and inline Manage no navigation.
+- Dashboard index.tsx:33-64 local web/native logout confirmation is INHERITED,
+  not introduced by 7ad1dc4. It calls useAuth.logout, which correctly delegates
+  to the canonical unifiedLogoutService (cache/session cleanup preserved).
+  Shared header Logout is already rendered at :68-74, but confirmation/error
+  UI is locally duplicated. Reuse the canonical command with shared approved
+  confirmation orchestration; do not add direct Supabase signOut. Tests must
+  exercise confirmation, one logout command and canonical cleanup/navigation.
+- Dashboard :85-86 introduces loading/error Text outside central typography and
+  text tokens. Existing radius=12 styles at :260,283 are INHERITED, as are static
+  colors and placeholder notification/profile handlers (:72-73), alert-only
+  feature actions and broad hardcoded copy. These are not genuine implemented
+  administration actions; the new dashboard must not reproduce placeholders.
+- Core DashboardHeader, StatCard, QuickActionButton and ConfirmationDialog exist.
+  DashboardHeader has optional Back/Logout callbacks; no standalone canonical
+  Logout-confirmation hook/button was found in core/auth. No general shared
+  Button/Table/Input/Badge component was found in core/components; do not invent
+  feature-specific copies. StatCard itself contains inherited literal shadow/
+  elevation values (:76-80); core/theme has no dedicated elevation export.
+  Approve any necessary shared primitive/confirmation/elevation extension before
+  implementing the strict requirement; do not silently expand global UI debt.
+
+Before/after intended boundary (NOT IMPLEMENTED): screen -> approved query hook
+-> domain platform read repository contract -> concrete data repository/DTO mapper
+-> platform datasource -> shared client. Backend remains authoritative. Central
+cache key conventions and identity segregation remain. Customer scope/selection
+and all mutations remain unchanged. Shared theme/header/confirmation replace
+local visual/navigation implementations, not their business behavior.
+
+Dashboard target is approved UX but NOT IMPLEMENTED: columns are clinic name,
+code, type, operational status, owning organization, trial state/expiry,
+subscription plan/status, effective entitlement and inline Manage. Manage sections
+are Overview, Organization, Commercial, Administration and Audit. Root gets shared
+Logout and no meaningless Back; actual subpages get one shared Back. Desktop table
+and mobile wrapping/expansion must preserve direct status visibility. No View
+Status detour, fake values, disabled placeholder write buttons or per-row HTTP
+fan-out. Extend Trial stays absent/unavailable until its authenticated workflow
+and separate execution authorization are satisfied.
+
+BLOCKER: existing platform schema intentionally contains metadata and counts
+only. Trial GET still requires customer organization/tenant context, subscription
+GET requires same-tenant RBAC, and audit reads require the explicit platform
+capability in accepted ADR-PF-015:106-113. A new/expanded privileged aggregate read
+contract is required; never reuse customer access checks as a platform bypass.
+Propose batched organization/commercial summaries for list and bounded histories
+for Manage using canonical CommercialEntitlementService. Audit feed must be
+separately capability-gated, tenant-target constrained and safe-field allowlisted,
+with organization/commercial/platform event ownership retained. No new clinical
+access or write permission. Exact capability and exposure require Security/Product
+approval. Until then no new API, dashboard implementation or production correction
+was made under this task's explicit STOP conditions.
+
+Fresh offline evidence: 41/41 backend tests and 30/30 frontend tests passed with
+zero failures/skips/errors and zero guard violations. Existing B1 architecture
+guard passed unchanged; it detects raw network imports/calls, not every typed
+contract, theme or navigation requirement. TypeScript passed. Scoped Ruff passed;
+ESLint had zero errors/five inherited TenantsListScreen unused-symbol warnings.
+Files: /private/tmp/nova-platform-architecture-audit-{backend,frontend}.json and
+.log; -ts.log, -eslint.log, -ruff.log with the same audit prefix. No new UI/theme/
+Manage/navigation tests were claimed. Authenticated live browser, responsive
+layout and native accessibility remain UNVERIFIED. Only this existing architecture
+record and backend Engineering Truth were appended; unrelated work is preserved.
+No code, source commit, service state, database, role, membership or trial changed.
+
+
+### 2026-10-30 — Approved dashboard remediation: implementation and traceability
+
+Owner approved the prior strict-audit corrections and platform commercial
+summaries. Historical entries above remain intact; the prior stop applies only to
+unapproved audit reads, which Phase E explicitly permits leaving unavailable.
+
+Before: screen -> query-hook -> raw transport data labeled as domain model.
+After: screen -> existing authenticated application/query-facing hook ->
+B0-approved repository query boundary consuming IPlatformTenantRepository -> data
+repository + DTO mapper -> datasource/shared axiosClient -> platform API.
+PlatformTenantDto/PageDto are separate from camel-case domain entities. Domain
+contracts have no data/transport imports. The existing query-hook boundary was
+retained; no ceremonial extra hook, second API client, authority derivation or
+customer membership impersonation was introduced. Query keys keep platform
+prefixes, authenticated actor, page and target identity, adding search/filter/sort
+inputs for correct cache segregation. Existing logout cancellation/cache clearing
+and auth navigation remain canonical and unchanged.
+
+Central primitives added only where missing: ThemedButton, ThemedInput,
+ThemedText and responsive DataTable. They use useClinicTheme typography/colors/
+spacing/radii/sizes/borders and central opacity. Shared DashboardHeader retains
+its callback API and Back/Logout controls, now binds the active theme; notification
+callback and 99+ badge compatibility are tested. ConfirmationDialog retains its
+public API and uses central tokens. Its old shadow values were moved unchanged
+to central elevations.dialog; gaps/radii are normalized to existing spacing/radius
+scales. Named central sizing tokens cover wide layout and dialog dimensions.
+No local palette, native unthemed button, arbitrary feature font or framework.
+
+PlatformAdminShell composes that single shared header and ConfirmationDialog with
+one centralized useLogoutConfirmation hook around useAuth.logout. Confirmation
+coalesces in-flight commands, cancellation performs no logout, failures remain
+visible in the dialog, and canonical unifiedLogoutService owns session/cache/
+navigation cleanup. Root has no Back. Subpages use shared useBackNavigation with
+history or the governed platformTenantRoutes.dashboard fallback. No direct
+Supabase signOut, screen-owned confirmation, duplicate header or Back. Protected
+route authorization remains unchanged. Super Admin layout background also binds
+the central active theme. Other unmodified legacy Super Admin pages are outside
+this correction; no broad UI or clinical refactoring occurred.
+
+Root /super-admin is now the primary PlatformClinicWorkspace. Its columns show
+clinic name/code, type, operational status, owning organization, stored trial
+state/expiry, subscription plan/status, effective canonical entitlement, Manage.
+All statuses are visible before expanding. Manage expands/collapses inline and
+renders Overview, Organization/association, Commercial details/recent extension
+history, Administration and Audit. It makes no additional per-row request or page
+transition. Detail deep links reuse the same read-only Manage rendering. Search,
+status filters, deterministic sorting, paging and full filtered totals work;
+changing search/filter/sort resets page and expansion. Pending/error states never
+claim stale or zero totals. Empty is only a successful empty response. Nullable
+commercial data and multiple candidates have explicit not-configured/inconsistent
+presentation. Backend entitlement is rendered as supplied; ACTIVE stored state
+is never interpreted as valid access by the UI.
+
+There is no View Status detour, fabricated subscription statistic or fake action.
+Administration explicitly states that no write actions are verified/authorized
+here. No Extend Trial or payment action is offered. Audit explicitly states the
+capability requirement and performs no event-feed API request. No approved audit-
+read capability/field-level read contract was found in the inspected repository
+records; is_org_admin is not substituted. Future enablement requires Platform
+Security/Product Architecture approval and assignment rules. Existing capability
+assignment infrastructure alone does not authorize audit reads.
+
+Desktop rendering uses shared table columns; below the central wide-layout token,
+rows stack labeled cells while retaining every essential status. Text keeps native
+font scaling/wrapping. Automated widths 400/1200 with fontScale=2 verify component
+presence/behavior, not real layout bounds or TalkBack. All four current clinic
+palettes are tested across rerenders. Manual responsive/native visual, large-text
+clipping, focus traversal and screen-reader checks remain UNVERIFIED.
+
+Fresh verification: **86 passed / 14 frontend suites**, zero failures/skips and
+zero network/process guard markers. Tests include repository/DTO/domain contract,
+identity cache, injected repository, loading/error/empty/populated states,
+search/filter/sort/paging, inline expansion with no navigation/fan-out, denied
+audit availability, shared Back fallback/root absence, confirmation/cancel/error/
+in-flight coalescing, theme/header callbacks, canonical logout regressions,
+localization and old/new architecture guards. TypeScript production passed;
+scoped ESLint (including final shared/test paths) has zero errors/warnings.
+English/Hindi platform copy/keys are present; no fallback or locale policy change.
+Backend guarded offline selection has **67 passed**, no failures/skips/errors or
+guard violations. Existing guards/assertion purposes were preserved; tests adapted
+only to the approved read-model and UI contracts, with new stricter guards added.
+
+Evidence uses /private/tmp/nova-superadmin-{backend,frontend}.json and .log,
+-ts.log, -eslint.log, -eslint-final.log and -ruff.log. Exact changed paths/hashes
+are in /private/tmp/nova-superadmin-remediation-manifest.json. No new documentation
+framework. All source remains uncommitted for review. Unrelated password recovery,
+notification and other working-tree changes are preserved. No live database,
+audit insert, authentication-provider request, trial grant, service start/restart,
+configuration, dependency, CI, push or merge operation was performed. Next steps
+are scoped Git inclusion review and separately authorized live development/UI
+verification with mandatory audit persistence. No release/UAT-complete claim.
+
+## 2026-10-30 — Super Admin UX rejection and bounded presentation correction
+
+Owner visual verdict supersedes any prior implication of completed UX acceptance.
+The earlier implementation returned the right read data but exposed raw enums and
+ISO timestamps, used primary filled row actions, and arranged Manage as a single
+vertical field stream. Unit tests established data/section presence, not visual
+quality. Architecture/API verification is retained; visual acceptance is pending.
+
+The corrected table retains clinic name/code/type, operational status, owning
+organization, trial/expiry, subscription, canonical effective entitlement and an
+inline Manage toggle. Shared ThemedButton adds an opt-in subtle variant (existing
+primary behavior retained); StatusBadge uses existing central feedback/surface
+colors and caption typography. No new color palette, font or local spacing scale.
+DataTable weights identity/organization columns and uses its existing responsive
+breakpoint; the Manage action keeps the accessible touch target without a large
+filled block or repeating each clinic name in its visible label.
+
+Before Manage: sequential heading/field text. After: wrapping, bordered Overview,
+Organization, Commercial, Audit and Administration cards; on narrow screens each
+card occupies the available row. Identifiers and aggregate version are secondary,
+explicitly expandable details. Canonical shared Back/Logout remain unchanged.
+Search, status filters, sort and pagination retain server query ownership.
+
+Display-only application adapter platformTenantPresentation.ts maps not_entitled
+to Access blocked and no_commercial_evidence to No valid commercial entitlement,
+localizes status labels, and formats timestamps with device timezone indication.
+Date-only billing dates remain calendar dates. Unknown values render an explicit
+unavailable/review label rather than an internal enum. Elapsed stored ACTIVE
+trials display Expired while the stored state remains available in Commercial.
+This clock-based display label never authorizes access, changes lifecycle state,
+or overrides canonical backend entitlement. Canonical entitlement service and
+all backend files remain unchanged during this correction.
+
+Commercial action disposition: the existing POST onboarding/{tenant_id}/
+commercial-trial/extensions endpoint requires the trusted active database
+platform administrator, server-resolved active target/organization/association,
+aggregate version, reason, duration and idempotency header. It is not called here.
+The platform read contract currently returns actions: []; it provides no verified
+command eligibility. Authenticated PostgreSQL command acceptance is outstanding.
+The runtime channel field accepts nonempty text; repository test examples alone
+are not sufficient authority to ratify SUPPORT spelling/vocabulary. No new
+channel or permission was introduced. Administration therefore shows a specific
+unavailable explanation, not a working-looking extension button. A separately
+reviewed authoritative availability and channel contract is needed before a
+mutation UI can be enabled. The 30-day grant remains unexecuted. Audit history
+continues to state unavailable pending the approved explicit read capability.
+
+Verification artifacts remain outside the repository under
+/private/tmp/nova-superadmin-ux-*.json and *.log. Guarded CPython 3.11 backend
+regressions: 67 passed, zero guard violations (three inherited dependency
+warnings). Frontend regression evidence and final counts are recorded below.
+Focused coverage includes elapsed-trial labeling without evidence mutation,
+entitlement/reason labels, local timezone/date-only formatting, structured cards,
+real Dimensions-driven mobile/desktop branches, theme-bound badges/compact actions,
+secondary identifiers, expand/collapse, unavailable actions, canonical logout,
+customer scope and architecture dependency guards.
+
+Visual acceptance: NOT VERIFIED. Browser automation was unavailable due to
+Computer Use permission in the acceptance session. No authenticated browser
+session or tokens were extracted. Owner verification must show the refreshed
+Super Admin table at desktop and narrow width, inline Manage open/closed, readable
+status badges/local dates, card wrapping at large font, search/filter/sort/pages,
+explicit audit/action unavailability, and canonical Back/Logout confirmation.
+Provide screenshots of the table and expanded Manage at both widths, excluding
+credentials or recovery URLs. Mocked responsive tests are not native or browser
+visual acceptance. No commit, push, commercial mutation or database write occurred.
+
+Final correction verification: 97/97 frontend tests passed across 15 suites;
+zero failed/skipped. Production TypeScript and scoped ESLint passed. Backend
+67/67 guarded tests passed, zero guard violations. Existing B1/platform boundary,
+customer-isolation and canonical logout checks passed. These results do not
+constitute visual acceptance or authenticated commercial-command acceptance.
+
+## 2026-10-30 — Owner clarification: Super Admin dashboard is read-only
+
+This decision supersedes the preceding Administration/action-availability UI
+proposal. The Administration panel and its extension-unavailable prompt are
+removed. Manage/Close only expand/collapse inline read details; there are no
+command handlers, mutation hooks, role controls, trial-extension or subscription
+management controls inside Manage. No commercial endpoint was invoked, and no
+service restart, database write or role change was performed for this correction.
+
+Manage now separates Overview, Organization, Commercial, Entitlement and
+Audit/History. Cards align at the start and use their content height rather than
+stretching into equal-height empty panels. Fields wrap within cards using existing
+spacing, typography, surfaces, borders and size tokens. Overview contains clinic
+name/code/type, operational status and creation date; Organization shows ownership
+and association status; Commercial shows trial lifecycle, activation/expiry and
+subscription/billing periods; Entitlement shows the canonical effective state and
+reason; Audit/History retains the explicit audit-unavailable state and bounded
+read-only extension history. Secondary identifier-toggle controls were removed.
+
+The clinic-label defect was a mismatch between theme IDs and the actual canonical
+clinic types. The type-only ClinicType dependency references the existing
+core/hooks/useFeatures.ts union without importing its runtime auth/network code;
+the display map covers general, ayurveda, allopathy, dental, physio and
+multispeciality. Operational display preserves server lifecycle status, including
+onboarding when isActive=false; it no longer substitutes inactive from that flag.
+Commercial entitlement remains a separate server decision. No lifecycle,
+authorization, tenant context, transport or backend contract changed.
+
+Main table operational status, trial expiry, subscription and effective entitlement
+remain visible. Existing query/repository/datasource flow, pagination, search,
+sorting, shared theme, canonical Back and canonical Logout remain intact. New
+architecture assertions prevent buttons, onPress handlers and mutation access in
+Manage. Tests cover all canonical clinic labels, onboarding state, natural card
+height, absence of the Administration panel and all detail buttons, responsive
+layout, customer scope and canonical navigation/logout.
+
+Automated results are recorded below. Browser/native visual acceptance remains
+NOT VERIFIED. Owner review must confirm readable table labels (especially
+Ayurveda and Onboarding), inline open/close, the five read-only sections, compact
+content-height cards at desktop/narrow widths, commercial information visible
+without Manage, and absence of administrative action controls. No commit is
+permitted before owner acceptance. Earlier automated evidence is retained as
+history and does not override this visual gate.
+
+Read-only clarification verification: 104/104 frontend tests passed across 15
+suites, zero failed/skipped; production TypeScript, scoped ESLint and git diff
+checks passed. Guarded execution used the existing offline runner. Layout tests
+exercise widths 320, 400 and 1200; visual acceptance remains pending owner review.
+
+## 2026-10-30 — Screenshot-driven Super Admin acceptance baseline
+
+Latest owner instruction (attachment 60edfea9-da06-4c0f-a308-e9dab51e1e99)
+explicitly supersedes the preceding no-Administration-panel instruction. The
+approved screenshot is a layout specification, not live counts or command
+execution authority. Administration is now visible with two disabled controls;
+no commercial action is enabled or executed.
+
+Layout implementation: shared application header with opt-in labeled canonical
+Logout; four summary cards; wrapping horizontal search/select/filter toolbar;
+compact eight-column desktop table / labeled mobile clinic rows; outlined
+Manage/Close toggle with expanded-row border; inline clinic identity and status
+header; Overview, Organization, Commercial and Effective Entitlement cards; then
+Administration (primary) and Audit/History (secondary). Four information cards
+appear at the central wide breakpoint, two on tablet and one on mobile. Cards
+retain content height and do not stretch into equal-height empty panels. Table
+and detail display use existing localization/presentation mapping, semantic
+badges and device-timezone dates. Read-only technical IDs and extension-history
+expansion were restored per the new screenshot instruction.
+
+Shared additions: ThemedCard, ThemedSelect and ThemedNotice extend the central UI
+library rather than introduce feature-local control copies. The legacy StatCard
+uses static palettes/literal styles and was deliberately left unchanged; summary
+composition instead uses the same new shared theme-bound card as Manage. All
+appearance values reference active theme typography, spacing, surfaces, borders,
+radii and size tokens. The shared header's labeled logout is opt-in; existing
+canonical logout command/confirmation and Back ownership remain unchanged.
+
+Contract coverage and explicit gaps:
+- Total and active summary counts use an unfiltered platform list query with
+  limit=1 through the existing actor-keyed B0 query/repository/datasource flow.
+  Page rows use a separate query. Summary totals are not filtered/page counts.
+  Errors/initialization do not fabricate zero; summary can be retried.
+- Commercial attention and expiring-soon aggregation are not in the current
+  backend contract. Their cards say unavailable, with the missing-contract reason.
+  No frontend count derivation or unapproved expiry window was introduced.
+- Search is server-side name/code only. Status supports active/inactive/suspended;
+  sort supports newest/name ascending/name descending. Clinic-type and organization
+  selects are visibly disabled, with a backend-support explanation. Organization
+  search/oldest sorting and onboarding-specific filter are not claimed supported.
+- Clear filters resets the query and page. Page size uses existing server limit
+  support (10/25/50), defaults to 10, and resets expanded state. Footer shows the
+  current page, filtered result count and visible range; page controls are bounded.
+- Organization type is absent from the read contract; no clinic/organization
+  equivalence was inferred. Existing owning organization and association IDs/status
+  are displayed server-authoritatively.
+- Extend Trial is visible but disabled: trusted platform-admin authorization and
+  authenticated PostgreSQL workflow acceptance remain pending. The committed
+  endpoint supports 1–30 days/version/reason/idempotency, but command eligibility
+  and approved channel vocabulary have not been established for enabling this UI.
+  No form/confirmation or command is opened by a disabled button; no grant sent.
+- Manage Subscription is visible but disabled: no approved management operation
+  exists here. No payment endpoint, navigation placeholder or command was invented.
+- Audit read capability remains absent. The explicit unavailable banner remains;
+  recent audit/commercial events are marked unavailable, and only already-projected
+  bounded extension records can be expanded. No audit read request was added.
+
+Architecture: presentation -> existing approved query-hook boundary -> domain
+repository -> data repository/DTO mapper -> datasource -> backend. No transport,
+SQL, entitlement calculation or command writer added to presentation. Backend
+implementation, customer membership authorization and entitlement resolver remain
+unchanged. No production, credential, environment, dependency or original dirty
+worktree changes. No live service navigation or database mutation was performed.
+
+Verification uses preserved offline guards, NODE_ENV=test and the existing Jest
+overlay. Component tests cover global vs filtered counts, missing metrics,
+filters/clear/sort/pages, canonical clinic types/statuses, elapsed-trial display,
+inline expansion, disabled actions/no confirmation, technical/history toggles,
+audit restrictions, central themes, responsive dimensions and canonical Back/
+Logout. Existing customer-isolation and B1/platform boundary checks are retained.
+Results and exact file hashes are recorded in the external screenshot receipt.
+
+VISUAL ACCEPTANCE: PENDING. The reference was inspected, but no actual running
+signed-in browser comparison or native PASS is claimed. Computer Use was
+unavailable in the preceding acceptance session; no user token was extracted or
+substituted. Owner acceptance checklist: compare header and summary strip;
+search/filter toolbar; all eight columns; highlighted inline Manage; four cards
+at wide desktop and wrapped cards at tablet/mobile; visible disabled Administration
+buttons and explanations; restricted Audit/History; technical/history expansion;
+pagination and filtered/global totals; canonical Logout confirmation and Back on
+subpages. Provide fresh desktop and narrow screenshots, with Manage open and
+closed. Missing server contracts above prevent exact data/interaction parity
+with the reference; they must remain explicit, not be hidden behind example data.
+No commit is permitted before owner visual acceptance.
+
+Final screenshot-driven automated results: 106/106 frontend tests passed across
+15 suites; 67/67 backend tests passed with zero guard violations. Production
+TypeScript, scoped ESLint and diff checks passed. Three backend dependency
+deprecation warnings remain inherited. Ruff was not rerun because no backend
+files changed. These results are not live browser or native visual acceptance.
+
+## 2026-11-01 — Super Admin stabilization, partial live acceptance and contract decisions
+
+Current scope preserves the October 30 screenshot-driven layout. Only compact
+card padding, identifier disclosure and concise availability copy changed.
+Organization and association UUIDs now appear exclusively under the existing
+Show Identifiers toggle with the clinic identifier/version; normal Organization
+content is name/status/association status. Central theme, cards, buttons, Back,
+Logout, query/repository/datasource boundaries and command-disabled state remain.
+
+### Transport investigation — exact failure remains unidentified
+
+The configured public API origin is http://192.168.1.7:8000. Backend PID 2978 and
+Metro PID 98548 have the named consolidated worktrees as cwd. Current LAN health
+returns 200; browser-origin OPTIONS for platform tenants with Authorization
+preflight returns 200 and Allow-Origin '*'; unauthenticated list returns 401.
+These checks do not prove the owner's failing browser request succeeded.
+
+The literal api.fallback.transport_failure originates in
+core/providers/ApiRequestFallbackProvider.tsx after apiRequestActivity records a
+response-less or >=500 non-cancelled transport error. The provider logs the
+context through logError (development console.error) and retains its fallback UI.
+Platform reads follow screen -> usePlatformTenants -> domain repository-backed
+query boundary -> repository DTO mapper -> platformTenants.api -> axiosClient ->
+platform router -> application -> domain ports -> SQL adapter/UoW. Axios timeout
+is 30 seconds; global query retry policy retries transient errors at most twice,
+not deterministic 4xx. Optional disabled metrics/filters issue no corresponding
+unsupported-feature request. No evidence identifies the actual failed method,
+pathname, status/code or response. No error is suppressed or reclassified, and no
+transport/security code was changed. The owner has been asked once for sanitized
+Network evidence; never export bearer headers, recovery links or raw HAR files.
+
+### Live read evidence, not substituted authentication
+
+November 1 at approximately 06:50 IST: existing signed-in browser requests for
+platform list limit=1 and limit=10 returned 200 in the modified backend process.
+Corresponding UUIDs 82c1df0d-0e98-4f0f-8a12-b1eb390ea248 and
+6e29c183-b9bd-4330-82c0-0f445f3b700d persist in successful platform.tenant.list
+records for the trusted database actor. Read-only catalog evidence confirms the
+actor active/platform-admin flags, 18 clinic rows, 12 operationally active clinics,
+and one active association for the target. This verifies those specific list
+calls and correlated audit persistence, not a fresh Codex-authenticated detail
+call or all response fields. No authenticated session was exposed to Codex, and
+no token was extracted/fabricated. Live detail, paginated full-ID coverage and
+unauthorized signed-in actor checks remain pending. Offline negative tests and
+unauthenticated 401 are separate evidence.
+
+Owner-assisted read acceptance: in the existing signed-in browser refresh
+/super-admin; inspect list pages offset=0/10 and confirm 18 distinct clinic IDs and
+12 active globally. Then open /super-admin/tenants/a1bd6dda-dbcd-4321-950a-fa28f435a4dd
+and inspect GET /api/v1/platform/tenants/{id}. Share only method/path/status and
+safe request-correlation UUID (if exposed), not Authorization. Compare organization,
+trial, subscription, entitlement and bounded history to the read data. Subsequent
+read-only audit verification must match these exact fresh calls. Do not click any
+commercial mutation or create a different login/role for this verification.
+
+### Extension gate — existing endpoint retained, no live grant
+
+POST /api/v1/onboarding/{tenant_id}/commercial-trial/extensions requires the
+existing verified identity, active authoritative platform-admin database user,
+active target, and unique active organization association resolved server-side.
+Request fields: aggregate_version >=1, extension_days 1..30, nonblank reason,
+channel (SUPPORT is the owner's specified business channel), optional requester/
+request-operation identifiers, and Idempotency-Key. The facade scopes idempotency
+by organization/actor/operation and fingerprints target association and payload.
+UoW commit follows domain persistence and audit; exceptions roll back. Domain
+requires matching aggregate version and eligible stored state; extensions from
+elapsed ACTIVE use max(previous expiry, authoritative UTC now) + requested days.
+No second extension API, command writer, permission or channel was introduced.
+
+Read-only live state: stored ACTIVE, elapsed expiry October 26, version 2, zero
+extension days/records, no claim, no paid subscription; target operationally active
+with one active organization association. This is conditionally eligible for the
+existing 30-day domain path, subject to a fresh locked authoritative read at command
+time. Canonical clinical entitlement remains denied after trial expiry. Offline
+extension tests do not prove real authenticated PostgreSQL commit/rollback or
+organization audit behavior. That acceptance is unavailable without an approved
+session and a controlled synthetic test mechanism that persists no business
+mutation. The real grant remains separately gated and unexecuted. Extend Trial
+stays disabled; no confirmation form or live submit is enabled. Manage Subscription
+also stays disabled because no approved operation exists.
+
+### Proposed minimal read contracts — NOT implemented or approved by this record
+
+The existing E8 domain already defines derived EXPIRING and uses
+commercial_trial_expiring_window_days (default 7); earlier wording implying no
+window implementation existed was incomplete. Reuse the effective backend policy,
+never a new frontend constant. A platform aggregate still needs approved counting
+scope and explicit treatment of inconsistent/multiple trial evidence.
+
+Proposed GET /api/v1/platform/tenants/summary, under the same strict platform read
+authority and mandatory audit: total clinics; operationally active; commercial
+attention = distinct operationally active clinics whose canonical entitlement is
+not operationally entitled (including inconsistent evidence, counted once);
+expiring soon = distinct clinics with one consistent trial whose canonical domain
+runtime_state is EXPIRING, using effective policy and server UTC as_of. Response
+must include as_of and effective window_days. Owner must ratify whether inactive
+clinics, paid clinics with an expiring trial and inconsistent evidence belong in
+each metric; none were arbitrarily combined into an implemented count here.
+
+Proposed GET /api/v1/platform/tenants/options: canonical clinic-type label/value
+options and server-resolved organization IDs/names from governed administration
+records. Extend existing list with clinic_type and organization_id predicates,
+combined with current search/status; filtered totals use the identical predicates,
+and sort retains the deterministic ID tie-breaker. Same application/domain ports,
+no SQL in transport and no partial-page client filtering. Current APIs do not offer
+these predicates/options, so the controls remain disabled. Approval is needed for
+the exact read contract/inclusion scope before implementation. Existing working
+name/code search, status filtering, sorts and pagination are unchanged.
+
+### Verification and stopping point
+
+Offline execution artifacts: /private/tmp/nova-stabilization-*.json and *.log.
+The old Node preload was missing; the first attempt stopped before Jest import.
+A standard-library-only temporary replacement restores fail-closed network/DNS/
+HTTP/TLS/process restrictions, dummy public configuration and disabled dotenv
+loading before Jest/Babel imports. No repository/dependency configuration changed.
+Backend retains its established pre-import Python network/database/process guard.
+No real PostgreSQL write tests, commercial commands or services were started.
+
+UI is ready for focused owner visual review, but overall stabilization remains
+BLOCKED — RUNTIME FAILURE (the reported failed request is not yet identified),
+BLOCKED — AUTHENTICATION (fresh controlled detail/extension acceptance unavailable),
+and BLOCKED — API CONTRACT (summary counting definitions/options/filter contracts).
+Do not declare the red error fixed or the full dashboard complete. No commit,
+push, merge, role change, migration, trial extension or payment occurred.
+
+Final stabilization execution evidence: 128/128 frontend assertions passed in 19
+suites, zero reported failed/skipped; Jest then retained open handles and did not
+exit. Only its verified PID 12996 was terminated (SIGTERM), not backend/Metro.
+Therefore a clean frontend process exit and the full-run exit-time guard snapshot
+are UNVERIFIED; no zero-violation/full clean-exit claim is made for that run.
+Focused UI/architecture run: 42 passed, exit 0, zero recorded guard violations.
+TypeScript and scoped ESLint passed, with zero recorded guard violations.
+Backend platform/customer/audit regression: 67 passed; extension/domain/transport
+selection: 60 passed; both exited 0 with zero guard violations. Scoped Ruff and
+13-file Python 3.11 grammar checks passed. No backend source changed.
+
+Current browser control attempt again returned Computer Use permissions are not
+granted. Authenticated Codex/browser acceptance and visual comparison remain
+BLOCKED; do not extract a browser token as a substitute. Original unrelated file
+hashes remain unchanged, both staging indexes are empty, and no commits were made.
+
+## 2026-11-01 — Remaining Super Admin acceptance: Jest closure and controlled-DB proposal
+
+### Verified test-only correction
+
+The 19-suite run previously passed assertions but retained referenced timers.
+Narrowing to the four transport/fallback suites reproduced the hang (21 passing
+tests). An external standard-library async_hooks probe identified seven real
+300000 ms React Query GC timers from Query.removeObserver during unmount. The
+fixture restored real timers before RNTL's outer afterEach unmounted observers.
+After correcting that order, a second probe found two GC timers from Query.fetch's
+asynchronous cancellation finally block. Clearing a query client before awaiting
+cancellation left those timers orphaned after timer restoration.
+
+Only tests/core/providers/ApiRequestFallbackProvider.test.tsx changed: track the
+fixture clients, await cleanupAsync(), await client.cancelQueries(), clear each
+client/cache and tracker, then restore real timers. Per-test clear calls moved
+into this single ordered teardown. No gcTime policy override, forceExit, blanket
+timer sweep, production code or assertion changes. TypeScript AST comparison
+confirms all 20 expect expressions are identical. Focused 21/21 and complete
+128/128 tests in 19 suites now exit naturally with status 0 and zero guard
+violations. The final full run used the exact persisted 19-suite selection from
+nova-stabilization-frontend.json. No open-handle warning remains. TypeScript and
+scoped ESLint pass. Earlier failed/hanging diagnostic attempts are not clean-exit
+acceptance evidence; their processes were cleaned up separately.
+
+### Still-unavailable runtime acceptance evidence
+
+No sanitized failed method/path/status/error was supplied in the current request
+or receipt; api.fallback.transport_failure remains a marker, not an identified
+request. No error handling changed. Do not reinterpret previous successful GETs
+as proof that the reported failure is fixed.
+
+No accessible authenticated browser session is exposed to the tools (the last
+Computer Use attempt denied permission). Do not extract browser credentials or
+substitute a service-role key, forged token or caller-set identity. Fresh detail
+and complete endpoint pagination remain BLOCKED, not failed. The previously
+observed database 18/12 count and correlated list records are retained as partial
+historical evidence. They do not establish a distinct-ID union for the two pages.
+Owner-assisted evidence still needed: normal signed-in UI requests for offset=0
+and offset=10 with limit=10 and identical cleared filters/sort; sanitized response
+IDs and totals; detail GET for a1bd6dda-dbcd-4321-950a-fa28f435a4dd; status and safe
+correlation UUID. Require 18 IDs, 18 distinct IDs, no duplicates, and exact
+request/audit actor/target/outcome/correlation matches. No new identities or role
+assignments are needed or authorized.
+
+### Proposed minimal PostgreSQL acceptance — SPECIFICATION ONLY
+
+Do not POST the real clinic's 30-day grant, even inside an assumed rollback.
+The existing HTTP facade commits its own UoW; wrapping an unrelated inspection
+connection in BEGIN/ROLLBACK does not roll back a request using another connection.
+A production-pool HTTP request is therefore unsuitable for this rollback test.
+
+Before execution, owner must approve this exact fixture/connection boundary and
+provide an approved authenticated test mechanism. A database/security operator
+must inspect triggers, rules, default/sequence behavior, extensions, external
+functions, change consumers and outbox/subscription hooks on the affected tables.
+Rollback does not undo sequence allocations, external calls, operational logs or
+all independently committed work. Stop if any uncontained external side effect
+or independent connection is found. Source inspection found repository flushes
+and same-UoW audit/idempotency, but is not a substitute for deployed catalog review.
+No migrations, grants, roles, existing memberships or production credentials.
+
+1. Use existing development project evkcvntjpkxlcxgwychq, verified CA+hostname TLS,
+   a dedicated connection and no role switching. Pin database/project identity.
+   Snapshot the protected real trial's version/expiry/history counters read-only.
+2. On that connection: BEGIN ISOLATION LEVEL REPEATABLE READ; SET LOCAL
+   statement_timeout='5s'; SET LOCAL lock_timeout='1s'; SET LOCAL
+   idle_in_transaction_session_timeout='60s'. Never COMMIT the outer transaction.
+3. Create only explicitly approved synthetic UUID-scoped organization, clinic,
+   active organization association and commercial trial fixtures. Reuse an approved
+   existing administrator actor as a read-only FK; do not create or elevate a user
+   or membership. A second synthetic target without a trial can test target binding.
+   Fixture writes require separate authorization before this plan is executed.
+4. Use a dedicated test-only ASGI composition, never the shared live backend.
+   Preserve real JWT validation and server-side platform-authority/target resolution.
+   Bind every UoW/repository/audit/idempotency session to the same connection with
+   join_transaction_mode='create_savepoint'. Verify transaction/connection identity
+   throughout. UoW commit releases only request savepoints; the outer transaction
+   must remain active. Any independently opened session or outer commit aborts the
+   test and fails acceptance. No application source/production wiring changes.
+5. Submit a one-day grant to the synthetic target only, using the existing endpoint,
+   channel SUPPORT, required reason, fresh fixture aggregate version and a unique
+   test idempotency key. Inspect actual trial/version/extension/event/org-audit and
+   org-idempotency rows inside the transaction. Require correct actor/organization/
+   tenant, exactly one transition and scoped response. An identical replay must
+   leave version/history unchanged; conflicting replay and stale version must fail.
+   The second target must never read/update the first target's trial.
+6. Verify failure rollback using an explicitly reviewed test-only audit-boundary
+   failpoint within a separate savepoint; do not revoke grants, disable auditing or
+   alter schema. This establishes transaction rollback behavior, not live permission
+   denial. No email, payment, notification, scheduler or external writer may run.
+7. ROLLBACK the outer transaction in finally and close all sessions/connections.
+   A separate read-only connection must find zero fixture UUIDs, idempotency keys,
+   events, extensions or audit rows, and unchanged protected real trial snapshots.
+   Stop/report if concurrent owners changed the real baseline rather than overwriting.
+
+Affected persistence is limited to org_organizations, org_tenants,
+org_organization_tenants, org_commercial_trials, org_commercial_trial_events,
+org_commercial_trial_extensions, org_idempotency_records and org_audit_logs;
+org_users is read-only. Inspect actual deployed dependencies before final approval.
+This savepoint procedure does not prove cross-connection concurrency or durable
+outer-commit behavior: those need separately approved isolated fixtures. It is not
+an authorization to execute, and not proof of authenticated live acceptance.
+
+### Conditional Git boundary
+
+Accumulate the reviewed manifests in chronological order: original 14-backend /
+31-frontend manifest, UX correction, read-only correction, screenshot implementation
+and November 1 stabilization receipts. All 51 prior file hashes matched before
+this correction. Add this one tracked test file to the frontend boundary. Final
+provisional boundary is 14 backend paths and 38 frontend paths; exact lists/hashes
+are in /private/tmp/nova-close-commit-scope.json. The frontend architecture document
+contains unrelated Expo notification/recovery appendices: include only platform/
+Super Admin hunks, preserving those unrelated appendices unstaged. Authentication,
+notification sources/tests, node_modules symlink, secrets, temporary tooling,
+receipts and all other dirty work remain excluded. Optionally preserve the test
+teardown as its own one-file frontend commit, separate from 37 dashboard paths.
+No commit is authorized. Transport evidence, authenticated detail/pagination and
+controlled PostgreSQL acceptance remain unresolved despite the Jest gate closing.
+
+### 2026-11-01 — Platform commercial read completion and controlled extension preparation
+
+The platform detail projection now carries bounded, authoritative extension records:
+decision, days, timestamp, previous and resulting expiry, support channel, reason
+and authorized approver identifier. This is commercial-extension history, not
+platform audit history. The latter remains unavailable until an explicit audit-read
+capability is approved; the UI distinguishes that state from an empty extension
+history and from API failure.
+
+The Super Admin screen can prepare a 1–30 day SUPPORT extension with a business
+reason and refreshes the platform projection before confirmation. It does not issue
+the commercial POST command. Platform-only administrators lack an approved command
+aggregate read contract, and PostgreSQL transaction acceptance is still required
+before a production-facing mutation can be enabled. The existing commercial-trial
+repository/datasource remains the future command boundary; no duplicate transport
+or local entitlement rule was added.
+
+Subscription information shown by the platform read projection is now expandable
+as a read-only detail view. Plan assignment, checkout, billing, suspension and
+cancellation remain customer-scoped E9/payment-provider operations and need a
+separate platform-admin contract, audit policy and owner authorization.
+
+Focused platform frontend tests passed 49/49, and offline backend platform-read
+tests passed 39/39 under the existing database/network/process guard. Production
+TypeScript, scoped ESLint, Python 3.11 parsing and scoped Ruff passed. This records
+offline evidence only; no extension, subscription, membership, role, audit-capability
+or commercial database record was changed.

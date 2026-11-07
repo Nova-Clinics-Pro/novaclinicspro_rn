@@ -16,18 +16,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
-import { useCreateInvoiceMutation } from '../../data/repositories/billing.repository.impl';
+import { useCreateInvoiceMutation, useCreateVisitScopedInvoiceMutation } from '../../data/repositories/billing.repository.impl';
 import { InvoiceForm } from '../components/InvoiceForm';
-import { InvoiceCreateRequest } from '../../data/models/billing.dtos';
+import { InvoiceCreateRequest, InvoiceUpdateRequest, VisitScopedInvoiceCreateRequest } from '../../data/models/billing.dtos';
 
 export const TenantInvoiceCreateScreen: React.FC = () => {
   const router = useRouter();
   const { currentUser } = useAuth();
+  const { appointmentId } = useLocalSearchParams<{ appointmentId?: string }>();
   const tenantId = currentUser?.tenantId || '';
 
   // For simplicity, we'll use a placeholder client ID
@@ -57,13 +58,23 @@ export const TenantInvoiceCreateScreen: React.FC = () => {
       Alert.alert('Error', error.message || 'Failed to create invoice');
     },
   });
+  const governedCreateMutation = useCreateVisitScopedInvoiceMutation(tenantId, {
+    onSuccess: (data) => router.replace(`/clinic-admin/billing/invoices/${data.id}`),
+    onError: (error) => Alert.alert('Error', error.message || 'Failed to create invoice'),
+  });
 
-  const handleSubmit = (data: InvoiceCreateRequest) => {
-    if (!data.client_id) {
+  const handleSubmit = (data: InvoiceCreateRequest | InvoiceUpdateRequest) => {
+    const invoiceData = data as InvoiceCreateRequest;
+    if (appointmentId) {
+      const { client_id: _clientId, visit_id: _visitId, appointment_id: _appointmentId, ...invoice } = invoiceData;
+      governedCreateMutation.mutate({ ...invoice, appointment_id: appointmentId } as VisitScopedInvoiceCreateRequest);
+      return;
+    }
+    if (!invoiceData.client_id) {
       Alert.alert('Error', 'Please enter a client ID');
       return;
     }
-    createMutation.mutate(data as InvoiceCreateRequest);
+    createMutation.mutate(invoiceData);
   };
 
   return (
@@ -88,8 +99,8 @@ export const TenantInvoiceCreateScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Client ID Input (simplified) */}
-          <View style={styles.clientSection}>
+          {/* Generic legacy flow retains its placeholder client selection. */}
+          {!appointmentId && <View style={styles.clientSection}>
             <Text style={styles.sectionTitle}>Client Information</Text>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Client ID *</Text>
@@ -100,13 +111,13 @@ export const TenantInvoiceCreateScreen: React.FC = () => {
                 </Text>
               </View>
             </View>
-          </View>
+          </View>}
 
           {/* Invoice Form */}
           <InvoiceForm
-            clientId={clientId || 'placeholder-client-id'}
+            clientId={appointmentId ? 'governed-context' : clientId || 'placeholder-client-id'}
             onSubmit={handleSubmit}
-            isLoading={createMutation.isPending}
+            isLoading={createMutation.isPending || governedCreateMutation.isPending}
             isEdit={false}
           />
         </ScrollView>

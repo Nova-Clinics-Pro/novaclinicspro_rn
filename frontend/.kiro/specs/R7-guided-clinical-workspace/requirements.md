@@ -1,21 +1,22 @@
 # R7 — Clinical Operating System · Requirements
 
-**Version:** 1.0 — **FROZEN** (2026-07-17) · **Date:** 2026-07-17
-**Status:** ✅ **FROZEN AT v1.0.** Implementation specification authored **from the frozen architecture**. No architecture was reinterpreted.
+**Version:** 1.1 — **FROZEN** (amended 2026-07-18) · **Original freeze:** 2026-07-17
+**Status:** ✅ **FROZEN AT v1.1.** Implementation specification authored **from the frozen architecture**. No architecture was reinterpreted.
 
-> ## REQUIREMENTS FREEZE — v1.0
-> These 42 requirements are **frozen** and are the authority for `design.md` and (later) `tasks.md`.
+> ## REQUIREMENTS FREEZE — v1.1 (amended)
+> These **44 requirements** (42 original + `FR-HIST-1`/`FR-HIST-2`, added 2026-07-18 by owner-approved controlled amendment) are **frozen** and are the authority for `design.md` and `tasks.md`.
 > **Design must implement these requirements — not reinterpret, extend, or narrow them.**
 > Changing a frozen requirement requires returning to the requirements-approval process; it is **not** a design-time decision.
 > The five **Engineering Truth Exceptions (§19)** and the marked **[VP]** verification points are the *only* sanctioned places where implementation resolves detail — and each names its owning group.
-> **Downstream status:** `design.md` authored from this version · `tasks.md` **not authored** (awaits design completion + owner approval).
+> **v1.1 amendment record:** owner-approved 2026-07-18. Added `FR-HIST-1` (Clinical History Separates Consultations from Therapy Encounters) and `FR-HIST-2` (Backend-Owned Hierarchical Clinical History Contract) — §22. **No existing requirement (FR-COS-1 … FR-RBAC-1) was reinterpreted, narrowed, or renumbered.** Amendment scope limited strictly to the clinical-history hierarchy gap identified in [R7-HISTORY-HIERARCHY-AMENDMENT.md](R7-HISTORY-HIERARCHY-AMENDMENT.md); rejected alternative (defer to R8) recorded in `R7-OWNER-RATIFICATION.md` Decision 10.
+> **Downstream status:** `design.md` amended to §2.1a/§3 · `tasks.md` amended (+7 tasks, 70→77) · both re-approved under this amendment.
 **Authority (constitutional, frozen — must not be reopened):** [R7-OWNER-RATIFICATION.md](R7-OWNER-RATIFICATION.md) · [R7-DESIGN-FREEZE-CHECKLIST.md](R7-DESIGN-FREEZE-CHECKLIST.md) · [R7-GUIDED-CLINICAL-WORKSPACE-DESIGN.md](R7-GUIDED-CLINICAL-WORKSPACE-DESIGN.md) · [R7-TREATMENT-SCHEDULING-MODEL.md](R7-TREATMENT-SCHEDULING-MODEL.md) · [R7-STATE-DEFINITIONS.md](R7-STATE-DEFINITIONS.md) · [R7-WIREFRAME-IMPACT-MATRIX.md](R7-WIREFRAME-IMPACT-MATRIX.md) · [R7-GUIDED-WORKSPACE-WIREFRAMES.md](R7-GUIDED-WORKSPACE-WIREFRAMES.md) · [R7-PATIENT-LIFECYCLE-GAP-MATRIX.md](R7-PATIENT-LIFECYCLE-GAP-MATRIX.md) · [R7-FEASIBILITY-AND-IMPACT.md](R7-FEASIBILITY-AND-IMPACT.md)
 **Baselines verified:** backend `dev` `8b23568` · frontend `dev` `cd86021`. Every current-code claim below is verified; unverified items are marked **[VP]** (verification point) or raised as an **Engineering Truth Exception**.
 
 **Principles every requirement obeys** (violation = defect, not a trade-off):
 `P1` Backend Owns Clinical Truth · `P2` Backend Owns Workflow Intelligence · `P3` **DP-15 One Clinical Answer** · `P4` One Case Sheet per Episode · `P5` Append-only Visit Contributions · `P6` Living Document Supersession · `P7` Recommendation with Easy Deviation · `P8` Capability-driven workflow · `P9` Frontend presentation only.
 
-**Owner decisions:** `D1`…`D9` + `F-1`, `F-2 = Option A`, Treatment Plan = entity, `Missed` decomposition, `PrescriptionStatus` deferred.
+**Owner decisions:** `D1`…`D9`, **`D10`** (Clinical History Hierarchy — amendment) + `F-1`, `F-2 = Option A`, Treatment Plan = entity, `Missed` decomposition, `PrescriptionStatus` deferred.
 
 **Legend:** ✅ verified in code · **[VP]** verification point for implementation · **[R8]** deferred, integration point only.
 
@@ -408,7 +409,7 @@
 
 ## 20. R7 / R8 Boundary
 
-**In R7:** COS core · VCC (R7-scope signals only) · backend workflow assembly + recommendation + completion readiness · Case Sheet per Episode + current-visit attribution + atomicity + idempotency · living-document supersession · verified prescription lifecycle · Treatment Recommendation → **Plan (entity)** → stable Sessions → schedule attributes → doctor content → therapist actuals · scheduling intents incl. PRN/review-dependent · billing visibility · mobile · legacy redirects · flags.
+**In R7:** COS core · VCC (R7-scope signals only) · backend workflow assembly + recommendation + completion readiness · Case Sheet per Episode + current-visit attribution + atomicity + idempotency · living-document supersession · verified prescription lifecycle · Treatment Recommendation → **Plan (entity)** → stable Sessions → schedule attributes → doctor content → therapist actuals · scheduling intents incl. PRN/review-dependent · billing visibility · mobile · legacy redirects · flags · **backend-owned consultation/treatment-review/therapy history hierarchy (FR-HIST-1/2, v1.1 amendment) — COS core, not advanced clinical intelligence, sequenced after Treatment Plan.**
 
 **Deferred to R8 (integration points only):** structured laboratory measurements · manual lab entry · attachments · LIONIC/LIS/FHIR/device adapters · comparative tables · trend visualisation · measurement-based "what changed" · **Clinical Advice framework** · **prescription copy-forward** · **medication reconciliation** · **allergy/intolerance/interaction/renal/hepatic modelling** · dispensing fulfilment lifecycle · advanced summaries · recommendation confidence.
 
@@ -422,3 +423,29 @@
 **Functional.** `episodeWorkspaceConfigByRole` ✅ extends 2 → 5 roles (Doctor, Assistant Doctor, Admin, Front desk, Therapist) **as config**. RBAC-flexible: any role holding the permission may act — never one hard-coded profession.
 **AC.** (1) One screen, role-composed. (2) Read-only roles see clinically useful content where policy permits. (3) **Backend enforces**; UI hiding is presentation polish only ✅ (`CLAUDE.md` §3). (4) Actionability from backend `blocking_factors`/`waiting_role` (FR-WFA-2).
 **Depends.** ETX-1. **Principles.** P1, P9.
+
+---
+
+## 22. Clinical History Hierarchy *(added v1.1, 2026-07-18 amendment — owner-approved, [R7-HISTORY-HIERARCHY-AMENDMENT.md](R7-HISTORY-HIERARCHY-AMENDMENT.md))*
+
+**Verified problem this section closes.** `useClinicalTimelineData` ✅ flattens every appointment — consultation or therapy — into one undifferentiated `'visit'` item (backed by Appointments, not `TenantVisit`); its own partial session-grouping computes `completedSessionCount` from **scheduled** rows, not **completed** ones (a verified defect); and therapy appointments still separately leak through as flat items alongside that same grouping — a double-representation defect. See `R7-HISTORY-HIERARCHY-AMENDMENT.md` §1 for full evidence.
+
+### FR-HIST-1 — Clinical History Separates Consultations from Therapy Encounters
+**Rationale.** Verified misclassification (above) undermines the first-class Treatment Plan (FR-TP-1) and conflates operational therapy execution with clinical consultation — exactly the concept-separation DP-15/P3 exists to prevent, applied to a surface (history) not previously named by R7.
+**Functional.** The Clinical Operating System presents doctor consultations and treatment reviews as **top-level** clinical encounters. Therapy execution encounters are **grouped beneath the authoritative Treatment Plan** to which their stable Sessions belong. Treatment Plans are collapsible. Collapse/expand is frontend UI state only; **the hierarchy and association are backend-owned.**
+**AC.** (1) Doctor consultations render as top-level clinical encounters. (2) Therapy sessions do not render as top-level doctor-consultation Visits. (3) Therapy sessions are grouped under their authoritative Treatment Plan. (4) Treatment Review encounters remain distinguishable from therapy execution. (5) Each Treatment Plan group is independently collapsible. (6) Multiple Treatment Plans remain separate. (7) Completed, stopped and superseded Plans remain visible. (8) Expanded Sessions retain their individual identity. (9) Session dates, therapists, instructions, execution outcomes and reasons remain available. (10) A collapsed Plan displays backend-provided session aggregates. (11) **The frontend does not calculate completed, pending, missed or cancelled counts.** (12) **The frontend does not classify encounters.** (13) **The frontend does not infer Plan association.** (14) Legacy/unassociated Sessions are explicitly classified by the backend. (15) Styling uses centralized semantic theme tokens and accessible shared primitives. (16) Consultation and therapy distinction does not depend on colour alone. (17) Mobile presentation preserves the hierarchy and does not flatten Sessions.
+**Backend.** owns encounter classification, Plan-to-session association, Plan/session aggregates, consultation-vs-therapy-vs-review distinction. **Frontend.** hierarchy rendering, collapse/expand state, navigation, accessibility, theme presentation only.
+**Sequencing.** Depends on `FR-TP-1` (Treatment Plan entity) and `FR-TS-1` (stable Session identity) existing — the Plan-grouping half cannot function before either does; this does not block Group -1 or any task not dependent on it.
+**Tests.** architecture test asserting the frontend performs zero encounter classification/aggregation (extends the `T-0.8`/`T-0.9` "no FE clinical derivation" pattern) · per-hierarchy-shape unit tests · accessibility (icon+text, never colour-alone) · mobile collapse-behavior tests.
+**Depends.** FR-TP-1, FR-TS-1, FR-TS-4. **Decisions.** D10. **Principles.** P1, P2, P3, P9.
+
+### FR-HIST-2 — Backend-Owned Hierarchical Clinical History Contract
+**Rationale.** FR-HIST-1 requires a single authoritative source; per DP-15/AC-5, this must be one backend contract, not a frontend reconstruction from multiple flat queries (the current, verified failure mode).
+**Functional.** The **existing Clinical Workspace aggregate** (§2.1, `T-BE-A`) exposes an authoritative hierarchical clinical-history projection. **No independent competing history aggregate is created** unless current API conventions make composition through the existing aggregate technically impossible and an Engineering Truth exception is separately approved. Conceptual semantics: `history_items: consultation | treatment_review | treatment_plan{sessions[]} | legacy_treatment_sessions`. Exact transport shape is an implementation-design decision; **semantic ownership is frozen** by this requirement.
+**Backend responsibilities.** classify encounter type · associate stable Sessions with Treatment Plans · provide Plan-level session counts · provide Plan lifecycle summary (reusing `treatment_lifecycle_resolver` ✅, never re-deriving) · classify unassociated legacy treatment sessions · prevent double representation of the same therapy encounter.
+**Frontend responsibilities.** render the returned hierarchy · manage collapse/expand state · route to details · apply theme, localization and accessibility · **perform no clinical aggregation.**
+**AC.** (1) The same therapy Session appears exactly once in history. (2) A therapy appointment and its Session do not appear as duplicate history items. (3) Completed-session count reflects **actual completed execution**, not scheduled rows. (4) Counts for scheduled/completed/not-completed/cancelled are backend-derived. (5) Plan association uses authoritative identifiers. (6) No association is inferred from date, therapy name, patient, therapist, or proximity. (7) Treatment Review is not classified as therapy execution. (8) History remains scoped to the active patient/Episode. (9) The contract contains semantics, not presentation styling (AC-4). (10) The frontend is **structurally unable** to produce a different grouping (AC-5, DP-15).
+**Legacy session policy.** `treatment_sheet_row` ✅ is never orphaned from its Treatment Sheet (non-null FK, verified), but Sheet-to-future-Plan **cardinality is unverified**. **No automatic legacy backfill without a verified cardinality/data audit.** Where reliable Plan association is unavailable, the backend classifies the group explicitly (`LEGACY_TREATMENT_SESSIONS` or the smallest equivalent semantic code, per convention — not invented here) rather than inferring from proximity/names. UI renders an explicit label (e.g. *"Legacy Treatment Sessions — Plan association unavailable"*), never a fabricated grouping.
+**Treatment Plan summary semantics** (collapsed-row fields): Plan identity · Plan status · treatment summary · course start date · authorized/intended session count · completed count · scheduled count · non-completed count · cancelled count · next scheduled Session · review milestone · responsible clinician where applicable. **Fields the underlying verified model does not yet support are represented explicitly as unavailable, never guessed.**
+**Tests.** contract test (no presentation fields, AC-4) · duplicate-representation test (AC 1/2) · completed-count-accuracy test against actual execution facts, not scheduled rows (AC 3) · legacy-classification test (no inferred association).
+**Depends.** FR-HIST-1, FR-TP-1, FR-TS-1, FR-TS-4, FR-VCC-3 (shares underlying session-count facts). **Decisions.** D10. **Principles.** P1, P2, P3, AC-1, AC-4, AC-5.

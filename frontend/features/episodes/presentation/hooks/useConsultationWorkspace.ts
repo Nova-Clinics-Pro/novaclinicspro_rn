@@ -7,21 +7,29 @@
  * TreatmentRecommendationModule respectively — this hook owns none of them
  * anymore.
  *
- * What remains here: a thin wrapper over useEpisodeWorkspaceData plus
- * buildSectionConfig/the shared SectionKey-family types every module still
- * imports from this file (SectionKey, SectionProgress, SectionSaveStatus,
+ * T-0.9 (ED-ARCH-006) removed this hook's own clinical-workflow-assembly
+ * helper, its hard-coded canonical section order, and its clinic-type-
+ * driven stage-presence gating. That was a second, competing frontend
+ * answer to "which workflow stages apply" (DP-15 violation);
+ * `ConsultationWorkspaceScreen.tsx` never consumed that helper's output in
+ * production (verified — no live reader), so nothing replaces it here.
+ * Workflow-stage assembly is backend-owned (the pure clinical workflow
+ * resolver, T-BE-B.1); a governed frontend consumption path for it is
+ * later frontend work (FE-D), not this task.
+ *
+ * What remains here: a thin wrapper over useEpisodeWorkspaceData plus the
+ * shared SectionKey-family types every module still imports from this file
+ * (SectionKey, SectionProgress, SectionSaveStatus,
  * TreatmentRecommendationDraft, etc.) — moving those type exports elsewhere
  * is out of this task's scope (T-B.3 migrates Treatment Recommendation's
- * *state*, not this file's shared type definitions). Every field this hook
- * still returns duplicates something already available via
- * useEpisodeContext()/usePatientContext() (T-A.1) or a direct
- * buildSectionConfig(useFeatures()) call — noted here as a candidate for a
- * future polish task (Group D), not retired unilaterally in this one.
+ * *state*, not this file's shared type definitions). `SectionProgress`
+ * remains presentation-local state only (save/empty/in-progress display),
+ * never a visit-level completion answer — that is the backend consultation-
+ * completion contract's job (T-BE-F.3), already consumed by
+ * CompleteConsultationScreen (T-0.8).
  */
 
-import { useMemo } from 'react';
 import { useEpisodeWorkspaceData } from './useEpisodeWorkspaceData';
-import { useFeatures, isAyurvedaClinic } from '../../../../core/hooks/useFeatures';
 import { EpisodeDetailsResponse } from '../../data/models/episodes.dtos';
 
 // ============================================================
@@ -39,11 +47,6 @@ export interface SectionProgress {
 export type CoreSectionKey = 'chiefComplaint' | 'clinicalNotes' | 'prescription' | 'treatmentRecommendation' | 'clinicalServices';
 export type SpecialtySectionKey = 'ayurvedicAssessment';
 export type SectionKey = CoreSectionKey | SpecialtySectionKey;
-
-export interface ConsultationSectionConfig {
-  activeSections: SectionKey[];
-  specialtySections: Set<SpecialtySectionKey>;
-}
 
 export interface TreatmentRecommendationDraft {
   recommendedTherapy: string;
@@ -70,33 +73,6 @@ export interface UseConsultationWorkspaceOutput {
   isEpisodeError: boolean;
   refetchEpisode: () => void;
   clientName: string;
-
-  // Section config
-  sectionConfig: ConsultationSectionConfig;
-}
-
-// ============================================================
-// HELPERS
-// ============================================================
-
-export function buildSectionConfig(features: ReturnType<typeof useFeatures>): ConsultationSectionConfig {
-  const coreSections: SectionKey[] = ['chiefComplaint', 'clinicalNotes', 'prescription', 'treatmentRecommendation'];
-  const specialtySections = new Set<SpecialtySectionKey>();
-
-  if (isAyurvedaClinic(features)) {
-    specialtySections.add('ayurvedicAssessment');
-  }
-
-  const activeSections: SectionKey[] = [
-    'chiefComplaint',
-    'clinicalNotes',
-    ...(isAyurvedaClinic(features) ? ['ayurvedicAssessment' as SpecialtySectionKey] : []),
-    'prescription',
-    'treatmentRecommendation',
-    'clinicalServices',
-  ];
-
-  return { activeSections, specialtySections };
 }
 
 // ============================================================
@@ -107,10 +83,6 @@ export function useConsultationWorkspace(
   input: UseConsultationWorkspaceInput,
 ): UseConsultationWorkspaceOutput {
   const { tenantId, episodeId, clientId } = input;
-
-  // ── Feature config (computed once; stable unless tenant changes) ──────────
-  const features = useFeatures();
-  const sectionConfig = useMemo(() => buildSectionConfig(features), [features]);
 
   // ── Episode workspace data (read-only, reactive) ──────────────────────────
   // R3A · T-B.1/T-B.3: casesheet/casesheetId/hasCasesheet and treatmentSheet/
@@ -133,6 +105,5 @@ export function useConsultationWorkspace(
     isEpisodeError,
     refetchEpisode,
     clientName,
-    sectionConfig,
   };
 }

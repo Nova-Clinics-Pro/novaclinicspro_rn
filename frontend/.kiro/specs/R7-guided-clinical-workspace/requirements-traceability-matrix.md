@@ -4,7 +4,9 @@
 
 **Why one file, not two.** Each requirement already carries its principles/decisions/dependencies inline, so a second "requirements-to-task-mapping" document would mostly duplicate it. What is *not* available inline is (a) a compact index, (b) the **reverse** direction — task group → requirements — and (c) **two-way coverage proof**. This file provides exactly those three and nothing else, per "do not create documentation for its own sake."
 
-**Counts:** 42 functional requirements · 8 architecture constraints · 6 engineering-debt gates · 5 Engineering Truth Exceptions.
+**Counts:** **44** functional requirements (42 original + `FR-HIST-1`/`FR-HIST-2`, v1.1 amendment, 2026-07-18) · 8 architecture constraints · **7** engineering-debt gates (+`ED-DEP-7`) · 5 Engineering Truth Exceptions.
+
+> **v1.1 amendment note.** This matrix predates `tasks.md`'s final group lettering in one respect, worth stating rather than silently papering over: §1/§2 below use an earlier `A-BE`/`B-BE`/`C-BE`… naming scheme where, e.g., **`B-BE` here = `BE Group A` (Clinical Workspace Aggregate) in `tasks.md`**. This mismatch predates this amendment and is not fixed here (out of this amendment's narrow scope). The new `FR-HIST-1`/`FR-HIST-2` rows below cite **exact `tasks.md` task IDs directly** (`T-BE-A.3` etc.) to avoid adding a second ambiguity on top of the first.
 
 ---
 
@@ -56,6 +58,8 @@ Principles: `P1` Backend Owns Clinical Truth · `P2` Backend Owns Workflow Intel
 | FR-LEG-2 | Redirects | — | D8 | LEGACY-PLAN | I |
 | FR-FLAG-1 | Flag-gated and reversible | AC-6 | D8 | FEASIBILITY | 0, all |
 | FR-RBAC-1 | Role-aware composition | P1,P9 | D8 | DESIGN §11 | **H** *(ETX-1)* |
+| **FR-HIST-1** *(v1.1)* | Consultation/therapy history separation | P1,P2,P3,P9 | **D10** | design.md §2.1a, §3 | `T-FE-C.5/C.6/C.7` |
+| **FR-HIST-2** *(v1.1)* | Backend hierarchical history contract | P1,P2,P3 | **D10** | design.md §2.1a | `T-BE-A.3/A.4/A.5` |
 
 ---
 
@@ -83,16 +87,17 @@ Principles: `P1` Backend Owns Clinical Truth · `P2` Backend Owns Workflow Intel
 | **J** COS workflow proof | all | end-to-end |
 | **K** R8 handoff | FR-RX-2 + `[R8]` markers | |
 | **Z** Architecture/closure | AC-1..8 | layer audit clean |
+| **History hierarchy** *(v1.1, tasks.md exact IDs)* | FR-HIST-1, FR-HIST-2 | `T-BE-A.3/A.4/A.5` (BE, extends Clinical Workspace aggregate) · `T-FE-C.5/C.6/C.7` (FE, extends `ClinicalTimeline`) · `T-Z.9` (proof) — **hard-depends on `T-BE-D.4`/`T-BE-E.1`** (Treatment Plan/Sessions) |
 
 ---
 
 ## 3. Coverage proof
 
-- **Every requirement maps to ≥1 group** ✅ (42/42; FR-RX-2 maps to R8 by design — it is a *negative* requirement: "not in R7").
-- **Every group maps to ≥1 requirement** ✅ (Group -1 is a gate over all; Group Z covers AC-1..8).
-- **Every owner decision is realized** ✅: D1→FR-CS-1/2 · D2→FR-LD-1..3 · D3→FR-RX-1 · D4→[R8] · D5→FR-RX-2 · D6→FR-BILL-1/2 · D7→FR-REC-2 · D8→boundary + FR-VCC-3 · D9→FR-WFA-1/FR-REC-1/FR-CR-1 · F-1→FR-CS-2/3/4 · F-2→FR-VCC-4/FR-PS-1 · Plan→FR-TP-1..3 · Missed→FR-TS-5.
-- **Every principle is enforced by ≥1 requirement** ✅: P1(12) P2(5) P3(6) P4(3) P5(5) P6(5) P7(1) P8(5) P9(6).
-- **Every ED gate binds ≥1 group** ✅: ED-DEP-1→0/all FE · ED-DEP-2→D-BE/I · ED-DEP-3→D-BE/D-FE · ED-DEP-4→C-* · ED-DEP-5→A-BE/D-FE · ED-DEP-6→D-BE.
+- **Every requirement maps to ≥1 group** ✅ (**44/44**; FR-RX-2 maps to R8 by design — it is a *negative* requirement: "not in R7"; FR-HIST-1/2 → the History-hierarchy row above).
+- **Every group maps to ≥1 requirement** ✅ (Group -1 is a gate over all; Group Z covers AC-1..8; the History-hierarchy chain covers FR-HIST-1/2).
+- **Every owner decision is realized** ✅: D1→FR-CS-1/2 · D2→FR-LD-1..3 · D3→FR-RX-1 · D4→[R8] · D5→FR-RX-2 · D6→FR-BILL-1/2 · D7→FR-REC-2 · D8→boundary + FR-VCC-3 · D9→FR-WFA-1/FR-REC-1/FR-CR-1 · **D10→FR-HIST-1/2 (v1.1)** · F-1→FR-CS-2/3/4 · F-2→FR-VCC-4/FR-PS-1 · Plan→FR-TP-1..3 · Missed→FR-TS-5.
+- **Every principle is enforced by ≥1 requirement** ✅: P1(14) P2(7) P3(8) P4(3) P5(5) P6(5) P7(1) P8(5) P9(8) *(counts updated for FR-HIST-1: P1,P2,P3,P9; FR-HIST-2: P1,P2,P3)*.
+- **Every ED gate binds ≥1 group** ✅: ED-DEP-1→0/all FE · ED-DEP-2→D-BE/I · ED-DEP-3→D-BE/D-FE · ED-DEP-4→C-* · ED-DEP-5→A-BE/D-FE · ED-DEP-6→D-BE · **ED-DEP-7→T-BE-A.5/T-FE-C.5 (v1.1)**.
 - **Every ETX has an owning group** ✅: ETX-1→0/H · ETX-2→A-BE · ETX-3→0/C-FE · ETX-4→D-BE · ETX-5→E-BE.
 
 ## 4. Critical path
@@ -104,6 +109,8 @@ Principles: `P1` Backend Owns Clinical Truth · `P2` Backend Owns Workflow Intel
    → C-BE (F-2 Option A scope) → C-FE
    → D-BE (assembly + recommendation + readiness)  → D-FE  [hard dependency]
    → E-BE (Plan entity ⚠migration + sessions + scheduling) → E-FE
+                                                             └─► T-BE-A.3/A.4/A.5 (history hierarchy BE) [v1.1]
+                                                                    └─► T-FE-C.5/C.6/C.7 (history hierarchy FE) → T-Z.9
    → F-BE → F-FE → G (schema; deferrable) → H → I → J → K → Z
 ```
-**Hard blocks:** ED-DEP-1 blocks all FE composition · ED-DEP-2 blocks Group I's completion route · ED-DEP-3 blocks FE workflow rendering · D-FE cannot precede D-BE (no interim FE derivation).
+**Hard blocks:** ED-DEP-1 blocks all FE composition · ED-DEP-2 blocks Group I's completion route · ED-DEP-3 blocks FE workflow rendering · D-FE cannot precede D-BE (no interim FE derivation) · **T-BE-A.3 cannot precede `T-BE-D.4`/`T-BE-E.1` (v1.1 — history hierarchy hard-depends on Treatment Plan/Sessions).**

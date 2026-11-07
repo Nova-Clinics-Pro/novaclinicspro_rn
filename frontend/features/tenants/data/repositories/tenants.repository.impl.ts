@@ -28,23 +28,28 @@ import { invalidateCanonicalOnboardingState } from '../../../onboarding/data/rep
 // Query Keys
 export const tenantsKeys = {
   all: ['tenants'] as const,
-  lists: () => [...tenantsKeys.all, 'list'] as const,
-  list: (params?: ListTenantsParams) => [...tenantsKeys.lists(), params] as const,
-  details: () => [...tenantsKeys.all, 'detail'] as const,
-  detail: (id: string) => [...tenantsKeys.details(), id] as const,
+  organization: (organizationId: string) => [...tenantsKeys.all, 'organization', organizationId] as const,
+  lists: (organizationId: string) => [...tenantsKeys.organization(organizationId), 'list'] as const,
+  list: (organizationId: string, params?: ListTenantsParams) =>
+    [...tenantsKeys.lists(organizationId), params] as const,
+  details: (organizationId: string) => [...tenantsKeys.organization(organizationId), 'detail'] as const,
+  detail: (organizationId: string, id: string) => [...tenantsKeys.details(organizationId), id] as const,
 };
 
 /**
  * Hook to list tenants with optional filters
  */
 export const useTenantsListQuery = (
+  organizationId: string,
   params?: ListTenantsParams,
   options?: Omit<UseQueryOptions<OrgTenantResponse[], Error>, 'queryKey' | 'queryFn'>
 ) => {
+  const { enabled = true, ...queryOptions } = options ?? {};
   return useQuery<OrgTenantResponse[], Error>({
-    queryKey: tenantsKeys.list(params),
-    queryFn: () => listTenantsApi(params),
-    ...options,
+    queryKey: tenantsKeys.list(organizationId, params),
+    queryFn: () => listTenantsApi(organizationId, params),
+    enabled: Boolean(organizationId) && enabled,
+    ...queryOptions,
   });
 };
 
@@ -52,14 +57,16 @@ export const useTenantsListQuery = (
  * Hook to get a single tenant by ID
  */
 export const useTenantQuery = (
+  organizationId: string,
   id: string,
   options?: Omit<UseQueryOptions<OrgTenantResponse, Error>, 'queryKey' | 'queryFn'>
 ) => {
+  const { enabled = true, ...queryOptions } = options ?? {};
   return useQuery<OrgTenantResponse, Error>({
-    queryKey: tenantsKeys.detail(id),
-    queryFn: () => getTenantApi(id),
-    enabled: !!id,
-    ...options,
+    queryKey: tenantsKeys.detail(organizationId, id),
+    queryFn: () => getTenantApi(organizationId, id),
+    enabled: Boolean(organizationId && id) && enabled,
+    ...queryOptions,
   });
 };
 
@@ -113,14 +120,14 @@ export const useUploadCurrentTenantClinicLogoMutation = (tenantId: string) => {
 /**
  * Hook to create a new tenant
  */
-export const useCreateTenantMutation = () => {
+export const useCreateTenantMutation = (organizationId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation<OrgTenantResponse, Error, OrgTenantCreate>({
-    mutationFn: createTenantApi,
+    mutationFn: (payload) => createTenantApi(organizationId, payload),
     onSuccess: () => {
       // Invalidate tenant lists to refetch
-      queryClient.invalidateQueries({ queryKey: tenantsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: tenantsKeys.lists(organizationId) });
     },
   });
 };
@@ -128,16 +135,16 @@ export const useCreateTenantMutation = () => {
 /**
  * Hook to update a tenant
  */
-export const useUpdateTenantMutation = (id: string) => {
+export const useUpdateTenantMutation = (organizationId: string, id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation<OrgTenantResponse, Error, OrgTenantUpdate>({
-    mutationFn: (payload) => updateTenantApi(id, payload),
+    mutationFn: (payload) => updateTenantApi(organizationId, id, payload),
     onSuccess: (data) => {
       // Update the specific tenant in cache
-      queryClient.setQueryData(tenantsKeys.detail(id), data);
+      queryClient.setQueryData(tenantsKeys.detail(organizationId, id), data);
       // Invalidate lists to reflect changes
-      queryClient.invalidateQueries({ queryKey: tenantsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: tenantsKeys.lists(organizationId) });
     },
   });
 };
@@ -145,16 +152,16 @@ export const useUpdateTenantMutation = (id: string) => {
 /**
  * Hook to deactivate a tenant (soft delete)
  */
-export const useDeactivateTenantMutation = (id: string) => {
+export const useDeactivateTenantMutation = (organizationId: string, id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation<OrgTenantResponse, Error, void>({
-    mutationFn: () => deactivateTenantApi(id),
+    mutationFn: () => deactivateTenantApi(organizationId, id),
     onSuccess: (data) => {
       // Update the specific tenant in cache
-      queryClient.setQueryData(tenantsKeys.detail(id), data);
+      queryClient.setQueryData(tenantsKeys.detail(organizationId, id), data);
       // Invalidate lists to reflect changes
-      queryClient.invalidateQueries({ queryKey: tenantsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: tenantsKeys.lists(organizationId) });
     },
   });
 };

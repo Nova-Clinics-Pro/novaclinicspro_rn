@@ -138,12 +138,12 @@ export const useCreateInventoryItemMutation = (
 
   return useMutation<InventoryItemResponse, Error, InventoryCreateRequest>({
     mutationFn: (payload) => createInventoryItemApi(tenantId, payload),
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, context, onMutateResult) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: inventoryKeys.lists() }),
         invalidateCanonicalOnboardingState(queryClient, tenantId),
       ]);
-      await handleSuccess?.(data, variables, context);
+      await handleSuccess?.(data, variables, context, onMutateResult);
     },
     ...mutationOptions,
   });
@@ -162,13 +162,13 @@ export const useUpdateInventoryItemMutation = (
 
   return useMutation<InventoryItemResponse, Error, InventoryUpdateRequest>({
     mutationFn: (payload) => updateInventoryItemApi(tenantId, itemId, payload),
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, context, onMutateResult) => {
       queryClient.setQueryData(inventoryKeys.detail(tenantId, itemId), data);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: inventoryKeys.lists() }),
         invalidateCanonicalOnboardingState(queryClient, tenantId),
       ]);
-      await handleSuccess?.(data, variables, context);
+      await handleSuccess?.(data, variables, context, onMutateResult);
     },
     ...mutationOptions,
   });
@@ -187,7 +187,7 @@ export const useDeleteInventoryItemMutation = (
 
   return useMutation<void, Error, void>({
     mutationFn: () => deleteInventoryItemApi(tenantId, itemId),
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (data, variables, context, onMutateResult) => {
       removeInventoryItemFromCachedLists(queryClient, itemId);
       queryClient.removeQueries({ queryKey: inventoryKeys.detail(tenantId, itemId) });
       queryClient.invalidateQueries({ queryKey: inventoryKeys.detail(tenantId, itemId) });
@@ -196,7 +196,7 @@ export const useDeleteInventoryItemMutation = (
         queryClient.invalidateQueries({ queryKey: inventoryKeys.all }),
         invalidateCanonicalOnboardingState(queryClient, tenantId),
       ]);
-      await handleSuccess?.(data, variables, context);
+      await handleSuccess?.(data, variables, context, onMutateResult);
     },
     ...mutationOptions,
   });

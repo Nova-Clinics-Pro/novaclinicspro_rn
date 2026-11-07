@@ -2,12 +2,11 @@
  * Doctor Dashboard Screen
  * Role-specific dashboard for doctors with KPI metrics from backend API
  * 
- * API Integration:
- * - GET /api/v1/clinic/{tenant_id}/staff/{staff_id}/kpis - Doctor KPI metrics
- * - GET /api/v1/clinic/{tenant_id}/staff/me/dashboard/doctor - Today's appointments
+ * Data is supplied through the Doctor Dashboard feature query boundary.
  */
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { ProtectedRoute } from '../core/components/ProtectedRoute';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,14 +14,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Platform,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, Router } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { DashboardHeader } from '../core/components/DashboardHeader';
-import { DateStrip, toISODateLocal } from '../core/components/DateStrip';
+import { DateStrip } from '../core/components/DateStrip';
 import { colors } from '../core/theme/colors';
 import { spacing } from '../core/theme/spacing';
 import { typography } from '../core/theme/typography';
@@ -30,14 +31,17 @@ import { useAuth } from '../features/auth/presentation/hooks/useAuth';
 import { t, ErrorTokens } from '../core/localization';
 import { useDoctorDashboardDate } from '../features/staffDashboards/presentation/hooks/useDashboardDate';
 import { filterAppointmentsByDate } from '../features/staffDashboards/domain/utils/filterAppointments';
-import { useQuery } from '@tanstack/react-query';
 import {
   useDoctorDashboardQuery,
   DashboardQuickActions,
   EmptyDashboardState,
   OnLeaveBanner,
-  QuickAction,
+  type QuickAction,
 } from '../features/staffDashboards';
+import {
+  appointmentsKeys,
+  getAppointmentDetail,
+} from '../features/appointments';
 import { AppointmentRow } from '../features/appointments/presentation/components/AppointmentRow';
 import { StaffFeedbackSection } from '../features/feedback';
 import {
@@ -53,6 +57,12 @@ import {
   mapBusiestDaysToBars,
   formatDuration,
 } from '../features/doctorDashboard';
+import {
+  episodesKeys,
+  listEpisodes,
+  useAttachEpisodeMutation,
+  useClientEpisodeCountsQuery,
+} from '../features/episodes';
 import { usePendingDocumentationQuery } from '../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import {
   getLifecycleStatusColor,
@@ -62,17 +72,20 @@ import {
   CaseResolverState,
   startConsultationWithGuard,
 } from '../features/doctorDashboard/application/caseResolver';
+import { toDoctorDashboardError } from '../features/doctorDashboard/application/doctorDashboardError';
 
 // Phase 4 (R4) · T-E.1 (ADR-R4-02) — re-pointed to the backend's own
 // lifecycle_status_label/lifecycle_status (T-C.2); this widget's own
 // getPendingDocumentationStatusLabel (raw state/scheduling_status/
 // documentation_status branching) is superseded, not recreated elsewhere.
 
-export default function DoctorDashboard() {
+function DoctorDashboard() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { logout, currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
   const staffId = currentUser?.userId || ''; // Use user_id directly as staff_id
+  const attachEpisodeMutation = useAttachEpisodeMutation();
 
   // ============================================================
   // CASE RESOLVER STATE
@@ -81,6 +94,32 @@ export default function DoctorDashboard() {
     loadingAppointmentId: null,
     error: null,
   });
+
+  const caseResolverOperations = React.useMemo(
+    () => ({
+      getAppointment: (activeTenantId: string, appointmentId: string) =>
+        queryClient.fetchQuery({
+          queryKey: appointmentsKeys.detail(activeTenantId, appointmentId),
+          queryFn: () => getAppointmentDetail(activeTenantId, appointmentId),
+          staleTime: 0,
+        }),
+      listActiveEpisodes: (activeTenantId: string, clientId: string) => {
+        const params = { client_id: clientId, status: 'ACTIVE' as const, limit: 1 };
+        return queryClient.fetchQuery({
+          queryKey: episodesKeys.list(activeTenantId, params),
+          queryFn: () => listEpisodes(activeTenantId, params),
+          staleTime: 0,
+        });
+      },
+      attachEpisode: (activeTenantId: string, appointmentId: string, episodeId: string) =>
+        attachEpisodeMutation.mutateAsync({
+          tenantId: activeTenantId,
+          appointmentId,
+          episodeId,
+        }),
+    }),
+    [attachEpisodeMutation, queryClient],
+  );
 
   /**
    * Handles "Start Consultation" tap for a given appointment card.
@@ -93,11 +132,12 @@ export default function DoctorDashboard() {
         appointmentId,
         clientId,
         router,
+        operations: caseResolverOperations,
         loadingAppointmentId: resolverState.loadingAppointmentId,
         setState: setResolverState,
       });
     },
-    [resolverState.loadingAppointmentId, tenantId, router]
+    [caseResolverOperations, resolverState.loadingAppointmentId, tenantId, router]
   );
 
   // Shared date hook (reads/writes doctor-specific field in Zustand store)
@@ -107,14 +147,11 @@ export default function DoctorDashboard() {
   React.useEffect(() => {
     if (currentUser && currentUser.roles && currentUser.roles.length > 0) {
       const userRole = currentUser.roles[0]?.toLowerCase() || '';
-      console.log('[Doctor] Route guard checking role:', userRole);
       
       // Allow: doctor only
       const allowedRoles = ['doctor'];
       
       if (!allowedRoles.includes(userRole) && !currentUser.isOrgAdmin) {
-        console.log('[Doctor] Access denied, redirecting to appropriate dashboard');
-        
         // Redirect to appropriate dashboard based on role
         if (userRole === 'therapist') {
           router.replace('/therapist');
@@ -148,31 +185,6 @@ export default function DoctorDashboard() {
       enabled: !!tenantId,
     }
   );
-
-  // Debug logging for appointments and KPIs
-  React.useEffect(() => {
-    console.log('[DoctorDashboard] State:', {
-      tenantId,
-      staffId,
-      currentUserUserId: currentUser?.userId,
-      selectedDate: selectedDate.toDateString(),
-      selectedDateStr,
-      kpiPeriod,
-      enabled: !!tenantId && !!staffId,
-    });
-  }, [tenantId, staffId, currentUser?.userId, selectedDate, selectedDateStr, kpiPeriod]);
-
-  // Log dashboard data when it changes
-  React.useEffect(() => {
-    if (dashboardData) {
-      console.log('[DoctorDashboard] Dashboard data received:', {
-        appointmentsCount: dashboardData.appointments?.length || 0,
-        onLeave: dashboardData.on_leave_today,
-        firstAppointment: dashboardData.appointments?.[0],
-        selectedDateStr,
-      });
-    }
-  }, [dashboardData, selectedDateStr]);
 
   // Fetch KPI metrics from backend
   const {
@@ -212,18 +224,6 @@ export default function DoctorDashboard() {
   });
   const pendingDocItems = pendingDocData?.items ?? [];
 
-  // Log KPI data when it changes
-  React.useEffect(() => {
-    if (kpiData) {
-      console.log('[DoctorDashboard] KPI Data received:', {
-        consultations: kpiData.consultations,
-        patients: kpiData.patients,
-        productivity: kpiData.clinical_productivity,
-        staffName: kpiData.staff_name,
-      });
-    }
-  }, [kpiData]);
-
   // Handle period change
   const handlePeriodChange = useCallback(
     (period: KPIPeriodType, fromDate?: string, toDate?: string) => {
@@ -251,68 +251,14 @@ export default function DoctorDashboard() {
     [dashboardData?.appointments, selectedDateStr]
   );
 
-  // Log filtered appointments
-  React.useEffect(() => {
-    if (dashboardData) {
-      console.log('[DoctorDashboard] Filtered appointments:', {
-        total: dashboardData.appointments?.length || 0,
-        filtered: filteredAppointments.length,
-        selectedDateStr,
-      });
-    }
-  }, [dashboardData, filteredAppointments.length, selectedDateStr]);
-
   // Get unique client IDs from filtered appointments
   const uniqueClientIds = useMemo(() => {
     return [...new Set(filteredAppointments.map(apt => apt.client_id))];
   }, [filteredAppointments]);
 
-  // Fetch episode counts for all unique clients
-  // Use axios client to benefit from automatic token handling and interceptors
-  const { data: episodeCountsData } = useQuery({
-    queryKey: ['episodeCounts', tenantId, uniqueClientIds],
-    queryFn: async () => {
-      console.log('[DoctorDashboard] Fetching episode counts for clients:', uniqueClientIds);
-      const counts: Record<string, number> = {};
-      
-      // Import axios client dynamically to avoid circular dependencies
-      const { axiosClient } = await import('../core/api/axiosClient');
-      
-      // Fetch episodes for each client using axios (has token interceptors)
-      await Promise.all(
-        uniqueClientIds.map(async (clientId) => {
-          try {
-            const url = `/api/v1/clinic/${tenantId}/episodes?client_id=${clientId}&limit=1`;
-            console.log('[DoctorDashboard] Fetching episodes for client:', clientId, 'URL:', url);
-            
-            const response = await axiosClient.get(url);
-            
-            console.log('[DoctorDashboard] Response status for client', clientId, ':', response.status);
-            console.log('[DoctorDashboard] Episode data for client', clientId, ':', response.data);
-            
-            counts[clientId] = response.data.total || 0;
-          } catch (error: any) {
-            console.error(`[DoctorDashboard] Error fetching episode count for client ${clientId}:`, error?.response?.status, error?.response?.data || error?.message);
-            counts[clientId] = 0;
-          }
-        })
-      );
-      
-      console.log('[DoctorDashboard] Final episode counts:', counts);
-      return counts;
-    },
-    enabled: !!tenantId && uniqueClientIds.length > 0,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
+  const { data: episodeCountsData } = useClientEpisodeCountsQuery(tenantId, uniqueClientIds);
 
-  const episodeCountMap = episodeCountsData || {};
-
-  // Debug log episode counts
-  React.useEffect(() => {
-    console.log('[DoctorDashboard] Episode counts data:', episodeCountsData);
-    console.log('[DoctorDashboard] Episode count map:', episodeCountMap);
-    console.log('[DoctorDashboard] Unique client IDs:', uniqueClientIds);
-  }, [episodeCountsData, episodeCountMap, uniqueClientIds]);
+  const episodeCountMap = useMemo(() => episodeCountsData ?? {}, [episodeCountsData]);
 
   // Map KPI data to card format
   const kpiCards = useMemo(() => {
@@ -323,14 +269,6 @@ export default function DoctorDashboard() {
       typeof kpiData.clinical_productivity === 'object';
     const hasTimeMetrics = kpiData.time_metrics && 
       typeof kpiData.time_metrics === 'object';
-    
-    console.log('[DoctorDashboard] KPI data structure:', {
-      hasConsultations: !!kpiData.consultations,
-      hasPatients: !!kpiData.patients,
-      hasProductivity,
-      hasTimeMetrics,
-      keys: Object.keys(kpiData),
-    });
     
     return {
       consultations: mapConsultationsToCards(kpiData.consultations),
@@ -345,7 +283,6 @@ export default function DoctorDashboard() {
     };
   }, [kpiData]);
 
-  // Quick actions
   const quickActions: QuickAction[] = useMemo(() => [
     {
       label: 'View Schedule',
@@ -364,59 +301,30 @@ export default function DoctorDashboard() {
       label: 'Start Session',
       icon: 'play-circle-outline',
       onPress: () => {
-        // T-D.2 (ADR-P1-04): delegates to the same canonical resolver as the
-        // per-appointment "Start Consultation" button (handleStartConsultation
-        // -> startConsultationWithGuard -> resolveCase), so every "Start" entry
-        // point yields one behavior. Previously this only showed an Alert with
-        // no confirm handler and never navigated (ED-004).
         const nextAppointment = dashboardData?.appointments?.find(
-          (a) => ['scheduled', 'confirmed'].includes(a.status?.toLowerCase())
+          (appointment) => ['scheduled', 'confirmed'].includes(appointment.status?.toLowerCase()),
         );
         if (nextAppointment) {
-          handleStartConsultation(nextAppointment.id, nextAppointment.client_id);
+          void handleStartConsultation(nextAppointment.id, nextAppointment.client_id);
         } else {
           Alert.alert('No Upcoming', 'No upcoming appointments to start.');
         }
       },
       color: colors.info.main,
     },
-  ], [dashboardData, router, handleStartConsultation]);
-
-  // Clinical documents quick actions
-  const clinicalActions: QuickAction[] = useMemo(() => [
-    {
-      label: 'Casesheets',
-      icon: 'document-text-outline',
-      onPress: () => {
-        Alert.alert(
-          'View Casesheets',
-          'Select a patient first to view their casesheets.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Go to Patients', onPress: () => router.push('/clinic-admin/clients') },
-          ]
-        );
-      },
-      color: colors.primary.main,
-    },
-    {
-      label: 'Prescriptions',
-      icon: 'medkit-outline',
-      onPress: () => {
-        Alert.alert(
-          'View Prescriptions',
-          'Select a patient first to view their prescriptions.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Go to Patients', onPress: () => router.push('/clinic-admin/clients') },
-          ]
-        );
-      },
-      color: colors.success.main,
-    },
-  ], [router]);
+  ], [dashboardData, handleStartConsultation, router]);
 
   const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm('Are you sure you want to logout?')) {
+        return;
+      }
+      void logout().catch(() => {
+        window.alert('Failed to logout. Please try again.');
+      });
+      return;
+    }
+
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -428,7 +336,7 @@ export default function DoctorDashboard() {
           onPress: async () => {
             try {
               await logout();
-            } catch (err) {
+            } catch {
               Alert.alert('Error', 'Failed to logout. Please try again.');
             }
           },
@@ -437,39 +345,7 @@ export default function DoctorDashboard() {
     );
   };
 
-  // Get error message for KPI errors
-  const getKpiErrorMessage = (error: any): { title: string; message: string } => {
-    const status = error?.response?.status;
-    const detail = error?.response?.data?.detail || '';
-
-    switch (status) {
-      case 400:
-        return {
-          title: 'Invalid Request',
-          message: detail || 'Invalid period or date range. Please try again.',
-        };
-      case 401:
-        return {
-          title: 'Session Expired',
-          message: 'Please log in again to view your KPIs.',
-        };
-      case 403:
-        return {
-          title: 'Access Denied',
-          message: 'You do not have permission to view these KPIs.',
-        };
-      case 404:
-        return {
-          title: 'Not Found',
-          message: 'Staff profile not found. Please contact support.',
-        };
-      default:
-        return {
-          title: 'Error Loading KPIs',
-          message: 'Could not load your performance metrics. Please try again.',
-        };
-    }
-  };
+  const getKpiErrorMessage = (error: unknown) => toDoctorDashboardError(error);
 
   const renderContent = () => {
     // Loading state for dashboard
@@ -484,15 +360,9 @@ export default function DoctorDashboard() {
 
     // Error state for dashboard
     if (isDashboardError) {
-      const axiosError = dashboardError as any;
-      const status = axiosError?.response?.status;
-      const errorDetail = axiosError?.response?.data?.detail || '';
-      
-      const isPermissionError = status === 403 || 
-        errorDetail.toLowerCase().includes('permission') ||
-        errorDetail.toLowerCase().includes('forbidden');
-      
-      const isAuthError = status === 401;
+      const dashboardFailure = toDoctorDashboardError(dashboardError);
+      const isPermissionError = dashboardFailure.code === 'PERMISSION_DENIED';
+      const isAuthError = dashboardFailure.code === 'SESSION_EXPIRED';
       
       return (
         <View style={styles.section}>
@@ -515,7 +385,11 @@ export default function DoctorDashboard() {
             actionLabel={isPermissionError ? t('common.goBack') : isAuthError ? 'Login' : t('common.retry')}
             onActionPress={() => {
               if (isPermissionError) {
-                router.back();
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/');
+                }
               } else if (isAuthError) {
                 router.replace('/login');
               } else {
@@ -528,7 +402,6 @@ export default function DoctorDashboard() {
     }
 
     // Success state
-    const appointments = dashboardData?.appointments || [];
     const onLeave = dashboardData?.on_leave_today;
 
     return (
@@ -539,6 +412,11 @@ export default function DoctorDashboard() {
             <OnLeaveBanner />
           </View>
         )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <DashboardQuickActions actions={quickActions} />
+        </View>
 
         {/* Date Selector */}
         <View style={styles.section}>
@@ -594,20 +472,16 @@ export default function DoctorDashboard() {
                     onPress={undefined} // Remove navigation to detail page
                     showActions={true} // Enable quick actions
                     userRole="doctor"
-                    onStatusUpdate={(appointmentId, newStatus) => {
-                      console.log('[DoctorDashboard] Status update:', appointmentId, newStatus);
+                    onStatusUpdate={() => {
                       // TODO: Implement status update mutation
                     }}
-                    onCancel={(appointmentId) => {
-                      console.log('[DoctorDashboard] Cancel:', appointmentId);
+                    onCancel={() => {
                       // TODO: Implement cancel mutation
                     }}
                     onReschedule={(appointmentId) => {
-                      console.log('[DoctorDashboard] Reschedule:', appointmentId);
                       router.push(`/clinic-admin/appointments/${appointmentId}`);
                     }}
-                    onViewAllEpisodes={(clientId, clientName) => {
-                      console.log('[DoctorDashboard] View all episodes for client:', clientId, clientName);
+                    onViewAllEpisodes={(clientId) => {
                       router.push(`/clinic-admin/clients/${clientId}/episodes` as any);
                     }}
                     clientEpisodesCount={episodeCountMap[appointment.client_id] || 0}
@@ -803,7 +677,7 @@ export default function DoctorDashboard() {
         title="Doctor Dashboard"
         subtitle={`Welcome back, ${doctorName}`}
         onNotificationPress={() => router.push('/notifications/history')}
-        onProfilePress={() => console.log('Profile')}
+        onProfilePress={() => undefined}
         onLogoutPress={handleLogout}
       />
 
@@ -1023,3 +897,12 @@ const caseResolverStyles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+/** Authenticated route: anonymous visitors are redirected to /login (backend remains authoritative). */
+export default function DoctorDashboardGuarded() {
+  return (
+    <ProtectedRoute>
+      <DoctorDashboard />
+    </ProtectedRoute>
+  );
+}

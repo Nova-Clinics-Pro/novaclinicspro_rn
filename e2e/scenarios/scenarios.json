@@ -1,0 +1,930 @@
+[
+ {
+  "id": "NC-UAT-01",
+  "name": "App launch",
+  "group": "core",
+  "objective": "The application starts and shows the sign-in entry without blocking errors.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "anonymous"
+  ],
+  "preconditions": [
+   "Backend and frontend reachable"
+  ],
+  "testData": [
+   "none"
+  ],
+  "expectedOutcomes": [
+   "Sign-in screen renders with email, password and register entry",
+   "No uncaught JavaScript errors or failed app-shell requests"
+  ],
+  "authorization": [
+   "No protected data visible before authentication"
+  ],
+  "persistence": [
+   "n/a"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "not-applicable"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [],
+  "severityIfFails": "Critical",
+  "dependsOn": []
+ },
+ {
+  "id": "NC-UAT-02",
+  "name": "Clinic-owner registration",
+  "group": "core",
+  "objective": "A new clinic owner can register, and the registration contract (including Idempotency-Key) is honoured.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Unused synthetic email"
+  ],
+  "testData": [
+   "Synthetic owner and clinic from the identity factory"
+  ],
+  "expectedOutcomes": [
+   "Client-side validation rejects empty/invalid input",
+   "Valid submission succeeds and lands on a post-registration screen",
+   "Registration status endpoint reports a lifecycle status for the new applicant",
+   "Replaying the same request payload with the same key does not create a second applicant"
+  ],
+  "authorization": [
+   "Registration status is readable only by the authenticated applicant",
+   "Missing Idempotency-Key is rejected by the backend"
+  ],
+  "persistence": [
+   "Application record exists server-side and survives reload"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full",
+    "note": "API-level checks: header requirement, unauthenticated status, replay"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_b27_public_registration_boundary.py",
+   "tests/test_nc_uat_registration_contract.py"
+  ],
+  "severityIfFails": "Critical",
+  "dependsOn": [
+   "NC-UAT-01"
+  ]
+ },
+ {
+  "id": "NC-UAT-03",
+  "name": "Login",
+  "group": "core",
+  "objective": "The registered owner authenticates and reaches an authenticated area showing their identity.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Registered owner exists"
+  ],
+  "testData": [
+   "Identity from NC-UAT-02"
+  ],
+  "expectedOutcomes": [
+   "Valid credentials sign in",
+   "Invalid credentials are rejected with a visible error",
+   "Authenticated area identifies the signed-in account (or its clinic)"
+  ],
+  "authorization": [
+   "Wrong password never yields a session"
+  ],
+  "persistence": [
+   "Token issued by the configured auth provider"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_package_a_security_boundaries.py"
+  ],
+  "severityIfFails": "Critical",
+  "dependsOn": [
+   "NC-UAT-02"
+  ]
+ },
+ {
+  "id": "NC-UAT-04",
+  "name": "Session persistence",
+  "group": "core",
+  "objective": "The session is restored after a browser reload (web) or backgrounding/resume (Android) without re-entering credentials.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Signed in"
+  ],
+  "testData": [
+   "none"
+  ],
+  "expectedOutcomes": [
+   "Protected screen remains accessible after reload/resume",
+   "Cleared storage returns the user to sign-in"
+  ],
+  "authorization": [
+   "Protected routes are not accessible without a session"
+  ],
+  "persistence": [
+   "Session storage only; no clinical data cached for signed-out users"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full",
+    "note": "Browser reload"
+   },
+   "android": {
+    "applicability": "full",
+    "note": "Background/resume where Expo Go allows"
+   },
+   "backend": {
+    "applicability": "not-applicable"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-03"
+  ]
+ },
+ {
+  "id": "NC-UAT-05",
+  "name": "Clinic onboarding",
+  "group": "core",
+  "objective": "The owner completes the applicable onboarding journey and the clinic information is saved.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Registered, approved or pending-review applicant"
+  ],
+  "testData": [
+   "Synthetic clinic details"
+  ],
+  "expectedOutcomes": [
+   "Onboarding journey reachable after sign-in according to application status",
+   "Entered clinic information is persisted and shown again after reload"
+  ],
+  "authorization": [
+   "Only the owner can modify their own clinic onboarding"
+  ],
+  "persistence": [
+   "Application/clinic state persisted server-side"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_b2_7_cs002_continuation.py",
+   "tests/test_registration_status_read_only.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-03"
+  ],
+  "productRuleGaps": [
+   "Manual-review versus automatic approval depends on the backend auto-approval engine; the policy (automatic-approval-first) must be preserved, not asserted beyond observed status."
+  ]
+ },
+ {
+  "id": "NC-UAT-06",
+  "name": "Dashboard and role-based navigation",
+  "group": "core",
+  "objective": "The signed-in user sees a dashboard with navigation appropriate to their role; unauthorized routes and actions are rejected.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner",
+   "non-owner roles (where accounts exist)"
+  ],
+  "preconditions": [
+   "Onboarded owner"
+  ],
+  "testData": [
+   "none"
+  ],
+  "expectedOutcomes": [
+   "Dashboard renders for the role",
+   "Role-specific navigation entries only",
+   "Direct navigation to an unauthorized route is refused or redirected"
+  ],
+  "authorization": [
+   "Backend rejects calls outside the role (401/403) irrespective of UI hiding"
+  ],
+  "persistence": [
+   "n/a"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_package_a_security_boundaries.py",
+   "tests/test_cp_boundary_guard.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-05"
+  ]
+ },
+ {
+  "id": "NC-UAT-07",
+  "name": "Patient creation and search",
+  "group": "core",
+  "objective": "A synthetic patient can be created, found by search and reopened with persisted details.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner/front desk"
+  ],
+  "preconditions": [
+   "Onboarded clinic"
+  ],
+  "testData": [
+   "patientFor(owner)"
+  ],
+  "expectedOutcomes": [
+   "Patient appears in list and search",
+   "Opened record shows saved details"
+  ],
+  "authorization": [
+   "Patient visible only inside the owning clinic"
+  ],
+  "persistence": [
+   "Persisted server-side; present after reload"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-05"
+  ]
+ },
+ {
+  "id": "NC-UAT-08",
+  "name": "Appointment creation and details",
+  "group": "core",
+  "objective": "An appointment for the test patient can be created and is visible in the schedule and detail view.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner/front desk"
+  ],
+  "preconditions": [
+   "Patient exists"
+  ],
+  "testData": [
+   "Future slot within operating hours"
+  ],
+  "expectedOutcomes": [
+   "Create succeeds and navigates to the appointment detail",
+   "Appointment visible in list/schedule with correct patient and time"
+  ],
+  "authorization": [
+   "Cross-clinic access denied"
+  ],
+  "persistence": [
+   "Persisted after reload"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_therapist_session_non_execution_reason.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-07"
+  ]
+ },
+ {
+  "id": "NC-UAT-09",
+  "name": "Consultation and case sheet",
+  "group": "core",
+  "objective": "Starting a consultation attaches an episode and a case sheet that persist clinical information.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "doctor"
+  ],
+  "preconditions": [
+   "Appointment exists",
+   "A doctor account"
+  ],
+  "testData": [
+   "Synthetic clinical text only"
+  ],
+  "expectedOutcomes": [
+   "Episode created/attached to the appointment",
+   "Case sheet saved and reopened with the same content",
+   "Case sheet belongs to the same episode and patient"
+  ],
+  "authorization": [
+   "Only authorized clinical roles can edit the case sheet"
+  ],
+  "persistence": [
+   "Persisted"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_r7_treatment_plan_amendment.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-08"
+  ],
+  "productRuleGaps": [
+   "A doctor account for the test clinic must exist; creating one requires staff onboarding UI/API not yet automated."
+  ]
+ },
+ {
+  "id": "NC-UAT-10",
+  "name": "Prescription and treatment",
+  "group": "core",
+  "objective": "Prescription and treatment recommendation/scheduling work according to specialty configuration and permissions.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "doctor",
+   "clinic_owner/admin"
+  ],
+  "preconditions": [
+   "Case sheet exists"
+  ],
+  "testData": [
+   "Synthetic prescription lines"
+  ],
+  "expectedOutcomes": [
+   "Prescription can be created in the supported workflow",
+   "Treatment recommendation and scheduling only where the clinic supports it"
+  ],
+  "authorization": [
+   "Doctor recommends; admin schedules (existing responsibility split)"
+  ],
+  "persistence": [
+   "Persisted"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "limited",
+    "note": "Depends on Expo Go + Maestro feasibility"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-09"
+  ]
+ },
+ {
+  "id": "NC-UAT-11",
+  "name": "Restart and data persistence",
+  "group": "core",
+  "objective": "Saved records persist across reload (web) or relaunch (Android).",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Records from earlier scenarios"
+  ],
+  "testData": [
+   "none"
+  ],
+  "expectedOutcomes": [
+   "Patient, appointment and clinical record are present after reload/relaunch"
+  ],
+  "authorization": [
+   "n/a"
+  ],
+  "persistence": [
+   "Server-side persistence only"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-09"
+  ]
+ },
+ {
+  "id": "NC-UAT-12",
+  "name": "Logout and login again",
+  "group": "core",
+  "objective": "Logout ends the session and denies protected access; signing in again restores the same identity and records.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Signed in"
+  ],
+  "testData": [
+   "none"
+  ],
+  "expectedOutcomes": [
+   "Logout returns to sign-in",
+   "Protected route is denied after logout",
+   "Re-login shows same account and saved records"
+  ],
+  "authorization": [
+   "No residual access after logout"
+  ],
+  "persistence": [
+   "Records unaffected"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-11"
+  ]
+ },
+ {
+  "id": "NC-UAT-13",
+  "name": "Ayurveda clinic onboarding",
+  "group": "specialty-therapy",
+  "objective": "An Ayurveda clinic owner registers and completes onboarding; Ayurveda specialty configuration persists and drives Ayurveda-specific sections and therapy navigation.",
+  "clinicTypes": [
+   "ayurveda"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Separate Ayurveda owner"
+  ],
+  "testData": [
+   "Ayurveda profile"
+  ],
+  "expectedOutcomes": [
+   "Clinic type persisted as ayurveda",
+   "Ayurveda assessment sections and therapy navigation available",
+   "Configuration unchanged after reload and re-login"
+  ],
+  "authorization": [
+   "Specialty configuration is read from the backend, never assumed by the test"
+  ],
+  "persistence": [
+   "Persisted"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_nc_uat_specialty_profiles.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-05"
+  ]
+ },
+ {
+  "id": "NC-UAT-14",
+  "name": "General clinic onboarding",
+  "group": "specialty-therapy",
+  "objective": "A General clinic owner registers and completes onboarding; Ayurveda-specific sections and therapy appointment creation are absent while ordinary appointments and consultations work.",
+  "clinicTypes": [
+   "general"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "Separate General owner"
+  ],
+  "testData": [
+   "General profile"
+  ],
+  "expectedOutcomes": [
+   "Clinic type persisted as general",
+   "No Ayurveda-specific sections",
+   "No therapy appointment option",
+   "Ordinary appointment and consultation unaffected",
+   "Configuration unchanged after reload and re-login"
+  ],
+  "authorization": [
+   "Direct route and API access cannot bypass the restriction (see gaps)"
+  ],
+  "persistence": [
+   "Persisted"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_nc_uat_specialty_profiles.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-05"
+  ],
+  "productRuleGaps": [
+   "Backend enforcement of the General-clinic therapy restriction at the appointment-creation endpoint is not evident in the source; see NC-UAT-17."
+  ]
+ },
+ {
+  "id": "NC-UAT-15",
+  "name": "Ayurveda therapy appointment creation",
+  "group": "specialty-therapy",
+  "objective": "In an Ayurveda clinic a therapy appointment (with therapist/resource, date, start, duration) can be created and persists.",
+  "clinicTypes": [
+   "ayurveda"
+  ],
+  "roles": [
+   "clinic_owner/front desk"
+  ],
+  "preconditions": [
+   "Ayurveda clinic with a therapist and a patient"
+  ],
+  "testData": [
+   "Synthetic therapist and patient"
+  ],
+  "expectedOutcomes": [
+   "Therapy appointment saved with therapist, date, start and duration",
+   "Visible in schedule and detail; persists after reload"
+  ],
+  "authorization": [
+   "Only authorized roles can create"
+  ],
+  "persistence": [
+   "Persisted"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "limited"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_nc_uat_scheduling_rules.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-13"
+  ],
+  "productRuleGaps": [
+   "A therapist staff member for the test clinic must exist."
+  ]
+ },
+ {
+  "id": "NC-UAT-16",
+  "name": "Therapy scheduling conflict simulation",
+  "group": "specialty-therapy",
+  "objective": "Overlap and boundary behaviour for therapist/resource and patient conflicts follows the implemented rules.",
+  "clinicTypes": [
+   "ayurveda"
+  ],
+  "roles": [
+   "clinic_owner/front desk"
+  ],
+  "preconditions": [
+   "Therapy-capable Ayurveda clinic"
+  ],
+  "testData": [
+   "Two synthetic patients, two therapists"
+  ],
+  "expectedOutcomes": [
+   "Overlap for the same therapist is rejected or reported as conflict",
+   "Non-overlapping appointment for same therapist is accepted",
+   "Overlapping appointments for the same patient are rejected or reported",
+   "Back-to-back (second starts exactly when first ends) is accepted: ranges are half-open",
+   "Different therapist and patient with overlapping time is accepted"
+  ],
+  "authorization": [
+   "n/a"
+  ],
+  "persistence": [
+   "Accepted appointments persist; rejected create no record"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "representative"
+   },
+   "android": {
+    "applicability": "representative"
+   },
+   "backend": {
+    "applicability": "full",
+    "note": "Comprehensive predicates verified from source and via compiled SQL"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_nc_uat_scheduling_rules.py"
+  ],
+  "severityIfFails": "High",
+  "dependsOn": [
+   "NC-UAT-15"
+  ],
+  "productRuleGaps": [
+   "Whether a conflict is blocking (409/validation error) or warning-only for single appointment creation must be confirmed at runtime; the SQL predicates are strict half-open (start < other end AND end > other start)."
+  ]
+ },
+ {
+  "id": "NC-UAT-17",
+  "name": "General clinic therapy restriction",
+  "group": "specialty-therapy",
+  "objective": "A General clinic cannot schedule therapy appointments through navigation, direct routes or the API, and no record is created.",
+  "clinicTypes": [
+   "general"
+  ],
+  "roles": [
+   "clinic_owner"
+  ],
+  "preconditions": [
+   "General clinic owner"
+  ],
+  "testData": [
+   "none"
+  ],
+  "expectedOutcomes": [
+   "No therapy scheduling option in navigation",
+   "Direct route is refused or redirected",
+   "API attempt with a General identity is rejected",
+   "No therapy appointment record exists afterwards"
+  ],
+  "authorization": [
+   "Backend specialty/authorization enforcement is mandatory"
+  ],
+  "persistence": [
+   "No record created"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_nc_uat_specialty_profiles.py"
+  ],
+  "severityIfFails": "Critical",
+  "dependsOn": [
+   "NC-UAT-14"
+  ],
+  "productRuleGaps": [
+   "Backend enforcement to be confirmed; if absent this is a product-rule/implementation gap, not a test failure to be hidden."
+  ]
+ },
+ {
+  "id": "NC-UAT-18",
+  "name": "Cross-clinic specialty and data isolation",
+  "group": "specialty-therapy",
+  "objective": "Each clinic sees only its own patients, appointments, therapy records and clinical data; switching accounts leaks no permissions or cached data.",
+  "clinicTypes": [
+   "ayurveda",
+   "general"
+  ],
+  "roles": [
+   "clinic_owner (two clinics)"
+  ],
+  "preconditions": [
+   "Ayurveda and General clinics with data"
+  ],
+  "testData": [
+   "Records from NC-UAT-15 and NC-UAT-07"
+  ],
+  "expectedOutcomes": [
+   "Ayurveda clinic sees its own therapy appointments",
+   "General clinic does not see Ayurveda records",
+   "Cross-tenant ID access is denied",
+   "After switching accounts no previous clinic data or permissions are shown"
+  ],
+  "authorization": [
+   "Tenant isolation enforced by the backend"
+  ],
+  "persistence": [
+   "n/a"
+  ],
+  "platforms": {
+   "web": {
+    "applicability": "full"
+   },
+   "android": {
+    "applicability": "full"
+   },
+   "backend": {
+    "applicability": "full"
+   },
+   "manual-android": {
+    "applicability": "full"
+   }
+  },
+  "relatedBackendTests": [
+   "tests/test_package_a_security_boundaries.py",
+   "tests/test_tg19_authenticated_organization_context.py"
+  ],
+  "severityIfFails": "Critical",
+  "dependsOn": [
+   "NC-UAT-15"
+  ]
+ }
+]

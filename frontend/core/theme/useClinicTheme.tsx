@@ -9,14 +9,23 @@ import { SemanticColors } from './semanticColors';
 import { getClinicTheme, ClinicType } from './clinicThemes';
 import { spacing } from './spacing';
 import { typography } from './typography';
+import { radii } from './radii';
+import { borderWidths } from './borderWidths';
+import { sizes } from './sizes';
 
 /**
- * Complete theme object with colors, spacing, and typography
+ * Complete theme object with colors, spacing, typography, and the
+ * reusable-appearance token categories (radii/borderWidths/sizes) —
+ * every reusable visual value a screen needs must come from here, not
+ * a raw local number.
  */
 export interface ClinicTheme {
   colors: SemanticColors;
   spacing: typeof spacing;
   typography: typeof typography;
+  radii: typeof radii;
+  borderWidths: typeof borderWidths;
+  sizes: typeof sizes;
   clinicType: ClinicType;
 }
 
@@ -43,6 +52,9 @@ export const ThemeProvider = ({ children, clinicType = 'AYURVEDA' }: ThemeProvid
     colors: getClinicTheme(clinicType),
     spacing,
     typography,
+    radii,
+    borderWidths,
+    sizes,
     clinicType,
   };
 
@@ -64,6 +76,9 @@ export const useClinicTheme = (): ClinicTheme => {
       colors: getClinicTheme('AYURVEDA'),
       spacing,
       typography,
+      radii,
+      borderWidths,
+      sizes,
       clinicType: 'AYURVEDA',
     };
   }
@@ -78,6 +93,9 @@ export const getTheme = (clinicType: ClinicType = 'AYURVEDA'): ClinicTheme => {
     colors: getClinicTheme(clinicType),
     spacing,
     typography,
+    radii,
+    borderWidths,
+    sizes,
     clinicType,
   };
 };

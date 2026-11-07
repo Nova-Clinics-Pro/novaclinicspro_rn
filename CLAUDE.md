@@ -43,9 +43,42 @@ on. Verify before relying on it.
 
 ## 3. Architecture invariants
 
-- Preserve Clean Architecture. Layers: `presentation → domain → data`.
-- Presentation must never call Axios or Supabase directly. It calls hooks and
-  application services; only `data/datasources/*.api.ts` touches the transport.
+### Mandatory Architecture Rule — Layer Integrity (permanent)
+
+Dependency direction is strict and must never be violated.
+
+```
+Presentation
+      ↓
+Application / Use Cases (hooks, application services)
+      ↓
+Domain (entities, repository interfaces)
+      ↓
+Data (repositories, datasources — the only layer that touches transport)
+```
+
+Forbidden:
+- ❌ Presentation → `axiosClient` directly
+- ❌ Presentation → a `data/datasources/*.api.ts` datasource directly
+- ❌ Presentation → Supabase client directly
+- ❌ Presentation bypassing an existing repository or application service to reach data itself
+
+Every HTTP/API operation MUST go through `data/datasources/*.api.ts`,
+reached via a hook or application service — never called from a
+presentation component or page directly. See `frontend/.kiro/engineering/
+ENGINEERING-DEBT.md` (`ED-ARCH-001`) for currently-known violations of this
+rule and the plan to fix them incrementally — do not treat their existence
+as license to add more.
+
+**Mandatory pre-implementation audit.** Before writing code for any task,
+check: is every dependency flowing downward; is any layer bypassed; is
+`axiosClient` or a datasource imported from presentation; is an existing
+repository/hook/application service bypassed. If any check fails: stop,
+report the violation, fix the architecture first (or explicitly defer to
+`ED-ARCH-001` and say why), then continue. This rule outranks
+implementation convenience — if a requested implementation appears to
+require violating it, stop and explain why instead of building a shortcut.
+
 - Use existing repositories, hooks, and application services. Reuse before replacing.
 - Do not introduce a duplicate writer for state that already has one.
 - The backend is authoritative for state transitions. The frontend reflects state; it
@@ -81,11 +114,13 @@ on. Verify before relying on it.
 ## 5. Git and worktree safety
 
 - Before editing, inspect branch, HEAD, upstream, and working-tree state.
-- Work only in the repository/worktree the task explicitly names. Sibling worktrees
-  exist (`novaclinicspro_rn-*`) and belong to other efforts — never touch onboarding
-  or another agent's worktree unless the task names it.
+- Work only in the repository/worktree the task explicitly names. Legacy sibling
+  worktrees (`novaclinicspro_rn-*`) are pending retirement review — never modify them,
+  and never touch another agent's worktree, unless the task names it.
 - Never implement features directly on `main`, `dev`, or `test`.
-- Create a task-specific branch/worktree from the approved base.
+- Work on the authoritative consolidated branch, or on a task-specific branch from the
+  approved base; use a separate worktree only as allowed by section 9 (Repository
+  Workspace Policy).
 - Commercial Platform work uses the permanent `cp` integration branch as its
   approved base. Commercial Platform feature branches must originate from
   synchronized `origin/cp`, never from `dev`; `cp` remains integration-only.
@@ -132,3 +167,19 @@ on. Verify before relying on it.
 - Ask for approval before destructive or shared-database writes unless the task
   already authorizes them explicitly.
 - Completion reports must be factual and traceable.
+
+## 9. Repository Workspace Policy
+
+This policy is identical in the frontend and backend repositories.
+
+- One authoritative checkout by default.
+- Create a temporary task-specific worktree only when concurrent, independent
+  implementation genuinely requires it.
+- Remove a temporary worktree once its changes are integrated, verified and committed.
+- Do not create permanent parallel implementation branches, and do not leave stale
+  worktrees (including worktrees whose directory has disappeared).
+- The consolidated branches (`integration/refactoring-consolidated` in the frontend and
+  backend repositories) remain the authoritative development branches. Promotion to
+  `dev` requires explicit approval.
+- Commercial Platform work keeps its own base rule: feature branches originate from
+  synchronized `origin/cp`, and `cp` remains integration-only.

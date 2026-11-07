@@ -28,6 +28,7 @@ import {
   useDeactivateTenantMutation,
 } from '../../data/repositories/tenants.repository.impl';
 import { OrgTenantUpdate, CLINIC_TYPES } from '../../data/models/tenants.dtos';
+import { useOrganizationTenantScope } from '../hooks/useOrganizationTenantScope';
 
 // Validation schema for tenant update
 const tenantUpdateSchema = z.object({
@@ -50,13 +51,14 @@ export default function TenantDetailScreen() {
   const router = useRouter();
   const { tenantId } = useLocalSearchParams<{ tenantId: string }>();
   const [isEditing, setIsEditing] = useState(false);
+  const { organizationId } = useOrganizationTenantScope();
 
   // Fetch tenant data
-  const { data: tenant, isLoading, isError, error } = useTenantQuery(tenantId);
+  const { data: tenant, isLoading, isError, error } = useTenantQuery(organizationId, tenantId);
 
   // Update mutation
-  const updateMutation = useUpdateTenantMutation(tenantId);
-  const deactivateMutation = useDeactivateTenantMutation(tenantId);
+  const updateMutation = useUpdateTenantMutation(organizationId, tenantId);
+  const deactivateMutation = useDeactivateTenantMutation(organizationId, tenantId);
 
   const {
     control,

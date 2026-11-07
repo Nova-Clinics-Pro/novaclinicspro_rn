@@ -1,0 +1,682 @@
+# C-FE-03 — Case-Sheet / Episode Composition Characterization
+
+**Status:** Characterization and both explicitly approved presentation extractions are committed and offline-verified; native and full-package acceptance remain pending.
+**Baseline:** `b061018c1e44cb9f9ba78053f3136e387a9e79d6` (`refactor/package-c-fe-03`).
+**Scope:** Package C C-FE-03 evidence only. This record does not assert that R7 is complete, nor that uncommitted work in another worktree is present in this baseline.
+
+## Sources examined
+
+- Package C proposed requirements, design, and task inventory in the backend working tree: C-FE-03 is characterization-only and protects the canonical CaseSheetTab writer boundary.
+- `clinical-documents-episodes` requirements, design, tasks, and verification records.
+- `phase-2-clinical-workflow-alignment` requirements, design, and task records.
+- The baseline frontend routes, screens, hooks, repository hooks, and tests listed below.
+
+The specification records retain their stated status. Current-code observations below are baseline-specific evidence, not a claim that every historical verification statement has been re-executed.
+
+## Verified current runtime composition
+
+```text
+Patient identity
+  → appointment route/action
+  → caseResolver (tenant-scoped appointment read)
+      → linked episode: doctor episode workspace route
+      → active episode: attach appointment, then doctor episode workspace route
+      → no active episode: start-consultation route
+  → CreateConsultationScreen (new episode command with client_id + appointment_id)
+  → episode workspace / ClinicalWorkspace / VisitCommandCenter (feature-gated route shell)
+  → CaseSheetModule (the consultation writer)
+  → case-sheet repository mutation hooks → data layer/API
+```
+
+### Route and component ownership
+
+| Concern | Verified baseline owner | Evidence |
+| --- | --- | --- |
+| Appointment-to-episode resolution | `features/doctorDashboard/application/caseResolver.ts` coordinates existing-link, active-episode attachment, or new-consultation routing. | `resolveCase()` receives `tenantId`, `appointmentId`, `clientId` and invokes caller-provided repository-bound operations. |
+| New episode creation | `CreateConsultationScreen` validates chief complaint, calls `useCreateEpisodeMutation`, supplies `client_id` and `appointment_id`, invalidates affected appointment/episode surfaces, then replaces to the resolved route. | `features/episodes/presentation/pages/CreateConsultationScreen.tsx`. |
+| Workspace routing | Expo routes carry episode, appointment, and client IDs. `cos_v1` selects `VisitCommandCenter`; the legacy branch renders `EpisodeWorkspaceScreen`. | `app/clinic-admin/episodes/[episodeId]/workspace.tsx`; `consultation.tsx`. |
+| Episode read composition | `useEpisodeWorkspaceData` reads tenant-scoped episode details; that response is the source of document IDs, then the hook reads details by ID. | `features/episodes/presentation/hooks/useEpisodeWorkspaceData.ts`. |
+| Case-sheet writer | `CaseSheetModule` owns local draft, autosave, create/update repository mutation hooks, error presentation, and visit attribution. | `features/episodes/presentation/components/ConsultationSections/CaseSheetModule.tsx`. |
+| Read-only summary | `CasesheetTab` renders a summary, gates actions through its `canCreate` input, and calls callbacks only. `EpisodeWorkspaceScreen` owns navigation to the canonical edit/create routes. | `CasesheetTab.tsx`; `EpisodeWorkspaceScreen.tsx`. |
+| Detail screen | `CasesheetDetailScreen` composes tenant-scoped case sheet/client/episode/treatment-sheet queries and its existing document actions. | `features/casesheets/presentation/pages/CasesheetDetailScreen.tsx`. |
+| Episode detail screen | `EpisodeDetailScreen` owns its detail/list query composition, close/reopen/update commands, document navigation callbacks, focus refresh, and local UI states. | `features/episodes/presentation/pages/EpisodeDetailScreen.tsx`. |
+
+## State, authorization, and freshness characterization
+
+- **Tenant scope:** the workspace uses the authenticated tenant ID for episode and dependent document queries. The resolver accepts tenant ID from its caller; the UI does not manufacture one.
+- **Role/capability surface:** `EpisodeWorkspaceScreen` takes a role mode and reads `episodeWorkspaceConfigByRole[mode]`; its tab affordances are configured at that boundary. `CasesheetTab` receives its write affordance as `canCreate`; it has no independent role derivation.
+- **Writer identity:** `CaseSheetModule` creates with both `appointment_id` and `episode_id`; updates provide the current `appointment_id`. It prevents a missing appointment context from falling through to a create command.
+- **Read-only versus editable:** `CasesheetTab` does not import a form or case-sheet mutation hook. Edit is a navigation callback to the canonical edit route. Signed source state is rendered through `CaseSheetVersionPanel` by the module.
+- **Freshness:** the module invokes `refetchEpisode()` after create and, when the freshness flag is enabled, updates/invalidates the established case-sheet keys. `EpisodeDetailScreen` refetches details when it regains focus, avoiding a stale post-create document flag. `CreateConsultationScreen` invalidates appointment, episode, client-episode, and dashboard query surfaces after creation.
+- **Loading/error/retry:** workspace and detail screens have explicit loading/error/retry paths. `CaseSheetModule` records save errors locally and marks section save state as error; `saveAndSubmit` refuses navigation if flush fails. No new behavior was added or assessed beyond these observed paths.
+- **Specialty visibility:** the canonical writer enables the established Ayurvedic assessment templates only when `isAyurvedaClinic(features)` is true. This is an existing feature boundary, not a C-FE-03 decision.
+
+## R7 compatibility and dependency matrix
+
+| Concern | Current implementation | R7 contract | Difference | Risk | Classification |
+| --- | --- | --- | --- | --- | --- |
+| Episode ownership | Resolver reuses/attaches an active episode before routing; creation includes appointment linkage. | Episode is the longitudinal container; attachment validates the episode lifecycle server-side. | No frontend authority to validate attachment observed. | Medium if server enforcement regresses; not a frontend decomposition defect. | Confirmed compliant at the presentation boundary. |
+| Case-sheet writer | `CaseSheetModule` uses repository hooks and carries visit/episode attribution. `CasesheetTab` is summary-only. | One canonical authoring surface; contributions are visit-attributed while the sheet is episode-owned. | Historical standalone edit/create routes coexist as canonical navigation destinations; C-FE-03 does not consolidate them. | High clinical sensitivity; protected from extraction. | Confirmed compliant for tab-vs-module boundary; R7 implementation pending/externally governed for any broader consolidation. |
+| Consultation navigation | Route builders preserve episode, appointment, and client identity; COS route is feature-gated. | Navigation must preserve clinical context and not synthesize lifecycle facts. | Multiple feature-gated shells are present by design. No equivalence claim was made for uncommitted R7 work outside baseline. | Medium. | R7 implementation pending where feature-gated behavior is not covered by this characterization. |
+| Mutation ownership | Case-sheet create/update stays in the writer through repository hooks; read-only tab does not mutate. | Frontend must not bypass data/repository boundary; backend remains clinical authority. | No direct datasource bypass found in characterized writer/tab paths. | Low for the examined boundary. | Confirmed compliant. |
+| Cache freshness | Existing invalidation/refetch patterns remain owned by the writer/entry screen/detail focus effect. | Current facts must refresh after mutation without duplicate authoring. | Existing flag-gated asymmetry is preserved; C-FE-03 does not redesign it. | Medium; regression-tested only for established paths. | Existing technical debt / accepted current behavior; not remediated. |
+| Role/tenant gating | Tenant comes from authenticated context; workspace role config and callback affordances gate UI. | Backend owns authorization; frontend must preserve tenant/role context. | This task did not exercise backend authorization at runtime. | Medium. | Confirmed compliant in composition; backend enforcement not revalidated. |
+
+## Evidence and tests
+
+Existing baseline tests run before C-FE-03 changes:
+
+- `casesheetTabReadOnlySummary.test.tsx`
+- `caseSheetModule.test.tsx`
+- `caseSheetModuleComposition.test.tsx`
+- `consultationFlow.integration.test.tsx`
+- `consultationRoutes.test.ts`
+- `CasesheetDetailScreen.test.tsx`
+- `treatmentLifecycleActionsStatusRepoint.test.tsx`
+
+Result: **7 suites, 62 tests passed**. Existing test output includes theme/console warnings and a Jest open-handle notice after successful completion; no test failed.
+
+New characterization guard:
+
+- `tests/features/episodes/CFE03CaseSheetEpisodeComposition.characterization.test.ts`
+
+It locks the current resolver path, new-consultation identity preservation, repository-hook writer boundary, and read-only-tab/edit-route split. It does not prescribe a future component structure.
+
+## Confirmed deviations and exclusions
+
+1. **No direct datasource bypass confirmed** in the characterized case-sheet writer, tab, or detail-screen paths.
+2. **No competing CaseSheetTab writer confirmed**. The historic duplicate-editor condition is protected by existing tests and is not reopened.
+3. `CasesheetDetailScreen` and `EpisodeDetailScreen` remain large mixed composition screens. File size alone does not establish a safe extraction boundary.
+4. The case-sheet-to-treatment recommendation `ensureCasesheetExists` bridge is explicitly transitional in current source. Its removal would change cross-module behavior and is **NOT AUTHORIZED**.
+5. The R7 design/requirement records describe broader workflow intentions, while this baseline has feature-gated workspace shells. This is a **contract/version dependency**, not a C-FE-03 regression.
+
+## Future candidates — NOT AUTHORIZED
+
+- Presentation-only extraction candidates within `CasesheetDetailScreen` and `EpisodeDetailScreen` require separate approval, a frozen behavior matrix, and verification that no mutation/navigation/cache owner moves.
+- Any consolidation of standalone and workspace case-sheet authoring must first reconcile the R7 canonical-authoring contract and is outside C-FE-03.
+- Any change to lifecycle derivation, role policy, tenant authority, appointment attachment, or backend contracts is outside Package C C-FE-03.
+
+## Rollback
+
+Revert only the C-FE-03 documentation and characterization-test commit. There are no production, API, schema, or persisted-data changes in this task.
+
+
+## A–F frontend integration verification — 2026-10-26
+
+Authority: the owner authorized reuse and isolated integration of C-FE-01,
+C-FE-02 and C-FE-03, without new clinical workflow changes or a Git commit.
+The existing Package C requirements/design/task inventory remains a proposed
+umbrella; individual completed tasks and this bounded integration do not approve
+its remaining decomposition candidates.
+
+### Reconciled task status
+
+| Task | Preserved implementation and current gate |
+| --- | --- |
+| C-FE-01 | Reused `43f05b5b65787c128314c212950b3b255a28bc5b`: creation selection controls extracted; screen retains commands, navigation and data ownership. Isolated combined verification passed; Git inclusion and destination integration remain pending. |
+| C-FE-02 | Reused `b061018c1e44cb9f9ba78053f3136e387a9e79d6`: preview presentation extracted; screen retains commands, selection coordination and navigation ownership. Same integration gates apply. |
+| C-FE-03 | Reused `a8a113cbb5a4cb61140c05e176f55540f2750740`: characterization only. No case-sheet/episode production extraction or writer consolidation was performed. |
+| C-BE-01 / C-BE-02 | Not implemented by this work; existing backend/R7 lifecycle, transaction and ownership prerequisites still apply. |
+| C-FE-04 | Not implemented; remains subject to existing registration-policy/security and task-specific authorization gates. |
+
+Original authority references: `PACKAGE-C-REQUIREMENTS.md`,
+`PACKAGE-C-DESIGN.md` and `PACKAGE-C-TASKS.md` in the existing backend
+`.kiro/specs/package-c-component-service-decomposition/` directory. Those
+original documents and all original worktrees were left unchanged.
+
+### Combined baseline and scope
+
+Base: frontend Package A `c7fc019486d171a44f723376dc72d185e66b6079`.
+C and base diverge from `df93d1389928fb4a7a9c08071df7e20b203d9b11`;
+changed-path intersection is empty. The eight C paths were copied byte-for-byte
+from the C tip before this evidence-only addition. No conflict resolution or
+reimplementation was needed. Canonical clinical writers and all other tracked
+paths must remain byte-identical to the Package A base.
+
+### Current offline evidence
+
+Existing dependencies only: Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5,
+TypeScript 6.0.3. The external runner preserves the native preset's `ios`
+default platform and `android,ios,native` platform list while adding
+`forceNodeFilesystemAPI: true`. Runs use `--runInBand --no-cache
+--watchman=false --runTestsByPath` under pre-import network/process guards;
+no repository test configuration or dependency declaration changed.
+
+Focused selection: **3 suites, 14 passed**, zero failed/skipped, exit 0:
+
+- `tests/features/appointments/CreateAppointmentSelectionControls.characterization.test.tsx`
+- `tests/features/appointments/PreviewAppointmentsPresentation.characterization.test.tsx`
+- `tests/features/episodes/CFE03CaseSheetEpisodeComposition.characterization.test.ts`
+
+Regression selection: **15 suites, 91 passed**, zero failed/skipped:
+
+- `tests/features/appointments/AppointmentRow.characterization.test.tsx`
+- `tests/features/appointments/appointmentCreationErrorBoundary.test.ts`
+- `tests/features/appointments/CreateAppointmentScreen.errorBoundary.test.ts`
+- `tests/features/doctorDashboard/casesheetTabReadOnlySummary.test.tsx`
+- `tests/features/doctorDashboard/caseSheetModule.test.tsx`
+- `tests/features/doctorDashboard/caseSheetModuleComposition.test.tsx`
+- `tests/features/doctorDashboard/consultationFlow.integration.test.tsx`
+- `tests/features/doctorDashboard/consultationRoutes.test.ts`
+- `tests/features/casesheets/CasesheetDetailScreen.test.tsx`
+- `tests/features/doctorDashboard/treatmentLifecycleActionsStatusRepoint.test.tsx`
+- `tests/architecture/b1-presentation-boundary-guard.test.ts`
+- `tests/security/packageALoggingBoundary.test.ts`
+- `tests/onboarding/PaymentSetupScreen.draft.test.tsx`
+- `tests/features/doctorDashboard/doctorLogoutPlatform.test.ts`
+- `tests/features/doctorDashboard/doctorDashboardError.test.ts`
+
+Regression runner exit: **0**, after delayed natural teardown. Jest emitted
+an open-handle warning after all assertions passed; no force-exit, process
+interruption or assertion suppression was used. This remains inherited test
+cleanup debt, not a failed assertion. Both guarded runs completed without a
+guard-violation marker; their process exits were 0.
+Existing console output includes theme-provider fallbacks and missing synthetic
+wizard-draft identity. No warning suppression or assertion changes were made.
+Production `tsc --noEmit --project tsconfig.production.json` passed. Static
+import checks found no transport, datasource, repository or use-case imports
+in either extracted presentation component.
+
+These tests establish bounded offline composition compatibility, not backend
+RBAC, database, device, R7-wide or release acceptance. Package A remains
+preserved in the base. No migration, API contract, clinical authority, backend,
+Commercial Platform, push, merge or deployment operation belongs to this work.
+
+Scoped ESLint of the four reused production files exits 1: six errors and ten
+warnings. A controlled stdin comparison against the Package A base confirms
+all six `react-hooks/set-state-in-effect` errors target identical unchanged
+syntax nodes in CreateAppointmentScreen; the base has the same six errors and
+seven warnings. PreviewAppointmentsScreen has zero errors and three warnings
+(base: zero errors, six warnings). The extracted components add no lint findings.
+This is inherited lint debt, not an authorized Package C behavior change.
+
+### A–F frontend integration runner correction (2026-10-28)
+
+Candidate: `codex/af-frontend-integration`, HEAD
+`1677534401518e629b8829c672419a00939e91c4`. The candidate started clean.
+The owner's Frontend Integration Regression Unblock directive authorizes this
+bounded diagnosis and evidence update, without production or assertion changes.
+
+**Verified root cause:** the temporary runner called Jest's `runCLI` API
+directly with `process.env.NODE_ENV` undefined. Installed Jest 29.7.0's
+`jest-cli/bin/jest.js` normally initializes this variable to `test` before
+calling Jest. The external API runner bypassed that CLI bootstrap. Expo's
+preset and native mocks were present; neither haste nor browser mocks were the
+cause of these two failures.
+
+React Native 0.86.3 `TouchableOpacity._setOpacityTo` starts `Animated.timing`
+with `useNativeDriver: true`. On the disabled-to-enabled rerender and the
+consultation action update, `AnimatedProps.#connectAnimatedView` receives no
+native handle from react-test-renderer. Its existing test-mode branch uses
+the synthetic tag `-1`; outside `NODE_ENV=test`, it throws `Unable to locate
+attached view in the native tree`. No code in that branch was patched, caught,
+or suppressed. Passing suites do not necessarily exercise this animation
+transition, so their success did not establish correct runner initialization.
+
+**Correction:** external runners initialize `process.env.NODE_ENV = 'test'`
+after installing the network/process guard and before importing Jest or
+transformed test modules. Canonical Jest CLI invocation should likewise use
+an explicit `NODE_ENV=test` for this verification. The existing Expo preset,
+`ios` default, `android,ios,native` platforms, `forceNodeFilesystemAPI`,
+run-in-band/no-cache/no-watchman options and guards remain unchanged. No
+repository Jest setup/configuration, test, mock, dependency or application
+file requires a correction. Native-device animation correctness is not
+established by react-test-renderer's documented-in-source test fallback.
+
+Controlled individual runs changed only runner initialization:
+
+| Existing suite | Before | After |
+| --- | --- | --- |
+| PreviewAppointmentsPresentation characterization | 4 passed / 1 failed | 5 passed |
+| consultationFlow integration | 11 passed / 1 failed | 12 passed |
+
+All assertions, rerenders, clinical commands and navigation checks are
+byte-identical to HEAD. The approved 14-suite selection then passed **114/114**
+in 9.351 seconds; the existing 15-suite regression selection passed **91/91**
+in 8.829 seconds. These selections overlap by six tests: **199 unique tests**
+passed, zero failed/skipped. This includes Package A's ten focused checks,
+payment's two tests, Package C's fourteen characterization checks and Package
+D's ninety-six checks, including the B1 architecture guard. Exact suite lists
+are the prior selections above and the existing Package D architecture
+evidence, not a new acceptance scope.
+
+Both individual corrected runs and both approved selection runs exited 0.
+Corrected external runners are `/private/tmp/nova-unblock-frontend-run.cjs`
+and `/private/tmp/nova-unblock-frontend-regression-run.cjs`; their only
+execution change from the earlier runners is test-environment initialization
+(result output paths are separate to preserve the failing evidence).
+
+The consultation-containing runs retain delayed natural teardown. The fixture
+creates a QueryClient with retry disabled but no explicit GC/cleanup setting;
+installed query-core defaults to a five-minute GC timer outside server mode.
+This is consistent with the observed delay and existing cleanup debt, not a
+new assertion failure. No force-exit, timer override or fixture change is used.
+
+Production TypeScript passed (exit 0). Scoped ESLint over the same twenty
+changed TS/TSX files returned exit 1 with **12 errors / 20 warnings**; exact
+messages match the prior candidate run. The earlier comparison against B27
+has 12 errors / 23 warnings and no new rule/severity/message summaries.
+No lint rule or suppression changed. Existing theme-provider fallback and
+synthetic wizard-identity console warnings remain; they were not suppressed.
+
+Environment: Node 20.19.4, Jest 29.7.0, jest-expo 57.0.5, React 19.2.3,
+React Native 0.86.3, RNTL 13.3.3, TypeScript 6.0.3 and ESLint 9.31.0;
+existing installed dependencies only. Python/JavaScript-level guards are not
+OS-level isolation. No database, external service or dependency installation
+was used. Temporary dependency linkage is removed after verification.
+
+The external runner fix is not an application change or completed additional
+Package C decomposition. Package C's remaining implementation, Package D
+native/Hindi/accessibility disposition, inherited lint and other A–F
+acceptance gates remain separate. This evidence-only repository change
+requires owner review and local commit approval; no commit, push, merge,
+CI execution or destination promotion is authorized here.
+
+
+## A–F continuation: current Package C verification and authorization boundary — 2026-10-28
+
+Authority: owner's A–F Refactoring Continuation directive permits the highest-value
+bounded read-only verification when no remaining task is already implementation-
+authorized. Both clean candidates were verified at their named branches/HEADs:
+frontend `codex/af-frontend-integration` / dd7173cfad058b0322320c3ad011d266bdc247f8;
+backend `codex/af-backend-integration` / a205c3d0bd2b0e7b67442a2b57cca03e721818f5.
+Both began clean. No historical test result was substituted for this run.
+
+The original backend `package-c-component-service-decomposition/PACKAGE-C-TASKS.md`
+still says PROPOSED / NOT APPROVED and requires task-specific approval after
+preconditions. C-FE-01/02 remain preserved implemented work. C-FE-03 remains
+characterization only; its existing Future candidates section does not authorize
+production extraction. C-FE-04 retains B2.7 prerequisites; C-BE-01/02 retain
+R7/B2 transaction/ownership prerequisites. No remaining extraction was silently
+authorized by the general continuation instruction. Protected appointment,
+case-sheet, episode and doctor-dashboard production paths are byte-identical
+at Git tree level to preserved C integration commit 1b463580af91c64edf23557af3bfdb92690dc9b2.
+
+Fresh guarded selection: the three C characterization suites (14 tests), the
+seven original canonical-writer/clinical regression suites listed above (62),
+and B1 architecture (2): **11 suites / 78 passed, zero failed or skipped**;
+Jest test duration **7.695 seconds**. Exact suite/assertion results are in
+`/private/tmp/nova-c-continuation-results.json`; external runner/log are
+`/private/tmp/nova-c-continuation-run.cjs` and
+`/private/tmp/nova-c-continuation.log`. Uses existing pre-import
+network/process guard, NODE_ENV=test before Jest, preserved native haste options,
+forceNodeFilesystemAPI, runInBand/no-cache/watchman=false and exact suite paths.
+No guard-violation markers. Existing theme/console output was not suppressed.
+Runner teardown/exit is recorded below independently of assertion success.
+
+Production TypeScript (`tsc --noEmit --project tsconfig.production.json`) passed,
+exit 0. Scoped ESLint on the four C production TSX paths and three characterization
+tests returned exit 1: **6 inherited errors / 10 inherited warnings**. Every
+rule/severity/message/line signature matches the preserved integration baseline;
+no source, assertion, lint rule, configuration or suppression changed. Existing
+Node 20.19.4/dependencies reused; no dependency installation. Native Python 3.11
+was unavailable at checked standard locations; Package E's existing runtime
+acceptance gap remains unverified, not solved by this frontend run.
+
+Next implementation decision: task-specific authorization for an exact C-FE-03
+presentation-only extraction boundary, with R7/B2 current-contract prerequisites
+confirmed and canonical writer/navigation/cache/tenant authority retained. This
+record does not approve extraction, clinical redesign or registration work.
+Package D still needs its recorded copy/appearance/native acceptance disposition;
+Package B security/lifecycle approvals remain; Package F credential use stays on
+explicit hold. No database activity, credentials access, source/test edits, Git
+staging/commit, push, merge or promotion was performed. This evidence-only update
+requires separate local Git-inclusion review.
+
+
+Final runner process exited naturally with **exit 0**, after delayed teardown
+(approximately five minutes after assertion results). No forced exit, timer
+mock or assertion suppression was introduced. This inherited cleanup behavior
+is not declared fixed. Temporary dependency linkage was removed. Installed
+Jest 29.7.0, jest-expo 57.0.5, TypeScript 6.0.3, ESLint 9.31.0, React 19.2.3
+and React Native 0.86.3 were reused. Original B27 frontend/backend snapshot
+checks passed: 1300/1670 recorded content hashes and their Git statuses match.
+Only this frontend evidence document and backend Engineering Truth changed;
+indexes remain empty. Local results are not GitHub-hosted, native-device,
+database, destination-integration or package-acceptance evidence.
+
+## C-FE-03 first approved production slice — 2026-10-29
+
+**Authority and baseline:** owner's C-FE-03 First Production Extraction directive
+explicitly authorizes only CasesheetDetailTextSection, its four exclusively used
+styles and seven clinical/SOAP call sites. Branch codex/af-frontend-integration,
+HEAD 567e04cf3e8fd88be6a703f8dd02ab61eeb99df6 was verified clean before edits.
+This task-specific approval supersedes the earlier no-extraction authorization
+status for this slice only. The proposed umbrella and Episode extraction are
+not thereby approved, and C-FE-03 is not declared complete.
+
+### Exact implementation and requirements traceability
+
+| Existing contract | Implementation and evidence |
+| --- | --- |
+| C-REQ-01 dependency direction | New `features/casesheets/presentation/components/CasesheetDetailTextSection.tsx` imports only React/native/icon and existing theme modules. TypeScript-AST structural test uses an explicit presentation import allowlist and rejects dynamic import/require and fetch/eval calls. No repository, query/mutation, navigation, tenant or lifecycle dependency. |
+| C-REQ-02 clinical authority | Parent screen still chooses fields/labels/order and owns all queries, mutations, navigation, cache/refresh, printing/snapshots, sign/archive and treatment-sheet bridge. No change to CaseSheetModule or CasesheetTab; canonical-writer regressions pass. |
+| C-REQ-03 equivalent output | Props are `title: string`, `text?: string \| null`, `icon: keyof typeof Ionicons.glyphMap`. Existing `if (!content)` becomes equivalent `if (!text)`; unchanged heading/content/icon native tree, four byte-identical styles, existing static theme tokens and implicit accessibility behavior. No new copy, translation, accessibility attribute or theme policy. |
+| C-REQ-04 characterize first | Preserved 78-pass baseline evidence precedes this slice. New component tests plus one additive screen-order test cover the moved boundary; original six screen tests remain byte-preserved. |
+| C-REQ-05/06 bounded owner, no speculative sharing | Feature-local component owns only section presentation. No new hook, provider, business rule or generic shared-component framework. |
+
+Exactly five repository paths comprise this artifact (relative to `frontend/`):
+
+- `features/casesheets/presentation/components/CasesheetDetailTextSection.tsx` (new).
+- `features/casesheets/presentation/pages/CasesheetDetailScreen.tsx`.
+- `tests/features/casesheets/CasesheetDetailTextSection.test.tsx` (new).
+- `tests/features/casesheets/CasesheetDetailScreen.test.tsx` (one added order test).
+- This existing characterization/evidence document.
+
+The component preserves content strings, including zero-as-text and whitespace;
+empty string/null/undefined omit the entire section. Rerender checks replace
+heading/text/icon, omit then restore the section. The screen test asserts both
+heading and content order: Chief Complaint, Provisional Diagnosis, Final
+Diagnosis, Subjective, Objective, Assessment, Plan. SOAP presence conditions and
+its Clinical Notes wrapper stay in the screen. Four exclusive styles move with
+no value changes; reverse-applying only the helper/import/style/call-site move
+reconstructs the exact baseline screen bytes. No other screen code changed.
+
+### Offline verification
+
+Existing external native-preset overlay and pre-import network/process guard;
+NODE_ENV=test before Jest, runInBand, no-cache, watchman=false, original ios and
+android/ios/native haste fields retained with forceNodeFilesystemAPI. No database,
+secrets, external services or dependency installation. JavaScript-level guard
+coverage is not OS-level isolation or native-device validation.
+
+- Focused component + screen: **2 suites, 15 passed, zero failed/skipped,
+  exit 0**, Jest 4.320 seconds. Eight new component cases plus seven screen
+  cases (six existing and one new).
+- Combined regression: **12 suites, 87 passed, zero failed/skipped**, Jest
+  12.125 seconds. This is the previous exact 78-test selection plus the eight
+  component cases and one order test; counts are not added across repeated runs.
+  Includes C-FE-01/02/03 characterization, Case Sheet screen, read-only tab,
+  canonical writer/module composition, consultation flow/routes, treatment
+  lifecycle and B1 architecture. Final process exit is recorded below separately
+  from assertion success; no force-exit is authorized.
+- Production TypeScript (`tsc --noEmit --project tsconfig.production.json`):
+  **PASS, exit 0**.
+- Scoped ESLint on the two production and two test paths: **PASS, exit 0,
+  zero errors/warnings**. Broader inherited lint findings are not declared fixed.
+- Exact screen reconstruction and original-test preservation: PASS. Existing
+  four style definitions byte-identical. No guard-violation markers in focused,
+  regression, TypeScript or ESLint logs. `git diff --check`: PASS.
+
+Temporary external evidence: `/private/tmp/nova-cfe03-focused-results.json`,
+`nova-cfe03-regression-results.json`, corresponding runner/log files, plus
+`nova-cfe03-tsc.log` and `nova-cfe03-eslint.log`. Existing Node 20.19.4,
+Jest 29.7.0, jest-expo 57.0.5, TypeScript 6.0.3, ESLint 9.31.0,
+React 19.2.3 and React Native 0.86.3 reused.
+
+### Remaining scope and acceptance
+
+This slice does not authorize EpisodeDetailMetadataGrid, Episode module/writer
+consolidation, lifecycle derivation, route/cache ownership changes or the
+transitional treatment-sheet bridge's removal. Relevant R7 version/ownership
+and B2.7/B2.8 security gates remain for any future task that intersects those
+boundaries; no registration/organization-admin/approval/audit decision changed.
+Package F database-login hold remains unchanged, with no credential access.
+Native visual/accessibility equivalence is not established by offline rendering
+alone. Local Git inclusion requires separate approval of these five exact paths;
+no staging, commit, CI, push, merge or destination promotion was performed.
+
+
+Final combined runner exited naturally with **exit 0**, after approximately
+five minutes of delayed teardown following passing assertions. No force-exit,
+timer mock, assertion suppression or test configuration change. Temporary
+dependency linkage removed. Both original dirty B27 snapshots verified unchanged
+(1300 frontend / 1670 backend hashes and Git statuses). Canonical CaseSheetModule,
+CasesheetTab, EpisodeDetailScreen and EpisodeWorkspaceScreen byte hashes match
+HEAD. Backend artifacts remain untouched. Five-file scope, baseline HEAD,
+empty index and diff whitespace checks pass. New component/test are Git-visible
+without force-add; no ignore rules changed. Ready for separately approved local
+Git inclusion of this slice, not full C-FE-03 or Package C completion.
+
+## C-FE-03 second approved slice: Episode metadata — 2026-10-29
+
+**Authority/baseline:** owner's C-FE-03 Episode Metadata Extraction directive,
+limited to the existing metadata grid near former EpisodeDetailScreen line 513.
+Verified clean `codex/af-frontend-integration` at
+5ce50a018826d26593c0a1b3a201bd14e00228e7 before editing. This authorizes only
+this display slice, not the remaining proposed Package C umbrella or lifecycle
+redesign. The first Case Sheet text slice remains preserved and unchanged.
+
+### Requirements → implementation → tests
+
+| Contract | Implementation | Evidence |
+| --- | --- | --- |
+| C-REQ-01 presentational dependency direction | New `features/episodes/presentation/components/EpisodeDetailMetadataGrid.tsx` imports only React, react-native and icons. No hooks, date parser, query, mutation, transport, auth or navigation. | TypeScript-AST guard allows only the three presentation imports and static StyleSheet.create; rejects other calls, dynamic dependencies and constructors. |
+| C-REQ-02 server/clinical authority | Screen retains its date formatter, query/focus/auth state, lifecycle/status interpretation, mutations, cache/refetch, document/consultation/prescription callbacks and edit/close/reopen behavior. | Reverse applying exactly the grid/import/style extraction reconstructs the baseline screen bytes. Runtime screen test checks tenant-scoped queries, formatter calls, existing back/Case Sheet callbacks, no mutation and unchanged ACTIVE close affordance. Existing canonical-writer/clinical regressions pass. |
+| C-REQ-03 equivalent display | Existing four metadata styles moved byte-identically; same native row order, labels, icons, sizes, text styles and theme values. | Grid tests assert layout/typography/order/icon props, all four clinic palettes, changed theme props, null/empty/undefined display values, zero visits and visibility independent of display values. |
+| C-REQ-04/05/06 characterize, retain owners, no speculative abstraction | Grid takes formatted values, explicit flags and resolved colors only; no shared framework or additional writer. | Existing C-FE-03 characterization retained unchanged; focused grid/screen tests plus the preserved first-slice and workflow selections. |
+
+Typed props: `startDateText?`, `endDateText?`, `lastVisitDateText?` are
+`string | null`; `showEndDate`/`showLastVisit` are required booleans;
+`visitsCount?: number | null`; `textColors` is readonly primary/tertiary strings.
+The screen still calls formatEpisodeDate; optional dates are formatted only
+when their original raw values are truthy. Explicit flags preserve the original
+optional-row visibility; Start Date and Total Visits rows remain present.
+Null/undefined/empty display values do not invent placeholders in the component.
+Colors come from the screen's existing clinic theme, including on rerender.
+No label, translation, accessibility attribute, clinic palette or fallback changed.
+
+Exactly five artifact paths, relative to frontend/:
+
+- `features/episodes/presentation/components/EpisodeDetailMetadataGrid.tsx` (new).
+- `features/episodes/presentation/pages/EpisodeDetailScreen.tsx`.
+- `tests/features/episodes/EpisodeDetailMetadataGrid.test.tsx` (new, 11 cases).
+- `tests/features/episodes/EpisodeDetailScreen.metadata.test.tsx` (new, 2 cases).
+- This existing characterization/evidence document.
+
+### Verification and limits
+
+Established pre-import JavaScript network/process guard and external Expo/Jest
+native-preset overlay; NODE_ENV=test, runInBand, no-cache, watchman=false,
+original haste fields preserved with forceNodeFilesystemAPI. No database,
+credentials, services, installs, CI or repository configuration changes.
+
+- Final focused run: **2 suites / 13 passed, zero failed/skipped, exit 0**,
+  Jest **3.741 seconds**. Initial new screen test used incorrect capitalization
+  of an existing English label; corrected the assertion to catalog's existing
+  `View Casesheet`, preserving the navigation assertion and production copy.
+- Combined: **17 suites / 108 passed, zero failed/skipped**, Jest **11.725 seconds**.
+  Includes all prior 87 tests plus 13 new cases and eight existing Episode
+  TreatmentSheetsSection, CreateConsultationScreen boundary and client-count
+  cases. Counts overlap between focused and combined runs; do not add them.
+  Final natural process exit is recorded below separately from assertions.
+- Production TypeScript: **PASS, exit 0** (`tsc --noEmit --project tsconfig.production.json`).
+- Scoped ESLint: **exit 0, zero errors, three inherited no-unused-vars warnings**
+  in EpisodeDetailScreen, matching rule/severity/message baseline signatures.
+  New component and both tests have zero diagnostics. No lint suppression/fix.
+- Four extracted styles byte-identical; exact reverse screen reconstruction and
+  `git diff --check` PASS. No guard-violation markers in verification logs.
+
+External temporary evidence: `/private/tmp/nova-episode-metadata-focused-results.json`,
+`nova-episode-metadata-regression-results.json`, their corresponding runner/log
+files, `nova-episode-metadata-tsc.log`, `nova-episode-metadata-eslint.log` and
+`nova-episode-metadata-baseline-eslint.json`. Existing Node 20.19.4, Jest 29.7.0,
+jest-expo 57.0.5, TypeScript 6.0.3, ESLint 9.31.0, React 19.2.3 and RN 0.86.3.
+These guards are JavaScript-level, not OS isolation; offline rendering does not
+establish native visual/accessibility or database acceptance.
+
+**Disposition:** both authorized presentation slices have implementation evidence;
+this second slice awaits separately approved local Git inclusion. No further
+extraction is implicitly authorized, and C-FE-03/Package C closure is not inferred.
+Relevant R7 contract/version, canonical-authoring/transition and B2.7/B2.8
+security/lifecycle gates remain for future changes intersecting those boundaries.
+No new such decision was required for this display-only grid. Native layout,
+large text, screen-reader and visual equivalence remain unverified. Package F
+credential-use hold remains unchanged, without database/credential access.
+
+
+Final combined runner exited naturally with **exit 0** after approximately
+five minutes of delayed teardown following assertion completion, consistent
+with the inherited regression-runner behavior. No forced exit, timer/mock
+change, assertion suppression or production adjustment was introduced.
+Temporary dependency linkage removed. Original B27 frontend/backend 1300/1670
+snapshot hashes and Git statuses match. Canonical writer, CasesheetTab,
+EpisodeWorkspaceScreen and preserved Case Sheet text slice match HEAD bytes.
+Exactly five intended files remain unstaged; baseline HEAD and empty index
+verified. New component and tests are Git-visible without ignore changes.
+Ready for separately approved local Git inclusion; no commit/push/merge or
+Package C-wide acceptance is claimed.
+
+
+## Final Package C acceptance reconciliation — 2026-10-29
+
+**Verified baseline before this evidence correction:** frontend
+codex/af-frontend-integration at b2274c109c18d8dcd76d4748eb791d13f8a9717c;
+backend codex/af-backend-integration at afd5db34e30b574bdecc1987d22424a26bb63f06.
+Both worktrees and indexes were clean. No suite was rerun for reconciliation.
+The stale initial characterization-only status and earlier pending-Git-inclusion
+statements are superseded by this dated record, not deleted from history.
+
+### Authority boundary
+
+Existing backend `.kiro/specs/package-c-component-service-decomposition/`
+PACKAGE-C-REQUIREMENTS.md, PACKAGE-C-DESIGN.md and PACKAGE-C-TASKS.md still
+explicitly say PROPOSED / NOT APPROVED. They are the original planning/acceptance
+reference, not proof of a ratified all-six-task implementation inventory. Owner
+execution directives separately approved C-FE-01/02 integration, C-FE-03
+characterization and the two exact display extractions. Those directives do not
+approve C-FE-04, C-BE-01/02 or unrestricted additional clinical decomposition.
+Do not classify unapproved proposed work as an omitted approved requirement.
+
+### Task-by-task disposition
+
+| Task | Verified committed scope/evidence | Current disposition |
+| --- | --- | --- |
+| C-FE-01 | Original 43f05b5 selection-control source retained byte-for-byte; consolidated preservation 1b463580af91c64edf23557af3bfdb92690dc9b2. Current 108-test selection includes its five characterization cases. Route/query/command/cache ownership retained. | Approved selection-control subset CODE-COMPLETE / OFFLINE-VERIFIED in candidate; native acceptance outstanding. No additional approved implementation gap identified. |
+| C-FE-02 | Original b061018 preview-component/screen source retained byte-for-byte; same 1b463580 preservation. Five characterization cases cover presentation imports, screen-owned plan/create/cache/R7 coordination, loading/error/retry/empty states, alternative intent callbacks and confirmation affordances. | Approved preview subset CODE-COMPLETE / OFFLINE-VERIFIED in candidate; native acceptance outstanding. |
+| C-FE-03 | Original a8a113c characterization test retained byte-for-byte in 1b463580; text section 5ce50a018826d26593c0a1b3a201bd14e00228e7; metadata grid b2274c109c18d8dcd76d4748eb791d13f8a9717c. Source/tests match both approved artifact receipts; all commits are in current ancestry. | Characterization PLUS both approved extractions CODE-COMPLETE / COMMITTED / OFFLINE-VERIFIED. No longer characterization-only or awaiting these commits. No broader clinical authoring consolidation implemented or authorized. |
+| C-FE-04 | PACKAGE-C-TASKS.md section C-FE-04 explicitly defers registration construction work; acceptance criteria not yet defined. No implementation in accepted C artifact. | DEFERRED / BLOCKED, NOT COMPLETE: B2_7_BLOCKED, B2.7-B-ISS-001, B2.7-FO-002, B2.8 activation and protected registration lifecycle/security review; separate task authorization required. |
+| C-BE-01 | Task section C-BE-01 requires treatment-sheet command/query/UoW/lifecycle map and approved design before implementation. No accepted Package C service extraction. | BLOCKED / NOT IMPLEMENTED: R7 treatment-plan/session authority and B2/R7 transaction compatibility, explicit design/task approval. Not a completed or independently approved backend task. |
+| C-BE-02 | Task section C-BE-02 requires authoritative fact/projection/transaction map before a possible pure assembler extraction. Package E workspace import/mock/lint cleanup is not this decomposition. | BLOCKED / NOT IMPLEMENTED: exact R7/B2 ownership review, B2.8 boundary compatibility and owner authorization. |
+
+The historical requirements table's B2.8 "not started" statement is not current
+implementation evidence: backend Engineering Truth records d310a93 offline
+preparation (28 opt-in checks passed, 22 cases default-disabled). Enforcement
+activation/parent security approvals remain open. No C1/C6 or B2.7 prerequisite
+is silently waived by that preparation or by frontend completion.
+
+### Acceptance criteria and closure decision
+
+For the explicitly approved frontend scope, C-REQ-01..06 and nonfunctional
+criteria have bounded source/test evidence: presentation-only dependencies,
+unchanged server/clinical authority, characterized equivalent local behavior,
+one existing query/cache/mutation owner, no speculative shared framework,
+exact manifests and reversible commits. The most recent combined historical
+run is **17 suites / 108 passed, zero failures/skips, natural exit 0**, including
+B1 and canonical-writer/consultation regressions. Production TypeScript passed;
+latest Episode scope has zero lint errors and three baseline-matched warnings.
+Other inherited lint and delayed teardown debt remain; do not claim a globally
+clean lint suite, fresh test execution, GitHub-hosted verification or live
+backend authorization acceptance.
+
+Reversible preservation boundaries: 1b463580 contains the eight-path C-FE-01/02/
+characterization consolidation; 5ce50a01 contains the five-path text extraction;
+b2274c10 contains the five-path metadata extraction. An authorized rollback
+would revert only the relevant task-sized commit in dependency order, newest
+first where dependencies require it; never reset/clean/stash the dirty B27
+checkouts. No schema/data rollback is involved. No rollback executed here.
+
+**A — YES, implementation/offline-verification closure for the exact executable
+frontend subset.** It is already assembled in the clean candidate; no duplicate
+replay, extra extraction or missing approved production behavior is identified.
+Ready for review/integration subject to separately controlled destination and
+acceptance gates; this is not merge authorization or release readiness.
+
+**B — retain explicit blocked/deferred tasks.** Original exit criterion 1
+requires inventory approval or approved supersession; full-package closure
+cannot count the proposed backend/registration tasks as done. The Product Owner
+owns inventory/disposition and B2.7 product policy decisions; Platform Security
+owns relevant security/ownership concurrence (including FO-002/C1/C6/B2.8);
+clinical/R7 architecture and backend owners must confirm transaction/lifecycle
+boundaries before any backend extraction. No additional R7/B2.7 decision is
+needed merely to acknowledge the completed display-only subset.
+
+**C — acceptance work remains, not another production-refactoring batch.**
+Native iOS/Android comparison of appointment controls/preview and the two detail
+sections must verify layout/order, truncation/wrapping, icons/themes, large text,
+focus/navigation, accessibility labels/order and VoiceOver/TalkBack. Existing
+local tests support unchanged native structure; they do not establish these
+runtime observations. No device/runtime acceptance environment was verified or
+used here. Backend RLS/tenant acceptance remains separate; Package F credential
+use is explicitly blocked. No unrestricted new code task is authorized.
+
+**Proposed overall disposition: approved frontend subset CODE-COMPLETE /
+OFFLINE-VERIFIED; Package C FULL ACCEPTANCE PENDING, with C-FE-04 DEFERRED/BLOCKED
+and C-BE-01/02 BLOCKED.** Next useful A–F milestone is an owner-authorized native
+frontend acceptance pass for the preserved A/C/D candidate, reusing existing
+evidence and recording results in existing records. This may close multiple
+acceptance gates without inventing copy, changing visuals or adding refactoring.
+This status correction changes only this evidence document, remains uncommitted,
+and requires separate Git-inclusion approval. No production/test/config change,
+credentials, database, CI, push, merge, promotion or new documentation framework.
+
+## A/C/D native acceptance availability and disposition — 2026-10-29
+
+Authority: owner's Package C Evidence Preservation and A/C/D Native Acceptance
+request. The reviewed reconciliation alone was committed as
+`d1c4033aa920b0993ebb6ee2678e151f504a14f4`, parent
+`b2274c109c18d8dcd76d4748eb791d13f8a9717c`, exact one-document path/hash,
+clean index/worktree immediately after commit. Backend remains clean at
+`afd5db34e30b574bdecc1987d22424a26bb63f06`. No further commit is authorized.
+
+### Observed environment (availability checks, not acceptance PASS)
+
+- iOS: xcode-select selects `/Library/Developer/CommandLineTools`; xcrun cannot
+  locate simctl; no Xcode application found in /Applications. Existing native
+  source/workspace/Podfile.lock does not supply an executable simulator/runtime.
+- Android: existing adb/emulator binaries, platforms 33–36, build-tools and
+  API 35 system images/AVDs found. `emulator -list-avds` listed seven existing
+  definitions, with Crashpad/Mach permission diagnostics under the sandbox.
+  No emulator boot or setup was attempted; boot usability remains unverified.
+- Existing local ADB daemon was listening. Sandbox-local enumeration initially
+  failed with Operation not permitted; one authorized elevated **read-only
+  inventory** succeeded, exit 0, **zero connected devices**. No daemon start,
+  pairing, device/app action, role/credential or database operation performed.
+- Candidate has native android/ios source but no APK at android/app/build/outputs/apk,
+  no ios/build, dist or .expo runtime artifact in checked locations. No existing
+  .maestro/.detox/e2e workflow or native acceptance package script was found in
+  the inspected candidate locations. A usable approved physical-device or
+  service-isolated candidate-build/synthetic-data workflow was not established.
+  This does not assert that no external build or device exists elsewhere.
+- app.json declares userInterfaceStyle=automatic. This is configuration evidence,
+  not proof of system-dark-theme support or appearance. Existing Package D
+  evidence explicitly leaves system dark-mode/native verification unproven.
+
+### Native criteria matrix
+
+No application was launched and no native criterion is reported PASS or FAIL.
+Existing Jest/TypeScript evidence was neither rerun nor counted as native proof.
+
+| Criterion / existing scope | Status | Exact blocker / evidence needed |
+| --- | --- | --- |
+| C-FE-01 appointment selection and interaction | BLOCKED | No connected target or verified candidate runtime; observe selection, availability/disabled affordances and callbacks using existing scenarios. |
+| C-FE-02 preview display/alternatives/confirmation | BLOCKED | Same environment prerequisite; observe ordering, loading/error/retry/empty states and existing intent navigation. |
+| C-FE-03 Case Sheet clinical/SOAP text | BLOCKED | Same prerequisite; compare seven sections, omission and reading order against the preserved pre-extraction behavior. |
+| C-FE-03 Episode dates/count metadata | BLOCKED | Same prerequisite; observe optional dates, zero/count display, row order and live theme propagation. |
+| Light/clinic-palette appearance | BLOCKED | Candidate native rendering and baseline comparison required; offline token checks are not screenshots. |
+| System-dark appearance | NOT RUN | Native target unavailable; automatic appearance flag does not establish a dark palette. No dark infrastructure/design implementation authorized. |
+| D English/Hindi supported-copy layout | BLOCKED | Native candidate with synthetic scenarios required; check clipping/wrapping and supported catalog coverage. Existing missing-copy decisions remain open. |
+| Large fonts/text wrapping | BLOCKED | Native target/font-scale acceptance required; no device setting changed. |
+| Accessibility labels/focus order | BLOCKED | Observe native accessibility tree, navigation and modal focus on the approved target. |
+| VoiceOver / TalkBack | BLOCKED | No usable iOS runtime or connected Android target; screen-reader execution not performed. |
+| A payment/logging-related native navigation and relevant clinical interactions | BLOCKED | Safe candidate runtime and approved synthetic workflow needed; no account/service/clinical data accessed. |
+
+### Minimal next setup/approval and integration disposition
+
+Prefer existing Android tooling: owner must identify/approve one existing AVD
+or connected authorized device, a build/bundle corresponding to this candidate,
+and a safe synthetic/offline workflow that cannot contact production. If a
+build, dependency resolution, device boot/install or fixture/service setup is
+needed, obtain that bounded setup approval first; no install/download or setup
+occurred here. iOS additionally needs approved full Xcode/simulator tooling or
+an approved physical-device workflow; do not infer it from CommandLineTools.
+Do not invent a new native harness or change configuration as part of this
+availability task. No native setup authorization implies Package F database
+login consent, tenant fixtures or production service access.
+
+Code/offline frontend subset remains ready for **destination integration review**,
+not unconditional acceptance, merge/promotion or release. Native A/C/D evidence
+remains blocked/not run; Package D's existing copy/appearance decisions and
+Package C's separate blocked/deferred tasks remain. No production defect was
+observed because application execution did not occur. This native disposition
+is an uncommitted evidence-only append; no additional Git commit authorized.

@@ -19,6 +19,10 @@ export interface CurrentUserResponse {
   full_name?: string;
   clinic_name?: string;  // single string (legacy / owner path)
   clinic_names?: string[]; // list shape from new backend implementation
+  /** Backend-authoritative organization/tenant scope and whether the JWT claims lag behind it. */
+  effective_organization_id?: string | null;
+  effective_tenant_id?: string | null;
+  session_refresh_required?: boolean;
 }
 
 /**

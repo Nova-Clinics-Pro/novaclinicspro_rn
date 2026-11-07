@@ -95,6 +95,14 @@ export interface PaginatedOperatingHoursResponse {
   limit: number;
 }
 
+/** Legacy named-day schedule consumed by the onboarding confirmation screen. */
+export interface OnboardingOperatingHoursSourceItem {
+  day: string;
+  is_open: boolean;
+  open_time?: string;
+  close_time?: string;
+}
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================

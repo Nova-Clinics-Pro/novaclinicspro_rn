@@ -1,26 +1,33 @@
 import type { RegistrationStatus } from '../domain/entities/registration.entity';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const isApprovedChoiceContinuation = (
+  continuation: unknown,
+): continuation is NonNullable<RegistrationStatus['continuation']> => {
+  if (!continuation || typeof continuation !== 'object' || Array.isArray(continuation)) {
+    return false;
+  }
+
+  const candidate = continuation as Record<string, unknown>;
+  return candidate.kind === 'approved_choice'
+    && typeof candidate.application_id === 'string'
+    && UUID_PATTERN.test(candidate.application_id)
+    && typeof candidate.tenant_name === 'string'
+    && candidate.tenant_name.trim().length > 0;
+};
+
 /** Route resolution used only by the root gate after authoritative status fetch. */
 export const resolveRegistrationStatusRoute = (status: RegistrationStatus): string | null => {
-  if (!status.application_id) return null;
-
-  switch (status.application_status?.toLowerCase()) {
-    case 'draft':
-      return `/onboarding/draft?applicationId=${status.application_id}`;
+  switch (status.status) {
+    case 'registration_submitted':
+      return '/onboarding/draft';
     case 'pending_review':
-      return `/onboarding/pending-review?applicationId=${status.application_id}`;
+      return '/onboarding/pending-review';
     case 'approved':
-      return status.tenant_id
-        ? `/onboarding/setup-wizard?tenantId=${status.tenant_id}`
-        : `/onboarding/choice?applicationId=${status.application_id}`;
-    case 'onboarding':
-      return status.tenant_id
-        ? `/onboarding/setup-wizard?tenantId=${status.tenant_id}`
-        : null;
-    case 'active':
-      return status.tenant_id ? '/clinic-admin' : null;
+      return isApprovedChoiceContinuation(status.continuation) ? '/onboarding/choice' : null;
     case 'rejected':
-      return `/onboarding/rejected?applicationId=${status.application_id}`;
+      return '/onboarding/rejected';
     default:
       return null;
   }

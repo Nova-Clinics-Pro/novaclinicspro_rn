@@ -5,6 +5,7 @@
 // Data Layer (primary source of DTOs)
 export * from './data/models/treatmentSheets.dtos';
 export * from './data/repositories/treatmentSheets.repository.impl';
+export * from './data/repositories/treatmentSheetLifecycle.repository.impl';
 
 // Domain Layer (entity helpers - avoid re-exporting types already in DTOs)
 export {

@@ -1,7 +1,6 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { PaymentSetupScreen } from '../../features/onboarding/presentation/pages/steps/PaymentSetupScreen';
-import { axiosClient } from '../../core/api/axiosClient';
 import { useWizardStore } from '../../features/onboarding/presentation/stores/wizard.store';
 
 const mockRouterReplace = jest.fn();
@@ -45,16 +44,14 @@ jest.mock('../../core/theme/useClinicTheme', () => ({
 }));
 
 jest.mock('../../features/onboarding/data/repositories/onboarding.repository.impl', () => ({
+  usePaymentMethodsQuery: () => ({
+    isLoading: false,
+    data: { paymentMethods: ['cash'], hasServerPaymentMethods: false },
+  }),
   useSubmitStepMutation: () => ({
     mutateAsync: (...args: any[]) => mockMutateAsync(...args),
     isPending: false,
   }),
-}));
-
-jest.mock('../../core/api/axiosClient', () => ({
-  axiosClient: {
-    get: jest.fn(),
-  },
 }));
 
 describe('PaymentSetupScreen draft integration', () => {
@@ -67,7 +64,6 @@ describe('PaymentSetupScreen draft integration', () => {
       tax_rate: 18,
       invoice_prefix: 'INV',
     });
-    (axiosClient.get as jest.Mock).mockResolvedValue({ data: {} });
     mockMutateAsync.mockResolvedValue({ next_step: null });
   });
 

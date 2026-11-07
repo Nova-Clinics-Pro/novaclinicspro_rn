@@ -15,7 +15,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ThemeProvider, useClinicTheme } from '../core/theme/useClinicTheme';
-import { ClinicType } from '../core/theme/clinicThemes';
 import { BgGradient, BgSolid } from '../core/components/ui/BgGradient';
 import { spacing } from '../core/theme/spacing';
 
@@ -25,15 +24,7 @@ import { spacing } from '../core/theme/spacing';
 const ThemeDemoContent = () => {
   const theme = useClinicTheme();
   const router = useRouter();
-  const [selectedTheme, setSelectedTheme] = useState<ClinicType>('AYURVEDA');
   const [useGradient, setUseGradient] = useState(true);
-
-  const clinicTypes: { type: ClinicType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { type: 'AYURVEDA', label: 'Ayurveda', icon: 'leaf' },
-    { type: 'GENERAL_MEDICINE', label: 'General Medicine', icon: 'medical' },
-    { type: 'DENTAL', label: 'Dental', icon: 'water' },
-    { type: 'PHYSIOTHERAPY', label: 'Physiotherapy', icon: 'fitness' },
-  ];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.default }]}>

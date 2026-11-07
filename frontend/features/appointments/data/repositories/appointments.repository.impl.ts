@@ -42,6 +42,9 @@ import {
   BulkCreateResponse,
   AvailableTherapist,
 } from '../models/appointments.dtos';
+import { AppointmentCreationError } from '../../domain/errors/appointmentCreationError';
+
+export { AppointmentCreationError } from '../../domain/errors/appointmentCreationError';
 
 // ============================================
 // QUERY KEYS
@@ -66,6 +69,19 @@ export const appointmentsKeys = {
   availableTherapists: (tenantId: string, params: Record<string, string>) =>
     [...appointmentsKeys.all, 'therapists', tenantId, params] as const,
 };
+
+/**
+ * Canonical tenant-scoped appointment-detail command.
+ *
+ * Non-React application orchestration uses this alongside
+ * `appointmentsKeys.detail`; presentation continues to use the query hook
+ * below. Keeping both paths here prevents application code from reaching into
+ * the datasource or central client directly.
+ */
+export const getAppointmentDetail = (
+  tenantId: string,
+  appointmentId: string,
+): Promise<AppointmentResponse> => getAppointmentApi(tenantId, appointmentId);
 
 // ============================================
 // QUERY HOOKS
@@ -131,7 +147,7 @@ export const useAppointmentDetailQuery = (
 ) => {
   return useQuery<AppointmentResponse, Error>({
     queryKey: appointmentsKeys.detail(tenantId, appointmentId),
-    queryFn: () => getAppointmentApi(tenantId, appointmentId),
+    queryFn: () => getAppointmentDetail(tenantId, appointmentId),
     enabled: !!tenantId && !!appointmentId,
     ...options,
   });
@@ -220,7 +236,7 @@ export const useEpisodeAppointmentsQuery = (
 export const useCreateAppointmentMutation = (tenantId: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation<AppointmentResponse, Error, AppointmentCreate>({
+  return useMutation<AppointmentResponse, AppointmentCreationError, AppointmentCreate>({
     mutationFn: (payload) => createAppointmentApi(tenantId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() });
@@ -374,7 +390,7 @@ export const useValidateAppointmentMutation = () => {
  * Hook to generate therapy plan (preview)
  */
 export const useGenerateTherapyPlanMutation = () => {
-  return useMutation<TherapyPlanResponse, Error, TherapyPlanRequest>({
+  return useMutation<TherapyPlanResponse, AppointmentCreationError, TherapyPlanRequest>({
     mutationFn: (payload) => generateTherapyPlanApi(payload),
   });
 };
@@ -385,7 +401,7 @@ export const useGenerateTherapyPlanMutation = () => {
 export const useBulkCreateAppointmentsMutation = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<BulkCreateResponse, Error, BulkCreateRequest>({
+  return useMutation<BulkCreateResponse, AppointmentCreationError, BulkCreateRequest>({
     mutationFn: (payload) => bulkCreateAppointmentsApi(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() });

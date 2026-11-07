@@ -64,10 +64,12 @@ describe('Admin Visit History card characterization (R3B · T-0.4, baseline for 
     expect(cardBody).not.toMatch(/onPress=\{onPress\}/);
   });
 
-  it('each card DOES contain two real, navigating CTAs: Add/View Case Sheet and Add/View Prescription, routing to the exact standalone routes Group B will flag-gate', () => {
+  it('each card contains two real, COS-aware Case Sheet and Prescription CTAs', () => {
     expect(source).toContain('router.push(`/clinic-admin/clients/${clientId}/casesheets/${appointment.case_sheet_id}`');
-    expect(source).toContain('router.push(`/clinic-admin/clients/${clientId}/casesheets/new?appointmentId=${appointment.id}`');
+    expect(source).toContain("episodeWorkspaceRoute(appointment.episode_id, appointment.id, clientId, 'doctor', 'case_sheet')");
     expect(source).toContain('router.push(`/clinic-admin/clients/${clientId}/prescriptions/${appointment.prescription_id}`');
-    expect(source).toContain('router.push(`/clinic-admin/clients/${clientId}/prescriptions/new?appointmentId=${appointment.id}`');
+    expect(source).toContain("episodeWorkspaceRoute(appointment.episode_id, appointment.id, clientId, 'doctor', 'prescription')");
+    // Legacy destinations remain only for COS-off and no-episode fallback.
+    expect(source).toContain(': `/clinic-admin/clients/${clientId}/prescriptions/new?appointmentId=${appointment.id}`');
   });
 });

@@ -25,27 +25,35 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
 import { buildCasesheetPrintHtml } from '../../../../core/clinicalPrint/adapters';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
 import {
   useCasesheetDetailQuery,
   useTransitionCasesheetStatusMutation,
   usePrintCasesheetMutation,
   useArchiveCasesheetMutation,
-  CasesheetStatus,
+} from '../../data/repositories/casesheets.repository.impl';
+import {
   formatDateTime,
   isEditable,
   getAllowedTransitions,
-} from '../../index';
-import { useCreateTreatmentSheetMutation } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
+} from '../../data/models/casesheets.dtos';
+import type { CasesheetStatus } from '../../data/models/casesheets.dtos';
+import { useClientDetailQuery } from '../../../clients/data/repositories/clients.repository.impl';
+import { useEpisodeQuery } from '../../../episodes/data/repositories/episodes.repository.impl';
+import {
+  useCreateTreatmentSheetMutation,
+  useTreatmentSheetsByEpisodeQuery,
+} from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { CasesheetStatusBadge } from '../components/CasesheetStatusBadge';
 import { EmptyCasesheetsState } from '../components/EmptyCasesheetsState';
-import { useQueryClient } from '@tanstack/react-query';
+import { CasesheetDetailTextSection } from '../components/CasesheetDetailTextSection';
 
 const DURATION_OPTIONS = [
   { days: 7, label: '7 Days' },
@@ -80,54 +88,18 @@ export const CasesheetDetailScreen: React.FC = () => {
   } = useCasesheetDetailQuery(tenantId, casesheetId);
 
   // Fetch client details to show name, age, gender, phone
-  const { data: client, isLoading: isClientLoading } = useQuery({
-    queryKey: ['client', tenantId, clientId],
-    queryFn: async () => {
-      const { axiosClient } = await import('../../../../core/api/axiosClient');
-      const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/clients/${clientId}`);
-      console.log('📋 Client data loaded:', {
-        full_name: response.data.full_name,
-        age: response.data.age,
-        age_type: typeof response.data.age,
-        age_is_null: response.data.age === null,
-        age_is_undefined: response.data.age === undefined,
-        gender: response.data.gender,
-        gender_type: typeof response.data.gender,
-        phone: response.data.phone,
-        raw: response.data
-      });
-      return response.data;
-    },
-    enabled: !!tenantId && !!clientId,
-  });
+  const { data: client } = useClientDetailQuery(tenantId, clientId);
 
   // Fetch episode details to show disease name in treatment sheet section
-  const { data: episode } = useQuery({
-    queryKey: ['episode', tenantId, casesheet?.episode_id],
-    queryFn: async () => {
-      const { axiosClient } = await import('../../../../core/api/axiosClient');
-      const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/episodes/${casesheet?.episode_id}`);
-      return response.data;
-    },
-    enabled: !!tenantId && !!casesheet?.episode_id,
-  });
+  useEpisodeQuery(tenantId, casesheet?.episode_id || '');
 
   // Fetch treatment sheets for this episode
   // Primary: Use casesheet.treatment_sheet_id if available
   // Fallback: Fetch by episode_id (always enabled as backend may not update treatment_sheet_id yet)
-  const { data: treatmentSheetsData } = useQuery({
-    queryKey: ['treatment-sheets-by-episode', tenantId, casesheet?.episode_id],
-    queryFn: async () => {
-      const { axiosClient } = await import('../../../../core/api/axiosClient');
-      const response = await axiosClient.get(
-        `/api/v1/clinic/${tenantId}/treatment-sheets`,
-        { params: { episode_id: casesheet?.episode_id } }
-      );
-      console.log('[CasesheetDetail] Treatment sheets by episode response:', response.data);
-      return response.data;
-    },
-    enabled: !!tenantId && !!casesheet?.episode_id,
-  });
+  const { data: treatmentSheetsData } = useTreatmentSheetsByEpisodeQuery(
+    tenantId,
+    casesheet?.episode_id || ''
+  );
 
   // Determine which treatment sheet to show:
   // 1. First priority: casesheet.treatment_sheet_id (direct link from backend)
@@ -333,19 +305,6 @@ export const CasesheetDetailScreen: React.FC = () => {
     );
   };
 
-  const renderSection = (title: string, content: string | null | undefined, icon: keyof typeof Ionicons.glyphMap) => {
-    if (!content) return null;
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name={icon} size={18} color={colors.primary.main} />
-          <Text style={styles.sectionTitle}>{title}</Text>
-        </View>
-        <Text style={styles.sectionContent}>{content}</Text>
-      </View>
-    );
-  };
-
   const renderExtensions = () => {
     const extensions = casesheet?.data_json?.extensions;
     if (!extensions || extensions.length === 0) return null;
@@ -483,7 +442,7 @@ export const CasesheetDetailScreen: React.FC = () => {
           variant="error"
           title="Unable to Load Casesheet"
           message={
-            error?.message?.includes('401')
+            error instanceof CasesheetOperationError && error.kind === 'AUTHENTICATION_REQUIRED'
               ? 'Authentication failed. Please try logging in again.'
               : 'Could not load this casesheet. Please try again.'
           }
@@ -573,18 +532,18 @@ export const CasesheetDetailScreen: React.FC = () => {
         </View>
 
         {/* Clinical Sections */}
-        {renderSection('Chief Complaint', casesheet.chief_complaint, 'alert-circle-outline')}
-        {renderSection('Provisional Diagnosis', casesheet.provisional_diagnosis, 'medical-outline')}
-        {renderSection('Final Diagnosis', casesheet.final_diagnosis, 'checkmark-circle-outline')}
+        {<CasesheetDetailTextSection title="Chief Complaint" text={casesheet.chief_complaint} icon="alert-circle-outline" />}
+        {<CasesheetDetailTextSection title="Provisional Diagnosis" text={casesheet.provisional_diagnosis} icon="medical-outline" />}
+        {<CasesheetDetailTextSection title="Final Diagnosis" text={casesheet.final_diagnosis} icon="checkmark-circle-outline" />}
 
         {/* SOAP Data (if available in data_json) */}
         {casesheet.data_json && (
           <View style={styles.soapContainer}>
             <Text style={styles.soapTitle}>Clinical Notes</Text>
-            {casesheet.data_json.subjective && renderSection('Subjective', casesheet.data_json.subjective, 'person-outline')}
-            {casesheet.data_json.objective && renderSection('Objective', casesheet.data_json.objective, 'eye-outline')}
-            {casesheet.data_json.assessment && renderSection('Assessment', casesheet.data_json.assessment, 'analytics-outline')}
-            {casesheet.data_json.plan && renderSection('Plan', casesheet.data_json.plan, 'list-outline')}
+            {casesheet.data_json.subjective && <CasesheetDetailTextSection title="Subjective" text={casesheet.data_json.subjective} icon="person-outline" />}
+            {casesheet.data_json.objective && <CasesheetDetailTextSection title="Objective" text={casesheet.data_json.objective} icon="eye-outline" />}
+            {casesheet.data_json.assessment && <CasesheetDetailTextSection title="Assessment" text={casesheet.data_json.assessment} icon="analytics-outline" />}
+            {casesheet.data_json.plan && <CasesheetDetailTextSection title="Plan" text={casesheet.data_json.plan} icon="list-outline" />}
           </View>
         )}
 
@@ -860,30 +819,6 @@ const styles = StyleSheet.create({
   },
 
   // Sections
-  section: {
-    backgroundColor: colors.background.default,
-    borderRadius: 12,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    gap: spacing.xs,
-  },
-  sectionTitle: {
-    ...typography.body1,
-    color: colors.primary.main,
-    fontWeight: '600',
-  },
-  sectionContent: {
-    ...typography.body1,
-    color: colors.text.primary,
-    lineHeight: 22,
-  },
   soapContainer: {
     marginTop: spacing.sm,
   },

@@ -20,11 +20,12 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
-import {
-  useCasesheetsListQuery,
+import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
+import { useCasesheetsListQuery } from '../../data/repositories/casesheets.repository.impl';
+import type {
   CasesheetResponse,
   CasesheetStatus,
-} from '../../index';
+} from '../../data/models/casesheets.dtos';
 import { CasesheetListItem } from '../components/CasesheetListItem';
 import { EmptyCasesheetsState } from '../components/EmptyCasesheetsState';
 
@@ -154,7 +155,7 @@ export const CasesheetsListScreen: React.FC<CasesheetsListScreenProps> = ({
           variant="error"
           title="Unable to Load Casesheets"
           message={
-            error?.message?.includes('401')
+            error instanceof CasesheetOperationError && error.kind === 'AUTHENTICATION_REQUIRED'
               ? 'Authentication failed. Please try logging in again.'
               : 'Could not load casesheets. Pull down to retry.'
           }

@@ -4,7 +4,7 @@ import type { RegistrationRepository } from '../repositories/registration.reposi
 export class RegisterClinicOwnerUseCase {
   constructor(private readonly repository: RegistrationRepository) {}
 
-  execute(request: RegistrationRequest): Promise<RegistrationResponse> {
-    return this.repository.registerClinicOwner(request);
+  execute(request: RegistrationRequest, idempotencyKey: string): Promise<RegistrationResponse> {
+    return this.repository.registerClinicOwner(request, idempotencyKey);
   }
 }

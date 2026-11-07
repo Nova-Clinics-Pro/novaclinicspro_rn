@@ -26,7 +26,6 @@ import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import {
   useTreatmentDetailQuery,
   useUpdateTreatmentMutation,
-  useDeleteTreatmentMutation,
 } from '../../../../features/treatments/data/repositories/treatments.repository.impl';
 import { useCurrentTenantQuery } from '../../../../features/tenants/data/repositories/tenants.repository.impl';
 import { useFeatures, isAyurvedaClinic as checkIsAyurveda } from '../../../../core/hooks/useFeatures';
@@ -39,9 +38,16 @@ import {
 import { TreatmentForm } from '../../../../features/treatments/presentation/components/TreatmentForm';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../../features/auth/presentation/providers/auth.store';
 
 export default function TreatmentDetailScreen() {
+  const { t } = useTranslation();
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { treatmentId } = useLocalSearchParams<{ treatmentId: string }>();
   const { currentUser } = useAuthStore();
@@ -53,7 +59,7 @@ export default function TreatmentDetailScreen() {
     enabled: !!tenantId && !!treatmentId,
   });
 
-  const { data: tenant } = useCurrentTenantQuery(tenantId, {
+  useCurrentTenantQuery(tenantId, {
     enabled: !!tenantId,
   });
 
@@ -61,7 +67,6 @@ export default function TreatmentDetailScreen() {
   const features = useFeatures();
 
   const updateMutation = useUpdateTreatmentMutation(tenantId, treatmentId || '');
-  const deleteMutation = useDeleteTreatmentMutation(tenantId);
 
   // Check if clinic is Ayurveda type using feature flags from JWT
   const isAyurvedaClinic = checkIsAyurveda(features);
@@ -71,33 +76,11 @@ export default function TreatmentDetailScreen() {
     const newStatus = !treatmentQuery.data.is_active;
     try {
       await updateMutation.mutateAsync({ is_active: newStatus });
-      Alert.alert('Success', `Treatment ${newStatus ? 'activated' : 'deactivated'}`);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update status');
+      Alert.alert(t('common.success'), `Treatment ${newStatus ? 'activated' : 'deactivated'}`);
+    } catch {
+      Alert.alert(t('common.error'), 'Failed to update status');
     }
-  }, [treatmentQuery.data, updateMutation]);
-
-  const handleDelete = useCallback(() => {
-    Alert.alert(
-      'Delete Treatment',
-      'Are you sure you want to delete this treatment? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync(treatmentId || '');
-              router.back();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete treatment');
-            }
-          },
-        },
-      ]
-    );
-  }, [deleteMutation, treatmentId, router]);
+  }, [treatmentQuery.data, updateMutation, t]);
 
   const handleEditSubmit = useCallback(async (data: TreatmentUpdate, hasChanges: boolean) => {
     // Issue #7: Don't call API if nothing changed
@@ -109,18 +92,18 @@ export default function TreatmentDetailScreen() {
     try {
       await updateMutation.mutateAsync(data);
       setIsEditing(false);
-      Alert.alert('Success', 'Treatment updated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update treatment');
+      Alert.alert(t('common.success'), 'Treatment updated successfully');
+    } catch {
+      Alert.alert(t('common.error'), 'Failed to update treatment');
     }
-  }, [updateMutation]);
+  }, [updateMutation, t]);
 
   if (treatmentQuery.isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
           title="Treatment Details"
-          subtitle="Loading..."
+          subtitle={t('common.loading')}
           onBackPress={() => router.back()}
         />
         <View style={styles.loadingContainer}>
@@ -135,7 +118,7 @@ export default function TreatmentDetailScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <DashboardHeader
           title="Treatment Details"
-          subtitle="Error"
+          subtitle={t('common.error')}
           onBackPress={() => router.back()}
         />
         <View style={styles.errorContainer}>
@@ -171,7 +154,7 @@ export default function TreatmentDetailScreen() {
               { backgroundColor: treatment.is_active ? '#10B981' : '#EF4444' }
             ]} />
             <Text style={styles.statusText}>
-              {treatment.is_active ? 'Active' : 'Inactive'}
+              {treatment.is_active ? t('common.active') : t('common.inactive')}
             </Text>
           </View>
           <TouchableOpacity
@@ -194,21 +177,21 @@ export default function TreatmentDetailScreen() {
               <Text style={styles.overviewValue}>
                 {formatDuration(treatment.duration_minutes)}
               </Text>
-              <Text style={styles.overviewLabel}>Duration</Text>
+              <Text style={styles.overviewLabel}>{t('common.duration')}</Text>
             </View>
             <View style={styles.overviewItem}>
               <Ionicons name="pricetag-outline" size={24} color="#C28A4B" />
               <Text style={styles.overviewValue}>
                 {formatPrice(effectivePrice)}
               </Text>
-              <Text style={styles.overviewLabel}>Price</Text>
+              <Text style={styles.overviewLabel}>{t('treatments.form.price.label')}</Text>
             </View>
           </View>
         </View>
 
         {/* Description */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.sectionTitle}>{t('common.description')}</Text>
           <Text style={styles.description}>
             {treatment.description || 'No description provided'}
           </Text>
@@ -217,7 +200,7 @@ export default function TreatmentDetailScreen() {
         {/* Ayurvedic Properties - Only show for Ayurveda clinics */}
         {isAyurvedaClinic && treatment.dosha_benefits && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ayurvedic Properties</Text>
+            <Text style={styles.sectionTitle}>{t('treatments.form.sections.ayurvedicProperties')}</Text>
             
             {treatment.dosha_benefits?.vata?.balances ? (
               <View style={styles.doshaItem}>
@@ -275,8 +258,7 @@ export default function TreatmentDetailScreen() {
               styles.warningTitle,
               !treatment.contraindications && styles.emptyWarningTitle
             ]}>
-              Contraindications
-            </Text>
+              {t('treatments.form.contraindications.label')}</Text>
           </View>
           <Text style={[
             styles.warningText,
@@ -290,7 +272,7 @@ export default function TreatmentDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Details</Text>
           <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Created</Text>
+            <Text style={styles.metaLabel}>{t('common.created')}</Text>
             <Text style={styles.metaValue}>
               {new Date(treatment.created_at).toLocaleDateString()}
             </Text>
@@ -336,7 +318,7 @@ export default function TreatmentDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -378,7 +360,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -418,7 +400,7 @@ const styles = StyleSheet.create({
     color: '#10B981',
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,

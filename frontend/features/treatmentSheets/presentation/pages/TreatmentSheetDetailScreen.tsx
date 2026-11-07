@@ -1,26 +1,44 @@
+/**
+ * R7 · T-0.7 (ED-ARCH-001): the pause/resume/cancel-eligibility checks and
+ * pause/cancel actions previously called `lifecycleApi.ts` (a datasource
+ * file) directly via three raw `useQuery` calls and two raw `useMutation`
+ * calls defined inline in this screen. Repointed to
+ * `useCanPauseTreatmentSeriesQuery`/`useCanResumeTreatmentSeriesQuery`/
+ * `useCanCancelTreatmentSeriesQuery`/`usePauseTreatmentSeriesMutation`/
+ * `useCancelTreatmentSeriesMutation` (`treatmentSheets.repository.impl.ts`
+ * — see that file's own docstring). `handleScheduleAppointments`'s direct
+ * `axiosClient.get(episode)` call was repointed to the existing, already-
+ * governed `useEpisodeQuery` (`episodes.repository.impl.ts`) — declared at
+ * top level with `enabled: false` and triggered on demand via its own
+ * `refetch({ throwOnError: true })`, preserving the original "fetch only
+ * when the button is pressed" trigger (a hook cannot be called
+ * imperatively inside an event handler).
+ *
+ * `useTreatmentSheetHeaderData` (this screen's OTHER, pre-existing direct
+ * `axiosClient` user) is left untouched — a separate, already-existing
+ * violation outside this task's declared change surface, recorded as a
+ * finding for a future task rather than fixed here.
+ */
 import React, { useCallback, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
-import { axiosClient } from '../../../../core/api/axiosClient';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
 import { buildTreatmentSheetPrintHtml } from '../../../../core/clinicalPrint/adapters';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { useEpisodeQuery } from '../../../episodes/data/repositories/episodes.repository.impl';
 import {
   useArchiveTreatmentSheetMutation,
   usePrintTreatmentSheetMutation,
   useTreatmentSheetDetailQuery,
+  useCanPauseTreatmentSeriesQuery,
+  useCanResumeTreatmentSeriesQuery,
+  useCanCancelTreatmentSeriesQuery,
+  usePauseTreatmentSeriesMutation,
+  useCancelTreatmentSeriesMutation,
 } from '../../index';
-import {
-  canCancelSeriesApi,
-  canPauseSeriesApi,
-  canResumeSeriesApi,
-  cancelSeriesApi,
-  pauseSeriesApi,
-} from '../../data/api/lifecycleApi';
-import { PauseSeriesDTO } from '../../data/models/lifecycle.dtos';
 import {
   useSendToSchedulingMutation,
   useTreatmentOrderQuery,
@@ -38,6 +56,7 @@ import { TreatmentSheetDetailHeader } from './detail/TreatmentSheetDetailHeader'
 import { useTreatmentSheetHeaderData } from './detail/useTreatmentSheetHeaderData';
 import { useTreatmentSheetRows } from './detail/useTreatmentSheetRows';
 import { ScheduleRow } from './detail/types';
+import { treatmentErrorMessage } from '../../application/treatmentErrorPresentation';
 
 export const TreatmentSheetDetailScreen: React.FC = () => {
   const theme = useClinicTheme();
@@ -80,25 +99,23 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
   const orderVersion = treatmentOrder?.version ?? 1;
   const headerData = useTreatmentSheetHeaderData(tenantId, treatmentSheet?.episode_id);
   const rows = useTreatmentSheetRows({ tenantId, treatmentSheetId, treatmentSheet, refetch });
+  // On-demand only (enabled: false) — triggered imperatively via
+  // .refetch() from handleScheduleAppointments below, preserving the
+  // original "fetch only when the button is pressed" behavior (a hook
+  // cannot itself be called imperatively inside an event handler).
+  const episodeQuery = useEpisodeQuery(tenantId, treatmentSheet?.episode_id ?? '', { enabled: false });
 
-  const canPauseQuery = useQuery({
-    queryKey: ['can-pause-series', tenantId, treatmentSheetId],
-    queryFn: () => canPauseSeriesApi(tenantId, treatmentSheetId),
+  const canPauseQuery = useCanPauseTreatmentSeriesQuery(tenantId, treatmentSheetId, {
     enabled: !!tenantId && !!treatmentSheetId && !!treatmentSheet,
   });
-  const canResumeQuery = useQuery({
-    queryKey: ['can-resume-series', tenantId, treatmentSheetId],
-    queryFn: () => canResumeSeriesApi(tenantId, treatmentSheetId),
+  const canResumeQuery = useCanResumeTreatmentSeriesQuery(tenantId, treatmentSheetId, {
     enabled: !!tenantId && !!treatmentSheetId && !!treatmentSheet,
   });
-  const canCancelQuery = useQuery({
-    queryKey: ['can-cancel-series', tenantId, treatmentSheetId],
-    queryFn: () => canCancelSeriesApi(tenantId, treatmentSheetId),
+  const canCancelQuery = useCanCancelTreatmentSeriesQuery(tenantId, treatmentSheetId, {
     enabled: !!tenantId && !!treatmentSheetId && !!treatmentSheet,
   });
 
-  const pauseMutation = useMutation({
-    mutationFn: (payload: PauseSeriesDTO) => pauseSeriesApi(tenantId, treatmentSheetId, payload),
+  const pauseMutation = usePauseTreatmentSeriesMutation(tenantId, treatmentSheetId, {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment-sheet', treatmentSheetId] });
       queryClient.invalidateQueries({ queryKey: ['can-pause-series', tenantId, treatmentSheetId] });
@@ -110,8 +127,7 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
     onError: (err: Error) => Alert.alert('Error', err.message || 'Failed to pause treatment series'),
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: (payload: { reason: string }) => cancelSeriesApi(tenantId, treatmentSheetId, payload),
+  const cancelMutation = useCancelTreatmentSeriesMutation(tenantId, treatmentSheetId, {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment-sheet', treatmentSheetId] });
       queryClient.invalidateQueries({ queryKey: ['can-cancel-series', tenantId, treatmentSheetId] });
@@ -145,10 +161,12 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
   const handleScheduleAppointments = useCallback(async () => {
     if (!treatmentSheet) return;
     try {
-      const episodeResponse = await axiosClient.get(
-        `/api/v1/clinic/${tenantId}/episodes/${treatmentSheet.episode_id}`
-      );
-      const episode = episodeResponse.data;
+      const { data: episode } = await episodeQuery.refetch({ throwOnError: true });
+      // Episode's own type has no `treatment_id` field (a pre-existing gap
+      // predating T-0.7 between the frontend type and the raw backend
+      // response, tolerated here exactly as the previous untyped axios call
+      // already tolerated it via the same `|| ''` fallback).
+      const treatmentId = (episode as any)?.treatment_id || '';
       router.push({
         pathname: '/clinic-admin/appointments/create',
         params: {
@@ -156,8 +174,8 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
           treatmentSheetId,
           episodeId: treatmentSheet.episode_id,
           caseSheetId: treatmentSheet.case_sheet_id || params.casesheetId || '',
-          treatmentId: episode.treatment_id || '',
-          treatmentName: episode.title || '',
+          treatmentId,
+          treatmentName: episode?.title || '',
           durationDays: treatmentSheet.duration_days?.toString(),
         },
       });
@@ -172,7 +190,7 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
         },
       });
     }
-  }, [params.casesheetId, router, tenantId, treatmentSheet, treatmentSheetId]);
+  }, [episodeQuery, params.casesheetId, router, treatmentSheet, treatmentSheetId]);
 
   const handleResume = useCallback(() => {
     if (!treatmentSheet) return;
@@ -203,8 +221,8 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
     releaseMutation.mutate(
       { sheetId: treatmentSheetId, version: orderVersion },
       {
-        onError: (err: any) =>
-          Alert.alert('Error', err?.response?.data?.detail?.message || err.message || 'Failed to release treatment sheet.'),
+        onError: (error: unknown) =>
+          Alert.alert('Error', treatmentErrorMessage(error, 'Failed to release treatment sheet.')),
       }
     );
   }, [releaseMutation, treatmentSheetId, orderVersion]);
@@ -215,8 +233,8 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
     addClinicalReviewNoteMutation.mutate(
       { sheetId: treatmentSheetId, notesJson },
       {
-        onError: (err: any) =>
-          Alert.alert('Error', err?.response?.data?.detail?.message || err.message || 'Failed to save observation.'),
+        onError: (error: unknown) =>
+          Alert.alert('Error', treatmentErrorMessage(error, 'Failed to save observation.')),
       }
     );
   }, [addClinicalReviewNoteMutation, treatmentSheetId]);
@@ -228,8 +246,8 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
     recordClinicalReviewOutcomeMutation.mutate(
       { sheetId: treatmentSheetId, version: orderVersion, outcome, notesJson },
       {
-        onError: (err: any) =>
-          Alert.alert('Error', err?.response?.data?.detail?.message || err.message || 'Failed to record outcome.'),
+        onError: (error: unknown) =>
+          Alert.alert('Error', treatmentErrorMessage(error, 'Failed to record outcome.')),
       }
     );
   }, [recordClinicalReviewOutcomeMutation, treatmentSheetId, orderVersion]);

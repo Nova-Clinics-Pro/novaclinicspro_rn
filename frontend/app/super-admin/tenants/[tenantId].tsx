@@ -1,8 +1,2 @@
-/**
- * Tenant Detail Route
- * /super-admin/tenants/[tenantId]
- */
-
-import TenantDetailScreen from '../../../features/tenants/presentation/pages/TenantDetailScreen';
-
-export default TenantDetailScreen;
+/** Read-only platform tenant metadata. Customer detail remains unchanged. */
+export { PlatformTenantDetailScreen as default } from '../../../features/tenants/presentation/pages/PlatformTenantsScreen';

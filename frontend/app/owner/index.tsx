@@ -22,12 +22,11 @@ import { colors } from '../../core/theme/colors';
 import { spacing } from '../../core/theme/spacing';
 import { typography } from '../../core/theme/typography';
 import { useAuth } from '../../features/auth/presentation/hooks/useAuth';
-import { useAuthStore, useSelectedClinic } from '../../features/auth/presentation/providers/auth.store';
+import { useSelectedClinic } from '../../features/auth/presentation/providers/auth.store';
 import { MetricStatCard, OwnerClinicCard } from '../../features/owner-dashboard/presentation/components';
 import {
   createPortfolioSummaryFromClinics,
   createClinicSummary,
-  unavailableMetric,
 } from '../../features/owner-dashboard/domain/entities/owner-dashboard.entity';
 import type { OwnerClinicSummary } from '../../features/owner-dashboard/domain/entities/owner-dashboard.entity';
 
@@ -214,7 +213,7 @@ export default function OwnerDashboardScreen() {
               <Ionicons name="business-outline" size={48} color={colors.text.tertiary} />
               <Text style={styles.emptyStateTitle}>No Clinics Found</Text>
               <Text style={styles.emptyStateMessage}>
-                You don't have any clinics yet. Add your first clinic to get started.
+                You don&apos;t have any clinics yet. Add your first clinic to get started.
               </Text>
               <TouchableOpacity
                 style={styles.emptyStateButton}

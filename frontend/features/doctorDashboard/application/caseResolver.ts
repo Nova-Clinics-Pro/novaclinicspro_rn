@@ -1,10 +1,25 @@
-import type { Router } from 'expo-router';
-import { axiosClient } from '../../../core/api/axiosClient';
-import { consultationRoute, startConsultationRoute } from './consultationRoutes';
+import { useRouter } from 'expo-router';
+import { toDoctorDashboardError } from './doctorDashboardError';
+import { episodeWorkspaceRoute, startConsultationRoute } from './consultationRoutes';
+
+type Router = ReturnType<typeof useRouter>;
 
 export interface CaseResolverState {
   loadingAppointmentId: string | null;
   error: { appointmentId: string; message: string } | null;
+}
+
+/**
+ * Tenant-scoped commands supplied by the screen's canonical repository/query
+ * boundary. This application service only coordinates the clinical decision.
+ */
+export interface CaseResolverOperations {
+  getAppointment: (tenantId: string, appointmentId: string) => Promise<{ episode_id?: string | null }>;
+  listActiveEpisodes: (
+    tenantId: string,
+    clientId: string,
+  ) => Promise<{ items: Array<{ id: string }> }>;
+  attachEpisode: (tenantId: string, appointmentId: string, episodeId: string) => Promise<void>;
 }
 
 export async function resolveCase(
@@ -12,29 +27,22 @@ export async function resolveCase(
   appointmentId: string,
   clientId: string,
   router: Pick<Router, 'push'>,
+  operations: CaseResolverOperations,
 ): Promise<void> {
-  const appointmentResponse = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/appointments/${appointmentId}`,
-    { params: { expand: 'staff' } },
-  );
-  const linkedEpisodeId = appointmentResponse.data?.episode_id;
+  const appointment = await operations.getAppointment(tenantId, appointmentId);
+  const linkedEpisodeId = appointment.episode_id;
 
   if (linkedEpisodeId) {
-    router.push(consultationRoute(linkedEpisodeId, appointmentId, clientId) as any);
+    router.push(episodeWorkspaceRoute(linkedEpisodeId, appointmentId, clientId, 'doctor') as any);
     return;
   }
 
-  const episodesResponse = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/episodes?client_id=${clientId}&status=ACTIVE&limit=1`,
-  );
+  const episodesResponse = await operations.listActiveEpisodes(tenantId, clientId);
 
-  if (episodesResponse.data.total > 0) {
-    const episode = episodesResponse.data.items[0];
-    await axiosClient.post(
-      `/api/v1/clinic/${tenantId}/appointments/${appointmentId}/attach-episode`,
-      { episode_id: episode.id },
-    );
-    router.push(consultationRoute(episode.id, appointmentId, clientId) as any);
+  if (episodesResponse.items.length > 0) {
+    const episode = episodesResponse.items[0];
+    await operations.attachEpisode(tenantId, appointmentId, episode.id);
+    router.push(episodeWorkspaceRoute(episode.id, appointmentId, clientId, 'doctor') as any);
     return;
   }
 
@@ -46,19 +54,20 @@ export async function startConsultationWithGuard(params: {
   appointmentId: string;
   clientId: string;
   router: Pick<Router, 'push'>;
+  operations: CaseResolverOperations;
   loadingAppointmentId: string | null;
   setState: (state: CaseResolverState | ((prev: CaseResolverState) => CaseResolverState)) => void;
 }): Promise<void> {
-  const { tenantId, appointmentId, clientId, router, loadingAppointmentId, setState } = params;
+  const { tenantId, appointmentId, clientId, router, operations, loadingAppointmentId, setState } = params;
   if (loadingAppointmentId !== null) return;
 
   setState({ loadingAppointmentId: appointmentId, error: null });
   try {
-    await resolveCase(tenantId, appointmentId, clientId, router);
-  } catch (err: any) {
+    await resolveCase(tenantId, appointmentId, clientId, router, operations);
+  } catch (err: unknown) {
     setState((prev) => ({
       ...prev,
-      error: { appointmentId, message: err?.message || 'Something went wrong. Please retry.' },
+      error: { appointmentId, message: toDoctorDashboardError(err).message },
     }));
   } finally {
     setState((prev) => ({ ...prev, loadingAppointmentId: null }));

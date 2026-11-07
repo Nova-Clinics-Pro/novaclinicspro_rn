@@ -165,7 +165,7 @@ export default function ClinicAdminDashboard() {
       if (confirmed) {
         try {
           await logout();
-        } catch (error) {
+        } catch {
           window.alert('Logout failed. Please try again.');
         }
       }
@@ -181,7 +181,7 @@ export default function ClinicAdminDashboard() {
             onPress: async () => {
               try {
                 await logout();
-              } catch (error) {
+              } catch {
                 Alert.alert(t('common.error'), t(ErrorTokens.auth.logoutFailed));
               }
             },

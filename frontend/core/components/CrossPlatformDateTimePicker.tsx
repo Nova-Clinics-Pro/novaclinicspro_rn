@@ -1,5 +1,5 @@
-import React from 'react';
-import { Platform, StyleSheet, TextInput, ViewStyle } from 'react-native';
+import React, { type ComponentProps } from 'react';
+import { Platform, StyleSheet, ViewStyle } from 'react-native';
 import NativeDateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
@@ -11,7 +11,7 @@ type PickerMode = 'date' | 'time';
 interface CrossPlatformDateTimePickerProps {
   value: Date;
   mode: PickerMode;
-  display?: 'default' | 'spinner' | 'calendar' | 'clock' | 'compact' | 'inline';
+  display?: ComponentProps<typeof NativeDateTimePicker>['display'];
   minimumDate?: Date;
   minuteInterval?: number;
   onChange: (event: DateTimePickerEvent, selectedDate?: Date) => void;
@@ -41,7 +41,9 @@ const parseDateInputValue = (inputValue: string, currentValue: Date) => {
 };
 
 const parseTimeInputValue = (inputValue: string, currentValue: Date) => {
-  const [hours, minutes] = inputValue.split(':').map(Number);
+  const parts = inputValue.split(':');
+  if (parts.length < 2 || parts.some(part => part.trim() === '')) return null;
+  const [hours, minutes] = parts.map(Number);
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
 
   const nextValue = new Date(currentValue);
@@ -58,6 +60,7 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
   minuteInterval,
   onChange,
   style,
+  display,
   ...nativeProps
 }) => {
   if (Platform.OS !== 'web') {
@@ -68,6 +71,7 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
         minimumDate={minimumDate}
         minuteInterval={minuteInterval}
         onChange={onChange}
+        display={display as never}
         {...nativeProps}
       />
     );
@@ -77,37 +81,39 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
   const minimumValue = minimumDate && mode === 'date' ? toDateInputValue(minimumDate) : undefined;
   const step = mode === 'time' && minuteInterval ? minuteInterval * 60 : undefined;
 
-  return (
-    <TextInput
-      value={inputValue}
-      onChangeText={(nextInputValue) => {
-        const nextValue =
-          mode === 'date'
-            ? parseDateInputValue(nextInputValue, value)
-            : parseTimeInputValue(nextInputValue, value);
+  // react-native-web's TextInput forces type="text", so render a real DOM input to get the
+  // browser's own date/time controls.
+  return React.createElement('input', {
+    type: mode,
+    value: inputValue,
+    min: minimumValue,
+    step,
+    style: { ...webInputStyle, ...(StyleSheet.flatten(style) as object) },
+    onChange: (event: { target: { value: string } }) => {
+      const nextInputValue = event.target.value;
+      const nextValue =
+        mode === 'date'
+          ? parseDateInputValue(nextInputValue, value)
+          : parseTimeInputValue(nextInputValue, value);
 
-        if (nextValue) {
-          onChange(createSetEvent(), nextValue);
-        }
-      }}
-      style={[styles.webInput, style]}
-      {...({ type: mode, min: minimumValue, step } as any)}
-    />
-  );
+      if (nextValue) {
+        onChange(createSetEvent(), nextValue);
+      }
+    },
+  });
 };
 
-const styles = StyleSheet.create({
-  webInput: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
-  },
-});
+// A real DOM <input> takes CSS (not React Native) style values.
+const webInputStyle = {
+  boxSizing: 'border-box',
+  width: '100%',
+  minHeight: 44,
+  border: '1px solid #D1D5DB',
+  borderRadius: 8,
+  padding: '10px 12px',
+  fontSize: 16,
+  color: '#111827',
+  backgroundColor: '#FFFFFF',
+} as const;
 
 export default CrossPlatformDateTimePicker;

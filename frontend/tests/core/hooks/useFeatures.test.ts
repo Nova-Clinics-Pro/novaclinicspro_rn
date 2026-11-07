@@ -59,6 +59,7 @@ import {
   hasTreatmentSheets,
   isFreshnessV1Enabled,
   isClinicalSpineV1Enabled,
+  isCosV1Enabled,
   type FeatureConfig,
 } from '../../../core/hooks/useFeatures';
 
@@ -69,6 +70,7 @@ function makeFeatures(overrides: Partial<FeatureConfig> = {}): FeatureConfig {
     treatment_sheets: { enable_treatment_sheets: false, enable_sheet_sync: false },
     freshness_v1_enabled: false,
     clinical_spine_v1_enabled: false,
+    cos_v1_enabled: false,
     ...overrides,
   };
 }
@@ -303,6 +305,53 @@ describe('clinical_spine_v1_enabled feature flag (R3B · T-A.1, ADR-R3B-04)', ()
   it('is independent of freshness_v1_enabled — one can be true while the other is false', () => {
     expect(isClinicalSpineV1Enabled(makeFeatures({ clinical_spine_v1_enabled: true, freshness_v1_enabled: false }))).toBe(true);
     expect(isFreshnessV1Enabled(makeFeatures({ clinical_spine_v1_enabled: true, freshness_v1_enabled: false }))).toBe(false);
+  });
+});
+
+describe('cos_v1_enabled feature flag (R7 · T-FE-A.3, FR-FLAG-1)', () => {
+  it('isCosV1Enabled reflects whatever the field is set to', () => {
+    expect(isCosV1Enabled(makeFeatures({ cos_v1_enabled: true }))).toBe(true);
+    expect(isCosV1Enabled(makeFeatures({ cos_v1_enabled: false }))).toBe(false);
+  });
+
+  const source = fs.readFileSync(
+    path.resolve(__dirname, '../../../core/hooks/useFeatures.ts'),
+    'utf8'
+  );
+
+  it('DEFAULT_FEATURES defaults cos_v1_enabled to false (fail-closed if the API is unreachable)', () => {
+    const defaultsBlock = source.slice(
+      source.indexOf('const DEFAULT_FEATURES'),
+      source.indexOf('};', source.indexOf('const DEFAULT_FEATURES'))
+    );
+    expect(defaultsBlock).toContain('cos_v1_enabled: false');
+  });
+
+  it('normalizeFeatures reads cos_v1_enabled directly from the raw API response, NOT gated by clinic type (global rollout flag, not a clinic-type feature)', () => {
+    const fnBody = source.slice(
+      source.indexOf('function normalizeFeatures'),
+      source.indexOf('\n}', source.indexOf('function normalizeFeatures'))
+    );
+    expect(fnBody).toContain('cos_v1_enabled: !!raw?.cos_v1_enabled');
+    // Distinguish from the therapyClinic-gated fields above it.
+    const flagLineIndex = fnBody.indexOf('cos_v1_enabled: !!raw?.cos_v1_enabled');
+    const flagLine = fnBody.slice(flagLineIndex, flagLineIndex + 50);
+    expect(flagLine).not.toContain('therapyClinic');
+  });
+
+  it('is independent of clinical_spine_v1_enabled/freshness_v1_enabled — one can be true while the others are false', () => {
+    expect(isCosV1Enabled(makeFeatures({ cos_v1_enabled: true, clinical_spine_v1_enabled: false, freshness_v1_enabled: false }))).toBe(true);
+    expect(isClinicalSpineV1Enabled(makeFeatures({ cos_v1_enabled: true, clinical_spine_v1_enabled: false }))).toBe(false);
+    expect(isFreshnessV1Enabled(makeFeatures({ cos_v1_enabled: true, freshness_v1_enabled: false }))).toBe(false);
+  });
+
+  it('is exactly one umbrella flag — no second cos-related field exists on FeatureConfig', () => {
+    const interfaceBlock = source.slice(
+      source.indexOf('export interface FeatureConfig'),
+      source.indexOf('\n}', source.indexOf('export interface FeatureConfig'))
+    );
+    const cosMatches = interfaceBlock.match(/\bcos_\w*:/g) ?? [];
+    expect(cosMatches).toEqual(['cos_v1_enabled:']);
   });
 });
 

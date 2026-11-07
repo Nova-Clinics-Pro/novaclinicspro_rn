@@ -9,7 +9,7 @@
  *     lifecycle_status
  *   - "Add Observation" is a NOTE-only action (does not require selecting an
  *     outcome, mirrors the standing "note vs outcome" distinction)
- *   - "Record Outcome" offers exactly the 5 outcomes; stop_remaining/complete
+ *   - "Record Outcome" offers exactly the 5 outcomes; stop_remaining/mark_complete
  *     require an extra confirm (terminal, cancels/completes the plan);
  *     continue_unchanged/update_future_rows/extend do not
  */
@@ -130,7 +130,7 @@ describe('ClinicalReviewSection (R4 · T-E.6)', () => {
     }
   );
 
-  it.each(['stop_remaining', 'complete'] as const)(
+  it.each(['stop_remaining', 'mark_complete'] as const)(
     'Record Outcome: selecting %s requires an extra confirm before calling onRecordOutcome (terminal — moves the plan to Treatment Complete)',
     (outcome) => {
       const onRecordOutcome = jest.fn();
@@ -138,7 +138,7 @@ describe('ClinicalReviewSection (R4 · T-E.6)', () => {
       const utils = render(<ClinicalReviewSection {...makeProps({ isDoctor: true })} treatmentOrder={order} onRecordOutcome={onRecordOutcome} />);
 
       fireEvent.press(utils.getByText('Record Outcome'));
-      const optionLabel = { stop_remaining: 'Stop Remaining Sessions', complete: 'Mark Complete' }[outcome];
+      const optionLabel = { stop_remaining: 'Stop Remaining Sessions', mark_complete: 'Mark Complete' }[outcome];
       fireEvent.press(utils.getByText(optionLabel));
       fireEvent.press(utils.getByText('Confirm Outcome'));
 

@@ -36,6 +36,9 @@ import {
 } from '../../data/models/treatments.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 import { MultiDayAppointmentsSetting } from '../../../capabilities/presentation/components/MultiDayAppointmentsSetting';
 
@@ -50,6 +53,10 @@ const TreatmentCard: React.FC<{
   onPress: () => void;
   isAyurvedaClinic?: boolean;
 }> = ({ treatment, onPress, isAyurvedaClinic = false }) => {
+  const { t } = useTranslation();
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const effectivePrice = treatment.price || treatment.base_price;
   const doshaInfo = getDoshaSummary(treatment.dosha_benefits);
 
@@ -72,7 +79,7 @@ const TreatmentCard: React.FC<{
           </Text>
           {!treatment.is_active && (
             <View style={styles.inactiveBadge}>
-              <Text style={styles.inactiveBadgeText}>Inactive</Text>
+              <Text style={styles.inactiveBadgeText}>{t('common.inactive')}</Text>
             </View>
           )}
         </View>
@@ -101,17 +108,17 @@ const TreatmentCard: React.FC<{
           <View style={styles.doshaRow}>
             {treatment.dosha_benefits.vata?.balances && (
               <View style={[styles.doshaBadge, { backgroundColor: DOSHA_COLORS.vata + '15' }]}>
-                <Text style={[styles.doshaText, { color: DOSHA_COLORS.vata }]}>Vata</Text>
+                <Text style={[styles.doshaText, { color: DOSHA_COLORS.vata }]}>{t('treatments.form.dosha.vata.label')}</Text>
               </View>
             )}
             {treatment.dosha_benefits.pitta?.balances && (
               <View style={[styles.doshaBadge, { backgroundColor: DOSHA_COLORS.pitta + '15' }]}>
-                <Text style={[styles.doshaText, { color: DOSHA_COLORS.pitta }]}>Pitta</Text>
+                <Text style={[styles.doshaText, { color: DOSHA_COLORS.pitta }]}>{t('treatments.form.dosha.pitta.label')}</Text>
               </View>
             )}
             {treatment.dosha_benefits.kapha?.balances && (
               <View style={[styles.doshaBadge, { backgroundColor: DOSHA_COLORS.kapha + '15' }]}>
-                <Text style={[styles.doshaText, { color: DOSHA_COLORS.kapha }]}>Kapha</Text>
+                <Text style={[styles.doshaText, { color: DOSHA_COLORS.kapha }]}>{t('treatments.form.dosha.kapha.label')}</Text>
               </View>
             )}
           </View>
@@ -126,6 +133,10 @@ const TreatmentCard: React.FC<{
 };
 
 export const TreatmentsScreen: React.FC = () => {
+  const { t } = useTranslation();
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { currentUser } = useAuthStore();
   const tenantId = currentUser?.tenantId || '';
@@ -203,22 +214,22 @@ export const TreatmentsScreen: React.FC = () => {
       'Delete Treatment',
       `Are you sure you want to delete "${treatment.name}"? This action cannot be undone.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteMutation.mutateAsync(treatment.id);
-              Alert.alert('Success', 'Treatment deleted successfully');
+              Alert.alert(t('common.success'), 'Treatment deleted successfully');
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete treatment');
+              Alert.alert(t('common.error'), 'Failed to delete treatment');
             }
           },
         },
       ]
     );
-  }, [deleteMutation]);
+  }, [deleteMutation, t]);
 
   // Client-side filtering for partial search (< 3 chars) when not using search API
   const filteredTreatments = useMemo(() => {
@@ -293,7 +304,7 @@ export const TreatmentsScreen: React.FC = () => {
           onPress={() => router.push('/clinic-admin/settings/treatments/create' as any)}
           accessibilityLabel="Add new treatment"
         >
-          <Ionicons name="add" size={24} color="#FFFFFF" />
+          <Ionicons name="add" size={24} color={colors.text.onPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -305,14 +316,14 @@ export const TreatmentsScreen: React.FC = () => {
           onPress={() => setShowInactive(false)}
         >
           <Text style={[styles.statValue, { color: '#10B981' }]}>{activeTreatments}</Text>
-          <Text style={styles.statLabel}>Active</Text>
+          <Text style={styles.statLabel}>{t('common.active')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.statCard, showInactive && { backgroundColor: '#F59E0B20', borderColor: '#F59E0B', borderWidth: 1 }]}
           onPress={() => setShowInactive(true)}
         >
           <Text style={[styles.statValue, { color: '#F59E0B' }]}>{inactiveTreatments}</Text>
-          <Text style={styles.statLabel}>Inactive</Text>
+          <Text style={styles.statLabel}>{t('common.inactive')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -347,7 +358,7 @@ export const TreatmentsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -363,7 +374,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 10,
     paddingHorizontal: spacing.md,
     height: 44,
@@ -392,7 +403,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 10,
     padding: spacing.sm,
     alignItems: 'center',
@@ -415,7 +426,7 @@ const styles = StyleSheet.create({
   treatmentCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,

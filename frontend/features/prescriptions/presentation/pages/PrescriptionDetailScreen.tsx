@@ -23,19 +23,22 @@ import { typography } from '../../../../core/theme/typography';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
 import { buildPrescriptionPrintHtml } from '../../../../core/clinicalPrint/adapters';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 import {
   usePrescriptionDetailQuery,
   useUpdatePrescriptionMutation,
   useDeletePrescriptionMutation,
   useSharePrescriptionMutation,
   usePrescriptionPrintMutation,
+} from '../../data/repositories/prescriptions.repository.impl';
+import {
   PrescriptionShareRequest,
   formatDateTime,
   formatMedication,
   isEditable,
   canShare,
   getAllowedTransitions,
-} from '../../index';
+} from '../../data/models/prescriptions.dtos';
 import { PrescriptionStatusBadge } from '../components/PrescriptionStatusBadge';
 import { PrescriptionShareModal } from '../components/PrescriptionShareModal';
 import { EmptyPrescriptionsState } from '../components/EmptyPrescriptionsState';
@@ -261,7 +264,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
           variant="error"
           title="Unable to Load Prescription"
           message={
-            error?.message?.includes('401')
+            error instanceof PrescriptionOperationError && error.kind === 'AUTHENTICATION_REQUIRED'
               ? 'Authentication failed. Please try logging in again.'
               : 'Could not load this prescription. Please try again.'
           }
@@ -571,7 +574,7 @@ const styles = StyleSheet.create({
   printButton: {
     backgroundColor: colors.grey[100],
     borderWidth: 1,
-    borderColor: colors.border.medium,
+    borderColor: colors.border.main,
   },
   printButtonText: {
     color: colors.text.primary,

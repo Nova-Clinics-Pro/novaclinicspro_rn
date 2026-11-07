@@ -36,13 +36,20 @@ import {
   useTherapistSessionsQuery,
   useSheetRowUsablesQuery,
   useCompleteSheetRowMutation,
+  useRecordSessionNonExecutionMutation,
   staffDashboardsKeys,
 } from '../../../staffDashboards/data/repositories/staffDashboards.repository.impl';
-import { TherapistSessionItemV2 } from '../../../staffDashboards/data/models/staffDashboards.dtos';
+import {
+  TherapistSessionItemV2,
+  RecordSessionNonExecutionRequest,
+  RecordSessionNonExecutionResponse,
+} from '../../../staffDashboards/data/models/staffDashboards.dtos';
+import { SessionNonExecutionModal } from '../components/SessionNonExecutionModal';
+import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useUpdateAppointmentStatusMutation } from '../../../appointments/data/repositories/appointments.repository.impl';
 import {
   useStartSessionMutation,
-  useTreatmentOrderQuery,
+  useTreatmentOrderOnDemand,
 } from '../../../treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 
 // Domain / use cases
@@ -145,6 +152,14 @@ const isSessionStartDue = (session: TherapistSessionItemV2): boolean => {
 const isSessionInProgress = (session?: TherapistSessionItemV2 | null): boolean =>
   session?.status?.toLowerCase() === 'in_progress';
 
+/**
+ * A Session may have its non-execution recorded whenever it has not already
+ * completed. Mirrors the one server-verified restriction (a COMPLETED row
+ * rejects non-execution) — no additional client-invented state machine.
+ */
+const canRecordNonExecution = (session: TherapistSessionItemV2): boolean =>
+  session.status?.toLowerCase() !== 'completed';
+
 // ============================================
 // COMPONENT
 // ============================================
@@ -244,10 +259,23 @@ export const TherapistDashboardScreen: React.FC = () => {
 
   // ── Start session mutation (multi-day: SCHEDULED → IN_PROGRESS) ───────────
   const startSession = useStartSessionMutation(tenantId);
+  const fetchTreatmentOrder = useTreatmentOrderOnDemand();
   // Track which row is being started (to show per-card loading)
   const [startingRowId, setStartingRowId] = useState<string | null>(null);
   // Cache for order versions: sheetId → version
   const [orderVersionCache, setOrderVersionCache] = useState<Record<string, number>>({});
+
+  // ── Non-execution flow (T-FE-E.3, T-BE-E.4a) ──────────────────────────────
+  const { t } = useTranslation();
+  const [nonExecutionRowId, setNonExecutionRowId] = useState<string | null>(null);
+  const [nonExecutionSheetId, setNonExecutionSheetId] = useState<string | undefined>(undefined);
+  const [nonExecutionModalOpen, setNonExecutionModalOpen] = useState(false);
+  // Transient results, keyed by row_id — see RecordSessionNonExecutionResponse
+  // docstring for why this cannot be durably re-displayed after a refetch.
+  const [nonExecutionResults, setNonExecutionResults] = useState<
+    Record<string, RecordSessionNonExecutionResponse>
+  >({});
+  const nonExecutionMutation = useRecordSessionNonExecutionMutation(tenantId);
 
   const prevSubmitStatusRef = React.useRef<string>('idle');
   useEffect(() => {
@@ -379,6 +407,49 @@ export const TherapistDashboardScreen: React.FC = () => {
     resetCompletion();
   }, [resetCompletion]);
 
+  const handleOpenNonExecution = useCallback((session: TherapistSessionItemV2) => {
+    if (!session.row_id) return;
+    setNonExecutionRowId(session.row_id);
+    setNonExecutionSheetId(session.treatment_sheet_id ?? undefined);
+    setNonExecutionModalOpen(true);
+  }, []);
+
+  const handleNonExecutionClose = useCallback(() => {
+    setNonExecutionModalOpen(false);
+    setNonExecutionRowId(null);
+    setNonExecutionSheetId(undefined);
+    nonExecutionMutation.reset();
+  }, [nonExecutionMutation]);
+
+  const handleNonExecutionSubmit = useCallback(
+    (payload: RecordSessionNonExecutionRequest) => {
+      if (!nonExecutionRowId) return;
+      nonExecutionMutation.mutate({ rowId: nonExecutionRowId, payload, sheetId: nonExecutionSheetId });
+    },
+    [nonExecutionMutation, nonExecutionRowId, nonExecutionSheetId]
+  );
+
+  // On success, record the transient result for the composed-label display
+  // and close the modal. On error the modal stays open (errorMessage shown).
+  const prevNonExecutionStatusRef = React.useRef<string>('idle');
+  useEffect(() => {
+    if (
+      nonExecutionMutation.submitStatus === 'idle' &&
+      prevNonExecutionStatusRef.current === 'submitting' &&
+      nonExecutionMutation.lastResult &&
+      nonExecutionRowId
+    ) {
+      setNonExecutionResults((prev) => ({
+        ...prev,
+        [nonExecutionRowId]: nonExecutionMutation.lastResult as RecordSessionNonExecutionResponse,
+      }));
+      setNonExecutionModalOpen(false);
+      setNonExecutionRowId(null);
+      setNonExecutionSheetId(undefined);
+    }
+    prevNonExecutionStatusRef.current = nonExecutionMutation.submitStatus;
+  }, [nonExecutionMutation.submitStatus, nonExecutionMutation.lastResult, nonExecutionRowId]);
+
   /**
    * Start a multi-day session row (SCHEDULED → IN_PROGRESS).
    * Fetches the order version on demand if not cached, then calls startSheetRowApi.
@@ -413,10 +484,7 @@ export const TherapistDashboardScreen: React.FC = () => {
       try {
         let version = orderVersionCache[sheetId];
         if (!version) {
-          const { getTreatmentOrderApi } = await import(
-            '../../../treatmentSheets/data/datasources/treatmentOrders.api'
-          );
-          const order = await getTreatmentOrderApi(sheetId, tenantId);
+          const order = await fetchTreatmentOrder(sheetId, tenantId);
           version = order.version;
           setOrderVersionCache((prev) => ({ ...prev, [sheetId]: version }));
         }
@@ -427,7 +495,7 @@ export const TherapistDashboardScreen: React.FC = () => {
         setStartingRowId(null);
       }
     },
-    [startSession, orderVersionCache, tenantId, updateStatusMutation, invalidateAfterCompletion]
+    [startSession, orderVersionCache, tenantId, fetchTreatmentOrder, updateStatusMutation, invalidateAfterCompletion]
   );
 
   // React to start session status changes
@@ -594,11 +662,15 @@ export const TherapistDashboardScreen: React.FC = () => {
                 session.instructions
               );
               const isInstructionsExpanded = Boolean(expandedInstructionIds[cardId]);
+              const nonExecutionResult = session.row_id ? nonExecutionResults[session.row_id] : undefined;
               const canStart =
                 ['pending', 'scheduled', 'confirmed'].includes(session.status?.toLowerCase() ?? '') &&
                 isSessionStartDue(session) &&
-                !session.started_at;
+                !session.started_at &&
+                !nonExecutionResult;
               const isStarting = startingRowId === session.row_id;
+              const showNonExecutionAction =
+                !!session.row_id && canRecordNonExecution(session) && !nonExecutionResult;
 
               return (
                 <View key={cardId} style={styles.sessionCardBlock}>
@@ -680,6 +752,38 @@ export const TherapistDashboardScreen: React.FC = () => {
                       )}
                     </TouchableOpacity>
                   )}
+                  {showNonExecutionAction && (
+                    <TouchableOpacity
+                      style={styles.nonExecutionBtn}
+                      onPress={() => handleOpenNonExecution(session)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('therapistExecution.recordNonExecution')}
+                    >
+                      <Ionicons name="close-circle-outline" size={16} color={colors.text.secondary} />
+                      <Text style={styles.nonExecutionBtnText}>
+                        {t('therapistExecution.recordNonExecution')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {nonExecutionResult && (
+                    <View style={styles.nonExecutionResultPanel} accessibilityRole="summary">
+                      <Text style={styles.nonExecutionResultLine}>
+                        {session.status ?? ''}
+                      </Text>
+                      <Text style={styles.nonExecutionResultLine}>
+                        {t('therapistExecution.executionDidNotOccur')}
+                      </Text>
+                      <Text style={styles.nonExecutionResultLine}>
+                        {nonExecutionResult.non_execution_reason_code
+                          ? t(`therapistExecution.reasonCodes.${nonExecutionResult.non_execution_reason_code}`)
+                          : ''}
+                        {nonExecutionResult.non_execution_reason_text
+                          ? ` — ${nonExecutionResult.non_execution_reason_text}`
+                          : ''}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               );
             })
@@ -727,6 +831,17 @@ export const TherapistDashboardScreen: React.FC = () => {
           isSubmitting={submitStatus === 'completing' || updateStatusMutation.isPending}
           submitStatus={modalSubmitStatus}
           errorMessage={completionError}
+        />
+      ) : null}
+
+      {/* Non-execution Modal */}
+      {nonExecutionModalOpen ? (
+        <SessionNonExecutionModal
+          visible={nonExecutionModalOpen}
+          onSubmit={handleNonExecutionSubmit}
+          onClose={handleNonExecutionClose}
+          isSubmitting={nonExecutionMutation.submitStatus === 'submitting'}
+          errorMessage={nonExecutionMutation.errorMessage}
         />
       ) : null}
     </SafeAreaView>
@@ -830,6 +945,39 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: colors.common.white,
     fontSize: 13,
+  },
+  nonExecutionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.background.paper,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border.main,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+    marginHorizontal: spacing.md,
+    minHeight: 44,
+  },
+  nonExecutionBtnText: {
+    ...typography.button,
+    color: colors.text.secondary,
+    fontSize: 13,
+  },
+  nonExecutionResultPanel: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.xs,
+    backgroundColor: colors.background.paper,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    padding: spacing.sm,
+    gap: 2,
+  },
+  nonExecutionResultLine: {
+    fontSize: 13,
+    color: colors.text.secondary,
   },
   instructionsToggle: {
     marginHorizontal: spacing.md,

@@ -8,8 +8,12 @@
  * removed — T-E.3's own parity audit confirmed no capability gap.
  */
 
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CasesheetStandaloneScreen } from '../../../../../features/casesheets/presentation/pages/CasesheetStandaloneScreen';
+import { isCosV1Enabled, useFeatures } from '../../../../../core/hooks/useFeatures';
+import { episodeWorkspaceRoute } from '../../../../../features/doctorDashboard/application/consultationRoutes';
+import { InvalidWorkspaceState } from '../../../../../features/episodes/presentation/components/InvalidWorkspaceState';
+import { LegacyRouteUsage } from '../../../../../core/observability/legacyRouteUsage';
 
 export default function NewCasesheetRoute() {
   const { clientId, appointmentId, episodeId } = useLocalSearchParams<{
@@ -17,6 +21,21 @@ export default function NewCasesheetRoute() {
     appointmentId?: string;
     episodeId?: string;
   }>();
+  const router = useRouter();
 
-  return <CasesheetStandaloneScreen clientId={clientId} appointmentId={appointmentId} episodeId={episodeId} />;
+  if (isCosV1Enabled(useFeatures())) {
+    if (!episodeId || !appointmentId || !clientId) {
+      return <InvalidWorkspaceState onBack={() => router.back()} />;
+    }
+    return (
+      <Redirect
+        href={episodeWorkspaceRoute(episodeId, appointmentId, clientId, 'doctor', 'case_sheet') as never}
+      />
+    );
+  }
+
+  return <>
+    <LegacyRouteUsage route="casesheet.new" />
+    <CasesheetStandaloneScreen clientId={clientId} appointmentId={appointmentId} episodeId={episodeId} />
+  </>;
 }

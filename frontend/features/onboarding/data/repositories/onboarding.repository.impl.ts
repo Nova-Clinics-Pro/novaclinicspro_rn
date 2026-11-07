@@ -35,7 +35,11 @@ import {
   getWorkspacePreparationApi,
   retryWorkspacePreparationApi,
   getJourneyVisibilityApi,
-  getReadyToStartApi
+  getReadyToStartApi,
+  getPaymentMethodsApi,
+  getBillingSettingsApi,
+  saveBillingSettingsApi,
+  type BillingSettingsInput,
 } from '../datasources/onboarding.api';
 import {
   ApplicationDetailResponse,
@@ -160,6 +164,25 @@ export const onboardingKeys = {
       READY_TO_START_CONTRACT_V1,
     ] as const,
 };
+
+export const usePaymentMethodsQuery = (tenantId: string) =>
+  useQuery({
+    queryKey: [...onboardingKeys.all, 'payment-methods', tenantId],
+    queryFn: () => getPaymentMethodsApi(tenantId),
+    enabled: !!tenantId,
+  });
+
+export const useBillingSettingsQuery = (tenantId: string) =>
+  useQuery({
+    queryKey: [...onboardingKeys.all, 'billing-settings', tenantId],
+    queryFn: () => getBillingSettingsApi(tenantId),
+    enabled: !!tenantId,
+  });
+
+export const useSaveBillingSettingsMutation = (tenantId: string) =>
+  useMutation({
+    mutationFn: (input: BillingSettingsInput) => saveBillingSettingsApi(tenantId, input),
+  });
 
 const CAPABILITY_REVISION_V1 = /^cap-v1:[0-9a-f]{64}$/;
 

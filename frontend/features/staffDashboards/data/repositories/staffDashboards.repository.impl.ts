@@ -439,3 +439,103 @@ export const useCompleteSheetRowMutation = (
 
   return { mutate, submitStatus, errorMessage, reset };
 };
+
+// ============================================
+// 3.5 — useRecordSessionNonExecutionMutation (T-FE-E.3, T-BE-E.4a)
+// ============================================
+
+import {
+  recordSessionNonExecutionApi,
+} from '../datasources/staffDashboards.api';
+import {
+  RecordSessionNonExecutionRequest,
+  RecordSessionNonExecutionResponse,
+} from '../models/staffDashboards.dtos';
+
+export type RecordNonExecutionSubmitStatus = 'idle' | 'submitting' | 'error';
+
+export interface UseRecordSessionNonExecutionMutationResult {
+  /** Call this to record why a Session did not execute. */
+  mutate: (args: { rowId: string; payload: RecordSessionNonExecutionRequest; sheetId?: string }) => void;
+  submitStatus: RecordNonExecutionSubmitStatus;
+  errorMessage: string | null;
+  /** The backend's own response for the row just recorded — the ONLY place
+   * these 3 facts are available (see RecordSessionNonExecutionResponse docstring
+   * for why this cannot be durably re-displayed after the next list refetch). */
+  lastResult: RecordSessionNonExecutionResponse | null;
+  reset: () => void;
+}
+
+/**
+ * Mutation hook for recording structured Session non-execution.
+ *
+ * Uses the real backend endpoint (record_session_non_execution, T-BE-E.4a) —
+ * this genuinely persists server-side. What it does NOT do is fake durable
+ * list-view redisplay of the reason: TherapistSessionItemV2 (the
+ * get_therapist_sessions schema) has no non_execution_reason_code/text field,
+ * and non-execution does not mutate row status server-side, so the composed
+ * label is only available from this hook's own `lastResult` immediately after
+ * a successful call — never invented or persisted client-side as if durable.
+ */
+export const useRecordSessionNonExecutionMutation = (
+  tenantId: string
+): UseRecordSessionNonExecutionMutationResult => {
+  const queryClient = useQueryClient();
+  const [submitStatus, setSubmitStatus] = useState<RecordNonExecutionSubmitStatus>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<RecordSessionNonExecutionResponse | null>(null);
+
+  const reset = useCallback(() => {
+    setSubmitStatus('idle');
+    setErrorMessage(null);
+    setLastResult(null);
+  }, []);
+
+  const mutate = useCallback(
+    ({ rowId, payload, sheetId }: { rowId: string; payload: RecordSessionNonExecutionRequest; sheetId?: string }) => {
+      setSubmitStatus('submitting');
+      setErrorMessage(null);
+
+      (async () => {
+        try {
+          const result = await recordSessionNonExecutionApi(tenantId, rowId, payload);
+          setLastResult(result);
+          setSubmitStatus('idle');
+
+          await queryClient.invalidateQueries({
+            queryKey: ['staffDashboards', 'therapist', 'sessions', tenantId],
+            exact: false,
+          });
+          await queryClient.invalidateQueries({
+            queryKey: ['staffDashboards', 'therapist', 'kpis', tenantId],
+            exact: false,
+          });
+          if (sheetId) {
+            await queryClient.invalidateQueries({
+              queryKey: ['treatmentOrders', 'detail', sheetId],
+            });
+          }
+        } catch (err: unknown) {
+          const axiosError = err as {
+            response?: { status?: number; data?: { detail?: string; message?: string } };
+            message?: string;
+          };
+          const status = axiosError?.response?.status;
+          const detail = axiosError?.response?.data?.detail ?? axiosError?.response?.data?.message;
+
+          setSubmitStatus('error');
+          if (status === 403) {
+            setErrorMessage('You do not have permission to record this outcome.');
+          } else if (status === 400 || status === 422) {
+            setErrorMessage(detail ?? 'This Session cannot be marked non-executed in its current state.');
+          } else {
+            setErrorMessage(detail ?? axiosError?.message ?? 'An unexpected error occurred. Please try again.');
+          }
+        }
+      })();
+    },
+    [tenantId, queryClient]
+  );
+
+  return { mutate, submitStatus, errorMessage, lastResult, reset };
+};

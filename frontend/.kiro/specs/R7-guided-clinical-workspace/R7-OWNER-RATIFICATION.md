@@ -213,6 +213,113 @@ It must **never** return button colours, icons, layout, or UI labels. **Backend 
 
 ---
 
+## Decision 10 — Clinical History Hierarchy · **RATIFIED** *(v1.1 amendment, 2026-07-18)*
+
+**Decision.** Clinical history is part of R7 COS core, not R8. Doctor consultations and Treatment Reviews are **top-level** clinical encounters. Therapy Sessions are **grouped beneath their authoritative Treatment Plan**. The backend owns encounter classification, Plan-to-Session association, and Plan/session aggregates; the frontend renders a collapsible hierarchy and owns nothing else.
+
+**Verified problem this decision closes.** `useClinicalTimelineData` ✅ flattens every appointment — consultation or therapy — into one undifferentiated `'visit'` item; its own partial session-grouping computes a completed-session count from **scheduled** rows, not **completed** ones (a verified defect, `ED-ARCH-007`); and therapy appointments still separately leak through as flat items alongside that same grouping (double representation). Full evidence: [R7-HISTORY-HIERARCHY-AMENDMENT.md](R7-HISTORY-HIERARCHY-AMENDMENT.md).
+
+**Rationale.** (1) corrects current misclassification of therapy encounters as doctor consultations; (2) removes double representation of therapy sessions; (3) prevents frontend-derived session aggregation — the same DP-15/P3 discipline Decision 9 already applied to workflow recommendation, extended here to a surface (history) not previously named; (4) makes the first-class Treatment Plan (Decision 2/Treatment Plan resolution) **meaningful in patient history** — without this decision, the new Plan entity would ship with no history representation at all; (5) it is Clinical Operating System core (viewing what happened to this patient), not advanced clinical intelligence (trends, labs, AI).
+
+**Alternative rejected: defer to R8, retain the flat history in R7.** Rejected because: it leaves a known clinical-history misclassification live in R7's own COS surface; it duplicates treatment execution representation; it undermines the first-class Treatment Plan entity R7 itself introduces (Decision: Treatment Plan resolution); it preserves a frontend-derived, verifiably incorrect aggregate (ED-ARCH-007) inside R7's release, not merely a pre-existing debt item left alone.
+
+**Sequencing constraint (not a rejection, a scheduling fact).** The feature is **sequenced after** the Treatment Plan backend (`T-BE-D.4`) and stable Session association (`T-BE-E.1`) are available — the Plan-grouping half has no data to group by before then. **It does not block unrelated Group -1 Engineering Truth tasks** (T--1.4 onward proceed independently).
+
+**Product impact.** Medium-High — directly changes what doctors see reviewing a patient's course, closing a real, verified gap. **Architecture impact.** Extends (does not fork) the Clinical Workspace aggregate (§2.1a) — consistent with, not a departure from, Decision 9's "one aggregate" precedent. **Implementation consequence:** +7 tasks (`T-BE-A.3/A.4/A.5`, `T-FE-C.5/C.6/C.7`, `T-Z.9`), 70→77 total; +2 requirements (`FR-HIST-1/2`), 42→44 total. **Code/schema likely later:** additive backend read-model extension; **no schema change** by this decision itself (consumes the already-approved `tenant_treatment_plan` migration under `T-BE-D.2`). **Documents affected:** requirements.md (v1.1), design.md (§2.1a/§3), tasks.md (v1.1), requirements-traceability-matrix.md, R7-GUIDED-WORKSPACE-WIREFRAMES.md (W23), R7-WIREFRAME-IMPACT-MATRIX.md, R7-DESIGN-FREEZE-CHECKLIST.md, this document.
+
+---
+
+## Decision 11 — R7 Treatment Recommendation Source Identity · **RATIFIED** *(v1.2 amendment, 2026-07-24)*
+
+**Decision.** No separate Treatment Recommendation entity is introduced in R7. The existing `TenantTreatmentSheet`/Treatment Order created through the verified `POST /clinic/{tenant_id}/treatment-recommendations` workflow is the storage representation of a Recommendation; its `id` is source provenance, persisted on `TreatmentPlan.originating_recommendation_id`. Treatment Plan remains a separate, independently persisted and versioned entity (Decision "Treatment Plan — RESOLVED"); scheduling, rescheduling, and execution never mutate the Plan or the source's provenance. This is a **legacy-source representation for R7 MVP**, not a claim that Recommendation and Plan are the same entity, and may be revisited after MVP — it is not itself an R7 requirement to change.
+
+**Verified problem this decision closes (engineering-truth, T-BE-D.4 pre-implementation investigation).** `design.md` §2.8 and `requirements.md` FR-TR-1 both assumed an existing, independently identifiable Recommendation backend entity to "reuse." Verified reality: `tenant_treatment_proposals` (the only entity that ever matched that description) was deliberately dropped, along with its `treatment_proposal.*` permissions, by migration `20260228_130000_remove_treatment_proposals.py` — predating this R7 spec. The actual live Recommendation-creation endpoint (`treatment_orders_router.py`, permission `treatment_sheet.order`) creates a `TenantTreatmentSheet` and transitions it to `state=ORDERED`/`is_order=True` via `send_to_scheduling`. Further verified: that exact transition is **also** reachable through a second, independent live endpoint (`POST /treatment-sheets/{sheet_id}/send-to-scheduling`) on an ordinary sheet never created as a Recommendation — `is_order`/`state` alone cannot distinguish the two. **T-BE-D.3a** therefore adds an explicit, persisted `creation_source` discriminator (`RECOMMENDATION` | `DIRECT` | `NULL` for legacy-unknown rows, never backfilled/inferred) to `tenant_treatment_sheets`, plus a tenant-scoped partial-unique-index enforcement of "one Recommendation → at most one Treatment Plan" (FR-TR-1 AC1) on `tenant_treatment_plans (tenant_id, originating_recommendation_id) WHERE originating_recommendation_id IS NOT NULL`.
+
+**Alternatives rejected.** *Recreate a dedicated Treatment Recommendation/Proposal entity* — rejected: reintroduces a subsystem the codebase's own history deliberately removed ("replaced by direct treatment sheet creation"), a real scope increase not required to satisfy FR-TR-1 as written. *Infer provenance from lifecycle state (`is_order`/`state`) alone* — rejected: verified two independent live code paths converge on the identical state, making inference unreliable and unsafe for a one-Plan-per-Recommendation guarantee. *Backfill legacy rows' `creation_source` from `is_order`/state/row-count/timestamps* — rejected: none of those signals reliably reconstructs true provenance; legacy rows remain explicitly unknown (`NULL`) and are never treated as eligible Recommendation sources.
+
+**Does not change FR-TR-1's frozen outcome** ("a recommendation may lead to one approved Treatment Plan") — clarifies how that outcome is realized against verified current storage, nothing more.
+
+**Product impact.** None — clinician-facing behaviour is unchanged; this is a storage-provenance clarification. **Architecture impact.** Low-medium — one additive column + CHECK constraint + partial unique index, no new entity, no router/DTO/workflow/scheduling changes. **Code/schema change:** yes — one additive, reversible migration (`T-BE-D.3a`), backend-only. **Documents affected:** this document, `design.md` §2.3/§2.8, `tasks.md` (new prerequisite task `T-BE-D.3a`, inserted before `T-BE-D.4`).
+
+---
+
+## Decision 12 — Case Sheet Contribution Snapshots (DO-2 amendment) · **RATIFIED** *(v1.3 amendment, 2026-07-25)*
+
+**Decision.** DO-2's core invariant is retained unchanged: **there is exactly one current, editable Case Sheet per Episode** (`TenantCasesheet.data_json` remains the sole canonical, mutable document — never superseded, never forked). DO-2's *narrower* restriction — that a Case Sheet Contribution "holds NO clinical content" — is amended: `TenantCasesheetContribution` gains one additive, nullable `content_snapshot` JSONB column, populated with the exact validated `data_json` being committed at the moment a contribution is recorded.
+
+**Amended DO-2 interpretation, stated precisely:**
+> The Episode Case Sheet remains the sole current editable clinical document. A Case Sheet Contribution may retain an immutable content snapshot solely for Visit attribution, historical visibility, auditability, and continuity. The snapshot is not an independently editable Case Sheet and is not a second source of current truth.
+
+A contribution snapshot is: append-only, immutable after insert, Visit-attributed (`visit_id`, unchanged), author-attributed (`staff_id`, unchanged), timestamped (`contributed_at`, unchanged), never independently edited, never treated as a second Case Sheet, and never used as the current write model. No JSON-patch or semantic-diff representation is introduced for MVP — the snapshot is the full `data_json` at that moment, stored and returned unreinterpreted.
+
+**Verified problem this decision closes (engineering-truth, T-BE-E.1a pre-implementation investigation).** FR-CS-5 ("prior visits' notes visibly retained with author+timestamp, never overwritten") and its own frontend consumer, `T-FE-E.1b`, both require rendering historical contribution *content*. Verified reality: `TenantCasesheetContribution`'s own docstring states explicitly *"Holds NO clinical content — the Case Sheet's own content stays Episode-owned (DO-2)"* (Phase 2 · T-B.2, ADR-P2-03); its persisted columns are `id, tenant_id, casesheet_id, visit_id, staff_id, contributed_at, correlation_id, payload_hash` — no content field exists anywhere, and `payload_hash` is a one-way SHA-256 digest, cryptographically irreversible. `TenantCasesheet.data_json` is a single mutable document, overwritten in place on every update (verified in `casesheets_service.py`'s `update_casesheet` and in the frontend's own `CaseSheetModule.tsx` update call, which sends a full replacement, not a delta). Without amendment, FR-CS-5's AC is structurally unsatisfiable — not a missing endpoint, but a missing persisted fact.
+
+**Alternatives rejected.** *Attribution-only history (author/timestamp, no content)* — rejected: does not satisfy FR-CS-5's own wording ("notes visibly retained"), and a timeline of "who touched this, with nothing to show for it" does not serve the clinical continuity purpose FR-CS-5 exists for. *JSON-patch/diff-based history* — rejected for MVP as unnecessary complexity; a full snapshot is simpler, correct, and sufficient, and the requirement never asked for a diff view. *A second, independently versioned Case Sheet entity* — rejected: would violate DO-2's core invariant (one current, editable document per Episode) and is explicitly out of this decision's scope; nothing here creates a versioning workflow.
+
+**Legacy rows.** Existing contribution rows keep `content_snapshot = NULL` — never backfilled, never reconstructed from the current `data_json`, never inferred. The history API returns them with an explicit `content_available = false` state, never silently substituting current content for historical content.
+
+**Product impact.** Enables FR-CS-5's own frontend surface (`T-FE-E.1b`) to render real historical content, not just attribution metadata. **Architecture impact.** Low — one additive, nullable, reversible column on an existing table; no new entity, no new write path beyond extending the existing atomic contribution-recording transaction (`T-BE-C.2`/`T-BE-C.3`/`T-BE-C.4`, unchanged in structure). **Code/schema change:** yes — one additive, reversible migration (`T-BE-E.1a`), backend-only, applied first to disposable local PostgreSQL only; the shared development database is not upgraded by this decision. **Documents affected:** this document, `design.md` §2.2, `tasks.md` (`T-BE-E.1a`'s own card), `RTM-MASTER.md` (FR-CS-5/FR-CS-6 entries only).
+
+---
+
+## Decision 13 — Living Document Identity, Immutable Snapshots & Linear Lineage · **RATIFIED** *(clarification, 2026-10-02)*
+
+**Purpose.** This ratifies the storage/ownership semantics deliberately deferred by Decision 2 and `design.md` §2.6. It clarifies implementation of FR-LD-1; it does not expand R7 into R8 or alter FR-CS-1's one-Case-Sheet-per-Episode invariant.
+
+**Three distinct concepts.** (1) **Document identity** is the enduring clinical object: the Episode's one Case Sheet, a Prescription, or a Treatment Plan/clinical-intent series. (2) An **immutable signed version/snapshot** is the complete clinical content attested by a clinician at a particular time. (3) **Lineage** records the version relationship and audit metadata: stable lineage identity, immediate predecessor/successor, amendment actor/reason/timestamp, signing metadata, and derived current relationship. Lineage owns **no clinical content**.
+
+**Complete snapshots, never deltas.** Every retained signed version stores complete clinical content as signed. Field-level deltas, JSON Patch, event replay, and a generic clinical-data dump are not the authoritative representation; comparisons may be derived later.
+
+**Case Sheet.** An Episode retains exactly **one** Case Sheet identity/current-authoring document. A Visit never creates another Case Sheet. Signed snapshots V1 → V2 → V3 belong to that one identity and are not additional Case Sheets. `TenantCasesheetContribution` remains separate Visit-attributed contribution history; it must not be relabelled or reused as Living Document version history merely because it has a content snapshot.
+
+**Prescription.** A Prescription retains one identity with complete immutable signed versions in one lineage. Amendment means amendment of that Prescription, not creation of an unrelated Prescription. This is distinct from R8 Prescription copy-forward.
+
+**Treatment Plan.** A clinical-intent amendment creates a distinct immutable Plan version; scheduling changes create none. Generic Living Document lineage is the common cross-document supersession/audit authority. `superseded_by_plan_id` is a synchronized projection only and must never become competing authority.
+
+### D5-OD-1 … D5-OD-15 — Treatment Plan amendment/supersession contract · **RATIFIED** *(2026-10-04)*
+
+1. **D5-OD-1:** Clinical-intent amendment creates a new Treatment Plan row/version; it never mutates the predecessor's clinical intent.
+2. **D5-OD-2:** One Living Document identity represents the enduring Treatment Plan clinical-intent series.
+3. **D5-OD-3:** Generic G1 lineage is the sole authoritative supersession/currentness authority for that series.
+4. **D5-OD-4:** `document_version` and `superseded_by_plan_id` are synchronized projections, never independent lineage authority.
+5. **D5-OD-5:** Executed and completed historical sessions remain owned by their predecessor Plan; in-progress sessions remain predecessor-owned and may complete.
+6. **D5-OD-6:** Future not-started predecessor rows become `SUPERSEDED` with provenance; `SUPERSEDED` is neither `CANCELLED` nor `COMPLETED`.
+7. **D5-OD-7:** Amendment never silently rebinds a session from predecessor to successor.
+8. **D5-OD-8:** Replacement relations are optional N:M audit relations, not ownership transfer or automatic scheduling.
+9. **D5-OD-9:** Replacement scheduling remains a separate operational action; amendment does not copy logistics as authoritative scheduling truth.
+10. **D5-OD-10:** Schedule-only/logistics changes create no Treatment Plan version.
+11. **D5-OD-11:** Future unexecuted instruction editing remains a session/instruction concern and creates no Treatment Plan version.
+12. **D5-OD-12:** Execution correction remains a session/execution concern and creates no Treatment Plan version.
+13. **D5-OD-13:** Concurrent START and supersession have exactly one winner: a committed start preserves `IN_PROGRESS`; a committed supersession rejects a later start.
+14. **D5-OD-14:** Runtime authorization is permission-driven: `treatment_plan.amend` governs clinical amendment and `treatment_order.schedule` governs scheduling/replacement logistics; subscription availability and seeded role grant remain separate.
+15. **D5-OD-15:** Amendment/supersession does not reassign billing history: billing stays attached to its actual Visit/session, and no successor Plan or replacement relation transfers it.
+
+**Strict linear lineage.** Each lineage has exactly one root; every non-root has exactly one immediate predecessor; every version has zero or one successor; branching, merging, multiple roots, disconnected chains sharing a lineage ID, and cycles are prohibited. Exactly one terminal/current version exists, derived as the unique member with no successor. Persisted currentness, if later needed, is only a transactionally consistent projection.
+
+**Invariant scope.** Tenant, client, Episode where applicable, document type, stable document identity, and lineage remain invariant across versions. Visit may differ. Concurrent amendments of the same predecessor permit only one committed successor; enforcement is domain + application/repository + database, never UI-only.
+
+**Retention.** A signed historical version is never edited in place, ordinarily deleted, soft-deleted out of clinical history, hidden so historical retrieval/rendering fails, removed by supersession, or destroyed by incidental cascade. Supersession retains V1, creates V2, and records V1 → V2.
+
+**R7 scope boundary.** Generic G1 Living Documents covers Case Sheet, Prescription, and Treatment Plan only. Treatment Sheet/session instruction/execution history remains under its existing lifecycle unless a future separately ratified requirement names a particular signed artifact. No G1 amendment command, permission, frontend surface, Treatment Plan D.5 behavior, or R8 copy-forward is introduced by this clarification.
+
+**Implementation consequence.** Immutable snapshot/version persistence remains owned by the originating document domain; generic lineage references those immutable versions but does not duplicate clinical content. T-BE-G.1 must establish this foundation before G.2 and D.5; exact tables/FKs and pre-adoption migration shape remain an implementation design task subject to its acceptance criteria.
+
+---
+
+## Decision 14 — Living Document Amendment Authoring Lifecycle · **RATIFIED** *(2026-10-02)*
+
+**Decision.** A clinician amending a signed Case Sheet or Prescription follows the existing source-document lifecycle: `SIGNED → AMEND → DRAFT → FINAL → SIGNED`. The amendment is not immediately a second signed historical version. The `AMEND` action requires the document-specific amendment permission (`casesheet.amend` or `prescription.amend`) and transitions the existing source document into amendment-draft authoring; it creates no new Case Sheet, Prescription identity, Living Document identity, signed snapshot, or lineage node.
+
+**Lineage boundary.** Living Document lineage versions correspond to completed signed clinical states, not mutable amendment drafts. Editing or finalizing an amendment creates no lineage node. Only successful signing atomically transitions the current source document to `SIGNED`, appends exactly one successor to the then-current signed lineage version, and creates that successor's complete immutable domain-owned snapshot. The predecessor snapshot remains immutable throughout.
+
+**Source-document ownership.** Amendment uses the existing current source document as its authoring surface; it does not fork another mutable clinical document. The Episode therefore retains exactly one Case Sheet, and a Prescription retains its existing stable identity. Amendment draft authoring remains subject to the same distinct amendment permission; generic update or sign permission alone cannot initiate or author an amendment. Existing sign authorization continues to govern the final signing operation where the source lifecycle requires it, but does not confer amendment authority.
+
+**Concurrency and retention.** At amendment signing, the expected signed predecessor must still be current. If another amendment has already created a successor, the stale signing attempt fails. The source signed transition, successor lineage append, and immutable snapshot creation are one transaction; the preceding authoring interactions are separate transactions. Cancelling or abandoning an amendment must never alter, delete, or unlock any prior signed snapshot or lineage version. No new cancellation state is introduced by this decision.
+
+**Scope.** This decision resolves `G2_SOURCE_DOCUMENT_AMENDMENT_SEQUENCE_DECISION_REQUIRED` for FR-LD-2 / T-BE-G.2 only. It does not introduce Treatment Plan amendment behavior, copy-forward, a second document lifecycle, or a new lineage authority.
+
+---
+
 ## Patient-Safety Reality Check — **F-2, BLOCKING, owner response required**
 
 The owner scoped into R7 core: *"At minimum surface existing verified data for: allergies · active medicines · known contraindication warnings · pending clinical reviews · renal-risk indicators where existing data already supports them"* — with the instruction **"Do not invent unsupported clinical rules."** Verified against code:
@@ -252,6 +359,8 @@ The owner scoped into R7 core: *"At minimum surface existing verified data for: 
 | 7 | Recommend-with-deviation | Ratified | — |
 | 8 | R7/R8 split | Ratified | R7 still Large after narrowing |
 | 9 | **Backend owns workflow intelligence** | Ratified | recommendation moves D-FE→D-BE; **3 frontend violations found** (ED-ARCH-004/006) |
+| 10 | **Clinical history hierarchy** *(v1.1)* | Ratified — **in R7, not R8** | sequenced after Treatment Plan (`T-BE-D.4`/`T-BE-E.1`); **1 new frontend violation found** (ED-ARCH-007); +7 tasks, +2 requirements |
+| 11 | **R7 Treatment Recommendation source identity** *(v1.2)* | Ratified | no new entity; `creation_source` discriminator + one-Plan-per-Recommendation constraint (`T-BE-D.3a`, blocks `T-BE-D.4`); legacy rows stay unknown, never backfilled |
 
 **Open decisions the owner must still make:** (i) F-1 disposition of `appointment_id` + nullability migration timing; (ii) **F-2 patient-safety option (a)/(b)/(c)**; (iii) whether Treatment Plan is a new persisted entity or an additive projection; (iv) whether session `Missed` is a status or a cancellation reason; (v) `PrescriptionStatus` deletion vs dispensing model.
 

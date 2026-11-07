@@ -25,7 +25,7 @@ import { useClinicTheme } from '../core/theme/useClinicTheme';
 import { spacing } from '../core/theme/spacing';
 import { RegistrationSubmissionError } from '../features/registration/data/datasources/registration.api';
 import { CLINIC_TYPES } from '../features/registration/data/models/registration.dtos';
-import { supabase } from '../core/api/supabaseClient';
+import { authSessionService } from '../features/auth/application/auth-session.service';
 import { logError } from '../core/utils/errorHandler';
 import { RegistrationErrorNotice } from '../features/registration/presentation/components/RegistrationErrorNotice';
 import { useRegisterClinicOwner } from '../features/registration/presentation/hooks/useRegisterClinicOwner';
@@ -153,7 +153,7 @@ export default function ClinicOwnerRegistrationScreen() {
       if (response.success) {
         // Sign out the user immediately after registration
         // This prevents session issues when redirecting
-        await supabase.auth.signOut();
+        await authSessionService.finalizeRegistrationSession();
 
         // Check if application was auto-approved
         const isAutoApproved = response.auto_approval_result?.eligible && 

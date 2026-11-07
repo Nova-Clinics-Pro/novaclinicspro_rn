@@ -13,7 +13,12 @@ import {
 import { sendToSchedulingApi, createTreatmentRecommendationApi } from '../../../features/treatmentSheets/data/datasources/treatmentOrders.api';
 import { axiosClient } from '../../../core/api/axiosClient';
 import { useAppointmentsListQuery } from '../../../features/appointments/data/repositories/appointments.repository.impl';
-import { usePrescriptionsListQuery } from '../../../features/prescriptions/data/repositories/prescriptions.repository.impl';
+import {
+  usePrescriptionsListQuery,
+  usePrescriptionByAppointmentQuery,
+  useCreatePrescriptionMutation,
+  useUpdatePrescriptionMutation,
+} from '../../../features/prescriptions/data/repositories/prescriptions.repository.impl';
 import { useTreatmentSheetsByEpisodeQuery } from '../../../features/treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { listClinicalServicesByVisitApi } from '../../../features/clinicalServices/data/datasources/clinicalServices.api';
 
@@ -69,6 +74,16 @@ jest.mock('../../../features/appointments/data/repositories/appointments.reposit
 }));
 jest.mock('../../../features/prescriptions/data/repositories/prescriptions.repository.impl', () => ({
   usePrescriptionsListQuery: jest.fn(),
+  // R7 · T-0.6: stale-mock repair (T-0.2 origin) — PrescriptionModule (T-0.2)
+  // reads these three hooks now; this test mounts the full ClinicalWorkspace
+  // tree (including PrescriptionModule), so they must be mocked here too, or
+  // PrescriptionModule crashes before this test's own Case-Sheet-autosave
+  // assertions ever run. Neutral shapes — this test never presses "Save
+  // Prescription", so the mutation hooks' `mutateAsync` is never invoked —
+  // does not alter this test's product assertions.
+  usePrescriptionByAppointmentQuery: jest.fn(),
+  useCreatePrescriptionMutation: jest.fn(),
+  useUpdatePrescriptionMutation: jest.fn(),
 }));
 jest.mock('../../../features/treatmentSheets/data/repositories/treatmentSheets.repository.impl', () => ({
   useTreatmentSheetsByEpisodeQuery: jest.fn(),
@@ -141,6 +156,9 @@ describe('ClinicalTimeline does not block/duplicate another module\'s save (R3B 
     (sendToSchedulingApi as jest.Mock).mockResolvedValue({ id: 'sheet-1', state: 'ORDERED', is_order: true, version: 1 });
     (useAppointmentsListQuery as jest.Mock).mockReturnValue({ data: { items: [] }, isLoading: false });
     (usePrescriptionsListQuery as jest.Mock).mockReturnValue({ data: { items: [] }, isLoading: false });
+    (usePrescriptionByAppointmentQuery as jest.Mock).mockReturnValue({ data: { items: [] }, isLoading: false });
+    (useCreatePrescriptionMutation as jest.Mock).mockReturnValue({ mutateAsync: jest.fn() });
+    (useUpdatePrescriptionMutation as jest.Mock).mockReturnValue({ mutateAsync: jest.fn() });
     (useTreatmentSheetsByEpisodeQuery as jest.Mock).mockReturnValue({ data: { treatment_sheets: [] }, isLoading: false });
     (listClinicalServicesByVisitApi as jest.Mock).mockResolvedValue({ items: [], total: 0, skip: 0, limit: 50 });
   });

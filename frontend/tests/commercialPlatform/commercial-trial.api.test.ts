@@ -1,5 +1,5 @@
 import { axiosClient } from '../../core/api/axiosClient';
-import { activateCommercialTrialApi, getCommercialRetentionApi, getCommercialTrialApi, grantCommercialTrialExtensionApi, requestCommercialTrialExtensionApi, requestCommercialTrialSubscriptionApi } from '../../features/commercialPlatform/data/datasources/commercial-trial.api';
+import { initializeLegacyCommercialTrialApi, activateCommercialTrialApi, getCommercialRetentionApi, getCommercialTrialApi, grantCommercialTrialExtensionApi, requestCommercialTrialExtensionApi, requestCommercialTrialSubscriptionApi } from '../../features/commercialPlatform/data/datasources/commercial-trial.api';
 
 jest.mock('../../core/api/axiosClient', () => ({ axiosClient: { get: jest.fn(), post: jest.fn() } }));
 
@@ -28,6 +28,15 @@ describe('Commercial Trial datasource', () => {
     expect(mockGet).toHaveBeenCalledWith(
       '/api/v1/onboarding/tenant-1/commercial-trial/retention',
       { signal: controller.signal }
+    );
+  });
+
+  it('initializes a legacy clinic through the platform endpoint with the caller-owned idempotency key', async () => {
+    await initializeLegacyCommercialTrialApi('tenant-1', { contract_version: 'commercial_trial_v1', confirmed: true }, 'legacy-key');
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/onboarding/tenant-1/commercial-trial/legacy-initialization',
+      { contract_version: 'commercial_trial_v1', confirmed: true },
+      { headers: { 'Idempotency-Key': 'legacy-key' } }
     );
   });
 

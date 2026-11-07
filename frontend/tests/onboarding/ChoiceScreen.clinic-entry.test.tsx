@@ -9,14 +9,17 @@ const mockReplace = jest.fn();
 const mockRefetch = jest.fn();
 const mockSetCurrentApplicationId = jest.fn();
 const mockUseApplicationDetailQuery = jest.fn();
+const mockApplicationDetailQueryFn = jest.fn();
 const mockUseAuth = jest.fn();
+const mockUseRegistrationStatus = jest.fn();
+const mockUseLocalSearchParams = jest.fn();
 const mockUseClinicEntryOrchestration = jest.fn();
 const mockSubmitNewClinic = jest.fn();
 const mockSubmitBringClinic = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),
-  useLocalSearchParams: () => ({ applicationId: 'application-1' }),
+  useLocalSearchParams: () => mockUseLocalSearchParams(),
 }));
 
 jest.mock('@expo/vector-icons', () => ({
@@ -64,6 +67,10 @@ jest.mock('../../features/auth/presentation/hooks/useAuth', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
+jest.mock('../../features/registration/presentation/hooks/useRegistrationStatus', () => ({
+  useRegistrationStatus: (...args: unknown[]) => mockUseRegistrationStatus(...args),
+}));
+
 jest.mock('../../features/onboarding/data/repositories/onboarding.repository.impl', () => ({
   useApplicationDetailQuery: (...args: unknown[]) => mockUseApplicationDetailQuery(...args),
 }));
@@ -79,12 +86,31 @@ jest.mock('../../features/onboarding/presentation/hooks/useClinicEntryOrchestrat
 describe('ChoiceScreen Clinic Entry presentation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseAuth.mockReturnValue({ currentUser: { applicationStatus: 'approved' } });
-    mockUseApplicationDetailQuery.mockReturnValue({
-      data: { id: 'application-1', tenant_name: 'Nova Clinic' },
+    mockUseLocalSearchParams.mockReturnValue({});
+    mockUseAuth.mockReturnValue({ currentUser: { userId: 'user-1', applicationStatus: 'approved' } });
+    mockUseRegistrationStatus.mockReturnValue({
+      data: {
+        status: 'approved',
+        action_required: false,
+        updated_at: '2026-10-19T00:00:00Z',
+        continuation: {
+          kind: 'approved_choice',
+          application_id: '11111111-1111-4111-8111-111111111111',
+          tenant_name: 'Nova Clinic',
+        },
+      },
       isLoading: false,
       error: null,
       refetch: mockRefetch,
+    });
+    mockUseApplicationDetailQuery.mockImplementation((applicationId: string, options?: { enabled?: boolean }) => {
+      if (options?.enabled) mockApplicationDetailQueryFn(applicationId);
+      return {
+        data: { id: '11111111-1111-4111-8111-111111111111', tenant_name: 'Nova Clinic' },
+        isLoading: false,
+        error: null,
+        refetch: mockRefetch,
+      };
     });
     mockUseClinicEntryOrchestration.mockReturnValue({
       state: 'idle', errorToken: null, organizations: [], organizationId: 'org-1',
@@ -119,6 +145,12 @@ describe('ChoiceScreen Clinic Entry presentation', () => {
     );
     expect(getByTestId('clinic-entry-path-new_clinic').props.accessibilityState.checked).toBe(true);
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockUseApplicationDetailQuery).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(mockSetCurrentApplicationId).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111');
+    expect(mockApplicationDetailQueryFn).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111');
   });
 
   it('presents Bring Your Clinic verification and non-import boundaries', () => {
@@ -159,11 +191,139 @@ describe('ChoiceScreen Clinic Entry presentation', () => {
   });
 
   it('preserves the existing navigation for an already active onboarding journey', () => {
-    mockUseAuth.mockReturnValue({ currentUser: { applicationStatus: 'onboarding' } });
+    mockUseAuth.mockReturnValue({ currentUser: { userId: 'user-1', applicationStatus: 'onboarding' } });
 
     render(<ChoiceScreen />);
 
     expect(mockReplace).toHaveBeenCalledWith('/onboarding/wizard-flow');
+  });
+
+  it('uses only the authenticated continuation when navigation supplies a conflicting application ID', () => {
+    mockUseLocalSearchParams.mockReturnValue({ applicationId: 'attacker-selected-application' });
+
+    render(<ChoiceScreen />);
+
+    expect(mockUseApplicationDetailQuery).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      expect.objectContaining({ enabled: true }),
+    );
+    expect(mockSetCurrentApplicationId).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111');
+    expect(mockUseApplicationDetailQuery).not.toHaveBeenCalledWith(
+      'attacker-selected-application',
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    ['approved', undefined],
+    ['pending_review', undefined],
+    ['rejected', undefined],
+  ] as const)('does not load a route-supplied application for %s without an approved continuation', (status, continuation) => {
+    mockUseLocalSearchParams.mockReturnValue({ applicationId: 'attacker-selected-application' });
+    mockUseRegistrationStatus.mockReturnValue({
+      data: { status, action_required: false, updated_at: '2026-10-19T00:00:00Z', continuation },
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    const screen = render(<ChoiceScreen />);
+
+    expect(screen.getByText('Clinic entry is unavailable because the application context could not be resolved.')).toBeTruthy();
+    expect(mockUseApplicationDetailQuery).toHaveBeenCalledWith(
+      '',
+      expect.objectContaining({ enabled: false }),
+    );
+    expect(mockSetCurrentApplicationId).not.toHaveBeenCalled();
+    expect(mockApplicationDetailQueryFn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['loading', { data: undefined, isLoading: true, error: null, refetch: mockRefetch }],
+    ['error', { data: undefined, isLoading: false, error: new Error('status failure'), refetch: mockRefetch }],
+  ])('does not load application details while the authenticated status query is %s', (_state, statusResult) => {
+    mockUseLocalSearchParams.mockReturnValue({ applicationId: 'attacker-selected-application' });
+    mockUseRegistrationStatus.mockReturnValue(statusResult);
+
+    const screen = render(<ChoiceScreen />);
+
+    expect(mockUseApplicationDetailQuery).toHaveBeenCalledWith(
+      '',
+      expect.objectContaining({ enabled: false }),
+    );
+    expect(mockSetCurrentApplicationId).not.toHaveBeenCalled();
+    expect(mockApplicationDetailQueryFn).not.toHaveBeenCalled();
+    expect(screen.queryByText('Nova Clinic')).toBeNull();
+  });
+
+  it('does not use a cached continuation without an authenticated applicant', () => {
+    mockUseLocalSearchParams.mockReturnValue({ applicationId: 'attacker-selected-application' });
+    mockUseAuth.mockReturnValue({ currentUser: undefined });
+
+    render(<ChoiceScreen />);
+
+    expect(mockUseApplicationDetailQuery).toHaveBeenCalledWith(
+      '',
+      expect.objectContaining({ enabled: false }),
+    );
+    expect(mockSetCurrentApplicationId).not.toHaveBeenCalled();
+    expect(mockApplicationDetailQueryFn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['missing continuation', undefined],
+    ['null continuation', null],
+    ['empty continuation', {}],
+    ['wrong continuation kind', { kind: 'other', application_id: '11111111-1111-4111-8111-111111111111', tenant_name: 'Nova Clinic' }],
+    ['missing application ID', { kind: 'approved_choice', tenant_name: 'Nova Clinic' }],
+    ['empty application ID', { kind: 'approved_choice', application_id: '', tenant_name: 'Nova Clinic' }],
+    ['malformed application ID', { kind: 'approved_choice', application_id: 'not-a-uuid', tenant_name: 'Nova Clinic' }],
+    ['missing tenant name', { kind: 'approved_choice', application_id: '11111111-1111-4111-8111-111111111111' }],
+    ['blank tenant name', { kind: 'approved_choice', application_id: '11111111-1111-4111-8111-111111111111', tenant_name: '   ' }],
+  ])('does not enable application details for direct entry with %s', (_scenario, continuation) => {
+    mockUseLocalSearchParams.mockReturnValue({ applicationId: 'attacker-selected-application' });
+    mockUseRegistrationStatus.mockReturnValue({
+      data: { status: 'approved', action_required: false, updated_at: '2026-10-19T00:00:00Z', continuation },
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    render(<ChoiceScreen />);
+
+    expect(mockUseApplicationDetailQuery).toHaveBeenCalledWith(
+      '',
+      expect.objectContaining({ enabled: false }),
+    );
+    expect(mockSetCurrentApplicationId).not.toHaveBeenCalled();
+    expect(mockApplicationDetailQueryFn).not.toHaveBeenCalled();
+  });
+
+  it('does not enable application details for a nonapproved status with a valid-looking continuation', () => {
+    mockUseRegistrationStatus.mockReturnValue({
+      data: {
+        status: 'pending_review',
+        action_required: false,
+        updated_at: '2026-10-19T00:00:00Z',
+        continuation: {
+          kind: 'approved_choice',
+          application_id: '11111111-1111-4111-8111-111111111111',
+          tenant_name: 'Nova Clinic',
+        },
+      },
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    render(<ChoiceScreen />);
+
+    expect(mockUseApplicationDetailQuery).toHaveBeenCalledWith(
+      '',
+      expect.objectContaining({ enabled: false }),
+    );
+    expect(mockSetCurrentApplicationId).not.toHaveBeenCalled();
+    expect(mockApplicationDetailQueryFn).not.toHaveBeenCalled();
   });
 
   it('keeps English and Hindi Clinic Entry localization shapes compatible', () => {

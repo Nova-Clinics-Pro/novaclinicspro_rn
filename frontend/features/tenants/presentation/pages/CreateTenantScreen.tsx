@@ -26,6 +26,7 @@ import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { useCreateTenantMutation } from '../../data/repositories/tenants.repository.impl';
 import { OrgTenantCreate, CLINIC_TYPES } from '../../data/models/tenants.dtos';
+import { useOrganizationTenantScope } from '../hooks/useOrganizationTenantScope';
 
 // Validation schema
 const createTenantSchema = z.object({
@@ -44,7 +45,8 @@ type CreateTenantFormData = z.infer<typeof createTenantSchema>;
 export default function CreateTenantScreen() {
   const theme = useClinicTheme();
   const router = useRouter();
-  const createMutation = useCreateTenantMutation();
+  const { organizationId } = useOrganizationTenantScope();
+  const createMutation = useCreateTenantMutation(organizationId);
 
   const {
     control,

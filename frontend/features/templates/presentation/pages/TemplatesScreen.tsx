@@ -30,6 +30,9 @@ import {
 } from '../../data/models/templates.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 
 // ============================================
@@ -50,7 +53,10 @@ interface TypeTabProps {
   onPress: () => void;
 }
 
-const TypeTab: React.FC<TypeTabProps> = ({ type, isActive, onPress }) => (
+const TypeTab: React.FC<TypeTabProps> = ({ type, isActive, onPress }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  return (
   <TouchableOpacity
     style={[styles.typeTab, isActive && styles.typeTabActive]}
     onPress={onPress}
@@ -59,6 +65,7 @@ const TypeTab: React.FC<TypeTabProps> = ({ type, isActive, onPress }) => (
     <Text style={[styles.typeTabText, isActive && styles.typeTabTextActive]}>{type.label}</Text>
   </TouchableOpacity>
 );
+};
 
 // ============================================
 // TEMPLATE CARD COMPONENT
@@ -71,6 +78,9 @@ interface TemplateCardProps {
 }
 
 const TemplateCard: React.FC<TemplateCardProps> = ({ template, onPress, onDelete }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const metadata = TEMPLATE_METADATA[template.template_type];
   if (!metadata) return null;
 
@@ -126,6 +136,9 @@ interface PlaceholderCardProps {
 }
 
 const PlaceholderCard: React.FC<PlaceholderCardProps> = ({ type, onPress }) => {
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const metadata = TEMPLATE_METADATA[type];
   if (!metadata) return null;
 
@@ -154,6 +167,10 @@ const PlaceholderCard: React.FC<PlaceholderCardProps> = ({ type, onPress }) => {
 // ============================================
 
 export const TemplatesScreen: React.FC = () => {
+  const { t } = useTranslation();
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { currentUser } = useAuthStore();
   const tenantId = currentUser?.tenantId || '';
@@ -184,23 +201,23 @@ export const TemplatesScreen: React.FC = () => {
         'Delete Template',
         `Are you sure you want to delete "${template.name}"?`,
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               try {
                 await deleteMutation.mutateAsync(template.id);
-                Alert.alert('Success', 'Template deleted');
+                Alert.alert(t('common.success'), 'Template deleted');
               } catch (error: any) {
-                Alert.alert('Error', error?.message || 'Failed to delete template');
+                Alert.alert(t('common.error'), error?.message || 'Failed to delete template');
               }
             },
           },
         ]
       );
     },
-    [deleteMutation]
+    [deleteMutation, t]
   );
 
   const handleCreateTemplate = useCallback(
@@ -208,10 +225,10 @@ export const TemplatesScreen: React.FC = () => {
       Alert.alert(
         'Create Template',
         'Template creation will be available soon. Contact support for custom templates.',
-        [{ text: 'OK' }]
+        [{ text: t('common.ok') }]
       );
     },
-    []
+    [t]
   );
 
   const handleViewTemplate = useCallback(
@@ -221,10 +238,10 @@ export const TemplatesScreen: React.FC = () => {
         `Type: ${TEMPLATE_METADATA[template.template_type]?.label}\n\nVariables: ${
           template.variables?.join(', ') || 'None'
         }\n\nTemplate editing coming soon.`,
-        [{ text: 'OK' }]
+        [{ text: t('common.ok') }]
       );
     },
-    []
+    [t]
   );
 
   // Filter templates by selected type
@@ -305,7 +322,7 @@ export const TemplatesScreen: React.FC = () => {
             <Ionicons name="cloud-offline-outline" size={24} color="#EF4444" />
             <Text style={styles.errorBoxText}>Failed to load templates</Text>
             <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -378,7 +395,7 @@ export const TemplatesScreen: React.FC = () => {
         onPress={() => handleCreateTemplate()}
         activeOpacity={0.8}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="add" size={28} color={colors.text.onPrimary} />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -388,7 +405,7 @@ export const TemplatesScreen: React.FC = () => {
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -397,7 +414,7 @@ const styles = StyleSheet.create({
     maxHeight: 52,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
   },
   tabsContent: {
     paddingHorizontal: spacing.md,
@@ -419,7 +436,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   typeTabTextActive: {
-    color: '#FFFFFF',
+    color: colors.text.onPrimary,
   },
   scrollView: {
     flex: 1,
@@ -459,7 +476,7 @@ const styles = StyleSheet.create({
     marginTop: -spacing.xs,
   },
   templateCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,

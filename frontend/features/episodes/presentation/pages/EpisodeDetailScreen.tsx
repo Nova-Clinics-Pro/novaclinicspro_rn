@@ -25,6 +25,7 @@ import {
   useUpdateEpisodeMutation,
 } from '../../data/repositories/episodes.repository.impl';
 import { EpisodeStatusBadge } from '../components/EpisodeStatusBadge';
+import { EpisodeDetailMetadataGrid } from '../components/EpisodeDetailMetadataGrid';
 import { EpisodeFormModal } from '../components/EpisodeFormModal';
 import { TreatmentPlansSection } from '../components/TreatmentPlansSection';
 import { TreatmentSheetsSection } from '../components/TreatmentSheetsSection';
@@ -510,51 +511,15 @@ export const EpisodeDetailScreen: React.FC<EpisodeDetailScreenProps> = ({
           )}
 
           {/* Episode Metadata */}
-          <View style={styles.metadataGrid}>
-            <View style={styles.metadataItem}>
-              <Ionicons name="calendar-outline" size={16} color={theme.colors.text.tertiary} />
-              <Text style={[styles.metadataLabel, { color: theme.colors.text.tertiary }]}>
-                Start Date
-              </Text>
-              <Text style={[styles.metadataValue, { color: theme.colors.text.primary }]}>
-                {formatEpisodeDate(episode.start_date)}
-              </Text>
-            </View>
-
-            {episode.end_date && (
-              <View style={styles.metadataItem}>
-                <Ionicons name="calendar-outline" size={16} color={theme.colors.text.tertiary} />
-                <Text style={[styles.metadataLabel, { color: theme.colors.text.tertiary }]}>
-                  End Date
-                </Text>
-                <Text style={[styles.metadataValue, { color: theme.colors.text.primary }]}>
-                  {formatEpisodeDate(episode.end_date)}
-                </Text>
-              </View>
-            )}
-
-            {episode.last_visit_date && (
-              <View style={styles.metadataItem}>
-                <Ionicons name="time-outline" size={16} color={theme.colors.text.tertiary} />
-                <Text style={[styles.metadataLabel, { color: theme.colors.text.tertiary }]}>
-                  Last Visit
-                </Text>
-                <Text style={[styles.metadataValue, { color: theme.colors.text.primary }]}>
-                  {formatEpisodeDate(episode.last_visit_date)}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.metadataItem}>
-              <Ionicons name="medical-outline" size={16} color={theme.colors.text.tertiary} />
-              <Text style={[styles.metadataLabel, { color: theme.colors.text.tertiary }]}>
-                Total Visits
-              </Text>
-              <Text style={[styles.metadataValue, { color: theme.colors.text.primary }]}>
-                {episode.visits_count}
-              </Text>
-            </View>
-          </View>
+          <EpisodeDetailMetadataGrid
+            startDateText={formatEpisodeDate(episode.start_date)}
+            endDateText={episode.end_date ? formatEpisodeDate(episode.end_date) : undefined}
+            lastVisitDateText={episode.last_visit_date ? formatEpisodeDate(episode.last_visit_date) : undefined}
+            showEndDate={Boolean(episode.end_date)}
+            showLastVisit={Boolean(episode.last_visit_date)}
+            visitsCount={episode.visits_count}
+            textColors={theme.colors.text}
+          />
 
           {/* Diagnosis Code */}
           {episode.episode_code && (
@@ -829,25 +794,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   editButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  metadataGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 16,
-  },
-  metadataItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minWidth: '45%',
-  },
-  metadataLabel: {
-    fontSize: 12,
-  },
-  metadataValue: {
     fontSize: 14,
     fontWeight: '600',
   },

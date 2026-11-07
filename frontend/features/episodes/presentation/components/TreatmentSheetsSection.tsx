@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import { useTreatmentSheetsByEpisodeQuery } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { TreatmentSheetStatusBadge } from '../../../treatmentSheets/presentation/components/TreatmentSheetStatusBadge';
 import { calculateProgress } from '../../../treatmentSheets/data/models/treatmentSheets.dtos';
 
@@ -32,18 +32,11 @@ export const TreatmentSheetsSection: React.FC<TreatmentSheetsSectionProps> = ({
   const theme = useClinicTheme();
 
   // Fetch treatment sheets for this episode
-  const { data: sheets, isLoading } = useQuery({
-    queryKey: ['treatment-sheets', tenantId, episodeId],
-    queryFn: async () => {
-      const { axiosClient } = await import('../../../../core/api/axiosClient');
-      const response = await axiosClient.get(
-        `/api/v1/clinic/${tenantId}/treatment-sheets`,
-        { params: { episode_id: episodeId } }
-      );
-      return response.data.items || [];
-    },
-    enabled: !!tenantId && !!episodeId,
-  });
+  const { data: sheetsData, isLoading } = useTreatmentSheetsByEpisodeQuery(
+    tenantId,
+    episodeId
+  );
+  const sheets = sheetsData?.treatment_sheets;
 
   if (isLoading) {
     return (

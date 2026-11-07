@@ -208,7 +208,7 @@ describe('ClinicalServicesModule (R3A · T-B.4)', () => {
       await (fireEvent.press(utils.getByText('Record Service')) as unknown as Promise<void>)?.catch(() => {});
     });
 
-    expect(utils.getByText('service record failed')).toBeTruthy();
+    expect(utils.getByText('Save failed')).toBeTruthy();
     expect(utils.getByPlaceholderText('e.g. Abhyanga, Wound Dressing').props.value).toBe('Abhyanga');
   });
 

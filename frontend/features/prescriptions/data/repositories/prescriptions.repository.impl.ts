@@ -12,6 +12,10 @@ import {
   deletePrescriptionApi,
   sharePrescriptionApi,
   getPrescriptionPrintApi,
+  listPrescriptionVersionsApi,
+  getPrescriptionVersionApi,
+  printPrescriptionVersionApi,
+  amendPrescriptionApi,
 } from '../datasources/prescriptions.api';
 import {
   PrescriptionCreateRequest,
@@ -23,6 +27,8 @@ import {
   PrescriptionPrintResponse,
   ListPrescriptionsParams,
 } from '../models/prescriptions.dtos';
+import { LivingDocumentVersionListResponse, PrescriptionSignedVersionSnapshot } from '../../../livingDocuments/data/models/livingDocuments.dtos';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 
 // ============================================
 // QUERY KEYS
@@ -47,6 +53,8 @@ export const prescriptionsKeys = {
    */
   byAppointment: (tenantId: string, episodeId: string, appointmentId: string) =>
     [...prescriptionsKeys.all, 'byAppointment', tenantId, episodeId, appointmentId] as const,
+  versions: (tenantId: string, prescriptionId: string) => [...prescriptionsKeys.detail(tenantId, prescriptionId), 'versions'] as const,
+  version: (tenantId: string, prescriptionId: string, versionId: string) => [...prescriptionsKeys.versions(tenantId, prescriptionId), versionId] as const,
 };
 
 // ============================================
@@ -59,9 +67,9 @@ export const prescriptionsKeys = {
 export const usePrescriptionsListQuery = (
   tenantId: string,
   params?: ListPrescriptionsParams,
-  options?: Omit<UseQueryOptions<PrescriptionListResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<PrescriptionListResponse, PrescriptionOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<PrescriptionListResponse, Error>({
+  return useQuery<PrescriptionListResponse, PrescriptionOperationError>({
     queryKey: prescriptionsKeys.list(tenantId, params),
     queryFn: () => listPrescriptionsApi(tenantId, params),
     enabled: !!tenantId,
@@ -99,9 +107,9 @@ export const usePrescriptionByAppointmentQuery = (
 export const usePrescriptionDetailQuery = (
   tenantId: string,
   prescriptionId: string,
-  options?: Omit<UseQueryOptions<PrescriptionResponse, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<PrescriptionResponse, PrescriptionOperationError>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<PrescriptionResponse, Error>({
+  return useQuery<PrescriptionResponse, PrescriptionOperationError>({
     queryKey: prescriptionsKeys.detail(tenantId, prescriptionId),
     queryFn: () => getPrescriptionApi(tenantId, prescriptionId),
     enabled: !!tenantId && !!prescriptionId,
@@ -109,6 +117,20 @@ export const usePrescriptionDetailQuery = (
     ...options,
   });
 };
+
+export const usePrescriptionVersionsQuery = (tenantId: string, prescriptionId: string) =>
+  useQuery<LivingDocumentVersionListResponse, Error>({
+    queryKey: prescriptionsKeys.versions(tenantId, prescriptionId),
+    queryFn: () => listPrescriptionVersionsApi(tenantId, prescriptionId),
+    enabled: !!tenantId && !!prescriptionId,
+  });
+
+export const usePrescriptionVersionQuery = (tenantId: string, prescriptionId: string, versionId: string | null) =>
+  useQuery<PrescriptionSignedVersionSnapshot, Error>({
+    queryKey: prescriptionsKeys.version(tenantId, prescriptionId, versionId ?? ''),
+    queryFn: () => getPrescriptionVersionApi(tenantId, prescriptionId, versionId!),
+    enabled: !!tenantId && !!prescriptionId && !!versionId,
+  });
 
 // ============================================
 // MUTATION HOOKS
@@ -150,6 +172,11 @@ export const useUpdatePrescriptionMutation = (
       queryClient.setQueryData(prescriptionsKeys.detail(tenantId, prescriptionId), data);
       // Invalidate list queries
       queryClient.invalidateQueries({ queryKey: prescriptionsKeys.lists() });
+      // Successful amendment signing appends the successor server-side.
+      // Query invalidation preserves backend authority over lineage truth.
+      if (data.status === 'SIGNED') {
+        queryClient.invalidateQueries({ queryKey: prescriptionsKeys.versions(tenantId, prescriptionId) });
+      }
     },
     ...options,
   });
@@ -199,5 +226,20 @@ export const usePrescriptionPrintMutation = (
   return useMutation<PrescriptionPrintResponse, Error, void>({
     mutationFn: () => getPrescriptionPrintApi(tenantId, prescriptionId),
     ...options,
+  });
+};
+
+export const usePrescriptionVersionPrintMutation = (tenantId: string, prescriptionId: string) =>
+  useMutation<string, Error, string>({ mutationFn: (versionId) => printPrescriptionVersionApi(tenantId, prescriptionId, versionId) });
+
+export const useAmendPrescriptionMutation = (tenantId: string, prescriptionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation<PrescriptionResponse, Error, void>({
+    mutationFn: () => amendPrescriptionApi(tenantId, prescriptionId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(prescriptionsKeys.detail(tenantId, prescriptionId), data);
+      queryClient.invalidateQueries({ queryKey: prescriptionsKeys.versions(tenantId, prescriptionId) });
+      queryClient.invalidateQueries({ queryKey: prescriptionsKeys.lists() });
+    },
   });
 };

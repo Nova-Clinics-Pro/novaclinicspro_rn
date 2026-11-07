@@ -23,6 +23,20 @@
  * treatment order's sheet from the client's latest casesheet). This bridge
  * is expected to be removed once Treatment Recommendation itself migrates
  * (T-B.3).
+ *
+ * R7 · T-0.3 (ED-ARCH-001): the write path imported `createCasesheetApi`/
+ * `updateCasesheetApi` directly from the datasource layer — the read side
+ * has no violation (existing casesheet data is already context-provided via
+ * `useEpisodeContext()`, never fetched by this component). Repointed to
+ * `useCreateCasesheetMutation`/`useUpdateCasesheetMutation`
+ * (`casesheets.repository.impl.ts`) — the same hooks `CreateCasesheetScreen`/
+ * `CasesheetEditScreen` already use. Cache invalidation is reproduced via a
+ * hook-level `onSuccess` override (not the additive call-time form) to
+ * preserve today's exact — and asymmetric — behavior: CREATE invalidates
+ * only `casesheetsKeys.list(tenantId, clientId)` and unconditionally calls
+ * `refetchEpisode()`; UPDATE sets the detail cache and invalidates the
+ * broader `casesheetsKeys.lists()`. Both remain gated by
+ * `isFreshnessV1Enabled`, exactly as before.
  */
 
 import React, {
@@ -36,8 +50,11 @@ import React, {
 } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFeatures, isAyurvedaClinic, isFreshnessV1Enabled } from '../../../../../core/hooks/useFeatures';
-import { createCasesheetApi, updateCasesheetApi } from '../../../../casesheets/data/datasources/casesheets.api';
-import { casesheetsKeys } from '../../../../casesheets/data/repositories/casesheets.repository.impl';
+import {
+  casesheetsKeys,
+  useCreateCasesheetMutation,
+  useUpdateCasesheetMutation,
+} from '../../../../casesheets/data/repositories/casesheets.repository.impl';
 import { CasesheetFormData } from '../../../../casesheets/presentation/components/CasesheetForm';
 import { useEpisodeContext, usePatientContext, useVisitContext } from '../../context/ClinicalWorkspaceContext';
 import { useReportSaveStatus } from '../../context/WorkspaceSaveStatusContext';
@@ -51,6 +68,9 @@ import { ChiefComplaintSection } from '../../../../casesheets/presentation/compo
 import { ClinicalNotesSection } from '../../../../casesheets/presentation/components/ClinicalNotesSection';
 import { CaseSheetExtensionsSection } from '../../../../casesheets/presentation/components/CaseSheetExtensionsSection';
 import { renderSection } from './sectionRenderer';
+import { CaseSheetContributionHistory } from './CaseSheetContributionHistory';
+import { CaseSheetVersionPanel } from '../../../../casesheets/presentation/components/CaseSheetVersionPanel';
+import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
 
 // R3B (T-B.1, ADR-R3B-05): fixed set, no add/remove — reproduces
 // AyurvedicAssessmentSection's own pre-T-B.1 behavior bit-for-bit (T-0.2
@@ -139,10 +159,11 @@ export interface CaseSheetModuleHandle {
 export interface CaseSheetModuleProps {
   expandedSections: Set<SectionKey>;
   onToggleSection: (key: SectionKey) => void;
+  permissions?: string[];
 }
 
 export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModuleProps>(
-  ({ expandedSections, onToggleSection }, ref) => {
+  ({ expandedSections, onToggleSection, permissions = [] }, ref) => {
     const queryClient = useQueryClient();
     const features = useFeatures();
     const {
@@ -163,6 +184,7 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
     const [casesheetSaveError, setCasesheetSaveError] = useState<string | null>(null);
 
     const casesheetIdRef = useRef<string | null>(null);
+    const [casesheetId, setCasesheetId] = useState<string | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const workspaceKeyRef = useRef(`${episodeId}:${appointmentId}`);
 
@@ -172,6 +194,7 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
 
       workspaceKeyRef.current = nextKey;
       casesheetIdRef.current = null;
+      setCasesheetId(null);
       casesheetDataRef.current = EMPTY_CASESHEET_DATA;
       setCasesheetData(EMPTY_CASESHEET_DATA);
       setCasesheetSaveError(null);
@@ -180,8 +203,10 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
     useEffect(() => {
       if (remoteCasesheetId && !casesheetIdRef.current) {
         casesheetIdRef.current = remoteCasesheetId;
+        setCasesheetId(remoteCasesheetId);
       } else if (!remoteCasesheetId && !hasCasesheet) {
         casesheetIdRef.current = null;
+        setCasesheetId(null);
       }
     }, [remoteCasesheetId, hasCasesheet]);
 
@@ -232,44 +257,70 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
       [features],
     );
 
+    const createMutation = useCreateCasesheetMutation(tenantId, resolvedClientId, {
+      onSuccess: (response) => {
+        refetchEpisode();
+        if (isFreshnessV1Enabled(features)) {
+          queryClient.setQueryData(casesheetsKeys.detail(tenantId, response.id), response);
+          queryClient.invalidateQueries({ queryKey: casesheetsKeys.list(tenantId, resolvedClientId) });
+        }
+      },
+    });
+    const updateMutation = useUpdateCasesheetMutation(tenantId, casesheetId ?? '', {
+      onSuccess: (response) => {
+        if (isFreshnessV1Enabled(features)) {
+          queryClient.setQueryData(casesheetsKeys.detail(tenantId, casesheetId ?? ''), response);
+          queryClient.invalidateQueries({ queryKey: casesheetsKeys.lists() });
+        }
+      },
+    });
+
     const performAutosave = useCallback(async (): Promise<void> => {
+      // T-FE-E.1a (T-BE-C.2, FR-CS-2): never send an unattributed write.
+      // Missing appointmentId means the current-Visit context this write
+      // would be attributed to cannot be established — preserve the
+      // draft locally, surface the module's own existing error
+      // convention, and do not create a second Case Sheet by falling
+      // through to the create branch below.
+      if (!appointmentId) {
+        setCasesheetSaveError('Missing current appointment context');
+        activeSections.forEach((k) => setSectionSaveStatus(k, 'error'));
+        return;
+      }
+
       const draft = casesheetDataRef.current;
       activeSections.forEach((k) => setSectionSaveStatus(k, 'saving'));
       setIsCasesheetSaving(true);
 
       try {
         if (!casesheetIdRef.current) {
-          const response = await createCasesheetApi(tenantId, resolvedClientId, {
+          const response = await createMutation.mutateAsync({
             clinic_type: features.clinic_type as any,
             data_json: draft,
             appointment_id: appointmentId,
             episode_id: episodeId,
           });
           casesheetIdRef.current = response.id;
-          refetchEpisode();
-          if (isFreshnessV1Enabled(features)) {
-            queryClient.setQueryData(casesheetsKeys.detail(tenantId, response.id), response);
-            queryClient.invalidateQueries({ queryKey: casesheetsKeys.list(tenantId, resolvedClientId) });
-          }
+          setCasesheetId(response.id);
         } else {
-          const response = await updateCasesheetApi(tenantId, casesheetIdRef.current, { data_json: draft });
-          if (isFreshnessV1Enabled(features)) {
-            queryClient.setQueryData(casesheetsKeys.detail(tenantId, casesheetIdRef.current), response);
-            queryClient.invalidateQueries({ queryKey: casesheetsKeys.lists() });
-          }
+          // T-FE-E.1a (T-BE-C.2, FR-CS-2): supply the explicit current-
+          // Visit context on every update, not just create -- the
+          // backend already accepts and requires this to attribute the
+          // contribution to the Visit the write actually happened
+          // during, not the Case Sheet's original creation Visit.
+          await updateMutation.mutateAsync({ data_json: draft, appointment_id: appointmentId });
         }
 
         setCasesheetSaveError(null);
         activeSections.forEach((k) => setSectionSaveStatus(k, 'saved'));
-      } catch (err: any) {
-        const msg = err?.response?.data?.detail ?? err?.message ?? 'Save failed';
-        setCasesheetSaveError(msg);
+      } catch (err: unknown) {
+        setCasesheetSaveError(toClinicalWorkspaceError(err, 'Save failed').message);
         activeSections.forEach((k) => setSectionSaveStatus(k, 'error'));
         throw err;
       } finally {
         setIsCasesheetSaving(false);
       }
-    }, [tenantId, resolvedClientId, appointmentId, episodeId, features, activeSections, setSectionSaveStatus, refetchEpisode, queryClient]);
+    }, [appointmentId, episodeId, features, activeSections, setSectionSaveStatus, createMutation, updateMutation]);
 
     const scheduleAutosave = useCallback(() => {
       if (debounceTimerRef.current) {
@@ -374,6 +425,11 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
       return result;
     }, [activeSections, casesheetData, saveStatuses]);
 
+    const signedSource = remoteCasesheet?.status === 'SIGNED';
+    if (signedSource && casesheetId) {
+      return <CaseSheetVersionPanel tenantId={tenantId} casesheetId={casesheetId} signed canAmend={permissions.includes('casesheet.amend')} onAmended={refetchEpisode} />;
+    }
+
     return (
       <>
         {renderSection(
@@ -416,6 +472,12 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
               saveStatus={sectionProgress.ayurvedicAssessment?.saveStatus ?? 'idle'}
             />,
           )}
+        {/* T-FE-E.1b: read-only, append-only history of prior Visit
+            contributions -- never a SectionKey (no save/progress
+            semantics), never editable, never merged into the draft
+            above. */}
+        <CaseSheetContributionHistory />
+        {casesheetId && <CaseSheetVersionPanel tenantId={tenantId} casesheetId={casesheetId} signed={false} canAmend={false} onAmended={refetchEpisode} />}
       </>
     );
   },

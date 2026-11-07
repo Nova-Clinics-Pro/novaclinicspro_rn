@@ -35,6 +35,9 @@ import {
 } from '../../data/models/rooms.dtos';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import type { SemanticColors } from '../../../../core/theme/semanticColors';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 
 // Room card component
@@ -42,6 +45,10 @@ const RoomCard: React.FC<{
   room: RoomResponse;
   onPress: () => void;
 }> = ({ room, onPress }) => {
+  const { t } = useTranslation();
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const typeLabel = getRoomTypeLabel(room.room_type);
   const typeIcon = getRoomTypeIcon(room.room_type) as keyof typeof Ionicons.glyphMap;
   const typeColor = room.room_type ? getTypeColor(room.room_type) : '#6B7280';
@@ -63,7 +70,7 @@ const RoomCard: React.FC<{
           <Text style={styles.roomName}>{room.name}</Text>
           {!room.is_active && (
             <View style={styles.inactiveBadge}>
-              <Text style={styles.inactiveBadgeText}>Inactive</Text>
+              <Text style={styles.inactiveBadgeText}>{t('common.inactive')}</Text>
             </View>
           )}
         </View>
@@ -95,6 +102,10 @@ const getTypeColor = (type: RoomType): string => {
 };
 
 export const RoomsScreen: React.FC = () => {
+  const { t } = useTranslation();
+  const { colors } = useClinicTheme();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const { currentUser } = useAuthStore();
   const tenantId = currentUser?.tenantId || '';
@@ -142,11 +153,11 @@ export const RoomsScreen: React.FC = () => {
       });
       setShowCreateModal(false);
       setFormData({ name: '', capacity: '1', roomType: null });
-      Alert.alert('Success', 'Room created successfully');
+      Alert.alert(t('common.success'), 'Room created successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to create room');
+      Alert.alert(t('common.error'), 'Failed to create room');
     }
-  }, [createMutation, formData]);
+  }, [createMutation, formData, t]);
 
   const renderRoom = useCallback(({ item }: { item: RoomResponse }) => (
     <RoomCard
@@ -187,14 +198,14 @@ export const RoomsScreen: React.FC = () => {
             onPress={() => setShowInactive(false)}
           >
             <Text style={[styles.statValue, { color: '#10B981' }]}>{activeCount}</Text>
-            <Text style={styles.statLabel}>Active</Text>
+            <Text style={styles.statLabel}>{t('common.active')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.statBadge, showInactive && { backgroundColor: '#F3F4F620', borderColor: '#9CA3AF' }]}
             onPress={() => setShowInactive(true)}
           >
             <Text style={[styles.statValue, { color: '#6B7280' }]}>{inactiveCount}</Text>
-            <Text style={styles.statLabel}>Inactive</Text>
+            <Text style={styles.statLabel}>{t('common.inactive')}</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -202,7 +213,7 @@ export const RoomsScreen: React.FC = () => {
           onPress={() => setShowCreateModal(true)}
           accessibilityLabel="Add new room"
         >
-          <Ionicons name="add" size={24} color="#FFFFFF" />
+          <Ionicons name="add" size={24} color={colors.text.onPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -324,7 +335,7 @@ export const RoomsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: SemanticColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F4EC',
@@ -343,7 +354,7 @@ const styles = StyleSheet.create({
   statBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 20,
@@ -376,7 +387,7 @@ const styles = StyleSheet.create({
   roomCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.default,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -465,7 +476,7 @@ const styles = StyleSheet.create({
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.elevated,
   },
   modalContent: {
     flex: 1,
@@ -541,7 +552,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     ...typography.body1,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.text.onPrimary,
   },
 });
 

@@ -1,175 +1,226 @@
 /**
- * useClinicalTimelineData (R3B · T-C.1, ADR-R3B-02, Timeline Adapter Rule §7)
+ * useClinicalTimelineData (R3B · T-C.1 origin; T-FE-C.5 rewrite — T-BE-A.3/
+ * A.3a, FR-HIST-1/2)
  *
- * A render-free adapter — aggregation/normalization ONLY, zero JSX, zero
- * rendering, no component-level state of its own — that reads
- * `episodeId`/`clientId`/`tenantId` from Persistent Context (CO-1) and
- * derives one chronologically ordered, uniformly shaped list from each
- * in-scope artifact type's own query. `ClinicalTimeline` (T-C.2) must never
- * itself merge queries; this file is the only place that logic lives.
+ * T-FE-C.5 replaces the prior five-query, frontend-assembled flat timeline
+ * (Visits + Prescriptions + Case Sheet + Treatment Recommendation +
+ * Clinical Services, locally sorted) with a thin adapter over the
+ * backend-owned Clinical History projection
+ * (`GET /clinic/{tenant_id}/clinical-workspace/history`, T-BE-A.3). There
+ * is no fallback to the old assembly -- the prior five queries
+ * (`useAppointmentsListQuery`/`usePrescriptionsListQuery`/
+ * `useTreatmentSheetsByEpisodeQuery`/`useEpisodeContext().casesheet`/the
+ * per-Visit `useQueries` clinical-services fan-out) are gone from this
+ * file entirely.
  *
- * Scope (corrected T-C.1, per user direction — see `design.md`'s ADR-R3B-02
- * correction and `requirements.md`'s FR-C1/FR-C1a): Visits, Prescriptions,
- * Case Sheet, Treatment Recommendation, Clinical Services. Feedback is
- * explicitly NOT built — no backend endpoint exists to retrieve a specific
- * patient's own submitted feedback (confirmed by reading `feedback_router.py`
- * in full); deferred to a future task. Therapy Sessions/Daily Progress
- * (Doc 03 §20's own finer-grained names) are not separate top-level items —
- * they are each Treatment Sheet's own already-fetched `rows`, carried as
- * this entry's own `sessionCount`/`completedSessionCount` detail.
+ * This file performs ZERO encounter classification, ZERO Session-count
+ * aggregation, ZERO Plan-association inference, and ZERO Treatment Review
+ * date derivation -- every one of those facts (`encounter_type`,
+ * `plan_id`, `session_counts`, `occurred_at`) is backend-resolved and
+ * passed through unchanged (Timeline Adapter Rule §7, extended to cover
+ * "no re-classification" as well as "no re-aggregation"). The only
+ * transformation performed here is a presentation-adapter mapping from
+ * the backend's semantic-only `HistoryItemResponse` shape onto the
+ * existing `ClinicalTimelineItem` shape `ClinicalTimeline.tsx` (T-FE-C.4)
+ * already renders -- required only because `ClinicalTimelineItem` predates
+ * this contract and still needs a `title`/optional `route` for its
+ * current (pre-T-FE-C.6) rendering:
+ *   - `title`: a static, governed label looked up by `encounter_type` via
+ *     localization (`clinicalTimeline.types.*`) -- not inferred from any
+ *     clinical fact, exactly the same "governed code -> UI label" pattern
+ *     already used throughout this codebase (e.g. `getStatusLabel`).
+ *   - `route`: populated only for `consultation`/`legacy_treatment_sessions`
+ *     (each has exactly one `appointment_ids[0]`, routed to the existing
+ *     `/clinic-admin/appointments/{id}` screen -- the same destination the
+ *     pre-T-FE-C.5 `'visit'` item type already used). Left `undefined` for
+ *     `treatment_plan`/`treatment_review` -- Engineering Truth found no
+ *     existing Treatment Plan or Clinical Review detail screen in this
+ *     app to route to, and this task must not invent a new route
+ *     (T-FE-C.6's or a later task's own scope).
+ *   - `subtitle` is left `undefined` for every item -- rendering
+ *     `session_counts`/richer summaries is T-FE-C.6's own scope, not
+ *     re-derived or pre-empted here.
  *
- * Data sourcing — every artifact type via an existing query, except Clinical
- * Services (new frontend code wired to an existing, previously-unwired
- * backend endpoint; NOT a new backend endpoint, NFR-1/N-3 respected):
- *  - Visits: `useAppointmentsListQuery` filtered by `episode_id` — the exact
- *    pattern §2.4/T-0.4 found already proven in `AppointmentDetailScreen`'s
- *    Visit History card.
- *  - Prescriptions: `usePrescriptionsListQuery` filtered by `episode_id`.
- *  - Case Sheet: `useEpisodeContext().casesheet` (one per episode, T-0.2).
- *  - Treatment Recommendation: `useTreatmentSheetsByEpisodeQuery`.
- *  - Clinical Services: one `listClinicalServicesByVisitApi` call per Visit
- *    above (the backend has no episode-wide query, only Visit-scoped),
- *    fanned out via `useQueries` (a dynamic-length query set — the correct
- *    primitive for a list whose size depends on how many Visits exist,
- *    unlike a fixed `useQuery` call which cannot vary hook count per render).
+ * Backend order is preserved exactly -- no `.sort()`/`.reverse()` of any
+ * kind. The backend does not return items in strict chronological order
+ * across encounter-type buckets today (consultations/legacy sessions in
+ * appointment order, then all Treatment Plan groups, then all Treatment
+ * Review items) -- that is accepted as-is per this task's explicit
+ * instruction not to reorder using `occurred_at` or any other
+ * locally-derived fact.
  *
- * Navigation targets (FR-C2) point at each artifact's own existing detail/
- * reference screen (not necessarily its editor) — the same screens
- * `PrescriptionsListScreen`/`CasesheetsListScreen`'s own item-press
- * navigation already uses, not a new navigation concept.
+ * T-FE-C.6a (T-BE-A.3b, FR-HIST-1 AC7/AC8/AC9): `plan_status`/`sessions`
+ * are passed through unchanged, same passthrough discipline as every
+ * other backend fact here -- `sessions` is mapped field-by-field to
+ * `ClinicalTimelineSession` (camelCase, matching this file's existing
+ * `appointmentIds`/`planId`/`sessionCounts` convention) with zero
+ * reordering, zero filtering, zero derived fields.
  */
 import { useMemo } from 'react';
-import { useQueries } from '@tanstack/react-query';
 import { useEpisodeContext, usePatientContext } from '../context/ClinicalWorkspaceContext';
-import { useAppointmentsListQuery } from '../../../appointments/data/repositories/appointments.repository.impl';
-import { usePrescriptionsListQuery } from '../../../prescriptions/data/repositories/prescriptions.repository.impl';
-import { useTreatmentSheetsByEpisodeQuery } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
-import { clinicalServicesKeys } from '../../../clinicalServices/data/repositories/clinicalServices.repository.impl';
-import { listClinicalServicesByVisitApi } from '../../../clinicalServices/data/datasources/clinicalServices.api';
+import { useClinicalHistoryQuery } from '../../data/repositories/clinicalWorkspace.repository.impl';
+import { t } from '../../../../core/localization/i18n';
 
 export type ClinicalTimelineItemType =
-  | 'visit'
-  | 'prescription'
-  | 'case_sheet'
-  | 'treatment_recommendation'
-  | 'clinical_service';
+  | 'consultation'
+  | 'treatment_review'
+  | 'treatment_plan'
+  | 'legacy_treatment_sessions';
+
+export interface ClinicalTimelineSessionCounts {
+  completed: number;
+  scheduled: number;
+  not_completed: number;
+  cancelled: number;
+}
+
+/**
+ * T-BE-A.3b (FR-HIST-1 AC8/AC9) -- one individual Session, passed through
+ * from `ClinicalHistorySessionResponse` unchanged (field-renamed to
+ * camelCase only, matching this file's own convention). `id` is the
+ * Session's stable identity. `scheduledDate`/`scheduledTime`/`scheduledAt`
+ * are `null` when genuinely unscheduled/PRN -- never fabricated.
+ * `assignedStaffName` is `null` when unassigned or unresolvable (e.g. a
+ * deleted staff record) -- the Session itself is never dropped either
+ * way. `status`, `completedAt`/`completedByStaffId`, and
+ * `nonExecutionReasonCode`/`nonExecutionReasonText` remain three
+ * independent fields, never composed into one derived label here.
+ */
+export interface ClinicalTimelineSession {
+  id: string;
+  scheduledDate: string | null;
+  scheduledTime: string | null;
+  scheduledAt: string | null;
+  assignedStaffId: string | null;
+  assignedStaffName: string | null;
+  treatmentName: string | null;
+  medicinesText: string | null;
+  instructionsText: string | null;
+  status: string;
+  completedAt: string | null;
+  completedByStaffId: string | null;
+  nonExecutionReasonCode: string | null;
+  nonExecutionReasonText: string | null;
+}
 
 export interface ClinicalTimelineItem {
   id: string;
-  type: ClinicalTimelineItemType;
-  /** ISO date/datetime string — the sole sort key (most-recent-first). */
-  date: string;
+  /**
+   * Passed through verbatim from `HistoryItemResponse.encounter_type` --
+   * typed as the known union in the common case, but never narrowed or
+   * remapped for an unrecognized value (a future backend-added type must
+   * render with a safe generic fallback, never be silently relabeled as
+   * one of the four known types).
+   */
+  type: ClinicalTimelineItemType | (string & {});
+  /**
+   * Backend-authoritative occurrence timestamp (T-BE-A.3a,
+   * `HistoryItemResponse.occurred_at`) -- ISO string, or `null` when the
+   * backend genuinely could not resolve one. Never fabricated, never
+   * derived from `appointmentIds`, a Treatment Sheet date, or the current
+   * date. `null` is preserved and rendered honestly (existing
+   * `formatDate()` already renders a null-safe placeholder) -- an item is
+   * never dropped merely because this is null.
+   */
+  date: string | null;
   title: string;
   subtitle?: string;
-  /** FR-C2: the item's own canonical detail/reference route. */
-  route: string;
+  /** FR-C2: the item's own canonical detail/reference route -- absent
+   * when no safe existing route exists yet for this encounter type. */
+  route?: string;
+  /** Backend identifiers/facts passed through unchanged for future
+   * (T-FE-C.6) hierarchy rendering -- never computed here. */
+  appointmentIds: string[];
+  planId: string | null;
+  sessionCounts: ClinicalTimelineSessionCounts | null;
+  /** T-BE-A.3b (FR-HIST-1 AC7) -- present for `treatment_plan` items
+   * only; `null` elsewhere means "not applicable", same convention as
+   * `sessionCounts`. The Plan's own authoritative status, never derived. */
+  planStatus: string | null;
+  /** T-BE-A.3b (FR-HIST-1 AC8/AC9) -- present for `treatment_plan` items
+   * only, same "not applicable" convention. Backend-ordered; never
+   * sorted here. */
+  sessions: ClinicalTimelineSession[] | null;
 }
 
 export interface ClinicalTimelineData {
   items: ClinicalTimelineItem[];
   isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
+}
+
+const KNOWN_TYPES: ReadonlySet<string> = new Set([
+  'consultation',
+  'treatment_review',
+  'treatment_plan',
+  'legacy_treatment_sessions',
+]);
+
+function encounterTypeLabel(encounterType: string): string {
+  if (!KNOWN_TYPES.has(encounterType)) {
+    return t('clinicalTimeline.unknownType');
+  }
+  return t(`clinicalTimeline.types.${encounterType}`);
 }
 
 export function useClinicalTimelineData(): ClinicalTimelineData {
-  const { tenantId, episodeId, casesheet, casesheetId } = useEpisodeContext();
+  const { tenantId, episodeId } = useEpisodeContext();
   const { clientId } = usePatientContext();
 
-  const visitsQuery = useAppointmentsListQuery(
-    tenantId,
-    { episode_id: episodeId, skip: 0, limit: 50 },
-    { enabled: !!tenantId && !!episodeId },
-  );
-  const prescriptionsQuery = usePrescriptionsListQuery(
-    tenantId,
-    { episode_id: episodeId },
-    { enabled: !!tenantId && !!episodeId },
-  );
-  const treatmentSheetsQuery = useTreatmentSheetsByEpisodeQuery(tenantId, episodeId);
-
-  const visits = visitsQuery.data?.items ?? [];
-
-  const clinicalServiceQueries = useQueries({
-    queries: visits.map((visit) => ({
-      queryKey: clinicalServicesKeys.byVisit(tenantId, visit.id),
-      queryFn: () => listClinicalServicesByVisitApi(tenantId, visit.id),
-      enabled: !!tenantId && !!visit.id,
-      staleTime: 30 * 1000,
-    })),
-  });
-
-  const isLoading =
-    visitsQuery.isLoading ||
-    prescriptionsQuery.isLoading ||
-    treatmentSheetsQuery.isLoading ||
-    clinicalServiceQueries.some((q) => q.isLoading);
+  const historyQuery = useClinicalHistoryQuery(tenantId, clientId, episodeId);
 
   const items = useMemo<ClinicalTimelineItem[]>(() => {
-    const result: ClinicalTimelineItem[] = [];
+    const rawItems = historyQuery.data?.items ?? [];
 
-    visits.forEach((visit) => {
-      result.push({
-        id: `visit-${visit.id}`,
-        type: 'visit',
-        date: visit.appointment_start,
-        title: 'Visit',
-        subtitle: visit.status,
-        route: `/clinic-admin/appointments/${visit.id}`,
-      });
+    // Passthrough map only -- backend order preserved exactly, no sort.
+    return rawItems.map((item) => {
+      // A route only exists (today) for the two appointment-attributed
+      // types, using their own first appointment id -- never a
+      // proximity/date-based guess, and never invented for
+      // treatment_plan/treatment_review.
+      const route =
+        (item.encounter_type === 'consultation' || item.encounter_type === 'legacy_treatment_sessions') &&
+        item.appointment_ids[0]
+          ? `/clinic-admin/appointments/${item.appointment_ids[0]}`
+          : undefined;
+
+      return {
+        id: item.id,
+        type: item.encounter_type,
+        date: item.occurred_at,
+        title: encounterTypeLabel(item.encounter_type),
+        route,
+        appointmentIds: item.appointment_ids,
+        planId: item.plan_id,
+        sessionCounts: item.session_counts,
+        planStatus: item.plan_status,
+        sessions: item.sessions
+          ? item.sessions.map((session) => ({
+              id: session.id,
+              scheduledDate: session.scheduled_date,
+              scheduledTime: session.scheduled_time,
+              scheduledAt: session.scheduled_at,
+              assignedStaffId: session.assigned_staff_id,
+              assignedStaffName: session.assigned_staff_name,
+              treatmentName: session.treatment_name,
+              medicinesText: session.medicines_text,
+              instructionsText: session.instructions_text,
+              status: session.status,
+              completedAt: session.completed_at,
+              completedByStaffId: session.completed_by_staff_id,
+              nonExecutionReasonCode: session.non_execution_reason_code,
+              nonExecutionReasonText: session.non_execution_reason_text,
+            }))
+          : null,
+      };
     });
+  }, [historyQuery.data]);
 
-    (prescriptionsQuery.data?.items ?? []).forEach((prescription) => {
-      const medCount = prescription.prescription_data?.medications?.length ?? 0;
-      result.push({
-        id: `prescription-${prescription.id}`,
-        type: 'prescription',
-        date: prescription.created_at,
-        title: 'Prescription',
-        subtitle: medCount ? `${medCount} medication${medCount === 1 ? '' : 's'}` : undefined,
-        route: `/clinic-admin/clients/${clientId}/prescriptions/${prescription.id}`,
-      });
-    });
-
-    if (casesheet && casesheetId) {
-      result.push({
-        id: `case-sheet-${casesheetId}`,
-        type: 'case_sheet',
-        date: casesheet.recorded_at,
-        title: 'Case Sheet',
-        subtitle: casesheet.chief_complaint ?? undefined,
-        route: `/clinic-admin/clients/${clientId}/casesheets/${casesheetId}`,
-      });
-    }
-
-    (treatmentSheetsQuery.data?.treatment_sheets ?? []).forEach((sheet) => {
-      const sessionCount = sheet.rows?.length ?? 0;
-      const completedSessionCount = sheet.rows?.filter((row) => !!row.session_date).length ?? 0;
-      result.push({
-        id: `treatment-recommendation-${sheet.id}`,
-        type: 'treatment_recommendation',
-        date: sheet.recorded_at,
-        title: 'Treatment Recommendation',
-        subtitle: sessionCount
-          ? `${completedSessionCount}/${sessionCount} therapy session${sessionCount === 1 ? '' : 's'}`
-          : undefined,
-        route: `/clinic-admin/treatment-sheets/${sheet.id}`,
-      });
-    });
-
-    clinicalServiceQueries.forEach((q) => {
-      (q.data?.items ?? []).forEach((service) => {
-        result.push({
-          id: `clinical-service-${service.id}`,
-          type: 'clinical_service',
-          date: service.delivered_at,
-          title: 'Clinical Service',
-          subtitle: service.service_type,
-          route: `/clinic-admin/appointments/${service.visit_id}`,
-        });
-      });
-    });
-
-    return result.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  }, [visits, prescriptionsQuery.data, casesheet, casesheetId, clientId, treatmentSheetsQuery.data, clinicalServiceQueries]);
-
-  return { items, isLoading };
+  return {
+    items,
+    isLoading: historyQuery.isLoading,
+    isError: historyQuery.isError,
+    refetch: historyQuery.refetch,
+  };
 }

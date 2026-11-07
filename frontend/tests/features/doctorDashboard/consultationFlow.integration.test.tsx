@@ -1,6 +1,5 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CreateConsultationScreen } from '../../../features/episodes/presentation/pages/CreateConsultationScreen';
@@ -9,7 +8,8 @@ import { CompleteConsultationScreen } from '../../../features/episodes/presentat
 import { createEpisodeApi } from '../../../features/episodes/data/datasources/episodes.api';
 import { transitionCasesheetStatusApi } from '../../../features/casesheets/data/datasources/casesheets.api';
 import { useEpisodeWorkspaceData } from '../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData';
-import { consultationRoute } from '../../../features/doctorDashboard/application/consultationRoutes';
+import { useConsultationCompletionQuery } from '../../../features/episodes/data/repositories/consultationCompletion.repository.impl';
+import { episodeWorkspaceRoute } from '../../../features/doctorDashboard/application/consultationRoutes';
 
 // This suite exercises the doctor consultation flow across the current
 // architecture's own screen boundary — CreateConsultationScreen (create) →
@@ -48,6 +48,9 @@ jest.mock('../../../features/appointments/data/repositories/appointments.reposit
 }));
 jest.mock('../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData', () => ({
   useEpisodeWorkspaceData: jest.fn(),
+}));
+jest.mock('../../../features/episodes/data/repositories/consultationCompletion.repository.impl', () => ({
+  useConsultationCompletionQuery: jest.fn(),
 }));
 
 // Stub the tab panels EpisodeWorkspaceScreen mounts so this suite can assert
@@ -137,11 +140,50 @@ const workspaceData = {
   clientName: 'Maya Rao',
 };
 
+// Backend-owned consultation completion contract (T-BE-F.3/T-0.8) — the
+// single source this screen now renders. Deliberately does NOT mirror
+// workspaceData's shape; the screen must derive nothing from it locally.
+const consultationCompletionContract = {
+  state: 'ready',
+  can_complete: true,
+  clinically_ready: true,
+  actionable_by_current_user: true,
+  outstanding_mandatory: [],
+  optional_suggested: ['prescription'],
+  warnings: [],
+  unresolved_facts: [],
+  recommended_action: 'complete_visit',
+  recommendation_reason: 'authoring_complete',
+  blocking_factors: [],
+  waiting_permission: null,
+  case_sheet: { exists: true, document_status: 'FINAL', recording_state: 'recorded' },
+  prescription: { exists: false, document_status: null, recording_state: 'absent' },
+  treatment: { exists: false, lifecycle_status: null, lifecycle_unresolved: false, recording_state: 'absent' },
+  billing: {
+    clinical_services_exist: false, invoice_exists: null, invoice_count: null, invoice_statuses: [],
+    billed_amount: null, paid_amount: null, outstanding_amount: null, currency: null,
+    recording_state: 'not_applicable',
+  },
+  visit: { visit_exists: true, appointment_status: 'IN_PROGRESS', outcome_type: null, recording_state: 'recorded' },
+  capability_loss: [],
+};
+
+const mockCompletionQuery = (overrides: Record<string, any> = {}) => {
+  (useConsultationCompletionQuery as jest.Mock).mockReturnValue({
+    data: consultationCompletionContract,
+    isLoading: false,
+    isError: false,
+    refetch: jest.fn(),
+    ...overrides,
+  });
+};
+
 describe('doctor consultation flow integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue(router);
     (useEpisodeWorkspaceData as jest.Mock).mockReturnValue(workspaceData);
+    mockCompletionQuery();
   });
 
   it('creates an episode from the appointment and navigates to its consultation workspace route', async () => {
@@ -154,7 +196,9 @@ describe('doctor consultation flow integration', () => {
     fireEvent.press(getByText('Start Consultation'));
 
     await waitFor(() => expect(createEpisodeApi).toHaveBeenCalled());
-    expect(router.replace).toHaveBeenCalledWith(consultationRoute('episode-1', 'appointment-1', 'client-1'));
+    expect(router.replace).toHaveBeenCalledWith(
+      episodeWorkspaceRoute('episode-1', 'appointment-1', 'client-1', 'doctor', 'assessment'),
+    );
   });
 
   it('opens the doctor workspace with note-editing and prescription-writing enabled', () => {
@@ -217,18 +261,118 @@ describe('doctor consultation flow integration', () => {
     expect(queryByText('Treatment Plans')).toBeTruthy();
   });
 
-  it('completes the consultation after workspace review and returns to the doctor dashboard', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-    (transitionCasesheetStatusApi as jest.Mock).mockResolvedValue({});
+  it('renders the backend-owned completion state and never calls the local Case Sheet FINAL transition', async () => {
+    const { getByTestId, getByText, getAllByText } = render(
+      <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
+    );
+
+    expect(useConsultationCompletionQuery).toHaveBeenCalledWith('tenant-1', 'client-1', 'episode-1', 'appointment-1');
+    expect(getByTestId('completion-state-label').props.children).toBe('Ready to complete');
+    // Optional-suggested item rendered via its backend semantic code, not authored prose
+    // (also matches the Prescription document-summary card's own title — both are
+    // legitimate backend-driven renderings, hence getAllByText not getByText).
+    expect(getAllByText('Prescription').length).toBeGreaterThan(0);
+
+    fireEvent.press(getByText('Complete Consultation'));
+
+    expect(transitionCasesheetStatusApi).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+// T-0.8 target-boundary characterization (replaces the pre-T-0.8
+// `deriveSummary` characterization suite — Group -1 · T-0.1, ED-ARCH-004).
+// These tests prove the NEW invariant: the screen renders the backend
+// contract verbatim and derives no clinical statement of its own. Unlike
+// the suite this replaces, passing here DOES endorse the behavior as
+// correct — it is the target this task exists to reach, not a defect
+// being merely documented.
+describe('CompleteConsultationScreen — renders backend contract, derives nothing locally (T-0.8)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useRouter as jest.Mock).mockReturnValue(router);
+    mockCompletionQuery();
+  });
+
+  it('shows a loading state while the completion contract is loading, with no completion action visible', () => {
+    mockCompletionQuery({ data: undefined, isLoading: true });
+    const { queryByText } = render(
+      <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
+    );
+    expect(queryByText('Complete Consultation')).toBeNull();
+  });
+
+  it('shows an error state and allows retry when the completion contract fails to load', async () => {
+    const refetch = jest.fn();
+    mockCompletionQuery({ data: undefined, isError: true, refetch });
     const { getByText } = render(
       <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
     );
 
-    fireEvent.press(getByText('Complete Consultation'));
+    expect(getByText('Could not load the consultation completion summary. Please try again.')).toBeTruthy();
+    fireEvent.press(getByText('Retry'));
+    expect(refetch).toHaveBeenCalled();
+  });
 
-    await waitFor(() =>
-      expect(transitionCasesheetStatusApi).toHaveBeenCalledWith('tenant-1', 'casesheet-1', { status: 'FINAL' }),
+  it('the completion action is always disabled — no governed completion mutation exists yet', () => {
+    const { getByText, getByTestId } = render(
+      <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
     );
-    expect(router.replace).toHaveBeenCalledWith('/doctor');
+    const button = getByTestId('complete-consultation-button');
+    expect(button.props.accessibilityState).toEqual({ disabled: true });
+    expect(getByText('This feature is not yet available')).toBeTruthy();
+  });
+
+  it('renders ABSENT and UNAVAILABLE distinctly, never as a negative clinical claim like "Not saved"/"Not created"', () => {
+    mockCompletionQuery({
+      data: {
+        ...consultationCompletionContract,
+        prescription: { exists: false, document_status: null, recording_state: 'absent' },
+        billing: { ...consultationCompletionContract.billing, recording_state: 'unavailable' },
+      },
+    });
+    const { getAllByText, queryByText } = render(
+      <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
+    );
+
+    expect(getAllByText('Not recorded').length).toBeGreaterThan(0); // prescription: absent
+    expect(getAllByText('Currently unavailable').length).toBeGreaterThan(0); // billing: unavailable
+    expect(queryByText('Not saved')).toBeNull();
+    expect(queryByText('Not created')).toBeNull();
+    expect(queryByText('Not sent')).toBeNull();
+  });
+
+  it('renders mandatory, optional, warning and unresolved groups distinctly from backend semantic codes', () => {
+    mockCompletionQuery({
+      data: {
+        ...consultationCompletionContract,
+        state: 'not_ready',
+        outstanding_mandatory: ['assessment'],
+        optional_suggested: ['prescription'],
+        warnings: ['outstanding_balance'],
+        unresolved_facts: ['treatment_lifecycle_unresolved'],
+      },
+    });
+    const { getByText, getAllByText } = render(
+      <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
+    );
+
+    expect(getByText('Outstanding required work')).toBeTruthy();
+    // "assessment" stage name renders as "Case Sheet", same text as the
+    // Case Sheet document-summary card's own title further down the page.
+    expect(getAllByText('Case Sheet').length).toBeGreaterThan(0);
+    expect(getByText('Optional suggested work')).toBeTruthy();
+    expect(getByText('Warnings')).toBeTruthy();
+    expect(getByText('There is an outstanding balance')).toBeTruthy();
+    expect(getByText('Unresolved facts')).toBeTruthy();
+    expect(getByText('Treatment status is currently unresolved')).toBeTruthy();
+  });
+
+  it('does not import or reference the removed hard-coded Ayurveda template check', () => {
+    const source = require('fs').readFileSync(
+      require.resolve('../../../features/episodes/presentation/pages/CompleteConsultationScreen'),
+      'utf8',
+    );
+    expect(source).not.toMatch(/nadi_pariksha|prakriti|deriveSummary|treatmentSent/);
   });
 });

@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "core/**/*.ts",
+    "core/**/*.tsx",
+    "features/**/*.ts",
+    "features/**/*.tsx",
+    "expo-env.d.ts"
+  ],
+  "exclude": [
+    "tests",
+    "node_modules"
+  ]
+}

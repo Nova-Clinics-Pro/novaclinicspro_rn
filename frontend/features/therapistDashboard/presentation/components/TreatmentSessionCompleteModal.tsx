@@ -8,7 +8,7 @@
  * - Works for both multi-day (rowId present) and single-day (rowId null)
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Modal,
   View,
@@ -31,8 +31,8 @@ import {
 } from '../../../staffDashboards/data/models/staffDashboards.dtos';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
-import { listInventoryItemsApi } from '../../../inventory/data/datasources/inventory.api';
 import { InventoryItemResponse } from '../../../inventory/data/models/inventory.dtos';
+import { useInventoryItemsListQuery } from '../../../inventory/data/repositories/inventory.repository.impl';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 
 // ============================================
@@ -120,33 +120,33 @@ interface TreatmentSessionCompleteModalProps {
 // INVENTORY SEARCH HOOK
 // ============================================
 
-function useInventorySearch(tenantId: string, query: string) {
-  const [results, setResults] = useState<InventoryItemResponse[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+export const useInventorySearch = (tenantId: string, query: string) => {
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const params = useMemo(
+    () => ({ search: debouncedQuery, limit: 8, is_active: true }),
+    [debouncedQuery]
+  );
 
   useEffect(() => {
     if (!query || query.length < 2) {
-      setResults([]);
+      setDebouncedQuery('');
       return;
     }
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const res = await listInventoryItemsApi(tenantId, { search: query, limit: 8, is_active: true });
-        setResults(res.items ?? []);
-      } catch {
-        setResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
   }, [query, tenantId]);
 
-  return { results, isSearching };
-}
+  const { data, isFetching } = useInventoryItemsListQuery(tenantId, params, {
+    enabled: !!tenantId && debouncedQuery.length >= 2,
+    retry: false,
+    staleTime: 0,
+  });
+
+  return {
+    results: debouncedQuery.length >= 2 ? data?.items ?? [] : [],
+    isSearching: debouncedQuery === query && query.length >= 2 && isFetching,
+  };
+};
 
 // ============================================
 // MATERIAL NAME FIELD WITH AUTOCOMPLETE

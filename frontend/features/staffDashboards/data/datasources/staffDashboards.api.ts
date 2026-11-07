@@ -197,6 +197,8 @@ import {
   SheetRowUsablesResponse,
   CompleteSheetRowRequest,
   CompleteSheetRowResponse,
+  RecordSessionNonExecutionRequest,
+  RecordSessionNonExecutionResponse,
 } from '../models/staffDashboards.dtos';
 
 /**
@@ -266,6 +268,27 @@ export const completeSheetRowApi = async (
   void tenantId;
   const response = await axiosClient.post(
     `/api/v1/clinic/treatment-sheets/rows/${rowId}/complete`,
+    payload
+  );
+  return response.data;
+};
+
+/**
+ * Record why a scheduled treatment sheet row did not execute.
+ * POST /api/v1/clinic/treatment-sheets/rows/{rowId}/non-execution
+ *
+ * IMPORTANT: rowId is the row's stable identity (TreatmentSheetRow.id),
+ * the same identifier used by start/complete. Never a session date, day
+ * number, or array index.
+ */
+export const recordSessionNonExecutionApi = async (
+  tenantId: string,
+  rowId: string,
+  payload: RecordSessionNonExecutionRequest
+): Promise<RecordSessionNonExecutionResponse> => {
+  void tenantId;
+  const response = await axiosClient.post(
+    `/api/v1/clinic/treatment-sheets/rows/${rowId}/non-execution`,
     payload
   );
   return response.data;

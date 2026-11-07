@@ -7,6 +7,8 @@
  */
 
 import { axiosClient } from '../../../../core/api/axiosClient';
+import { isAxiosError } from 'axios';
+import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
 import {
   CasesheetCreateRequest,
   CasesheetUpdateRequest,
@@ -14,8 +16,10 @@ import {
   CasesheetResponse,
   CasesheetListResponse,
   CasesheetPrintResponse,
+  CasesheetContributionHistoryResponse,
   ListCasesheetsParams,
 } from '../models/casesheets.dtos';
+import { CasesheetSignedVersionSnapshot, LivingDocumentVersionListResponse } from '../../../livingDocuments/data/models/livingDocuments.dtos';
 
 /**
  * List casesheets for a client
@@ -26,11 +30,12 @@ export const listCasesheetsApi = async (
   clientId: string,
   params?: ListCasesheetsParams
 ): Promise<CasesheetListResponse> => {
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/clients/${clientId}/casesheets`,
-    { params }
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/clients/${clientId}/casesheets`, { params });
+    return response.data;
+  } catch (error) {
+    throw normalizeCasesheetLoadError(error);
+  }
 };
 
 /**
@@ -67,10 +72,20 @@ export const getCasesheetApi = async (
   tenantId: string,
   casesheetId: string
 ): Promise<CasesheetResponse> => {
-  const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/casesheets/${casesheetId}`
-  );
-  return response.data;
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}`);
+    return response.data;
+  } catch (error) {
+    throw normalizeCasesheetLoadError(error);
+  }
+};
+
+export const normalizeCasesheetLoadError = (error: unknown): CasesheetOperationError => {
+  if (isAxiosError(error)) {
+    if (error.response?.status === 401) return new CasesheetOperationError('AUTHENTICATION_REQUIRED');
+    if (error.response?.status === 403) return new CasesheetOperationError('PERMISSION_DENIED');
+  }
+  return new CasesheetOperationError('LOAD_FAILED');
 };
 
 /**
@@ -131,6 +146,39 @@ export const printCasesheetApi = async (
 ): Promise<CasesheetPrintResponse> => {
   const response = await axiosClient.get(
     `/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/print`
+  );
+  return response.data;
+};
+
+export const listCasesheetVersionsApi = async (tenantId: string, casesheetId: string): Promise<LivingDocumentVersionListResponse> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions`)).data;
+
+export const getCasesheetVersionApi = async (tenantId: string, casesheetId: string, versionId: string): Promise<CasesheetSignedVersionSnapshot> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions/${versionId}`)).data;
+
+/** HTML is authored and version-labelled by the backend; the frontend never modifies it. */
+export const printCasesheetVersionApi = async (tenantId: string, casesheetId: string, versionId: string): Promise<string> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions/${versionId}/print`, { responseType: 'text' })).data;
+
+export const amendCasesheetApi = async (tenantId: string, casesheetId: string): Promise<CasesheetResponse> =>
+  (await axiosClient.post(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/amend`)).data;
+
+/**
+ * T-FE-E.1b (T-BE-E.1a, Decision 12). Get the append-only contribution
+ * history for a Case Sheet — client_id/episode_id are required query
+ * params the backend uses for context validation (tenant/client/Episode/
+ * Case Sheet scope), never for filtering or inference here.
+ * GET /api/v1/clinic/{tenant_id}/casesheets/{casesheet_id}/contributions
+ */
+export const getCasesheetContributionsApi = async (
+  tenantId: string,
+  casesheetId: string,
+  clientId: string,
+  episodeId: string
+): Promise<CasesheetContributionHistoryResponse> => {
+  const response = await axiosClient.get(
+    `/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/contributions`,
+    { params: { client_id: clientId, episode_id: episodeId } }
   );
   return response.data;
 };

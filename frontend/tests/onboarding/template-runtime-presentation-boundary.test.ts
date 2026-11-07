@@ -71,7 +71,8 @@ describe('template runtime presentation boundaries', () => {
   it('keeps persisted-session routing behind the explicit bootstrap gate', () => {
     const provider = readFileSync(resolve(__dirname, '../../core/providers/AuthProvider.tsx'), 'utf8');
     const store = readFileSync(resolve(__dirname, '../../features/auth/presentation/providers/auth.store.ts'), 'utf8');
-    expect(provider).toContain('bootstrapSession');
-    expect(store).toContain('application routing gate closed');
+    expect(provider).toContain('authSessionService.bootstrap()');
+    expect(provider).toContain('completeBootstrap()');
+    expect(store).toMatch(/completeBootstrap:\s*\(\)\s*=>\s*set\(\{\s*isLoading:\s*false\s*\}\)/);
   });
 });

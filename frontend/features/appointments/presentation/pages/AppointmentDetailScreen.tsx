@@ -68,6 +68,11 @@ import {
   getStaffName,
 } from '../../domain/helpers';
 import { formatDate, formatTime } from '../../../../core/utils/dateTimeUtils';
+import { isCosV1Enabled, useFeatures } from '../../../../core/hooks/useFeatures';
+import {
+  episodeWorkspaceRoute,
+  startConsultationRoute,
+} from '../../../doctorDashboard/application/consultationRoutes';
 
 // ============================================
 // SECTION HEADER COMPONENT
@@ -152,6 +157,7 @@ interface VisitHistoryCardProps {
  */
 const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPress, t }) => {
   const router = useRouter();
+  const cosEnabled = isCosV1Enabled(useFeatures());
   const statusColor = getStatusColor(appointment.status);
   
   // Extract data from appointment
@@ -176,9 +182,14 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
       router.push(`/clinic-admin/clients/${clientId}/casesheets/${appointment.case_sheet_id}` as any);
     } else {
       // Add new case sheet
-      router.push(`/clinic-admin/clients/${clientId}/casesheets/new?appointmentId=${appointment.id}` as any);
+      const destination = cosEnabled
+        ? appointment.episode_id
+          ? episodeWorkspaceRoute(appointment.episode_id, appointment.id, clientId, 'doctor', 'case_sheet')
+          : startConsultationRoute(appointment.id, clientId)
+        : `/clinic-admin/clients/${clientId}/casesheets/new?appointmentId=${appointment.id}`;
+      router.push(destination as any);
     }
-  }, [hasCaseSheet, appointment, router]);
+  }, [cosEnabled, hasCaseSheet, appointment, router]);
 
   // Handler for Prescription action
   const handlePrescriptionPress = useCallback(() => {
@@ -188,9 +199,14 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
       router.push(`/clinic-admin/clients/${clientId}/prescriptions/${appointment.prescription_id}` as any);
     } else {
       // Add new prescription
-      router.push(`/clinic-admin/clients/${clientId}/prescriptions/new?appointmentId=${appointment.id}` as any);
+      const destination = cosEnabled
+        ? appointment.episode_id
+          ? episodeWorkspaceRoute(appointment.episode_id, appointment.id, clientId, 'doctor', 'prescription')
+          : startConsultationRoute(appointment.id, clientId)
+        : `/clinic-admin/clients/${clientId}/prescriptions/new?appointmentId=${appointment.id}`;
+      router.push(destination as any);
     }
-  }, [hasPrescription, appointment, router]);
+  }, [cosEnabled, hasPrescription, appointment, router]);
   
   // BUG FIX #4: Removed TouchableOpacity and navigation - previous visits are view-only
   return (
@@ -775,7 +791,7 @@ export const AppointmentDetailScreen: React.FC = () => {
   // FIX: Use case-insensitive status comparison
   const canModify = canModifyAppointment && ['scheduled', 'confirmed'].includes(appointment.status?.toLowerCase());
   const canComplete = canCompleteSession && ['confirmed', 'in_progress'].includes(appointment.status?.toLowerCase());
-  const isPartOfSeries = appointment.series_id && appointment.session_number;
+  const isPartOfSeries = Boolean(appointment.series_id && appointment.session_number);
 
   // Display values with fallbacks
   const displayClientName = clientName || t('common.unknownClient') || 'Unknown Client';
@@ -865,7 +881,7 @@ export const AppointmentDetailScreen: React.FC = () => {
               <Text style={styles.clientName} data-testid="detail-client-name">
                 {displayClientName}
               </Text>
-              {displayClientPhone && (
+              {!!displayClientPhone && (
                 <Text style={styles.clientPhone} data-testid="detail-client-phone">
                   {displayClientPhone}
                 </Text>
@@ -931,7 +947,7 @@ export const AppointmentDetailScreen: React.FC = () => {
         )}
 
         {/* Notes Section (keep if exists) */}
-        {appointment.notes && (
+        {!!appointment.notes && (
           <View style={styles.section}>
             <SectionHeader title={t('common.notes') || 'Notes'} icon="document-text" />
             <View style={styles.notesCard}>
@@ -942,12 +958,12 @@ export const AppointmentDetailScreen: React.FC = () => {
 
         {/* Timestamps */}
         <View style={styles.metaSection}>
-          {appointment.created_at && (
+          {!!appointment.created_at && (
             <Text style={styles.metaText}>
               {t('common.created')}: {formatDate(appointment.created_at)}
             </Text>
           )}
-          {appointment.updated_at && (
+          {!!appointment.updated_at && (
             <Text style={styles.metaText}>
               {t('common.updated')}: {formatDate(appointment.updated_at)}
             </Text>

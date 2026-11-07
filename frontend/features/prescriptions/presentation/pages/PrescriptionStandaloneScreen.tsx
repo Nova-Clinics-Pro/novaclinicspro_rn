@@ -70,15 +70,15 @@ import {
   usePrescriptionDetailQuery,
   useCreatePrescriptionMutation,
   useUpdatePrescriptionMutation,
-  isEditable,
-} from '../../index';
+} from '../../data/repositories/prescriptions.repository.impl';
+import { isEditable, PrescriptionData } from '../../data/models/prescriptions.dtos';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
-import { PrescriptionData } from '../../data/models/prescriptions.dtos';
 import { PrescriptionStatusBadge } from '../components/PrescriptionStatusBadge';
 import { EmptyPrescriptionsState } from '../components/EmptyPrescriptionsState';
 import { PrescriptionEditingCore, PrescriptionAdviceFieldId } from '../components/PrescriptionEditingCore';
 import { useAppointmentDetailQuery } from '../../../appointments/data/repositories/appointments.repository.impl';
 import { useEpisodeQuery } from '../../../episodes/data/repositories/episodes.repository.impl';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 
 export interface PrescriptionStandaloneScreenProps {
   clientId: string;
@@ -171,14 +171,13 @@ const EditModeContent: React.FC<{
         notes: draft.notes || undefined,
       });
       Alert.alert('Success', 'Prescription updated successfully.', [{ text: 'OK', onPress: () => router.back() }]);
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to update prescription.';
-      if (errorMessage.includes('DOCTOR')) {
+    } catch (error) {
+      if (error instanceof PrescriptionOperationError && error.kind === 'PERMISSION_DENIED') {
         Alert.alert('Permission Denied', 'Only doctors can edit signed prescriptions.');
-      } else if (errorMessage.includes('FINAL')) {
+      } else if (error instanceof PrescriptionOperationError && error.kind === 'FINALIZED') {
         Alert.alert('Cannot Edit', 'Final prescriptions cannot be edited.');
       } else {
-        Alert.alert('Error', errorMessage);
+        Alert.alert('Error', 'Failed to update prescription.');
       }
     }
   }, [updateMutation, draft, router]);
@@ -223,7 +222,7 @@ const EditModeContent: React.FC<{
         variant="error"
         title="Unable to Load Prescription"
         message={
-          error?.message?.includes('401')
+          error instanceof PrescriptionOperationError && error.kind === 'AUTHENTICATION_REQUIRED'
             ? 'Authentication failed. Please try logging in again.'
             : 'Could not load this prescription. Please try again.'
         }
@@ -312,27 +311,26 @@ const CreateModeContent: React.FC<{
         pathname: '/clinic-admin/clients/[clientId]/prescriptions/[prescriptionId]' as any,
         params: { clientId, prescriptionId: result.id },
       });
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      if (detail?.error === 'PRESCRIPTION_ALREADY_EXISTS' && detail?.prescription_id) {
-        Alert.alert('Prescription Already Exists', detail.message || 'This visit already has a prescription.', [
+    } catch (error) {
+      if (error instanceof PrescriptionOperationError && error.kind === 'ALREADY_EXISTS' && error.existingPrescriptionId) {
+        Alert.alert('Prescription Already Exists', 'This visit already has a prescription.', [
           {
             text: 'View Prescription',
             onPress: () =>
               router.replace({
                 pathname: '/clinic-admin/clients/[clientId]/prescriptions/[prescriptionId]' as any,
-                params: { clientId, prescriptionId: detail.prescription_id },
+                params: { clientId, prescriptionId: error.existingPrescriptionId },
               }),
           },
         ]);
         return;
       }
-      if (err.error_code === 'EPISODE_MISMATCH' || err.message?.includes('episode_id must match')) {
+      if (error instanceof PrescriptionOperationError && error.kind === 'EPISODE_MISMATCH') {
         Alert.alert('Episode Mismatch', 'Document episode must match appointment episode. Please try again.', [
           { text: 'OK' },
         ]);
       } else {
-        Alert.alert('Error', err.message || 'Failed to create prescription.');
+        Alert.alert('Error', 'Failed to create prescription.');
       }
     }
   }, [createMutation, clientId, appointmentId, episodeId, draft, router]);

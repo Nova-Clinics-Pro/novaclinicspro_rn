@@ -49,6 +49,17 @@ export interface FeatureConfig {
    * behavior) if the API is unreachable or the field is absent.
    */
   clinical_spine_v1_enabled: boolean;
+  /**
+   * R7 · T-FE-A.3 (FR-FLAG-1): umbrella rollout flag for the Clinical
+   * Operating System — Visit Command Center, backend-assembled workflow,
+   * and the consultation-completion contract. Mirrors
+   * `clinical_spine_v1_enabled` exactly — global (not clinic-type-derived),
+   * served as-is from GET /tenants/{id}/features (backend
+   * OrgTenantsService.get_tenant_features, env-var-driven). Defaults to
+   * false (fail-closed to today's existing workspace behavior) if the API
+   * is unreachable or the field is absent.
+   */
+  cos_v1_enabled: boolean;
 }
 
 const DEFAULT_FEATURES: FeatureConfig = {
@@ -63,6 +74,7 @@ const DEFAULT_FEATURES: FeatureConfig = {
   },
   freshness_v1_enabled: false,
   clinical_spine_v1_enabled: false,
+  cos_v1_enabled: false,
 };
 
 function normalizeClinicType(value?: string): FeatureConfig['clinic_type'] {
@@ -109,6 +121,9 @@ function normalizeFeatures(raw?: any): FeatureConfig {
     // missing/undefined field (API unreachable, or an older backend that
     // hasn't deployed this field yet) safely to false.
     clinical_spine_v1_enabled: !!raw?.clinical_spine_v1_enabled,
+    // R7 · T-FE-A.3 (FR-FLAG-1): same shape as clinical_spine_v1_enabled
+    // above — global rollout flag, not clinic-type-derived.
+    cos_v1_enabled: !!raw?.cos_v1_enabled,
   };
 }
 
@@ -248,4 +263,9 @@ export function isFreshnessV1Enabled(features: FeatureConfig): boolean {
 /** Phase 3B (R3B) · T-A.1 (ADR-R3B-04). */
 export function isClinicalSpineV1Enabled(features: FeatureConfig): boolean {
   return features.clinical_spine_v1_enabled;
+}
+
+/** R7 · T-FE-A.3 (FR-FLAG-1). */
+export function isCosV1Enabled(features: FeatureConfig): boolean {
+  return features.cos_v1_enabled;
 }

@@ -76,8 +76,8 @@ export const CreateCasesheetScreen: React.FC = () => {
       const result = await createMutation.mutateAsync({
         clinic_type: 'ayurveda', // Default clinic type, can be made configurable
         data_json: data,
-        appointment_id: appointmentId,
-        episode_id: episodeId, // Include episode_id when creating from episode context
+        appointment_id: appointmentId ?? undefined,
+        episode_id: episodeId ?? undefined, // Include episode_id when creating from episode context
       });
       
       // Navigate to the newly created casesheet detail page

@@ -20,13 +20,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   Linking,
   Platform,
-  Modal,
 } from 'react-native';
 import CrossPlatformDateTimePicker, {
   DateTimePickerEvent,
@@ -58,11 +56,22 @@ import {
 } from '../../domain/helpers';
 import { validateAppointmentTime, formatValidationMessage, ValidationResult } from '../../utils/appointmentValidation';
 import { buildInitialEffectiveTimes } from '../../utils/previewEffectiveTimes';
+import {
+  PreviewActionBar,
+  PreviewAlternativeSlot,
+  PreviewClientSummary,
+  PreviewConflictBanner,
+  PreviewEffectiveTime,
+  PreviewPlanState,
+  PreviewPlanLevelAlternative,
+  PreviewSessionData,
+  PreviewSessionsList,
+  PreviewSuccessModal,
+  PreviewValidationToast,
+} from '../components/PreviewAppointmentsPresentation';
 // Import centralized date/time utils
 import {
   formatDate,
-  formatShortDate,
-  formatDayOfWeek,
   formatTime,
   formatTimeFromParts,
   extractTimePattern,
@@ -79,432 +88,9 @@ import {
  * EffectiveTime: The authoritative time slot for a session.
  * This is the SINGLE SOURCE OF TRUTH - all UI must read from this.
  */
-interface EffectiveTime {
-  start: string;
-  end: string;
-  staff_id: string | null;
-  staff_ids: string[];           // all assigned therapist ids
-  staff_name: string | null;
-  room_id: string | null;
-  room_name: string | null;
-  is_resolved: boolean; // true if user selected an alternative for a conflicted session
-}
-
-/**
- * Plan-level alternative that can be applied globally
- */
-interface PlanLevelAlternative {
-  time_pattern: string; // e.g., "11:00" - the hour:minute pattern
-  start_hour: number;
-  start_minute: number;
-  coverage_count: number; // how many sessions this works for
-  total_sessions: number;
-  covered_sessions: number[]; // session_numbers this applies to
-}
-
-// NOTE: Date/time formatting functions are now imported from centralized utils:
-// formatDate, formatShortDate, formatDayOfWeek, formatTime, formatTimeFromParts,
-// extractTimePattern, extractHour, extractMinute
-// from '../../../../core/utils/dateTimeUtils'
-
 // Legacy aliases for compatibility (these now use centralized utils)
 const safeFormatDate = formatDate;
 const safeFormatTime = formatTime;
-const safeFormatDayOfWeek = formatDayOfWeek;
-const safeFormatShortDate = formatShortDate;
-
-/**
- * Format time from ISO string
- * The axios interceptor converts backend UTC times to local ISO strings (without Z)
- * This function parses the local ISO string and formats it for display
- */
-const formatLocalTime = (isoString: string): string => {
-  if (!isoString) return '—';
-  
-  // Parse ISO string to Date object
-  // If it has Z suffix (UTC), Date constructor converts to local
-  // If no Z suffix (local ISO from interceptor), Date constructor treats as local
-  const date = new Date(isoString);
-  if (isNaN(date.getTime())) return '—';
-  
-  // Get local time components
-  const hour = date.getHours();
-  const minute = date.getMinutes();
-  
-  return formatTimeFromParts(hour, minute);
-};
-
-// ============================================
-// STAFF ASSIGNMENT TYPE (matching backend)
-// ============================================
-
-interface StaffAssignment {
-  id: string;
-  name: string;
-}
-
-// ============================================
-// ALTERNATIVE SLOT TYPE - from API
-// ============================================
-
-interface AlternativeSlot {
-  start: string;
-  end: string;
-  available_staff: Array<{
-    staff_id: string;
-    full_name: string;
-    staff_type: string;
-  }>;
-  available_rooms: Array<{
-    room_id: string;
-    name: string;
-    room_type: string;
-  }>;
-  score: number;
-  plan_level?: boolean; // true if this is a plan-level alternative
-}
-
-// ============================================
-// SESSION DATA TYPE - Updated per API spec
-// ============================================
-interface SessionData {
-  session_number: number;
-  appointment_start: string;
-  appointment_end: string;
-  doctor_id?: string | null;
-  therapist_ids?: string[];
-  staff_name: string | null;
-  staff_assignments?: StaffAssignment[] | null;
-  room_id: string | null;
-  room_name: string | null;
-  is_conflicted: boolean;
-  conflict?: {
-    day_index: number;
-    requested_time: string;
-    conflict_type: string;
-    message: string;
-    alternative_slots: AlternativeSlot[];
-  } | null;
-}
-
-/**
- * Get therapist display text from session data.
- * BUG FIX #1: When therapists are unavailable, show "Staff not available" instead of "Unassigned"
- */
-const getSessionTherapistDisplay = (session: SessionData, isConflicted: boolean): string => {
-  // If conflicted due to staff unavailability, show clear message
-  if (isConflicted && session.conflict?.conflict_type?.toLowerCase().includes('staff')) {
-    return 'Staff not available';
-  }
-  
-  // Use staff_assignments (new API format)
-  if (session.staff_assignments && session.staff_assignments.length > 0) {
-    return session.staff_assignments.map(staff => staff.name).join(', ');
-  }
-  // Fallback to deprecated staff_name
-  if (session.staff_name) {
-    return session.staff_name;
-  }
-  
-  // For non-conflicted sessions without staff, show "To be assigned"
-  return isConflicted ? 'Staff not available' : 'To be assigned';
-};
-
-// ============================================
-// GLOBAL ALTERNATIVES SECTION COMPONENT
-// ============================================
-
-interface GlobalAlternativesSectionProps {
-  planLevelAlternatives: PlanLevelAlternative[];
-  onApplyGlobal: (alternative: PlanLevelAlternative) => void;
-  selectedGlobalPattern: string | null;
-  t: (key: string, params?: Record<string, string | number>) => string;
-}
-
-const GlobalAlternativesSection: React.FC<GlobalAlternativesSectionProps> = ({
-  planLevelAlternatives,
-  onApplyGlobal,
-  selectedGlobalPattern,
-  t,
-}) => {
-  if (planLevelAlternatives.length === 0) return null;
-
-  return (
-    <View style={styles.globalAlternativesSection} data-testid="global-alternatives-section">
-      <Text style={styles.globalAlternativesTitle}>
-        {t('appointments.applyToAllSlots') || 'Apply to all sessions'}
-      </Text>
-      <Text style={styles.globalAlternativesSubtitle}>
-        {t('appointments.highCoverageOptions') || 'These times work for most sessions'}
-      </Text>
-      {planLevelAlternatives.map((alt, index) => {
-        const isSelected = selectedGlobalPattern === alt.time_pattern;
-        const coverageText = `${alt.coverage_count}/${alt.total_sessions}`;
-        
-        return (
-          <TouchableOpacity
-            key={`global-alt-${index}-${alt.time_pattern}`}
-            style={[
-              styles.globalAlternativeOption,
-              isSelected && styles.globalAlternativeOptionSelected,
-            ]}
-            onPress={() => onApplyGlobal(alt)}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: isSelected }}
-            data-testid={`global-alternative-${index}`}
-          >
-            <View style={styles.globalAlternativeContent}>
-              <View style={styles.globalAlternativeTimeRow}>
-                <Ionicons 
-                  name="time-outline" 
-                  size={18} 
-                  color={isSelected ? colors.primary.main : colors.text.secondary} 
-                />
-                <Text style={[
-                  styles.globalAlternativeTime,
-                  isSelected && styles.globalAlternativeTimeSelected,
-                ]}>
-                  {formatTimeFromParts(alt.start_hour, alt.start_minute)}
-                </Text>
-              </View>
-              <Text style={styles.globalAlternativeCoverage}>
-                {t('appointments.worksForSessions', { count: alt.coverage_count, total: alt.total_sessions }) || 
-                  `Works for ${coverageText} sessions`}
-              </Text>
-            </View>
-            {isSelected ? (
-              <Ionicons name="checkmark-circle" size={24} color={colors.primary.main} />
-            ) : (
-              <View style={styles.globalAlternativeRadio} />
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-};
-
-// ============================================
-// SESSION CARD COMPONENT
-// ============================================
-
-interface SessionCardProps {
-  session: SessionData;
-  effectiveTime: EffectiveTime;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onSelectAlternative: (alt: AlternativeSlot) => void;
-  onOpenCustomTimePicker?: (sessionNumber: number) => void;
-  t: (key: string, params?: Record<string, string | number>) => string;
-}
-
-const SessionCard: React.FC<SessionCardProps> = ({
-  session,
-  effectiveTime,
-  isExpanded,
-  onToggle,
-  onSelectAlternative,
-  onOpenCustomTimePicker,
-  t,
-}) => {
-  const hasConflict = session.is_conflicted;
-  const isResolved = effectiveTime.is_resolved;
-  
-  // SINGLE SOURCE OF TRUTH: Always read display values from effectiveTime
-  const displayStartTime = effectiveTime.start;
-  const displayEndTime = effectiveTime.end;
-  
-  // BUG FIX #1: Use getSessionTherapistDisplay for proper conflict messaging
-  const displayStaffName = effectiveTime.staff_name || 
-    getSessionTherapistDisplay(session, hasConflict && !isResolved);
-  
-  const displayRoomName = effectiveTime.room_name || session.room_name || 'Not assigned';
-
-  // Get alternative slots from conflict object (per API spec)
-  // Filter out plan_level alternatives - those are shown globally
-  const alternativeSlots = (session.conflict?.alternative_slots || [])
-    .filter(alt => !alt.plan_level);
-
-  // BUG FIX #3: Only show conflict message ONCE in the expanded section
-  // The main card shows the conflict icon, the expanded section shows the message
-  const conflictMessage = session.conflict?.message;
-
-  return (
-    <View 
-      style={[styles.sessionCard, hasConflict && !isResolved && styles.sessionCardConflict]}
-      data-testid={`session-card-${session.session_number}`}
-    >
-      {/* Session Header */}
-      <TouchableOpacity
-        style={styles.sessionHeader}
-        onPress={hasConflict ? onToggle : undefined}
-        activeOpacity={hasConflict ? 0.7 : 1}
-        accessibilityRole="button"
-        accessibilityLabel={`Session ${session.session_number}${hasConflict && !isResolved ? ', has conflict' : ''}`}
-      >
-        {/* Status Icon */}
-        <View style={styles.sessionStatus}>
-          {hasConflict && !isResolved ? (
-            <View style={styles.conflictIcon}>
-              <Ionicons name="warning" size={20} color={colors.error.main} />
-            </View>
-          ) : (
-            <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.success.main} />
-            </View>
-          )}
-        </View>
-
-        {/* Session Info */}
-        <View style={styles.sessionInfo}>
-          <View style={styles.sessionTitleRow}>
-            <Text style={styles.sessionNumber}>
-              {t('appointments.session')} {session.session_number}
-            </Text>
-            <Text style={styles.sessionDate}>
-              {safeFormatDayOfWeek(session.appointment_start)}, {safeFormatShortDate(session.appointment_start)}
-            </Text>
-          </View>
-          <Text style={styles.sessionTime}>
-            {formatLocalTime(displayStartTime)} - {formatLocalTime(displayEndTime)}
-          </Text>
-          {/* Display room name */}
-          <Text style={styles.sessionRoom}>
-            {displayRoomName}
-          </Text>
-        </View>
-
-        {/* Expand/Collapse Icon */}
-        {hasConflict && (
-          <Ionicons
-            name={isExpanded ? 'chevron-up' : 'chevron-down'}
-            size={20}
-            color={colors.text.secondary}
-          />
-        )}
-      </TouchableOpacity>
-
-      {/* Conflict Details & Alternatives - Only when expanded */}
-      {hasConflict && isExpanded && (
-        <View style={styles.conflictSection}>
-          {/* C1: Single conflict message - only in expanded section */}
-          {conflictMessage && (
-            <View style={styles.conflictReason}>
-              <Ionicons name="alert-circle" size={16} color={colors.error.main} />
-              <Text style={styles.conflictReasonText}>
-                {conflictMessage}
-              </Text>
-            </View>
-          )}
-
-          {/* C2: Alternative Slots - fully selectable, updates state */}
-          {alternativeSlots.length > 0 ? (
-            <View style={styles.alternativesSection}>
-              <Text style={styles.alternativesTitle}>
-                {t('appointments.selectAlternative') || 'Select an alternative'}:
-              </Text>
-              {alternativeSlots.map((alt, altIndex) => {
-                const firstStaff = alt.available_staff?.[0];
-                const firstRoom = alt.available_rooms?.[0];
-                // Check if this alternative is currently selected by comparing times
-                const isSelected = effectiveTime.is_resolved && 
-                  extractTimePattern(effectiveTime.start) === extractTimePattern(alt.start);
-                const scorePercent = Math.round((alt.score || 0) * 100);
-                const scoreColor = scorePercent >= 90 ? colors.success.main :
-                                   scorePercent >= 70 ? colors.warning.main : colors.text.secondary;
-                
-                return (
-                  <TouchableOpacity
-                    key={`alt-${altIndex}-${alt.start}`}
-                    style={[styles.alternativeOption, isSelected && styles.alternativeOptionSelected]}
-                    onPress={() => onSelectAlternative(alt)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: isSelected }}
-                    data-testid={`alternative-slot-${session.session_number}-${altIndex}`}
-                  >
-                    <View style={styles.alternativeContent}>
-                      <Text style={[styles.alternativeTime, isSelected && styles.alternativeTextSelected]}>
-                        {formatLocalTime(alt.start)} - {formatLocalTime(alt.end)}
-                      </Text>
-                      <Text style={[styles.alternativeStaff, isSelected && styles.alternativeTextSelected]}>
-                        {firstStaff?.full_name || t('common.therapist') || 'Therapist'}
-                        {firstRoom?.name && ` • ${firstRoom.name}`}
-                      </Text>
-                      {alt.available_staff?.length > 1 && (
-                        <Text style={styles.moreOptionsText}>
-                          +{alt.available_staff.length - 1} more staff options
-                        </Text>
-                      )}
-                    </View>
-                    <View style={styles.alternativeScore}>
-                      <Text style={[styles.scoreText, { color: scoreColor }]}>
-                        {scorePercent}%
-                      </Text>
-                      <Text style={styles.scoreLabel}>
-                        {scorePercent >= 90 ? (t('common.best') || 'Best') : 
-                         scorePercent >= 70 ? (t('common.good') || 'Good') : (t('common.fair') || 'Fair')}
-                      </Text>
-                    </View>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={20} color={colors.primary.main} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={styles.noAlternatives}>
-              <Text style={styles.noAlternativesText}>
-                {t('appointments.noAlternativeSlotsAvailable') || 'No alternative slots available.'}
-              </Text>
-            </View>
-          )}
-
-          {/* BUG FIX #6 & #7: Custom Time Picker - ALWAYS shown regardless of alternative slots */}
-          <View style={styles.customTimeSection}>
-            <TouchableOpacity
-              style={[
-                styles.customTimeRow,
-                effectiveTime.is_resolved && 
-                  alternativeSlots.every(alt => extractTimePattern(alt.start) !== extractTimePattern(effectiveTime.start)) &&
-                  styles.customTimeRowSelected,
-              ]}
-              onPress={() => onOpenCustomTimePicker?.(session.session_number)}
-              data-testid={`custom-time-${session.session_number}`}
-            >
-              <Ionicons 
-                name={effectiveTime.is_resolved && 
-                  alternativeSlots.every(alt => extractTimePattern(alt.start) !== extractTimePattern(effectiveTime.start))
-                  ? "checkmark-circle" 
-                  : "time-outline"
-                } 
-                size={18} 
-                color={effectiveTime.is_resolved && 
-                  alternativeSlots.every(alt => extractTimePattern(alt.start) !== extractTimePattern(effectiveTime.start))
-                  ? colors.success.main
-                  : colors.primary.main
-                } 
-              />
-              <View style={styles.customTimeContent}>
-                <Text style={styles.customTimeText}>
-                  {t('appointments.chooseDifferentTime') || 'Choose a different time…'}
-                </Text>
-                {/* BUG FIX #7: Show the selected custom time if one was chosen */}
-                {effectiveTime.is_resolved && 
-                  alternativeSlots.every(alt => extractTimePattern(alt.start) !== extractTimePattern(effectiveTime.start)) && (
-                  <Text style={styles.customTimeSelectedText}>
-                    {t('appointments.selectedTime') || 'Selected'}: {formatLocalTime(effectiveTime.start)} - {formatLocalTime(effectiveTime.end)}
-                  </Text>
-                )}
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.text.secondary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-    </View>
-  );
-};
 
 // ============================================
 // MAIN SCREEN
@@ -542,14 +128,14 @@ export const PreviewAppointmentsScreen: React.FC = () => {
   // ============================================
   
   // Raw sessions from API (immutable after fetch)
-  const [sessions, setSessions] = useState<SessionData[]>([]);
+  const [sessions, setSessions] = useState<PreviewSessionData[]>([]);
   
   // Series ID from therapy plan response (used for bulk create)
   const [seriesId, setSeriesId] = useState<string | null>(null);
   
   // SINGLE SOURCE OF TRUTH: effectiveTimes indexed by session_number
   // This is the ONLY place to read session times from
-  const [effectiveTimes, setEffectiveTimes] = useState<Map<number, EffectiveTime>>(new Map());
+  const [effectiveTimes, setEffectiveTimes] = useState<Map<number, PreviewEffectiveTime>>(new Map());
   
   // Currently selected global pattern (if any)
   const [selectedGlobalPattern, setSelectedGlobalPattern] = useState<string | null>(null);
@@ -626,7 +212,7 @@ export const PreviewAppointmentsScreen: React.FC = () => {
   // COMPUTE PLAN-LEVEL ALTERNATIVES
   // ============================================
   
-  const planLevelAlternatives = useMemo((): PlanLevelAlternative[] => {
+  const planLevelAlternatives = useMemo((): PreviewPlanLevelAlternative[] => {
     if (sessions.length === 0) return [];
     
     // Collect all plan_level alternatives across all conflicted sessions
@@ -658,7 +244,7 @@ export const PreviewAppointmentsScreen: React.FC = () => {
     });
     
     // Convert to array and sort by coverage (highest first)
-    const alternatives: PlanLevelAlternative[] = [];
+    const alternatives: PreviewPlanLevelAlternative[] = [];
     timePatternMap.forEach((data, pattern) => {
       alternatives.push({
         time_pattern: pattern,
@@ -685,9 +271,9 @@ export const PreviewAppointmentsScreen: React.FC = () => {
   // INITIALIZE EFFECTIVE TIMES FROM API RESPONSE
   // ============================================
   
-  const initializeEffectiveTimes = useCallback((newSessions: SessionData[]) => {
+  const initializeEffectiveTimes = useCallback((newSessions: PreviewSessionData[]) => {
     setEffectiveTimes(
-      buildInitialEffectiveTimes(newSessions, therapistIds, staffNames) as Map<number, EffectiveTime>
+      buildInitialEffectiveTimes(newSessions, therapistIds, staffNames) as Map<number, PreviewEffectiveTime>
     );
   }, [therapistIds, staffNames]);
 
@@ -754,7 +340,7 @@ export const PreviewAppointmentsScreen: React.FC = () => {
             is_conflicted: response.sessions[0].is_conflicted,
           });
           
-          const mappedSessions: SessionData[] = response.sessions.map((session: any) => ({
+          const mappedSessions: PreviewSessionData[] = response.sessions.map((session: any) => ({
             session_number: session.session_number,
             appointment_start: session.appointment_start,
             appointment_end: session.appointment_end,
@@ -776,9 +362,8 @@ export const PreviewAppointmentsScreen: React.FC = () => {
           console.log('[PreviewAppointments] Sessions loaded:', mappedSessions.length);
           console.log('[PreviewAppointments] Has conflicts:', response.has_conflicts);
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('[PreviewAppointments] Failed to generate therapy plan:', error);
-        console.error('[PreviewAppointments] Error response:', error?.response?.data);
       }
     };
 
@@ -795,7 +380,7 @@ export const PreviewAppointmentsScreen: React.FC = () => {
    */
   const handleSelectPerSessionAlternative = useCallback((
     sessionNumber: number, 
-    alt: AlternativeSlot
+    alt: PreviewAlternativeSlot
   ) => {
     const firstStaff = alt.available_staff?.[0];
     const firstRoom = alt.available_rooms?.[0];
@@ -825,7 +410,7 @@ export const PreviewAppointmentsScreen: React.FC = () => {
    * Handle global "apply to all" alternative selection
    * Updates effectiveTimes for ALL covered sessions
    */
-  const handleApplyGlobalAlternative = useCallback((alternative: PlanLevelAlternative) => {
+  const handleApplyGlobalAlternative = useCallback((alternative: PreviewPlanLevelAlternative) => {
     setSelectedGlobalPattern(alternative.time_pattern);
     
     setEffectiveTimes(prev => {
@@ -1021,9 +606,7 @@ export const PreviewAppointmentsScreen: React.FC = () => {
   // Determine if we can proceed
   const isLoading = generatePlanMutation.isPending;
   const hasError = generatePlanMutation.isError;
-  const errorMessage = generatePlanMutation.error?.message || 
-                       (generatePlanMutation.error as any)?.response?.data?.detail ||
-                       t('appointments.failedToGeneratePlan');
+  const errorMessage = t('appointments.failedToGeneratePlan');
   const canProceed = sessions.length > 0 && allConflictsResolved && !hasError;
 
   // ============================================
@@ -1283,9 +866,9 @@ export const PreviewAppointmentsScreen: React.FC = () => {
           );
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[PreviewScreen] Bulk create failed:', err);
-      Alert.alert(t('common.error'), err.message || t('appointments.failedToCreate'));
+      Alert.alert(t('common.error'), t('appointments.failedToCreate'));
     } finally {
       setIsCreating(false);
     }
@@ -1348,189 +931,61 @@ export const PreviewAppointmentsScreen: React.FC = () => {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Loading State */}
-      {isLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary.main} />
-          <Text style={styles.loadingText}>{t('appointments.generatingPlan')}</Text>
-          <Text style={styles.loadingSubtext}>{t('appointments.checkingAvailability')}</Text>
-        </View>
-      )}
-
-      {/* Error State - BLOCKS PROGRESSION */}
-      {!isLoading && hasError && (
-        <View style={styles.errorContainer}>
-          <Ionicons name="cloud-offline" size={64} color={colors.error.main} />
-          <Text style={styles.errorTitle}>{t('appointments.validationUnavailable') || 'Validation Unavailable'}</Text>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-          <Text style={styles.errorHelp}>
-            {t('appointments.cannotProceedWithoutValidation') || 'Cannot proceed without backend validation. Please try again.'}
-          </Text>
-          <View style={styles.errorButtons}>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={() => {
-                setHasFetched(false);
-              }}
-            >
-              <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.retryButton, { backgroundColor: colors.grey[400], marginLeft: spacing.md }]}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.retryButtonText}>{t('common.goBack') || 'Go Back'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Missing Required Fields */}
-      {!isLoading && !hasError && sessions.length === 0 && hasFetched && (
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color={colors.warning.main} />
-          <Text style={styles.errorTitle}>{t('appointments.noSessionsReturned') || 'No Sessions Available'}</Text>
-          <Text style={styles.errorText}>
-            {t('appointments.backendReturnedEmpty') || 'The server returned no sessions for this therapy plan.'}
-          </Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.retryButtonText}>{t('common.goBack') || 'Go Back'}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <PreviewPlanState
+        isLoading={isLoading}
+        hasError={hasError}
+        hasFetched={hasFetched}
+        hasSessions={sessions.length > 0}
+        errorMessage={errorMessage}
+        t={t}
+        onRetry={() => setHasFetched(false)}
+        onBack={() => router.back()}
+      />
 
       {/* Plan Content - ONLY when we have backend data */}
       {!isLoading && !hasError && sessions.length > 0 && (
         <>
-          {/* Client Info Card */}
-          <View style={styles.clientCard} data-testid="preview-client-card">
-            <View style={styles.clientIconContainer}>
-              <Ionicons name="person" size={24} color={colors.primary.main} />
-            </View>
-            <View style={styles.clientInfo}>
-              <Text style={styles.clientName}>{clientName}</Text>
-              {clientPhone && (
-                <Text style={styles.clientPhone}>{clientPhone}</Text>
-              )}
-              <Text style={styles.clientDetails}>
-                {treatmentName} • {sessions.length} {t('appointments.sessions')}
-              </Text>
-              <Text style={styles.clientDetails}>
-                {staffNames || t('appointments.therapistsAssigned')}
-              </Text>
-              <Text style={styles.clientDetails}>
-                {t('appointments.starting')} {safeFormatDate(startDateStr)} at {formatTimeFromParts(preferredTimeHourLocal, preferredTimeMinutesLocal)} • {durationMinutes} {t('common.minEach')}
-              </Text>
-            </View>
-          </View>
-
-          {/* Conflict Summary */}
-          {hasConflicts && (
-            <View style={[
-              styles.conflictBanner,
-              allConflictsResolved && styles.conflictBannerResolved,
-            ]}>
-              <Ionicons
-                name={allConflictsResolved ? 'checkmark-circle' : 'warning'}
-                size={20}
-                color={allConflictsResolved ? colors.success.main : colors.warning.main}
-              />
-              <Text style={[
-                styles.conflictBannerText,
-                allConflictsResolved && styles.conflictBannerTextResolved,
-              ]}>
-                {allConflictsResolved
-                  ? t('appointments.allConflictsResolved')
-                  : `${unresolvedConflicts.length} ${t('appointments.conflictsRemaining')}`}
-              </Text>
-            </View>
-          )}
-
-          {/* No Conflicts Banner */}
-          {!hasConflicts && (
-            <View style={styles.successBanner} data-testid="no-conflicts-banner">
-              <Ionicons name="checkmark-circle" size={20} color={colors.success.main} />
-              <Text style={styles.successBannerText}>
-                {t('appointments.allSessionsAvailable', { count: sessions.length })}
-              </Text>
-            </View>
-          )}
-
-          {/* Sessions List */}
-          <ScrollView
-            style={styles.sessionsList}
-            contentContainerStyle={styles.sessionsContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* BUG FIX #5: Global "Apply to All" Options */}
-            {hasConflicts && !allConflictsResolved && planLevelAlternatives.length > 0 && (
-              <GlobalAlternativesSection
-                planLevelAlternatives={planLevelAlternatives}
-                onApplyGlobal={handleApplyGlobalAlternative}
-                selectedGlobalPattern={selectedGlobalPattern}
-                t={t}
-              />
-            )}
-
-            {sessions.map((session) => {
-              const effectiveTime = effectiveTimes.get(session.session_number);
-              if (!effectiveTime) return null;
-              
-              return (
-                <SessionCard
-                  key={session.session_number}
-                  session={session}
-                  effectiveTime={effectiveTime}
-                  isExpanded={expandedSession === session.session_number}
-                  onToggle={() => setExpandedSession(
-                    expandedSession === session.session_number ? null : session.session_number
-                  )}
-                  onSelectAlternative={(alt) => 
-                    handleSelectPerSessionAlternative(session.session_number, alt)
-                  }
-                  onOpenCustomTimePicker={handleOpenCustomTimePicker}
-                  t={t}
-                />
-              );
-            })}
-
-            {/* Spacer for action bar */}
-            <View style={{ height: 100 }} />
-          </ScrollView>
-
-          {/* Action Bar */}
-          <View style={styles.actionBar}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => router.back()}
-              data-testid="preview-back-button"
-            >
-              <Text style={styles.cancelButtonText}>{t('common.back')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.confirmButton,
-                !canProceed && styles.confirmButtonDisabled,
-              ]}
-              onPress={handleConfirm}
-              disabled={isCreating || !canProceed}
-              data-testid="preview-confirm-button"
-            >
-              {isCreating ? (
-                <ActivityIndicator size="small" color={colors.background.default} />
-              ) : (
-                <>
-                  <Ionicons name="checkmark" size={20} color={colors.background.default} />
-                  <Text style={styles.confirmButtonText}>
-                    {t('appointments.confirmSessions', { count: sessions.length })}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          <PreviewClientSummary
+            clientName={clientName}
+            clientPhone={clientPhone}
+            treatmentName={treatmentName}
+            sessionCount={sessions.length}
+            staffNames={staffNames}
+            startDateText={safeFormatDate(startDateStr)}
+            preferredTimeHour={preferredTimeHourLocal}
+            preferredTimeMinutes={preferredTimeMinutesLocal}
+            durationMinutes={durationMinutes}
+            t={t}
+          />
+          <PreviewConflictBanner
+            hasConflicts={hasConflicts}
+            allConflictsResolved={allConflictsResolved}
+            unresolvedCount={unresolvedConflicts.length}
+            sessionCount={sessions.length}
+            t={t}
+          />
+          <PreviewSessionsList
+            hasConflicts={hasConflicts}
+            allConflictsResolved={allConflictsResolved}
+            alternatives={planLevelAlternatives}
+            selectedGlobalPattern={selectedGlobalPattern}
+            onApplyGlobal={handleApplyGlobalAlternative}
+            sessions={sessions}
+            effectiveTimes={effectiveTimes}
+            expandedSession={expandedSession}
+            onToggleSession={(sessionNumber) => setExpandedSession(expandedSession === sessionNumber ? null : sessionNumber)}
+            onSelectAlternative={handleSelectPerSessionAlternative}
+            onOpenCustomTimePicker={handleOpenCustomTimePicker}
+            t={t}
+          />
+          <PreviewActionBar
+            canProceed={canProceed}
+            isCreating={isCreating}
+            sessionCount={sessions.length}
+            t={t}
+            onBack={() => router.back()}
+            onConfirm={handleConfirm}
+          />
         </>
       )}
 
@@ -1545,20 +1000,7 @@ export const PreviewAppointmentsScreen: React.FC = () => {
         />
       )}
 
-      {/* Validation Toast - Bottom notification */}
-      {validationToast.visible && (
-        <View style={[
-          styles.validationToast,
-          validationToast.type === 'error' ? styles.validationToastError : styles.validationToastSuccess,
-        ]}>
-          <Ionicons 
-            name={validationToast.type === 'error' ? 'close-circle' : 'checkmark-circle'} 
-            size={20} 
-            color="#fff" 
-          />
-          <Text style={styles.validationToastText}>{validationToast.message}</Text>
-        </View>
-      )}
+      <PreviewValidationToast {...validationToast} />
 
       {/* Loading overlay during validation */}
       {isValidatingCustomTime && (
@@ -1572,47 +1014,15 @@ export const PreviewAppointmentsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Success Modal (for web compatibility) */}
       {successModal.visible && (
-        <Modal
+        <PreviewSuccessModal
           visible={successModal.visible}
-          transparent
-          animationType="fade"
-          onRequestClose={handleSuccessModalDone}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.successModalContent}>
-              <View style={styles.successModalIcon}>
-                <Ionicons name="checkmark-circle" size={64} color={colors.success.main} />
-              </View>
-              <Text style={styles.successModalTitle}>
-                {t('appointments.appointmentsCreated') || 'Appointments Created!'}
-              </Text>
-              <Text style={styles.successModalText}>
-                {successModal.createdCount} {t('appointments.sessionsScheduled') || 'sessions have been scheduled'}
-              </Text>
-              <View style={styles.successModalActions}>
-                <TouchableOpacity
-                  style={styles.successModalDoneButton}
-                  onPress={handleSuccessModalDone}
-                >
-                  <Text style={styles.successModalDoneText}>{t('common.done') || 'Done'}</Text>
-                </TouchableOpacity>
-                {successModal.whatsappUrl && (
-                  <TouchableOpacity
-                    style={styles.successModalWhatsAppButton}
-                    onPress={handleSuccessModalWhatsApp}
-                  >
-                    <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-                    <Text style={styles.successModalWhatsAppText}>
-                      {t('appointments.sendWhatsApp') || 'Send WhatsApp'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          </View>
-        </Modal>
+          createdCount={successModal.createdCount}
+          whatsappUrl={successModal.whatsappUrl}
+          t={t}
+          onDone={handleSuccessModalDone}
+          onSendWhatsApp={handleSuccessModalWhatsApp}
+        />
       )}
     </SafeAreaView>
   );

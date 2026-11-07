@@ -16,12 +16,14 @@ import {
   useMutation,
   useQueryClient,
   UseQueryOptions,
+  UseMutationOptions,
 } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
 import {
   getTreatmentOrderApi,
   listTreatmentOrdersApi,
   sendToSchedulingApi,
+  createTreatmentRecommendationApi,
   startSheetRowApi,
   scheduleRowApi,
   bulkScheduleRowsApi,
@@ -31,8 +33,11 @@ import {
   releaseTreatmentSheetApi,
   addClinicalReviewNoteApi,
   recordClinicalReviewOutcomeApi,
+  getSchedulingProposalApi,
+  CreateTreatmentRecommendationRequest,
   ClinicalReviewNoteResponse,
   ClinicalReviewOutcome,
+  SchedulingProposalParams,
 } from '../datasources/treatmentOrders.api';
 import {
   TreatmentOrderResponse,
@@ -42,6 +47,7 @@ import {
   ScheduleRowRequest,
   BulkScheduleRequest,
   VersionConflictError,
+  SchedulingProposalResponse,
 } from '../models/treatmentOrders.dtos';
 import { treatmentSheetsKeys } from './treatmentSheets.repository.impl';
 
@@ -59,6 +65,8 @@ export const treatmentOrderKeys = {
     [...treatmentOrderKeys.worklists(tenantId), params] as const,
   pendingDocumentation: (tenantId: string, staffId: string) =>
     [...treatmentOrderKeys.all, 'pendingDocumentation', tenantId, staffId] as const,
+  schedulingProposal: (planId: string, startDate: string) =>
+    [...treatmentOrderKeys.all, 'schedulingProposal', planId, startDate] as const,
 };
 
 const removeOrderFromCachedWorklists = (
@@ -123,6 +131,47 @@ export const useTreatmentOrderQuery = (
     queryFn: () => getTreatmentOrderApi(sheetId, tenantId),
     enabled: !!sheetId && !!tenantId,
     staleTime: 0,
+    ...options,
+  });
+
+/**
+ * Resolves a treatment order from an event handler while preserving the same
+ * canonical React Query cache identity as `useTreatmentOrderQuery`.
+ *
+ * The therapist's Start Session action needs the server-issued version before
+ * it can submit a row transition. The action is initiated from a callback, so
+ * a regular query hook cannot be called at that point without violating the
+ * Rules of Hooks.
+ */
+export const useTreatmentOrderOnDemand = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    (sheetId: string, tenantId: string) =>
+      queryClient.fetchQuery<TreatmentOrderResponse>({
+        queryKey: treatmentOrderKeys.detail(sheetId),
+        queryFn: () => getTreatmentOrderApi(sheetId, tenantId),
+        staleTime: 0,
+      }),
+    [queryClient]
+  );
+};
+
+/**
+ * T-FE-E.2 closure (FR-SCH-1). Read-only: resolves a Treatment Plan's
+ * scheduling intent into proposed session dates -- disabled until a
+ * `planId` exists (a Plan must be created first). No local date
+ * computation/sorting; the response is rendered as-is.
+ */
+export const useSchedulingProposalQuery = (
+  planId: string,
+  params: SchedulingProposalParams,
+  options?: Omit<UseQueryOptions<SchedulingProposalResponse, Error>, 'queryKey' | 'queryFn'>
+) =>
+  useQuery<SchedulingProposalResponse, Error>({
+    queryKey: treatmentOrderKeys.schedulingProposal(planId, params.startDate),
+    queryFn: () => getSchedulingProposalApi(planId, params),
+    enabled: !!planId && !!params.startDate,
     ...options,
   });
 
@@ -274,6 +323,43 @@ export const useSendToSchedulingMutation = (tenantId: string): UseSendToScheduli
 
   return { mutate, status, errorMessage, currentVersion, reset };
 };
+
+// ============================================
+// CREATE RECOMMENDATION / DIRECT SEND-TO-SCHEDULING MUTATIONS
+// ============================================
+
+/**
+ * R7 · T-0.4 (ED-ARCH-001): thin useMutation wrappers so
+ * TreatmentRecommendationModule (Presentation) no longer imports
+ * createTreatmentRecommendationApi/sendToSchedulingApi directly. Distinct
+ * from useSendToSchedulingMutation above (a local status-machine hook used
+ * by the standalone Treatment Sheet screens) — that hook swallows errors
+ * into its own status/errorMessage state and never resolves the response
+ * to its caller, which doesn't fit a caller that needs to await the
+ * created/updated order and throw on failure. No default onSuccess
+ * (matches useAddClinicalReviewNoteMutation's precedent below) — callers
+ * own their own invalidation.
+ */
+export const useCreateTreatmentRecommendationMutation = (
+  tenantId: string,
+  options?: UseMutationOptions<TreatmentOrderResponse, Error, CreateTreatmentRecommendationRequest>
+) =>
+  useMutation<TreatmentOrderResponse, Error, CreateTreatmentRecommendationRequest>({
+    mutationFn: (payload) => createTreatmentRecommendationApi(tenantId, payload),
+    ...options,
+  });
+
+export const useSendTreatmentOrderToSchedulingMutation = (
+  options?: UseMutationOptions<
+    TreatmentOrderResponse,
+    Error,
+    { sheetId: string; version: number; payload?: SendToSchedulingRequest }
+  >
+) =>
+  useMutation<TreatmentOrderResponse, Error, { sheetId: string; version: number; payload?: SendToSchedulingRequest }>({
+    mutationFn: ({ sheetId, version, payload }) => sendToSchedulingApi(sheetId, version, payload),
+    ...options,
+  });
 
 // ============================================
 // START SESSION MUTATION

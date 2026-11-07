@@ -44,10 +44,10 @@ const OUTCOME_OPTIONS: { value: ClinicalReviewOutcome; label: string; descriptio
   { value: 'update_future_rows', label: 'Update Future Sessions', description: 'Edit remaining days below using the row editor. Stays In Therapy.' },
   { value: 'extend', label: 'Extend Treatment', description: 'Add more sessions to this plan. Stays In Therapy.' },
   { value: 'stop_remaining', label: 'Stop Remaining Sessions', description: 'Cancels all remaining sessions. Marks the plan Treatment Complete.' },
-  { value: 'complete', label: 'Mark Complete', description: 'All sessions finished as planned. Marks the plan Treatment Complete.' },
+  { value: 'mark_complete', label: 'Mark Complete', description: 'All sessions finished as planned. Marks the plan Treatment Complete.' },
 ];
 
-const TERMINAL_OUTCOMES: ReadonlySet<ClinicalReviewOutcome> = new Set(['stop_remaining', 'complete']);
+const TERMINAL_OUTCOMES: ReadonlySet<ClinicalReviewOutcome> = new Set(['stop_remaining', 'mark_complete']);
 
 export const ClinicalReviewSection: React.FC<Props> = ({
   treatmentOrder,

@@ -1,7 +1,27 @@
-import React, { useState } from 'react';
+/**
+ * CompleteConsultationScreen (T-0.8)
+ *
+ * Renders the backend-owned consultation completion contract
+ * (T-BE-F.3 / T-BE-F.3a) — it derives no clinical statement of its own.
+ *
+ * Removed by this task (ED-ARCH-004): the client-side summary-composition
+ * function this screen used to call, its treatment-order-lifecycle-state
+ * inference, the hard-coded Ayurveda-specific assessment-template-ID
+ * check, absence-rendered-as-a-negative-finding strings, and the local
+ * Case Sheet finalize-status API call this screen used to invoke, gated on
+ * nothing but the Case Sheet's own existence.
+ *
+ * No governed consultation-completion mutation endpoint exists yet
+ * (verified — only the backend's read-only GET
+ * /clinic/{tenant_id}/consultation-completion contract exists; see this
+ * task's completion report). The completion action therefore fails
+ * closed: it renders the backend's readiness contract in full, but the
+ * action itself stays disabled with an existing localized unavailable
+ * state, never substituting the old direct Case Sheet status write.
+ */
+import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,10 +32,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
-import { useFeatures, isAyurvedaClinic } from '../../../../core/hooks/useFeatures';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
-import { transitionCasesheetStatusApi } from '../../../casesheets/data/datasources/casesheets.api';
-import { EpisodeWorkspaceData, useEpisodeWorkspaceData } from '../hooks/useEpisodeWorkspaceData';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { useConsultationCompletionQuery } from '../../data/repositories/consultationCompletion.repository.impl';
+import { ConsultationCompletionResponse } from '../../data/models/consultationCompletion.dtos';
 
 interface CompleteConsultationScreenProps {
   episodeId: string;
@@ -23,71 +43,23 @@ interface CompleteConsultationScreenProps {
   clientId: string;
 }
 
-export interface ConsultationSummary {
-  notes: SummaryItem;
-  prescription: SummaryItem;
-  treatmentRecommendation: SummaryItem;
-  ayurvedicAssessment?: SummaryItem;
-  casesheetId: string | null;
-}
+type ThemeColors = ReturnType<typeof useClinicTheme>['colors'];
 
-interface SummaryItem {
-  title: string;
-  status: string;
-  detail: string;
-}
-
-export function deriveSummary(
-  data: EpisodeWorkspaceData,
-  appointmentId: string,
-  includeAyurveda: boolean,
-): ConsultationSummary {
-  const visit = data.visits.find(item => item.appointment_id === appointmentId);
-  const casesheetStatus = data.casesheet?.status ?? data.episodeDetails?.documents.casesheet.status ?? null;
-  const prescriptionStatus = visit?.prescription?.status ?? null;
-  // The treatment recommendation's "sent" state is the ORDER lifecycle `state`
-  // (DRAFT → ORDERED → SCHEDULED …), NOT the document `status` (which remains
-  // DRAFT so the doctor can keep editing). Reading `status` here showed "DRAFT"
-  // even after Send to Admin — derive from the latest persisted `state` instead.
-  const treatmentState = (data.treatmentSheet as any)?.state ?? null;
-  const treatmentSent = treatmentState != null && treatmentState !== 'DRAFT';
-  const hasAyurveda = Boolean(
-    data.casesheet?.data_json?.extensions?.some((ext: any) =>
-      ['nadi_pariksha', 'prakriti'].includes(ext.template_id) &&
-      Object.values(ext.data || {}).some(value => String(value ?? '').trim()),
-    ),
-  );
-
-  return {
-    casesheetId: data.casesheetId,
-    notes: {
-      title: 'Consultation Notes',
-      status: casesheetStatus || 'Not saved',
-      detail: data.hasCasesheet ? 'Notes are available for review.' : 'Consultation notes have not been saved.',
-    },
-    prescription: {
-      title: 'Prescription',
-      status: prescriptionStatus || 'Not created',
-      detail: prescriptionStatus ? 'Prescription is linked to this visit.' : 'No prescription has been saved for this visit.',
-    },
-    treatmentRecommendation: {
-      title: 'Treatment Recommendation',
-      status: treatmentSent ? 'Sent to Admin' : 'Not sent',
-      detail: treatmentSent
-        ? 'Recommendation sent to Admin for scheduling.'
-        : 'No treatment recommendation was sent.',
-    },
-    ...(includeAyurveda
-      ? {
-          ayurvedicAssessment: {
-            title: 'Ayurvedic Assessment',
-            status: hasAyurveda ? 'Recorded' : 'Not recorded',
-            detail: hasAyurveda ? 'Nadi or Prakriti observations were captured.' : 'No Ayurveda assessment data was captured.',
-          },
-        }
-      : {}),
-  };
-}
+const stateColor = (state: string, colors: ThemeColors): string => {
+  switch (state) {
+    case 'ready':
+    case 'ready_with_warnings':
+      return colors.feedback.success;
+    case 'blocked':
+      return colors.feedback.error;
+    case 'not_ready':
+    case 'waiting_on_permission':
+    case 'unresolved':
+      return colors.feedback.warning;
+    default:
+      return colors.text.secondary;
+  }
+};
 
 export const CompleteConsultationScreen: React.FC<CompleteConsultationScreenProps> = ({
   episodeId,
@@ -97,32 +69,15 @@ export const CompleteConsultationScreen: React.FC<CompleteConsultationScreenProp
   const router = useRouter();
   const { currentUser, selectedClinicId } = useAuth();
   const tenantId = selectedClinicId || currentUser?.tenantId || '';
-  const features = useFeatures();
-  const includeAyurveda = isAyurvedaClinic(features);
   const { colors, spacing, typography } = useClinicTheme();
-  const data = useEpisodeWorkspaceData(tenantId, episodeId, clientId);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const summary = deriveSummary(data, appointmentId, includeAyurveda);
-  const isLoading = data.isEpisodeLoading || data.isCasesheetLoading || data.isTreatmentSheetLoading;
+  const { t } = useTranslation();
 
-  const complete = async () => {
-    if (!summary.casesheetId) {
-      setError('Consultation notes must be saved before completing.');
-      return;
-    }
-    setError(null);
-    setIsCompleting(true);
-    try {
-      await transitionCasesheetStatusApi(tenantId, summary.casesheetId, { status: 'FINAL' });
-      Alert.alert('Consultation completed. Treatment recommendation sent to Admin.');
-      router.replace('/doctor' as any);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail ?? err?.message ?? 'Failed to complete consultation.');
-    } finally {
-      setIsCompleting(false);
-    }
-  };
+  const {
+    data: contract,
+    isLoading,
+    isError,
+    refetch,
+  } = useConsultationCompletionQuery(tenantId, clientId, episodeId, appointmentId);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background.default }]}>
@@ -130,7 +85,7 @@ export const CompleteConsultationScreen: React.FC<CompleteConsultationScreenProp
         <TouchableOpacity onPress={() => router.back()} accessibilityRole="button" style={styles.iconButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={[typography.h5, { color: colors.text.primary }]}>Review & Complete</Text>
+        <Text style={[typography.h5, { color: colors.text.primary }]}>{t('completeConsultation.title')}</Text>
         <View style={styles.iconButton} />
       </View>
 
@@ -138,37 +93,93 @@ export const CompleteConsultationScreen: React.FC<CompleteConsultationScreenProp
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary.default} />
         </View>
+      ) : isError || !contract ? (
+        <View style={[styles.center, { padding: spacing.md, gap: spacing.md }]}>
+          <Text style={[typography.body2, { color: colors.feedback.error }]}>
+            {t('errors.completeConsultation.loadFailed')}
+          </Text>
+          <TouchableOpacity onPress={() => refetch()} accessibilityRole="button">
+            <Text style={[typography.button, { color: colors.primary.default }]}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <>
           <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl }}>
-            <SummaryCard item={summary.notes} />
-            <SummaryCard item={summary.prescription} />
-            <SummaryCard item={summary.treatmentRecommendation} />
-            {summary.ayurvedicAssessment && <SummaryCard item={summary.ayurvedicAssessment} />}
-            {!!error && (
-              <View
-                style={[
-                  styles.errorBox,
-                  { backgroundColor: colors.feedback.errorLight, padding: spacing.md, borderRadius: spacing.sm },
-                ]}
-              >
-                <Text style={[typography.body2, { color: colors.feedback.error }]}>{error}</Text>
-              </View>
-            )}
+            <StateBanner contract={contract} />
+            <SemanticList
+              titleKey="completeConsultation.sections.mandatory"
+              emptyKey="completeConsultation.empty.mandatory"
+              items={contract.outstanding_mandatory}
+              nameNamespace="completeConsultation.stageNames"
+            />
+            <SemanticList
+              titleKey="completeConsultation.sections.optional"
+              emptyKey="completeConsultation.empty.optional"
+              items={contract.optional_suggested}
+              nameNamespace="completeConsultation.stageNames"
+            />
+            <SemanticList
+              titleKey="completeConsultation.sections.warnings"
+              emptyKey="completeConsultation.empty.warnings"
+              items={contract.warnings}
+              nameNamespace="completeConsultation.reasonCodes"
+            />
+            <SemanticList
+              titleKey="completeConsultation.sections.unresolved"
+              emptyKey="completeConsultation.empty.unresolved"
+              items={contract.unresolved_facts}
+              nameNamespace="completeConsultation.reasonCodes"
+            />
+
+            <DocumentSummaryCard
+              titleKey="completeConsultation.sections.caseSheet"
+              status={contract.case_sheet.document_status}
+              recordingState={contract.case_sheet.recording_state}
+            />
+            <DocumentSummaryCard
+              titleKey="completeConsultation.sections.prescription"
+              status={contract.prescription.document_status}
+              recordingState={contract.prescription.recording_state}
+            />
+            <DocumentSummaryCard
+              titleKey="completeConsultation.sections.treatment"
+              status={contract.treatment.lifecycle_status}
+              recordingState={contract.treatment.recording_state}
+            />
+            <DocumentSummaryCard
+              titleKey="completeConsultation.sections.billing"
+              status={null}
+              recordingState={contract.billing.recording_state}
+            />
+            <DocumentSummaryCard
+              titleKey="completeConsultation.sections.visit"
+              status={contract.visit.appointment_status}
+              recordingState={contract.visit.recording_state}
+            />
           </ScrollView>
-          <View style={[styles.footer, { padding: spacing.md, borderTopColor: colors.border.subtle }]}>
+          <View style={[styles.footer, { padding: spacing.md, borderTopColor: colors.border.subtle, gap: spacing.xs }]}>
             <TouchableOpacity
-              onPress={complete}
-              disabled={isCompleting}
+              disabled
+              testID="complete-consultation-button"
               accessibilityRole="button"
+              accessibilityState={{ disabled: true }}
               style={[
                 styles.completeButton,
-                { backgroundColor: colors.primary.default, borderRadius: spacing.sm, padding: spacing.md, gap: spacing.xs },
+                {
+                  backgroundColor: colors.primary.disabled,
+                  borderRadius: spacing.sm,
+                  padding: spacing.md,
+                  gap: spacing.xs,
+                },
               ]}
             >
-              {isCompleting && <ActivityIndicator size="small" color={colors.primary.onPrimary} />}
-              <Text style={[typography.button, { color: colors.primary.onPrimary }]}>Complete Consultation</Text>
+              <Text style={[typography.button, { color: colors.text.disabled }]}>
+                {t('completeConsultation.action.complete')}
+              </Text>
             </TouchableOpacity>
+            <Text style={[typography.caption, { color: colors.text.secondary }]}>
+              {t('common.featureUnavailable')}
+            </Text>
           </View>
         </>
       )}
@@ -176,26 +187,82 @@ export const CompleteConsultationScreen: React.FC<CompleteConsultationScreenProp
   );
 };
 
-const SummaryCard: React.FC<{ item: SummaryItem }> = ({ item }) => {
+const StateBanner: React.FC<{ contract: ConsultationCompletionResponse }> = ({ contract }) => {
   const { colors, spacing, typography } = useClinicTheme();
+  const { t } = useTranslation();
+  const accent = stateColor(contract.state, colors);
   return (
     <View
       style={[
         styles.card,
-        {
-          backgroundColor: colors.surface.default,
-          borderColor: colors.border.default,
-          borderRadius: spacing.sm,
-          padding: spacing.md,
-          gap: spacing.xs,
-        },
+        { backgroundColor: colors.surface.default, borderColor: accent, borderRadius: spacing.sm, padding: spacing.md, gap: spacing.xs },
       ]}
     >
       <View style={styles.cardHeader}>
-        <Text style={[typography.h6, styles.cardTitle, { color: colors.text.primary }]}>{item.title}</Text>
-        <Text style={[typography.caption, { color: colors.text.secondary }]}>{item.status}</Text>
+        <Text style={[typography.h6, { color: colors.text.primary }]} testID="completion-state-label">
+          {t(`completeConsultation.state.${contract.state}`)}
+        </Text>
+        <View
+          style={[
+            styles.stateDot,
+            { backgroundColor: accent, width: spacing.sm, height: spacing.sm, borderRadius: spacing.xs },
+          ]}
+          accessibilityElementsHidden
+        />
       </View>
-      <Text style={[typography.body2, { color: colors.text.secondary }]}>{item.detail}</Text>
+    </View>
+  );
+};
+
+const SemanticList: React.FC<{
+  titleKey: string;
+  emptyKey: string;
+  items: string[];
+  nameNamespace: string;
+}> = ({ titleKey, emptyKey, items, nameNamespace }) => {
+  const { colors, spacing, typography } = useClinicTheme();
+  const { t } = useTranslation();
+  return (
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: colors.surface.default, borderColor: colors.border.default, borderRadius: spacing.sm, padding: spacing.md, gap: spacing.xs },
+      ]}
+    >
+      <Text style={[typography.h6, { color: colors.text.primary }]}>{t(titleKey)}</Text>
+      {items.length === 0 ? (
+        <Text style={[typography.body2, { color: colors.text.secondary }]}>{t(emptyKey)}</Text>
+      ) : (
+        items.map((code) => (
+          <Text key={code} style={[typography.body2, { color: colors.text.secondary }]}>
+            {t(`${nameNamespace}.${code}`)}
+          </Text>
+        ))
+      )}
+    </View>
+  );
+};
+
+const DocumentSummaryCard: React.FC<{
+  titleKey: string;
+  status: string | null;
+  recordingState: string;
+}> = ({ titleKey, status, recordingState }) => {
+  const { colors, spacing, typography } = useClinicTheme();
+  const { t } = useTranslation();
+  return (
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: colors.surface.default, borderColor: colors.border.default, borderRadius: spacing.sm, padding: spacing.md, gap: spacing.xs },
+      ]}
+    >
+      <View style={styles.cardHeader}>
+        <Text style={[typography.h6, styles.cardTitle, { color: colors.text.primary }]}>{t(titleKey)}</Text>
+        <Text style={[typography.caption, { color: colors.text.secondary }]}>
+          {status ?? t(`completeConsultation.recordingState.${recordingState}`)}
+        </Text>
+      </View>
     </View>
   );
 };
@@ -213,7 +280,7 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { flex: 1 },
-  errorBox: {},
+  stateDot: {},
   footer: { borderTopWidth: 1 },
   completeButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
 });

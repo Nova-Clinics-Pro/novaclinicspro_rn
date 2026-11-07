@@ -48,6 +48,7 @@ export type { IEpisodesRepository } from './domain/repositories/episodes.reposit
 // React Query Hooks
 export {
   useEpisodesQuery,
+  useClientEpisodeCountsQuery,
   useInfiniteEpisodesQuery,
   useEpisodeQuery,
   useCreateEpisodeMutation,
@@ -56,4 +57,5 @@ export {
   useReopenEpisodeMutation,
   useAttachEpisodeMutation,
   episodesKeys,
+  listEpisodes,
 } from './data/repositories/episodes.repository.impl';

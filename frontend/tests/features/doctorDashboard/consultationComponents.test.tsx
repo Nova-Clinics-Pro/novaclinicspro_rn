@@ -1,18 +1,15 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppointmentRow } from '../../../features/appointments/presentation/components/AppointmentRow';
 import { CreateConsultationScreen } from '../../../features/episodes/presentation/pages/CreateConsultationScreen';
 import { EpisodeWorkspaceScreen } from '../../../features/episodes/presentation/pages/EpisodeWorkspaceScreen';
-import {
-  CompleteConsultationScreen,
-  deriveSummary,
-} from '../../../features/episodes/presentation/pages/CompleteConsultationScreen';
+import { CompleteConsultationScreen } from '../../../features/episodes/presentation/pages/CompleteConsultationScreen';
 import { createEpisodeApi } from '../../../features/episodes/data/datasources/episodes.api';
 import { transitionCasesheetStatusApi } from '../../../features/casesheets/data/datasources/casesheets.api';
 import { useEpisodeWorkspaceData } from '../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData';
+import { useConsultationCompletionQuery } from '../../../features/episodes/data/repositories/consultationCompletion.repository.impl';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
 
@@ -45,6 +42,9 @@ jest.mock('../../../features/casesheets/data/datasources/casesheets.api', () => 
 }));
 jest.mock('../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData', () => ({
   useEpisodeWorkspaceData: jest.fn(),
+}));
+jest.mock('../../../features/episodes/data/repositories/consultationCompletion.repository.impl', () => ({
+  useConsultationCompletionQuery: jest.fn(),
 }));
 
 // EpisodeWorkspaceScreen renders these tab panels for real. Stub them so this
@@ -154,11 +154,44 @@ const workspaceData = {
   clientName: 'Maya Rao',
 };
 
+// Backend-owned consultation completion contract (T-BE-F.3/T-0.8) — the
+// single source CompleteConsultationScreen now renders.
+const consultationCompletionContract = {
+  state: 'ready',
+  can_complete: true,
+  clinically_ready: true,
+  actionable_by_current_user: true,
+  outstanding_mandatory: [],
+  optional_suggested: [],
+  warnings: [],
+  unresolved_facts: [],
+  recommended_action: 'complete_visit',
+  recommendation_reason: 'authoring_complete',
+  blocking_factors: [],
+  waiting_permission: null,
+  case_sheet: { exists: true, document_status: 'DRAFT', recording_state: 'recorded' },
+  prescription: { exists: true, document_status: 'DRAFT', recording_state: 'recorded' },
+  treatment: { exists: true, lifecycle_status: 'in_therapy', lifecycle_unresolved: false, recording_state: 'recorded' },
+  billing: {
+    clinical_services_exist: false, invoice_exists: null, invoice_count: null, invoice_statuses: [],
+    billed_amount: null, paid_amount: null, outstanding_amount: null, currency: null,
+    recording_state: 'not_applicable',
+  },
+  visit: { visit_exists: true, appointment_status: 'IN_PROGRESS', outcome_type: null, recording_state: 'recorded' },
+  capability_loss: [],
+};
+
 describe('consultation components', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue(router);
     (useEpisodeWorkspaceData as jest.Mock).mockReturnValue(workspaceData);
+    (useConsultationCompletionQuery as jest.Mock).mockReturnValue({
+      data: consultationCompletionContract,
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    });
   });
 
   describe('AppointmentRow', () => {
@@ -214,7 +247,7 @@ describe('consultation components', () => {
       expect(createEpisodeApi).not.toHaveBeenCalled();
     });
 
-    it('creates an episode and navigates to consultation', async () => {
+    it('creates an episode and navigates to the COS assessment workspace', async () => {
       (createEpisodeApi as jest.Mock).mockResolvedValue({ id: 'episode-1' });
       const { getByText, getByPlaceholderText } = renderWithQueryClient(
         <CreateConsultationScreen appointmentId="appointment-1" clientId="client-1" />,
@@ -225,7 +258,7 @@ describe('consultation components', () => {
 
       await waitFor(() => expect(createEpisodeApi).toHaveBeenCalled());
       expect(router.replace).toHaveBeenCalledWith(
-        '/clinic-admin/episodes/episode-1/consultation?appointmentId=appointment-1&clientId=client-1',
+        '/clinic-admin/episodes/episode-1/workspace?appointmentId=appointment-1&clientId=client-1&mode=doctor&step=assessment',
       );
     });
 
@@ -296,38 +329,44 @@ describe('consultation components', () => {
     });
   });
 
-  describe('CompleteConsultationScreen', () => {
-    it('derives and renders complete consultation summary', () => {
-      const summary = deriveSummary(workspaceData as any, 'appointment-1', true);
-      expect(summary.notes.status).toBe('DRAFT');
-      expect(summary.prescription.status).toBe('DRAFT');
-      expect(summary.treatmentRecommendation.status).toBe('Sent to Admin');
-      expect(summary.ayurvedicAssessment?.status).toBe('Recorded');
+  describe('CompleteConsultationScreen (T-0.8 — renders the backend contract, derives nothing locally)', () => {
+    it('renders the backend-owned completion state and requests the exact context identifiers', () => {
+      const { getByTestId } = render(
+        <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
+      );
+      expect(useConsultationCompletionQuery).toHaveBeenCalledWith('tenant-1', 'client-1', 'episode-1', 'appointment-1');
+      expect(getByTestId('completion-state-label').props.children).toBe('Ready to complete');
     });
 
-    it('finalizes casesheet and returns to doctor dashboard', async () => {
-      jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-      (transitionCasesheetStatusApi as jest.Mock).mockResolvedValue({});
-      const { getByText } = render(
+    it('never calls the local Case Sheet FINAL transition — the completion action fails closed', () => {
+      const { getByTestId, getByText } = render(
         <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
       );
 
-      fireEvent.press(getByText('Complete Consultation'));
+      fireEvent.press(getByTestId('complete-consultation-button'));
 
-      await waitFor(() =>
-        expect(transitionCasesheetStatusApi).toHaveBeenCalledWith('tenant-1', 'casesheet-1', { status: 'FINAL' }),
-      );
-      expect(router.replace).toHaveBeenCalledWith('/doctor');
-    });
-
-    it('blocks completion when notes are not saved', () => {
-      (useEpisodeWorkspaceData as jest.Mock).mockReturnValue({ ...workspaceData, casesheetId: null, hasCasesheet: false });
-      const { getByText } = render(
-        <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
-      );
-      fireEvent.press(getByText('Complete Consultation'));
-      expect(getByText('Consultation notes must be saved before completing.')).toBeTruthy();
       expect(transitionCasesheetStatusApi).not.toHaveBeenCalled();
+      expect(router.replace).not.toHaveBeenCalledWith('/doctor');
+      expect(getByText('This feature is not yet available')).toBeTruthy();
+    });
+
+    it('renders backend readiness state even when mandatory work is outstanding, without any local derivation', () => {
+      (useConsultationCompletionQuery as jest.Mock).mockReturnValue({
+        data: {
+          ...consultationCompletionContract,
+          state: 'not_ready',
+          can_complete: false,
+          clinically_ready: false,
+          outstanding_mandatory: ['assessment'],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: jest.fn(),
+      });
+      const { getByTestId } = render(
+        <CompleteConsultationScreen episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" />,
+      );
+      expect(getByTestId('completion-state-label').props.children).toBe('Not ready to complete');
     });
   });
 });

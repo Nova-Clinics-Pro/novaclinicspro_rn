@@ -1,38 +1,42 @@
-import { useEffect, useState } from 'react';
-import { axiosClient } from '../../../../../core/api/axiosClient';
+import { useEffect } from 'react';
+import { useEpisodeQuery } from '../../../../episodes/data/repositories/episodes.repository.impl';
+import { useClientDetailQuery } from '../../../../clients/data/repositories/clients.repository.impl';
 import { ClientEntity, HeaderEntity } from './types';
 
 export const useTreatmentSheetHeaderData = (tenantId: string, episodeId?: string | null) => {
-  const [episodeData, setEpisodeData] = useState<HeaderEntity | null>(null);
-  const [clientData, setClientData] = useState<ClientEntity | null>(null);
-  const [isLoadingHeaderData, setIsLoadingHeaderData] = useState(false);
+  const resolvedEpisodeId = episodeId || '';
+  const episodeQuery = useEpisodeQuery(tenantId, resolvedEpisodeId, {
+    enabled: Boolean(tenantId && resolvedEpisodeId),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  const clientId = episodeQuery.data?.client_id || '';
+  const clientQuery = useClientDetailQuery(tenantId, clientId, {
+    enabled: Boolean(tenantId && resolvedEpisodeId && clientId),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
   useEffect(() => {
-    const fetchHeaderData = async () => {
-      if (!episodeId || !tenantId) return;
+    const error = episodeQuery.error || clientQuery.error;
+    if (error) {
+      console.error('[TreatmentSheet] Failed to fetch header data:', error);
+    }
+  }, [episodeQuery.error, clientQuery.error]);
 
-      setIsLoadingHeaderData(true);
-      try {
-        const episodeResponse = await axiosClient.get(
-          `/api/v1/clinic/${tenantId}/episodes/${episodeId}`
-        );
-        setEpisodeData(episodeResponse.data);
-
-        if (episodeResponse.data.client_id) {
-          const clientResponse = await axiosClient.get(
-            `/api/v1/clinic/${tenantId}/clients/${episodeResponse.data.client_id}`
-          );
-          setClientData(clientResponse.data);
-        }
-      } catch (error) {
-        console.error('[TreatmentSheet] Failed to fetch header data:', error);
-      } finally {
-        setIsLoadingHeaderData(false);
-      }
-    };
-
-    fetchHeaderData();
-  }, [episodeId, tenantId]);
+  const episodeData = (episodeQuery.data as HeaderEntity | undefined) ?? null;
+  const clientData = (clientQuery.data as ClientEntity | undefined) ?? null;
+  const isLoadingHeaderData = Boolean(
+    episodeQuery.isFetching || (clientId && clientQuery.isFetching)
+  );
 
   return { episodeData, clientData, isLoadingHeaderData };
 };

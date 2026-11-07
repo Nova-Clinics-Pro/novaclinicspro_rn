@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import { StepDetailScreen } from '../../features/onboarding/presentation/pages/StepDetailScreen';
 
 const mockRouterReplace = jest.fn();
@@ -38,60 +38,35 @@ jest.mock('../../core/theme/useClinicTheme', () => ({
   }),
 }));
 
-jest.mock('../../features/onboarding/data/repositories/onboarding.repository.impl', () => ({
-  useOnboardingStatusQuery: () => ({
-    data: {
-      per_step_validation: {},
-    },
-    isLoading: false,
-    error: null,
-  }),
+jest.mock('../../features/onboarding/presentation/hooks/useJourneyFoundation', () => ({
+  useJourneyFoundation: () => ({ isLoading: false, projection: undefined }),
 }));
 
 jest.mock('../../features/onboarding/presentation/components/ErrorScreen', () => ({
   ErrorScreen: ({ message }: { message: string }) => message,
 }));
-jest.mock('../../features/onboarding/presentation/components/StepProgressHeader', () => ({
-  StepProgressHeader: () => null,
-}));
-jest.mock('../../features/onboarding/presentation/pages/steps/ClinicProfileScreen', () => ({
-  ClinicProfileScreen: () => null,
-}));
-jest.mock('../../features/onboarding/presentation/pages/steps/OperatingHoursScreen', () => ({
-  OperatingHoursScreen: () => null,
-}));
-jest.mock('../../features/onboarding/presentation/pages/steps/BillingSetupScreen', () => ({
-  BillingSetupScreen: () => null,
-}));
-jest.mock('../../features/onboarding/presentation/pages/steps/PaymentSetupScreen', () => ({
-  PaymentSetupScreen: () => null,
-}));
 
-describe('StepDetailScreen service catalogue alias routing', () => {
+describe('StepDetailScreen retired service catalogue aliases', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it.each(['services', 'services_offered', 'treatment_services'])(
-    'redirects %s to Treatments management',
-    async (stepCode) => {
+    'does not use the retired %s route redirect',
+    (stepCode) => {
       mockStepCode = stepCode;
 
       render(<StepDetailScreen />);
 
-      await waitFor(() => {
-        expect(mockRouterReplace).toHaveBeenCalledWith('/clinic-admin/settings/treatments');
-      });
+      expect(mockRouterReplace).not.toHaveBeenCalled();
     }
   );
 
-  it('does not redirect an unrecognised step code', async () => {
+  it('does not redirect an unrecognised step code', () => {
     mockStepCode = 'unknown_step';
 
     render(<StepDetailScreen />);
 
-    await waitFor(() => {
-      expect(mockRouterReplace).not.toHaveBeenCalled();
-    });
+    expect(mockRouterReplace).not.toHaveBeenCalled();
   });
 });

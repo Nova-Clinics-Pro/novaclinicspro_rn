@@ -12,7 +12,36 @@ import {
   RoomResponse,
   ListRoomsParams,
   PaginatedRoomsResponse,
+  OnboardingRoomSourceItem,
 } from '../models/rooms.dtos';
+
+const normalizeOnboardingRooms = (data: any): OnboardingRoomSourceItem[] => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+};
+
+/**
+ * Read rooms for the legacy onboarding form.
+ *
+ * The historical treatment-rooms endpoint is attempted only when the canonical
+ * rooms endpoint returns 404. Other failures remain failures.
+ */
+export const listOnboardingRoomsApi = async (
+  tenantId: string
+): Promise<OnboardingRoomSourceItem[]> => {
+  try {
+    const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/rooms`);
+    return normalizeOnboardingRooms(response.data);
+  } catch (error: any) {
+    if (error?.response?.status !== 404) throw error;
+    const response = await axiosClient.get(
+      `/api/v1/clinic/${tenantId}/treatment-rooms`
+    );
+    return normalizeOnboardingRooms(response.data);
+  }
+};
 
 /**
  * List rooms for a tenant

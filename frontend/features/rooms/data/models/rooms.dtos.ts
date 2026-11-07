@@ -69,6 +69,15 @@ export interface PaginatedRoomsResponse {
   limit: number;
 }
 
+/** Legacy onboarding room shape accepted by the setup form. */
+export interface OnboardingRoomSourceItem {
+  id?: string | null;
+  name?: string | null;
+  room_type?: string | null;
+  type?: string | null;
+  capacity?: number | string | null;
+}
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================

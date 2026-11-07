@@ -116,3 +116,31 @@ All four prior blockers are resolved: **F-1** (Episode binding · current-Visit 
 2. **Naming collision for requirements to resolve:** `tenant_visits.treatment_plan` (TEXT) vs the new Plan entity — implementers must never confuse them.
 
 **Recommended next activity:** author the formal R7 requirements from this frozen architecture. Do not reopen Decisions 1–9 or the Final Blocker Resolution unless Engineering Truth proves a direct contradiction that makes the model impossible.
+
+---
+
+# v1.1 Amendment Re-Verification *(2026-07-18 — Clinical History Hierarchy, `FR-HIST-1`/`FR-HIST-2`, Decision 10)*
+
+Re-run against the amended scope only — Decisions 1–9 and the Final Blocker Resolution are **not reopened**.
+
+| Check | Result |
+|---|---|
+| Backend ownership preserved | ✅ — encounter classification, Plan-to-session association, aggregates, legacy classification all backend-owned (FR-HIST-1/2, design.md §2.1a) |
+| DP-15 preserved | ✅ — history is one authoritative backend projection on the existing Clinical Workspace aggregate, not a second competing source; frontend structurally cannot produce a different grouping (FR-HIST-2 AC10) |
+| Frontend derivation removed | ✅ — `T-FE-C.5` explicitly removes `useClinicalTimelineData`'s local `completedSessionCount` computation (the verified ED-ARCH-007 defect); architecture test extends the T-0.8/T-0.9 "no FE clinical derivation" pattern to this file |
+| R7/R8 boundary still coherent | ✅ — history hierarchy is COS core (viewing existing patient course data); no lab/measurement/trend/AI content introduced; Decision 10's own rationale states this explicitly |
+| No advanced trends/labs/advice moved into R7 | ✅ — verified: `R7-HISTORY-HIERARCHY-AMENDMENT.md` and all amended documents cite only `appointment_type`, `treatment_lifecycle_resolver` states, and `treatment_sheet_row` facts — all already-R7-scoped signals, nothing R8-deferred |
+| Task plan remains implementation-ready | ✅ — 7 new atomic tasks added (`T-BE-A.3/A.4/A.5`, `T-FE-C.5/C.6/C.7`, `T-Z.9`), each with Files/Blocked-by/AC/Tests/Rollback; no existing task renumbered; 70→77 |
+| Treatment Plan dependency explicit | ✅ — `T-BE-A.3` blocked by `T-BE-D.4`/`T-BE-E.1`; design.md §7 Sequencing and the traceability matrix's critical path both state this as a hard dependency, not an assumption |
+| No contradiction remains | ✅ — 3-file contradiction sweep (requirements.md/design.md/tasks.md counts cross-checked: 44 requirements, 77 tasks, both internally consistent); the pre-existing `A-BE`/`BE Group A` lettering mismatch in `requirements-traceability-matrix.md` was found and **flagged explicitly**, not silently resolved (out of this amendment's scope — predates it) |
+
+**Additional verification specific to this amendment:**
+- **Legacy data-audit gate honored.** No automatic Sheet→Plan backfill is designed or scheduled; `T-BE-A.4` is explicitly blocked on the (not-yet-performed) cardinality audit, per FR-HIST-2's own "no automatic legacy backfill without a verified cardinality/data audit" rule.
+- **Sequencing does not block unrelated work.** Group -1's remaining tasks (T--1.4 onward) do not depend on this amendment; verified by inspecting their own `Blocked by` fields, none of which reference the new tasks.
+- **Debt correctly attributed, not duplicated.** `ED-ARCH-007` is a new debt item (neither `ED-ARCH-004` nor `ED-ARCH-006` accurately owns `useClinicalTimelineData`'s session-count defect — different files, different concerns) — recorded in both repos' `ENGINEERING-DEBT.md`, mapped to `T-FE-C.5`/`T-BE-A.5` via `ED-DEP-7`.
+
+## Verdict (amended scope)
+
+# R7 DESIGN REMAINS FROZEN AS AMENDED.
+
+The v1.1 amendment adds `FR-HIST-1`/`FR-HIST-2` and Decision 10 without reopening any prior decision, without introducing R8 scope, and without weakening backend clinical-truth ownership or DP-15. The amendment is fully sequenced (hard-dependent on Treatment Plan/Sessions), fully traced (requirements → design → tasks → traceability matrix, all four updated consistently), and its one newly-discovered architectural violation (`ED-ARCH-007`) is recorded, not silently fixed or silently ignored.

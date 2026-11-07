@@ -150,9 +150,8 @@ export const StaffLeaveScreen: React.FC = () => {
             await approveMutation.mutateAsync({ leaveId: leave.id });
             Alert.alert('Success', 'Leave request approved');
             refetch();
-          } catch (err: any) {
-            const message = err?.response?.data?.error || err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Failed to approve leave';
-            Alert.alert('Error', message);
+          } catch {
+            Alert.alert('Error', 'Failed to approve leave');
           }
         },
       },
@@ -179,9 +178,8 @@ export const StaffLeaveScreen: React.FC = () => {
       setSelectedLeave(null);
       Alert.alert('Success', 'Leave request rejected');
       refetch();
-    } catch (err: any) {
-      const message = err?.response?.data?.error || err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Failed to reject leave';
-      Alert.alert('Error', message);
+    } catch {
+      Alert.alert('Error', 'Failed to reject leave');
     }
   }, [selectedLeave, rejectReason, rejectMutation, refetch]);
 

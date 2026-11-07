@@ -44,6 +44,82 @@ import {
   OwnershipStatusResult,
 } from '../../domain/clinic-entry';
 
+export interface PaymentMethodsSourceResult {
+  paymentMethods: string[];
+  hasServerPaymentMethods: boolean;
+}
+
+export interface BillingSettingsSourceResult {
+  taxEnabled: boolean;
+  taxRate: string;
+  invoicePrefix: string;
+  hasServerBillingSettings: boolean;
+}
+
+export interface BillingSettingsInput {
+  tax_enabled: boolean;
+  tax_rate: number;
+  invoice_prefix: string;
+}
+
+const billingSettingsResult = (billing: any): BillingSettingsSourceResult => {
+  const source = billing ?? {};
+  const hasServerBillingSettings =
+    source.tax_enabled !== undefined ||
+    source.tax_rate !== undefined ||
+    Boolean(source.invoice_prefix);
+  return {
+    taxEnabled: source.tax_enabled ?? false,
+    taxRate: source.tax_rate !== undefined ? String(source.tax_rate) : '0',
+    invoicePrefix: source.invoice_prefix || 'INV',
+    hasServerBillingSettings,
+  };
+};
+
+/** Preserves the legacy fallback: settings is read only when tenant GET throws. */
+export const getBillingSettingsApi = async (
+  tenantId: string
+): Promise<BillingSettingsSourceResult> => {
+  try {
+    const { data } = await axiosClient.get(`/api/v1/tenants/${tenantId}`);
+    return billingSettingsResult(data);
+  } catch {
+    try {
+      const { data } = await axiosClient.get(`/api/v1/clinic/${tenantId}/settings`);
+      return billingSettingsResult(data?.billing);
+    } catch {
+      return billingSettingsResult(undefined);
+    }
+  }
+};
+
+export const saveBillingSettingsApi = async (
+  tenantId: string,
+  input: BillingSettingsInput
+): Promise<void> => {
+  await axiosClient.patch(`/api/v1/tenants/${tenantId}`, input);
+};
+
+export const getPaymentMethodsApi = async (tenantId: string): Promise<PaymentMethodsSourceResult> => {
+  try {
+    const { data } = await axiosClient.get(`/api/v1/tenants/${tenantId}`);
+    if (Array.isArray(data.payment_methods)) {
+      return { paymentMethods: data.payment_methods, hasServerPaymentMethods: true };
+    }
+    return { paymentMethods: ['cash'], hasServerPaymentMethods: false };
+  } catch {
+    try {
+      const { data } = await axiosClient.get(`/api/v1/clinic/${tenantId}/settings`);
+      if (Array.isArray(data.payment_methods)) {
+        return { paymentMethods: data.payment_methods, hasServerPaymentMethods: true };
+      }
+    } catch {
+      // Preserve the established default when neither legacy endpoint responds.
+    }
+    return { paymentMethods: ['cash'], hasServerPaymentMethods: false };
+  }
+};
+
 const throwClinicEntryError = (error: any): never => {
   const body = error?.response?.data?.detail?.error ?? error?.response?.data?.detail ?? {};
   throw new ClinicEntryTransportError(
