@@ -141,14 +141,14 @@ export const listStaffLeaveApi = async (
 
 /**
  * List all leave requests across all staff for a tenant (admin view)
- * GET /api/v1/clinic/{tenant_id}/leave
+ * GET /api/v1/clinic/{tenant_id}/leaves  (the backend route is plural; `/leave` 404s)
  */
 export const listAllStaffLeaveApi = async (
   tenantId: string,
   params?: ListStaffLeaveParams
 ): Promise<PaginatedLeaveResponse> => {
   const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/leave`,
+    `/api/v1/clinic/${tenantId}/leaves`,
     { params }
   );
   return response.data;
