@@ -1,5 +1,21 @@
 # NovaClinicsPro — Frontend (React Native / Expo)
 
+## Default operating mode — applies to EVERY request (no command or reminder needed)
+
+Treat any substantive request — however short or non-technical — as a full engineering task, and run the following automatically. The user will not ask you to check skills, standards, tests, or architecture; apply all of it anyway, on every request.
+
+1. **Understand & discover.** Translate a plain-language ask (e.g. "let patients cancel their own appointment") into the real clinical/product task before designing. Invoke the `novaclinics-engineering-truth` skill whenever docs, specs, DB state, or implementation might disagree, and `novaclinics-product-discovery` when the request touches product behaviour, workflows, navigation, ownership, or lifecycle.
+2. **Follow the rules.** Use `novaclinics-engineering-workflow` as the operating procedure, and enforce every invariant in this file — Clean Architecture (presentation → domain → data, no Axios/Supabase in presentation), React Query cache discipline, canonical route builders, capability-vs-RBAC separation, localization, tenant isolation, accessibility — without being told.
+3. **Plan on this (Opus) session yourself; do not delegate planning.** Produce a numbered plan: task, affected layers, files, risks, test/rollback.
+4. **Gate.** Proceed automatically for ordinary changes. STOP and show the plan for approval only when the change is destructive or irreversible, crosses a clinical-safety or tenant boundary, changes backend-authoritative state handling, or the request is ambiguous or contradicts its own sources.
+5. **Implement** via the `nova-implementer` subagent (Sonnet) — approved scope only, one task at a time.
+6. **Review** via the `nova-reviewer` subagent (Sonnet, fresh context): it runs the jest unit/component tests and the typecheck/lint/cp-boundary gates, and audits for Clean-Architecture, server-state, localization, and tenant-isolation deviations. For integration-level or pre-merge changes, also run the `nova-e2e` Playwright web suite (`/e2e`).
+7. **Deliver** the diffs, the exact test results, the reviewer's findings, and a short completion report. Never commit, push, or merge unless explicitly told to in this session.
+
+Approval rule: normal work follows the step-4 STOP conditions above. `/feature` is the strict mode of this same flow: it ALWAYS stops for explicit approval after the plan and before any implementation, whether or not a STOP condition applies.
+
+Where these live: the `nova-implementer`, `nova-reviewer` and `nova-e2e` agents are in `.claude/agents/`, and the `/feature` and `/e2e` commands are in `.claude/commands/`. They are tracked in Git (`.gitignore` re-includes only those two folders' Markdown files). The `novaclinics-*` skills come from the NovaClinics Claude plugin, not from this repository; if a skill is unavailable, follow this file directly. `.claude/settings.json`, `.claude/settings.local.json` and `.mcp.json` are local-only and never committed.
+
 Application code lives in `frontend/`. Run all package scripts from there.
 
 ## 1. Product identity
