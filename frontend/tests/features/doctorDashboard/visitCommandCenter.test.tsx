@@ -466,3 +466,43 @@ describe('VisitCommandCenter (T-FE-A.1)', () => {
     });
   });
 });
+
+describe('VisitCommandCenter step route param (one workspace instance per appointment)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useRouter as jest.Mock).mockReturnValue(router);
+    (useEpisodeWorkspaceData as jest.Mock).mockReturnValue(workspaceData);
+    mockGetClinicalWorkspaceApi.mockResolvedValue(notRecordedSnapshot);
+    mockGetClinicalWorkflowApi.mockResolvedValue(emptyWorkflowResolution);
+  });
+
+  const tree = (queryClient: QueryClient, initialStep?: 'assessment' | 'prescription') => (
+    <QueryClientProvider client={queryClient}>
+      <VisitCommandCenter episodeId="episode-1" appointmentId="appointment-1" clientId="client-1" initialStep={initialStep} />
+    </QueryClientProvider>
+  );
+
+  it('a same-appointment navigation to another step expands that step\'s section on the SAME mounted instance', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(tree(queryClient, 'assessment'));
+    expect(view.queryByText('Add Medication')).toBeNull(); // the prescription section is collapsed for the assessment step
+    view.rerender(tree(queryClient, 'prescription'));
+    await waitFor(() => expect(view.getByText('Add Medication')).toBeTruthy());
+  });
+
+  it('does not collapse a section the user already opened when the step changes', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(tree(queryClient, 'prescription'));
+    expect(view.getByText('Add Medication')).toBeTruthy();
+    view.rerender(tree(queryClient, 'assessment'));
+    expect(view.getByText('Add Medication')).toBeTruthy();
+  });
+
+  it('keeps the same instance: a step change does not remount the shell (the header stays rendered)', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(tree(queryClient, 'assessment'));
+    const before = view.getByText('Maya Rao');
+    view.rerender(tree(queryClient, 'prescription'));
+    expect(view.getByText('Maya Rao')).toBe(before);
+  });
+});

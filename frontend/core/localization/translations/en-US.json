@@ -1,4 +1,21 @@
 {
+  "unsavedWork": {
+    "title": "Unsaved changes",
+    "prescriptionDraft": "Prescription draft",
+    "message": "You have unsaved changes: {{items}}. Save them, discard them, or cancel and stay here.",
+    "intent": {
+      "exit": "You are leaving this consultation.",
+      "deepLink": "A link is trying to open another screen.",
+      "completion": "You are moving to the completion step.",
+      "logout": "You are signing out."
+    },
+    "save": "Save",
+    "discard": "Discard",
+    "cancel": "Cancel",
+    "saveFailed": "The draft could not be saved. Your changes are still here. Try again, discard them, or cancel.",
+    "discardFailed": "The draft could not be discarded. Try again or cancel.",
+    "tenantMismatch": "This draft belongs to a different clinic and cannot be saved here."
+  },
   "platformAdmin": {
     "title": "Platform clinic administration",
     "name": "Clinic name and code",

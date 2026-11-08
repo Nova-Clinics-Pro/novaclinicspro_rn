@@ -7,6 +7,7 @@ import { WorkspaceSaveStatusProvider } from '../../../features/episodes/presenta
 import { useEpisodeWorkspaceData } from '../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData';
 import { createPrescriptionApi, updatePrescriptionApi, listPrescriptionsApi } from '../../../features/prescriptions/data/datasources/prescriptions.api';
 import { prescriptionsKeys } from '../../../features/prescriptions/data/repositories/prescriptions.repository.impl';
+import { hasDirtyDrafts, resetUnsavedWorkForTests } from '../../../core/unsavedWork/unsavedWorkRegistry';
 
 // R3A · T-B.2 — PrescriptionModule's own tests. Migrated from
 // useConsultationWorkspace.test.tsx (load/save POST-then-PATCH),
@@ -33,6 +34,11 @@ import { prescriptionsKeys } from '../../../features/prescriptions/data/reposito
 // defeats jest.spyOn(realQueryClient, ...) needed by the invalidation tests.
 
 let mockFeatures: any = { clinic_type: 'ayurveda', freshness_v1_enabled: false };
+const mockAuth = { currentUser: { tenantId: 'tenant-1' }, selectedClinicId: null as string | null };
+
+jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
+  useAuth: () => mockAuth,
+}));
 
 jest.mock('../../../core/hooks/useFeatures', () => ({
   useFeatures: () => mockFeatures,
@@ -146,6 +152,10 @@ const addMedicationNamed = (utils: ReturnType<typeof renderModule>, name: string
 };
 
 describe('PrescriptionModule (R3A · T-B.2)', () => {
+  afterEach(() => {
+    resetUnsavedWorkForTests();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -233,50 +243,49 @@ describe('PrescriptionModule (R3A · T-B.2)', () => {
     });
   });
 
-  describe('FR-A4: save-before-transition (unmount-flush, own effect per design §6.4)', () => {
-    it('auto-saves an unsaved, non-empty prescription draft on unmount', async () => {
+  describe('draft protection (supersedes FR-A4 silent unmount-flush)', () => {
+    it('NEVER saves silently on unmount, even for a dirty, non-empty draft', async () => {
       const utils = renderModule();
       addMedicationNamed(utils, 'Amoxicillin');
-      expect(createPrescriptionApi).not.toHaveBeenCalled();
+      expect(hasDirtyDrafts()).toBe(true);
 
       utils.unmount();
-      await waitFor(() =>
-        expect(createPrescriptionApi).toHaveBeenCalledWith(
-          'tenant-1',
-          expect.objectContaining({ prescription_data: { medications: [{ name: 'Amoxicillin', dosage: '', frequency: '', duration: '' }] } }),
-        ),
-      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(createPrescriptionApi).not.toHaveBeenCalled();
+      expect(updatePrescriptionApi).not.toHaveBeenCalled();
     });
 
-    it('does NOT auto-save on unmount if the medication list has no real name (empty draft)', async () => {
+    it('reports a dirty draft to the unsaved-work registry once a medication has a real name', () => {
       const utils = renderModule();
+      expect(hasDirtyDrafts()).toBe(false);
       fireEvent.press(utils.getByText('Add Medication'));
-      // Leave the name field empty.
-      utils.unmount();
-      await act(async () => {
-        await Promise.resolve();
-      });
-      expect(createPrescriptionApi).not.toHaveBeenCalled();
+      expect(hasDirtyDrafts()).toBe(false); // an empty row is not worth protecting
+      const nameFields = utils.getAllByPlaceholderText('name');
+      fireEvent.changeText(nameFields[nameFields.length - 1], 'Aspirin');
+      expect(hasDirtyDrafts()).toBe(true);
     });
 
-    it('does NOT auto-save on unmount if nothing was edited (not dirty)', async () => {
-      const utils = renderModule();
-      utils.unmount();
-      await act(async () => {
-        await Promise.resolve();
-      });
-      expect(createPrescriptionApi).not.toHaveBeenCalled();
+    it('is not dirty when nothing was edited', () => {
+      renderModule();
+      expect(hasDirtyDrafts()).toBe(false);
     });
 
-    it('does NOT auto-save on unmount after "Mark as Not Required" (intentional resolution)', async () => {
+    it('is not dirty after "Mark as Not Required" (intentional resolution)', () => {
       const utils = renderModule();
       addMedicationNamed(utils, 'Aspirin');
+      expect(hasDirtyDrafts()).toBe(true);
       fireEvent.press(utils.getByText('Mark as Not Required'));
+      expect(hasDirtyDrafts()).toBe(false);
+    });
+
+    it('unregisters from the registry when the module unmounts', () => {
+      const utils = renderModule();
+      addMedicationNamed(utils, 'Aspirin');
+      expect(hasDirtyDrafts()).toBe(true);
       utils.unmount();
-      await act(async () => {
-        await Promise.resolve();
-      });
-      expect(createPrescriptionApi).not.toHaveBeenCalled();
+      expect(hasDirtyDrafts()).toBe(false);
     });
   });
 

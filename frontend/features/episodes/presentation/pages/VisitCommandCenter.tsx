@@ -102,6 +102,7 @@ import { resolveCosPresentationConfig } from '../config/episodeWorkspaceConfig';
 import { SectionKey } from '../hooks/useConsultationWorkspace';
 import type { CosWorkspaceStep } from '../../../doctorDashboard/application/consultationRoutes';
 import { InvalidWorkspaceState } from '../components/InvalidWorkspaceState';
+import { WorkspaceExitGuard } from '../navigation/WorkspaceExitGuard';
 
 export interface VisitCommandCenterProps {
   episodeId: string;
@@ -158,6 +159,17 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permis
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
     new Set(initialStep ? INITIAL_EXPANDED_SECTIONS[initialStep] ?? ['chiefComplaint'] : ['chiefComplaint']),
   );
+  // A same-appointment navigation to another step reuses this instance (one workspace per appointment), so the
+  // `step` route param must keep driving the sections: expand the new step's sections (adjusted during render, not
+  // in an effect). Nothing is collapsed, so a section the user opened stays open.
+  const [syncedStep, setSyncedStep] = useState<CosWorkspaceStep | undefined>(initialStep);
+  if (syncedStep !== initialStep) {
+    setSyncedStep(initialStep);
+    if (initialStep) {
+      const stepSections = INITIAL_EXPANDED_SECTIONS[initialStep] ?? ['chiefComplaint'];
+      setExpandedSections((prev) => new Set([...prev, ...stepSections]));
+    }
+  }
   const toggleSection = (key: SectionKey) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -197,6 +209,7 @@ const VisitCommandCenterShell: React.FC<{ initialStep?: CosWorkspaceStep; permis
 
   return (
     <SafeAreaView testID="visit-command-center" accessibilityLabel={rolePresentation.config?.labelKey ?? 'workspace'} style={[styles.safe, { backgroundColor: colors.background.default }]}>
+      <WorkspaceExitGuard />
       <View
         style={[
           styles.header,
