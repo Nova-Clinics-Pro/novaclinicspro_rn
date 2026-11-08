@@ -265,7 +265,7 @@ export const MultiDayTreatmentSection: React.FC<MultiDayTreatmentSectionProps> =
             >
               <Ionicons name="create-outline" size={16} color={theme.colors.surface.elevated} />
               <Text style={[styles.primaryButtonText, { color: theme.colors.surface.elevated }]}>
-                Document Today's Treatment
+                Document Today&apos;s Treatment
               </Text>
             </TouchableOpacity>
           )}

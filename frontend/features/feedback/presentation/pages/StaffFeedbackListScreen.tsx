@@ -100,8 +100,10 @@ export const StaffFeedbackListScreen: React.FC<StaffFeedbackListScreenProps> = (
     }
   );
 
-  // Update items when data changes
-  React.useEffect(() => {
+  // Update items when data changes (adjusted during render when data or offset change, not in an effect)
+  const [syncedPage, setSyncedPage] = useState<{ data: typeof data; offset: number } | null>(null);
+  if (!syncedPage || syncedPage.data !== data || syncedPage.offset !== offset) {
+    setSyncedPage({ data, offset });
     if (data?.items) {
       if (offset === 0) {
         setAllItems(data.items);
@@ -109,7 +111,7 @@ export const StaffFeedbackListScreen: React.FC<StaffFeedbackListScreenProps> = (
         setAllItems((prev) => [...prev, ...data.items]);
       }
     }
-  }, [data, offset]);
+  }
 
   // Handlers
   const handlePeriodChange = useCallback((newPeriod: KPIPeriod) => {

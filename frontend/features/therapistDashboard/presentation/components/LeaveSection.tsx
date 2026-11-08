@@ -57,10 +57,17 @@ export const LeaveSection: React.FC<LeaveSectionProps> = ({
 }) => {
   const [showApplyModal, setShowApplyModal] = useState(false);
 
-  // Open modal when triggered externally (e.g. HR section button)
-  React.useEffect(() => {
+  // Open modal when triggered externally (e.g. HR section button). The modal state is adjusted during render
+  // when the trigger changes; the parent is told it was handled by the effect below.
+  const [syncedExternalOpen, setSyncedExternalOpen] = useState<boolean | undefined | null>(null);
+  if (syncedExternalOpen !== externalOpen) {
+    setSyncedExternalOpen(externalOpen);
     if (externalOpen) {
       setShowApplyModal(true);
+    }
+  }
+  React.useEffect(() => {
+    if (externalOpen) {
       onExternalOpenHandled?.();
     }
   }, [externalOpen]);

@@ -277,20 +277,26 @@ export const TherapistDashboardScreen: React.FC = () => {
   >({});
   const nonExecutionMutation = useRecordSessionNonExecutionMutation(tenantId);
 
-  const prevSubmitStatusRef = React.useRef<string>('idle');
-  useEffect(() => {
+  // Close the completion modal when a submit conflicts or finishes. The modal state is adjusted during render
+  // when the submit status changes (previous status kept in state); resetting the mutation stays in the effect.
+  const [prevSubmitStatus, setPrevSubmitStatus] = useState<string>('idle');
+  if (prevSubmitStatus !== submitStatus) {
+    setPrevSubmitStatus(submitStatus);
     if (submitStatus === 'conflict') {
       setCompletionModalOpen(false);
       setSelectedRowId(null);
       setSelectedAppointmentId(null);
-      resetCompletion();
-    } else if (submitStatus === 'idle' && prevSubmitStatusRef.current === 'completing') {
+    } else if (submitStatus === 'idle' && prevSubmitStatus === 'completing') {
       // Success: mutation went completing → idle, close the modal
       setCompletionModalOpen(false);
       setSelectedRowId(null);
       setSelectedAppointmentId(null);
     }
-    prevSubmitStatusRef.current = submitStatus;
+  }
+  useEffect(() => {
+    if (submitStatus === 'conflict') {
+      resetCompletion();
+    }
   }, [submitStatus, resetCompletion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Leave ─────────────────────────────────────────────────────────────────
@@ -498,14 +504,20 @@ export const TherapistDashboardScreen: React.FC = () => {
     [startSession, orderVersionCache, tenantId, fetchTreatmentOrder, updateStatusMutation, invalidateAfterCompletion]
   );
 
-  // React to start session status changes
+  // React to start session status changes. The order-version cache is cleared during render when the status
+  // changes; the alerts and the mutation reset stay in the effect below.
+  const [syncedStartStatus, setSyncedStartStatus] = useState<string | null>(null);
+  if (syncedStartStatus !== startSession.status) {
+    setSyncedStartStatus(startSession.status);
+    if (startSession.status === 'success' || startSession.status === 'conflict') {
+      setOrderVersionCache({});
+    }
+  }
   useEffect(() => {
     if (startSession.status === 'success') {
-      setOrderVersionCache({});
       startSession.reset();
     } else if (startSession.status === 'conflict') {
       Alert.alert('Session Updated', startSession.errorMessage ?? 'This session was updated elsewhere. Refreshing…');
-      setOrderVersionCache({});
       startSession.reset();
     } else if (startSession.status === 'error' && startSession.errorMessage) {
       Alert.alert('Error', startSession.errorMessage);

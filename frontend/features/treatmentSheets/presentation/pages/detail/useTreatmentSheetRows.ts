@@ -9,7 +9,7 @@
  * this hook's own success/failure handling (Alert, isSaving/isEditing
  * state, `refetch()`) is completely unchanged.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import {
   useUpdateAllTreatmentSheetRowsMutation,
@@ -44,11 +44,15 @@ export const useTreatmentSheetRows = ({
   const updateRowMutation = useUpdateTreatmentSheetRowMutation(tenantId, treatmentSheetId);
   const updateAllRowsMutation = useUpdateAllTreatmentSheetRowsMutation(tenantId, treatmentSheetId);
 
-  useEffect(() => {
-    if (!treatmentSheet?.rows) return;
-    setHasBeenSavedOnce(hasSavedRowContent(treatmentSheet.rows));
-    setRowsData(buildRows(treatmentSheet.rows));
-  }, [treatmentSheet]);
+  // Re-seed the editable rows whenever the loaded sheet changes (adjusted during render, not in an effect).
+  const [syncedSheet, setSyncedSheet] = useState<{ value: typeof treatmentSheet } | null>(null);
+  if (!syncedSheet || syncedSheet.value !== treatmentSheet) {
+    setSyncedSheet({ value: treatmentSheet });
+    if (treatmentSheet?.rows) {
+      setHasBeenSavedOnce(hasSavedRowContent(treatmentSheet.rows));
+      setRowsData(buildRows(treatmentSheet.rows));
+    }
+  }
 
   const updateRowField = useCallback((index: number, field: keyof RowFormData, value: string) => {
     setRowsData(prev => {

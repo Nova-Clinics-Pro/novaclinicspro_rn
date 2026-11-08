@@ -127,14 +127,17 @@ export const useInventorySearch = (tenantId: string, query: string) => {
     [debouncedQuery]
   );
 
+  // A too-short query clears the debounced value immediately (corrected during render, not in an effect);
+  // a long enough one is debounced by the timer below.
+  const queryTooShort = !query || query.length < 2;
+  if (queryTooShort && debouncedQuery !== '') {
+    setDebouncedQuery('');
+  }
   useEffect(() => {
-    if (!query || query.length < 2) {
-      setDebouncedQuery('');
-      return;
-    }
+    if (queryTooShort) return;
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(timer);
-  }, [query, tenantId]);
+  }, [query, queryTooShort, tenantId]);
 
   const { data, isFetching } = useInventoryItemsListQuery(tenantId, params, {
     enabled: !!tenantId && debouncedQuery.length >= 2,
@@ -160,6 +163,47 @@ interface MaterialNameFieldProps {
   index: number;
 }
 
+interface MaterialQuantityFieldProps {
+  index: number;
+  value: number;
+  onChange: (value: number) => void;
+  onBlur: () => void;
+  fieldError?: { message?: string };
+}
+
+// A component of its own (not a render-prop body) so it can own the local text state.
+const MaterialQuantityField: React.FC<MaterialQuantityFieldProps> = ({ index, value, onChange, onBlur, fieldError }) => {
+  // Keep a local string so intermediate input (e.g. "5." or "") doesn't
+  // corrupt the numeric RHF value while the user is still typing.
+  const [rawText, setRawText] = useState(value === 0 ? '' : String(value));
+  return (
+    <View style={styles.fieldGroup}>
+      <Text style={styles.label}>Quantity *</Text>
+      <TextInput
+        style={[styles.input, fieldError && styles.inputError]}
+        value={rawText}
+        onChangeText={(text) => {
+          setRawText(text);
+          const num = parseFloat(text);
+          onChange(isNaN(num) ? 0 : num);
+        }}
+        onBlur={() => {
+          // Commit final parsed value on blur
+          const num = parseFloat(rawText);
+          onChange(isNaN(num) ? 0 : num);
+          onBlur();
+        }}
+        placeholder="e.g. 50"
+        keyboardType="numeric"
+        accessibilityLabel={`Material ${index + 1} quantity`}
+      />
+      {fieldError && (
+        <Text style={styles.fieldError}>{fieldError.message}</Text>
+      )}
+    </View>
+  );
+};
+
 const MaterialNameField: React.FC<MaterialNameFieldProps> = ({
   value, onChange, tenantId, error, index,
 }) => {
@@ -169,8 +213,12 @@ const MaterialNameField: React.FC<MaterialNameFieldProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const { results, isSearching } = useInventorySearch(tenantId, inputText);
 
-  // Sync external value changes (e.g. reset)
-  useEffect(() => { setInputText(value); }, [value]);
+  // Sync external value changes (e.g. reset) - adjusted during render when `value` changes, not in an effect
+  const [syncedValue, setSyncedValue] = useState<string | null>(null);
+  if (syncedValue !== value) {
+    setSyncedValue(value);
+    setInputText(value);
+  }
 
   const handleTextChange = (text: string) => {
     setInputText(text);
@@ -311,37 +359,15 @@ const MaterialRow: React.FC<MaterialRowProps> = ({
       <Controller
         control={control}
         name={`materials.${index}.quantity_used`}
-        render={({ field: { onChange, onBlur, value } }) => {
-          // Keep a local string so intermediate input (e.g. "5." or "") doesn't
-          // corrupt the numeric RHF value while the user is still typing.
-          const [rawText, setRawText] = React.useState(value === 0 ? '' : String(value));
-          return (
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Quantity *</Text>
-              <TextInput
-                style={[styles.input, rowErrors?.quantity_used && styles.inputError]}
-                value={rawText}
-                onChangeText={(text) => {
-                  setRawText(text);
-                  const num = parseFloat(text);
-                  onChange(isNaN(num) ? 0 : num);
-                }}
-                onBlur={() => {
-                  // Commit final parsed value on blur
-                  const num = parseFloat(rawText);
-                  onChange(isNaN(num) ? 0 : num);
-                  onBlur();
-                }}
-                placeholder="e.g. 50"
-                keyboardType="numeric"
-                accessibilityLabel={`Material ${index + 1} quantity`}
-              />
-              {rowErrors?.quantity_used && (
-                <Text style={styles.fieldError}>{rowErrors.quantity_used.message}</Text>
-              )}
-            </View>
-          );
-        }}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <MaterialQuantityField
+            index={index}
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            fieldError={rowErrors?.quantity_used}
+          />
+        )}
       />
 
       {/* Unit */}

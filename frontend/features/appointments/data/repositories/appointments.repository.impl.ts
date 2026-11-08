@@ -338,6 +338,9 @@ export const useCancelAppointmentMutation = (tenantId: string) => {
   });
 };
 
+type LegacyRescheduleVariables = { new_start: string; new_end?: string };
+type RescheduleVariables = { tenantId: string; appointmentId: string; newStart: string; newEnd?: string };
+
 /**
  * Hook to reschedule an appointment
  * Supports two usage patterns:
@@ -349,32 +352,34 @@ export function useRescheduleAppointmentMutation(tenantId: string, appointmentId
 export function useRescheduleAppointmentMutation(tenantId?: string, appointmentId?: string) {
   const queryClient = useQueryClient();
 
-  // If tenantId and appointmentId are provided, use the legacy signature
-  if (tenantId && appointmentId) {
-    return useMutation<AppointmentRescheduleResponse, Error, { new_start: string; new_end?: string }>({
-      mutationFn: (payload) => {
-        return rescheduleAppointmentApi(tenantId, appointmentId, payload);
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() });
-        queryClient.invalidateQueries({ queryKey: appointmentsKeys.detail(tenantId, appointmentId) });
-      },
-    });
-  }
+  // Legacy signature: tenantId and appointmentId were given up front and only the new dates are passed to mutate.
+  const legacyScope = tenantId && appointmentId ? { tenantId, appointmentId } : null;
 
-  // New signature: pass everything in mutate call
-  return useMutation<AppointmentRescheduleResponse, Error, { tenantId: string; appointmentId: string; newStart: string; newEnd?: string }>({
-    mutationFn: ({ tenantId: tid, appointmentId: aid, newStart, newEnd }) => {
-      return rescheduleAppointmentApi(tid, aid, { 
-        new_start: newStart, 
+  // Exactly one useMutation call on every render, whichever signature is used (hooks must not be called
+  // conditionally); the signature only selects the request and which caches are invalidated.
+  const mutation = useMutation<AppointmentRescheduleResponse, Error, LegacyRescheduleVariables | RescheduleVariables>({
+    mutationFn: (variables) => {
+      if (legacyScope) {
+        return rescheduleAppointmentApi(legacyScope.tenantId, legacyScope.appointmentId, variables as LegacyRescheduleVariables);
+      }
+      const { tenantId: tid, appointmentId: aid, newStart, newEnd } = variables as RescheduleVariables;
+      return rescheduleAppointmentApi(tid, aid, {
+        new_start: newStart,
         new_end: newEnd,
-        appointment_start: newStart 
+        appointment_start: newStart
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentsKeys.lists() });
+      if (legacyScope) {
+        queryClient.invalidateQueries({ queryKey: appointmentsKeys.detail(legacyScope.tenantId, legacyScope.appointmentId) });
+      }
     },
   });
+
+  // The overloads above give each call site the exact mutate() variables type for its signature.
+  return mutation as unknown as ReturnType<typeof useMutation<AppointmentRescheduleResponse, Error, RescheduleVariables>> &
+    ReturnType<typeof useMutation<AppointmentRescheduleResponse, Error, LegacyRescheduleVariables>>;
 }
 
 /**

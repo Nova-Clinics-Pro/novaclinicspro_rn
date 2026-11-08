@@ -279,7 +279,7 @@ export const StaffLeaveScreen: React.FC = () => {
         {/* No results hint */}
         {showDropdown && debouncedSearch.length >= MIN_SEARCH_LENGTH && dropdownResults.length === 0 && (
           <View style={styles.noResults}>
-            <Text style={styles.noResultsText}>No staff found for "{debouncedSearch}"</Text>
+            <Text style={styles.noResultsText}>No staff found for &quot;{debouncedSearch}&quot;</Text>
           </View>
         )}
 

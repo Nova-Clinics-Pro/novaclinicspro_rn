@@ -120,7 +120,7 @@ export const ClinicSettingsScreen: React.FC = () => {
             <Ionicons name="settings" size={32} color="#2F6F4E" />
           </View>
           <Text style={styles.introText}>
-            Configure your clinic's operational settings, rooms, services, and scheduling rules.
+            Configure your clinic&apos;s operational settings, rooms, services, and scheduling rules.
           </Text>
         </View>
 

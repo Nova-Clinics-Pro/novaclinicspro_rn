@@ -179,7 +179,7 @@ export const LinkEpisodeSheet: React.FC = () => {
             <Ionicons name="folder-open-outline" size={64} color={colors.text.tertiary} />
             <Text style={styles.emptyTitle}>No active episodes</Text>
             <Text style={styles.emptyText}>
-              This client doesn't have any active episodes yet. You can create a new episode for
+              This client doesn&apos;t have any active episodes yet. You can create a new episode for
               this appointment.
             </Text>
             <TouchableOpacity style={styles.createButton} onPress={handleCreateNew}>

@@ -21,7 +21,9 @@ jest.mock('../../../core/theme/useClinicTheme', () => ({
 
 jest.mock('../../../core/components/CrossPlatformDateTimePicker', () => {
   const { Text } = require('react-native');
-  return () => <Text testID="staff-date-picker">picker</Text>;
+  const DatePickerMock = () => <Text testID="staff-date-picker">picker</Text>;
+  DatePickerMock.displayName = 'DatePickerMock';
+  return DatePickerMock;
 });
 
 describe('StaffForm date of birth field', () => {

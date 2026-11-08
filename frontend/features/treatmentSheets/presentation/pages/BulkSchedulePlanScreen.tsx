@@ -222,44 +222,42 @@ export const BulkSchedulePlanScreen: React.FC = () => {
   const [assignments, setAssignments] = useState<Record<string, RowAssignment>>({});
   const [initialized, setInitialized] = useState(false);
 
-  // Initialise assignments from order rows (runs once)
-  React.useEffect(() => {
-    if (order && !initialized) {
-      const now = new Date();
-      const defaultTime = new Date(now);
-      defaultTime.setHours(9, 0, 0, 0);
+  // Initialise assignments from order rows (once; adjusted during render, not in an effect)
+  if (order && !initialized) {
+    const now = new Date();
+    const defaultTime = new Date(now);
+    defaultTime.setHours(9, 0, 0, 0);
 
-      const init: Record<string, RowAssignment> = {};
-      order.rows.forEach(row => {
-        if (row.status === 'CANCELLED') return; // skip cancelled rows
-        const existingDate = row.scheduled_date
-          ? new Date(row.scheduled_date + 'T00:00:00')
-          : new Date(now);
-        const existingTime = row.scheduled_time
-          ? (() => {
-              const [h, m] = row.scheduled_time.split(':').map(Number);
-              const t = new Date();
-              t.setHours(h, m, 0, 0);
-              return t;
-            })()
-          : defaultTime;
+    const init: Record<string, RowAssignment> = {};
+    order.rows.forEach(row => {
+      if (row.status === 'CANCELLED') return; // skip cancelled rows
+      const existingDate = row.scheduled_date
+        ? new Date(row.scheduled_date + 'T00:00:00')
+        : new Date(now);
+      const existingTime = row.scheduled_time
+        ? (() => {
+            const [h, m] = row.scheduled_time.split(':').map(Number);
+            const t = new Date();
+            t.setHours(h, m, 0, 0);
+            return t;
+          })()
+        : defaultTime;
 
-        init[row.id] = {
-          rowId: row.id,
-          dayNumber: row.day_number,
-          currentStatus: row.status,
-          staffId: row.assigned_staff_id ?? '',
-          therapistIds: row.assigned_staff_id ? [row.assigned_staff_id] : [],
-          roomId: '',
-          date: existingDate,
-          time: existingTime,
-          isPreFilled: !!row.scheduled_date,
-        };
-      });
-      setAssignments(init);
-      setInitialized(true);
-    }
-  }, [order, initialized]);
+      init[row.id] = {
+        rowId: row.id,
+        dayNumber: row.day_number,
+        currentStatus: row.status,
+        staffId: row.assigned_staff_id ?? '',
+        therapistIds: row.assigned_staff_id ? [row.assigned_staff_id] : [],
+        roomId: '',
+        date: existingDate,
+        time: existingTime,
+        isPreFilled: !!row.scheduled_date,
+      };
+    });
+    setAssignments(init);
+    setInitialized(true);
+  }
 
   // ── Date/time picker state ────────────────────────────────────────────────
   const [pickerRowId, setPickerRowId] = useState<string | null>(null);
@@ -433,7 +431,7 @@ export const BulkSchedulePlanScreen: React.FC = () => {
         <View style={[styles.notesBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
           <Ionicons name="document-text-outline" size={16} color="#B45309" />
           <Text style={[styles.notesText, { color: '#92400E' }]} numberOfLines={3}>
-            Doctor's notes: {order.order_notes}
+            Doctor&apos;s notes: {order.order_notes}
           </Text>
         </View>
       ) : null}

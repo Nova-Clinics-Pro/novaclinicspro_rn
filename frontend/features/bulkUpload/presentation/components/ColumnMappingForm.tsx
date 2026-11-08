@@ -3,7 +3,7 @@
  * Allows mapping CSV columns to entity fields
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -43,12 +43,14 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
   const targetFields = getSampleFields(entityType);
   const requiredFields = getRequiredFields(entityType);
 
-  // Initialize with suggested mapping
-  useEffect(() => {
+  // Initialize with suggested mapping (adjusted during render when it changes, not in an effect)
+  const [syncedSuggestion, setSyncedSuggestion] = useState<{ value: typeof suggestedMapping } | null>(null);
+  if (!syncedSuggestion || syncedSuggestion.value !== suggestedMapping) {
+    setSyncedSuggestion({ value: suggestedMapping });
     if (suggestedMapping) {
       setMapping(suggestedMapping);
     }
-  }, [suggestedMapping]);
+  }
 
   const handleFieldSelect = (csvColumn: string, targetField: string) => {
     setMapping((prev) => ({

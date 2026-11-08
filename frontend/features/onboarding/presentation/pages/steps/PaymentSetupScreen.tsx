@@ -3,7 +3,7 @@
  * Configure payment methods
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,45 +22,68 @@ interface PaymentSetupScreenProps {
   draftBaseEvidence?: DraftRevisionEvidence;
 }
 
+const paymentSnapshot = (methods: string[]): string => JSON.stringify({ selectedMethods: methods });
+
 export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, onRegisterSaveHandler, draftBaseEvidence }: PaymentSetupScreenProps) {
   const theme = useClinicTheme();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [selectedMethods, setSelectedMethods] = useState<string[]>(['cash']);
   const { setPaymentMethods, getStepData } = useWizardStore();
-  const [draftRestored, setDraftRestored] = useState(false);
-  const initialSnapshotRef = useRef<string | null>(null);
-  const restoredSnapshotRef = useRef<string | null>(null);
+  // Content of the server result most recently applied (null until the first one arrives: the loading state).
+  // Compared by content, so a new object with identical content is not treated as new data.
+  const [syncedKey, setSyncedKey] = useState<string | null>(null);
+  // Snapshot of what the server holds (or was last saved): the "no change" baseline for submit.
+  const [baselineSnapshot, setBaselineSnapshot] = useState<string | null>(null);
+  // Snapshot of a restored wizard draft; non-null while the "restored" indicator is shown.
+  const [restoredSnapshot, setRestoredSnapshot] = useState<string | null>(null);
+  // True once the user has edited the selection (reset after a successful save).
+  const [edited, setEdited] = useState(false);
+  const loading = syncedKey === null;
+  const draftRestored = restoredSnapshot !== null;
 
   const submitStepMutation = useSubmitStepMutation(tenantId, 'payment_setup');
   const paymentMethodsQuery = usePaymentMethodsQuery(tenantId);
 
-  useEffect(() => {
-    if (!paymentMethodsQuery.isLoading && paymentMethodsQuery.data) {
-      const { paymentMethods, hasServerPaymentMethods } = paymentMethodsQuery.data;
-      setSelectedMethods(paymentMethods);
-      initialSnapshotRef.current = JSON.stringify({ selectedMethods: paymentMethods });
+  // Server data -> selection, applied during render when a new result arrives (not in an effect).
+  //  - The baseline always follows the server, so "no change" means "equal to what the server holds".
+  //  - The selection itself is only replaced while the user has no unsaved edits: a refetch must never
+  //    overwrite an in-progress selection.
+  //  - With no server methods, a stored wizard draft is restored (read when the data arrives).
+  const serverResult = paymentMethodsQuery.isLoading ? undefined : paymentMethodsQuery.data;
+  const serverKey = serverResult ? JSON.stringify(serverResult) : null;
+  if (serverResult && serverKey !== syncedKey) {
+    setSyncedKey(serverKey);
+    const { paymentMethods: serverMethods, hasServerPaymentMethods } = serverResult;
+    setBaselineSnapshot(paymentSnapshot(serverMethods));
+    const hasUnsavedEdits = edited && paymentSnapshot(selectedMethods) !== baselineSnapshot;
+    if (!hasUnsavedEdits) {
+      let nextMethods = serverMethods;
+      let restored: string | null = null;
       if (!hasServerPaymentMethods) {
         const zustandData = getStepData('payment_setup');
         if (Array.isArray(zustandData?.payment_methods)) {
-          setSelectedMethods(zustandData.payment_methods);
-          restoredSnapshotRef.current = JSON.stringify({ selectedMethods: zustandData.payment_methods });
-          setDraftRestored(true);
+          nextMethods = zustandData.payment_methods;
+          restored = paymentSnapshot(nextMethods);
         }
       }
-      setLoading(false);
+      setSelectedMethods(nextMethods);
+      setRestoredSnapshot(restored);
+      setEdited(false);
     }
-  }, [paymentMethodsQuery.isLoading, paymentMethodsQuery.data, getStepData]);
+  }
+
+  // User edits: mark the selection edited, and drop the "restored" indicator once it no longer matches the draft.
+  const updateSelection = (next: string[]) => {
+    setSelectedMethods(next);
+    setEdited(true);
+    if (restoredSnapshot !== null && paymentSnapshot(next) !== restoredSnapshot) {
+      setRestoredSnapshot(null);
+    }
+  };
 
   // Save to Zustand whenever form data changes
   useEffect(() => {
     if (!loading) {
-      const currentSnapshot = JSON.stringify({ selectedMethods });
-      if (draftRestored && restoredSnapshotRef.current !== currentSnapshot) {
-        setDraftRestored(false);
-        restoredSnapshotRef.current = null;
-      }
-
       const timeout = setTimeout(() => {
         setPaymentMethods({
           payment_methods: selectedMethods,
@@ -69,7 +92,7 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
 
       return () => clearTimeout(timeout);
     }
-  }, [selectedMethods, loading, setPaymentMethods, draftRestored, draftBaseEvidence]);
+  }, [selectedMethods, loading, setPaymentMethods, draftBaseEvidence]);
 
 
   const paymentMethods = [
@@ -85,9 +108,9 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
         Alert.alert('Error', 'At least one payment method is required');
         return;
       }
-      setSelectedMethods(selectedMethods.filter((id) => id !== methodId));
+      updateSelection(selectedMethods.filter((id) => id !== methodId));
     } else {
-      setSelectedMethods([...selectedMethods, methodId]);
+      updateSelection([...selectedMethods, methodId]);
     }
   };
 
@@ -100,10 +123,10 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
     const currentSnapshot = JSON.stringify({ selectedMethods });
     
     // Check if data has changed
-    const hasChanges = currentSnapshot !== initialSnapshotRef.current;
+    const hasChanges = currentSnapshot !== baselineSnapshot;
     
     // If no changes, just advance without API call
-    if (!hasChanges && initialSnapshotRef.current !== null) {
+    if (!hasChanges && baselineSnapshot !== null) {
       if (isWizardMode && onSuccess) {
         onSuccess();
       }
@@ -121,9 +144,9 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       });
 
       // Update snapshot after successful save
-      initialSnapshotRef.current = currentSnapshot;
-      restoredSnapshotRef.current = null;
-      setDraftRestored(false);
+      setBaselineSnapshot(currentSnapshot);
+      setRestoredSnapshot(null);
+      setEdited(false);
       await clearStepDraftAndSync('payment_setup');
 
       // In wizard mode, call onSuccess callback
@@ -146,7 +169,7 @@ export function PaymentSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       }
       throw error;
     }
-  }, [loading, selectedMethods, submitStepMutation, isWizardMode, onSuccess, tenantId, router]);
+  }, [loading, selectedMethods, baselineSnapshot, submitStepMutation, isWizardMode, onSuccess, tenantId, router]);
 
   // Register/update the save handler with wizard whenever it changes
   useEffect(() => {

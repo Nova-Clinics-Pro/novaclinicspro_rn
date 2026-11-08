@@ -143,7 +143,6 @@ function CapabilitiesSettingsScreenInner(): React.ReactElement {
       Alert.alert('Unable to update', 'Failed to update this capability. Please try again.');
     }
 
-    setTogglingCode(null);
     reset();
   }, [status, rejection, togglingCode, reset]);
 

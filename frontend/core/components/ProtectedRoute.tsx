@@ -110,7 +110,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <View style={styles.container}>
           <Ionicons name="lock-closed" size={64} color={colors.error.main} />
           <Text style={styles.errorText}>Access Denied</Text>
-          <Text style={styles.text}>You don't have permission to access this page.</Text>
+          <Text style={styles.text}>You don&apos;t have permission to access this page.</Text>
           <Text style={styles.permissionInfo}>
             Required: {requiredPermissions.join(requireAll ? ' AND ' : ' OR ')}
           </Text>

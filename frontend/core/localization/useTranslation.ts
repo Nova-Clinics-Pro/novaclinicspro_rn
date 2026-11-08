@@ -9,7 +9,7 @@
  * const message = t('errors.network.generic');
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { t as translate, changeLanguage, getCurrentLocale, LocaleCode, SUPPORTED_LOCALES } from './i18n';
 
 interface UseTranslationReturn {
@@ -39,11 +39,6 @@ interface UseTranslationReturn {
 export const useTranslation = (): UseTranslationReturn => {
   const [locale, setLocale] = useState<LocaleCode>(getCurrentLocale());
   const [, forceUpdate] = useState({});
-
-  // Update locale state when it changes
-  useEffect(() => {
-    setLocale(getCurrentLocale());
-  }, []);
 
   const changeLocale = useCallback(async (newLocale: LocaleCode) => {
     await changeLanguage(newLocale);
