@@ -20,8 +20,13 @@ const frontendEnv = parseEnvFile(path.join(os.homedir(), '.novaclinics-local', '
 export const config = {
   /** Expo Web dev server dedicated to automation (8083); 8081 stays reserved for the physical Android device. */
   webBaseUrl: process.env.NC_WEB_BASE_URL ?? 'http://localhost:8083',
-  /** Backend under test (development environment). */
-  apiBaseUrl: process.env.NC_API_BASE_URL ?? 'http://192.168.1.7:8000',
+  /**
+   * Backend under test. Resolution order: NC_API_BASE_URL, then EXPO_PUBLIC_API_BASE_URL from the isolated UAT
+   * config (~/.novaclinics-local/frontend/.env, the file the web build under test is started with, so the
+   * browser and these direct API calls cannot disagree), then a local default. The scenarios are stateful and
+   * create records: only point this at a non-production backend.
+   */
+  apiBaseUrl: process.env.NC_API_BASE_URL ?? (frontendEnv.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8000'),
   /** Public Supabase values used by the app itself (anon key is shipped in the app bundle). */
   supabaseUrl: process.env.NC_SUPABASE_URL ?? frontendEnv.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.NC_SUPABASE_ANON_KEY ?? frontendEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
