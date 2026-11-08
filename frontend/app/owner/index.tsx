@@ -23,6 +23,7 @@ import { spacing } from '../../core/theme/spacing';
 import { typography } from '../../core/theme/typography';
 import { useAuth } from '../../features/auth/presentation/hooks/useAuth';
 import { useSelectedClinic } from '../../features/auth/presentation/providers/auth.store';
+import { confirmUnsavedWork, hasDirtyDrafts } from '../../core/unsavedWork/unsavedWorkRegistry';
 import { MetricStatCard, OwnerClinicCard } from '../../features/owner-dashboard/presentation/components';
 import {
   createPortfolioSummaryFromClinics,
@@ -53,14 +54,23 @@ export default function OwnerDashboardScreen() {
     setTimeout(() => setRefreshing(false), 1000);
   };
 
-  const handleOpenClinicDashboard = (tenantId: string) => {
+  // Clinic switch = navigation reset. Workspace routes are identified by episode + appointment only (no tenant), so the
+  // previous clinic's navigator must never stay underneath the new clinic's stack: unwind the stack to its first screen
+  // before entering the selected clinic. Unsaved prescription work is resolved (Save / Discard / Cancel) first; any
+  // draft that somehow survived would still be refused on save because its stamped tenant is not the selected one.
+  const enterClinic = async (tenantId: string, href: '/clinic-admin' | '/clinic-admin/staff') => {
+    if (hasDirtyDrafts() && !(await confirmUnsavedWork('exit'))) return;
+    if (router.canDismiss()) router.dismissAll();
     setSelectedClinic(tenantId);
-    router.push('/clinic-admin');
+    router.push(href);
+  };
+
+  const handleOpenClinicDashboard = (tenantId: string) => {
+    void enterClinic(tenantId, '/clinic-admin');
   };
 
   const handleManageStaff = (tenantId: string) => {
-    setSelectedClinic(tenantId);
-    router.push('/clinic-admin/staff');
+    void enterClinic(tenantId, '/clinic-admin/staff');
   };
 
   const handleLogout = async () => {

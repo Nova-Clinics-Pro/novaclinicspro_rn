@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 
 import { queryClient } from '../../../../core/api/queryClient';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { confirmUnsavedWork, hasDirtyDrafts } from '../../../../core/unsavedWork/unsavedWorkRegistry';
 import {
   useAssociateClinicEntryMutation,
   useContactVerificationStatusMutation,
@@ -112,8 +113,34 @@ export function useClinicEntryOrchestration() {
     [createOrganization, organizationId, organizationQuery, selectOrganization]
   );
 
+  // Entering a DIFFERENT clinic than the one currently active, while a prescription draft is unsaved, needs the user's
+  // Save / Discard / Cancel decision before anything is torn down.
+  const switchNeedsDecision = useCallback(
+    (tenantId: string) => {
+      const outgoingClinicId = selectedClinicId ?? currentUser?.tenantId ?? null;
+      return outgoingClinicId !== null && outgoingClinicId !== tenantId && hasDirtyDrafts();
+    },
+    [currentUser?.tenantId, selectedClinicId]
+  );
+
   const handoff = useCallback(
     async (resolvedOrganizationId: string, tenantId: string) => {
+      // Switching from one clinic to another is a navigation reset: nothing of the outgoing clinic may stay underneath
+      // the new clinic's stack. Unsaved prescription work is resolved (Save / Discard / Cancel) before anything is torn
+      // down; Cancel leaves the user where they were and the handoff can be retried.
+      const outgoingClinicId = selectedClinicId ?? currentUser?.tenantId ?? null;
+      const isClinicSwitch = outgoingClinicId !== null && outgoingClinicId !== tenantId;
+      if (switchNeedsDecision(tenantId) && !(await confirmUnsavedWork('exit'))) {
+        if (tenantChoices.length > 0) {
+          // The user was choosing among clinics: put them back on that choice, nothing else changed.
+          setState('selecting_tenant');
+        } else {
+          // Automatic handoff: surface a retryable state (retry() re-runs this handoff and asks again).
+          setErrorToken('errors.clinicEntry.switchCancelled');
+          setState('error');
+        }
+        return;
+      }
       setState('refreshing_session');
       await queryClient.cancelQueries();
       // A tenant handoff is an identity boundary, not an ordinary freshness
@@ -121,7 +148,7 @@ export function useClinicEntryOrchestration() {
       // invalidating it would retain mounted A observers that can refetch with
       // the old route parameter during the transition.
       queryClient.clear();
-      const outgoingTenantId = selectedClinicId ?? currentUser?.tenantId ?? null;
+      const outgoingTenantId = outgoingClinicId;
       const currentUserId = currentUser?.userId ?? currentUser?.id ?? null;
       if (outgoingTenantId && outgoingTenantId !== tenantId && currentUserId) {
         await clearWizardDraftStorageForIdentity({
@@ -147,6 +174,9 @@ export function useClinicEntryOrchestration() {
       // Workspace preparation is an internal readiness handshake. A newly
       // provisioned clinic starts the canonical setup journey; the final
       // review invokes preparation after required setup is complete.
+      // Unwind to the first screen so the previous clinic's navigator (and any workspace in it) cannot remain
+      // underneath; the replace below then puts the new clinic's setup in that slot.
+      if (isClinicSwitch && router.canDismiss()) router.dismissAll();
       router.replace(`/onboarding/setup-wizard?tenantId=${tenantId}` as any);
     },
     [
@@ -157,6 +187,8 @@ export function useClinicEntryOrchestration() {
       router,
       selectedClinicId,
       setSelectedClinic,
+      switchNeedsDecision,
+      tenantChoices.length,
     ]
   );
 
@@ -360,6 +392,8 @@ export function useClinicEntryOrchestration() {
   const chooseTenant = useCallback(
     async (tenantId: string) => {
       if (!organizationId) return;
+      // Ask BEFORE the server-side effective-tenant switch, so cancelling leaves server and client state untouched.
+      if (switchNeedsDecision(tenantId) && !(await confirmUnsavedWork('exit'))) return;
       setState('submitting');
       try {
         await selectTenant.mutateAsync({
@@ -372,7 +406,7 @@ export function useClinicEntryOrchestration() {
         fail(error);
       }
     },
-    [fail, handoff, keyFor, organizationId, selectTenant]
+    [fail, handoff, keyFor, organizationId, selectTenant, switchNeedsDecision]
   );
 
   const retry = useCallback(() => {

@@ -366,6 +366,7 @@
       "inProgress": "Clinic entry is already in progress. Check again shortly.",
       "transientFailure": "Clinic entry is temporarily unavailable. Please try again.",
       "sessionRefreshFailed": "The clinic was saved, but the secure session could not be refreshed. Please try again.",
+      "switchCancelled": "Switching clinic was cancelled. Your unsaved work is unchanged. Try again when you are ready.",
       "organizationRequired": "Select an organization before continuing.",
       "organizationNameRequired": "Enter an organization name before continuing.",
       "organizationCreationUnauthorized": "Your account cannot create an organization.",
