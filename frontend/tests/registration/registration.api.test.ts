@@ -42,6 +42,39 @@ describe('registration error classification', () => {
     expect(mapRegistrationSubmissionError(axiosError(status, data)).kind).toBe(kind);
   });
 
+  it('classifies the backend retryable 503 registration_unavailable as a temporary service condition', () => {
+    const error = mapRegistrationSubmissionError(
+      axiosError(503, {
+        detail: {
+          error: 'registration_unavailable',
+          retryable: true,
+          message: 'internal backend prose that must never reach the user',
+          suggestion: 'internal suggestion',
+        },
+      })
+    );
+
+    expect(error).toBeInstanceOf(RegistrationSubmissionError);
+    expect(error.kind).toBe('SERVICE_UNAVAILABLE');
+    expect(error.status).toBe(503);
+    expect(error.domainCode).toBe('registration_unavailable');
+    expect(error.recoverable).toBe(true); // the applicant can simply try again; not logged as a defect
+    expect(error.validationIssues).toEqual([]);
+    expect(error.message).not.toContain('internal backend prose');
+  });
+
+  it('does not confuse temporary unavailability with invalid input, conflicts or an existing account', () => {
+    const kinds = [
+      [422, { detail: { error: 'registration_validation_failed', errors: [] } }],
+      [409, { detail: { error: 'clinic_name_unavailable' } }],
+      [409, { detail: { error: 'user_already_exists' } }],
+      [429, { detail: { error: 'rate_limited' } }],
+    ].map(([status, data]) => mapRegistrationSubmissionError(axiosError(status as number, data)).kind);
+
+    expect(kinds).not.toContain('SERVICE_UNAVAILABLE');
+    expect(kinds).toEqual(['FORM_VALIDATION', 'CONFLICT', 'USER_ALREADY_EXISTS', 'TOO_MANY_ATTEMPTS']);
+  });
+
   it('keeps an unexpected 5xx distinct from recoverable domain errors', () => {
     const error = mapRegistrationSubmissionError(axiosError(503, { error: 'server_failure' }));
     expect(error.kind).toBe('UNEXPECTED');
@@ -105,6 +138,33 @@ describe('registerClinicOwnerApi Idempotency-Key header', () => {
   it.each(['', '   ', 'x'.repeat(256)])('does not send a request with an invalid key (%#)', async key => {
     await expect(registerClinicOwnerApi(request, key)).rejects.toMatchObject({ kind: 'UNEXPECTED' });
     expect(axiosClient.post).not.toHaveBeenCalled();
+  });
+
+  it('resends the SAME key after a 503 registration_unavailable and treats the later success as a normal registration', async () => {
+    axiosClient.post
+      .mockRejectedValueOnce(axiosError(503, { detail: { error: 'registration_unavailable', retryable: true } }))
+      .mockResolvedValueOnce({ data: { success: true, application_status: 'onboarding' } });
+
+    await expect(registerClinicOwnerApi(request, 'attempt-key-1')).rejects.toMatchObject({
+      kind: 'SERVICE_UNAVAILABLE',
+      status: 503,
+    });
+    const retry = await registerClinicOwnerApi(request, 'attempt-key-1');
+
+    const keys = axiosClient.post.mock.calls.map((call: any[]) => call[2].headers['Idempotency-Key']);
+    expect(keys).toEqual(['attempt-key-1', 'attempt-key-1']);
+    expect(retry).toMatchObject({ success: true, application_status: 'onboarding' });
+  });
+
+  it('returns a pending-review registration as a success response, never as an error', async () => {
+    const response = {
+      success: true,
+      application_status: 'pending_review',
+      auto_approval_result: { eligible: false, reason: 'Pending manual review' },
+    };
+    axiosClient.post.mockResolvedValue({ data: response });
+
+    await expect(registerClinicOwnerApi(request, 'attempt-key-2')).resolves.toEqual(response);
   });
 
   it('maps the backend idempotency conflict (409) and key validation (400) like other registration errors', async () => {

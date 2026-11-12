@@ -62,7 +62,6 @@ export function GoLiveScreen({
     [finalReviewStepId, runtime?.visibleSteps]
   );
   const incompletePrerequisites = required.filter(item => item.status !== 'completed');
-  const managementSteps = required.filter(item => item.status === 'completed' && item.action);
   const prerequisitesComplete = incompletePrerequisites.length === 0;
   const preparationAction = readiness.data?.blockers.find(
     blocker => blocker.nextAction?.targetId === 'onboarding.workspace_preparation'
@@ -151,32 +150,6 @@ export function GoLiveScreen({
           ) : null}
         </View>
       ))}
-
-      {managementSteps.length > 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.text}>
-            {t('onboarding.progressiveExperience.readyToStart.presentation.manageSetup')}
-          </Text>
-          {managementSteps.map(({ step, action }) =>
-            action ? (
-              <TouchableOpacity
-                key={step.stepId}
-                style={styles.button}
-                onPress={() =>
-                  executeOnboardingAction(router, action, {
-                    tenant_id: tenantId,
-                    step_id: step.stepId,
-                  })
-                }
-              >
-                <Text style={styles.buttonText}>
-                  {translateOnboardingToken(action.labelToken, action.fallbackToken)}
-                </Text>
-              </TouchableOpacity>
-            ) : null
-          )}
-        </View>
-      ) : null}
 
       {prerequisitesComplete && readiness.error ? (
         <View style={styles.card} accessibilityRole="alert">
