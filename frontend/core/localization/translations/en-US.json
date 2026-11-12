@@ -309,7 +309,108 @@
       }
     }
   },
+  "rolePermissions": {
+    "title": "Roles & permissions",
+    "subtitle": "Decide what each role can do in your clinic",
+    "hubDescription": "Add or revoke permissions for each role",
+    "intro": "Every role starts with default permissions. Change them to match your clinic's policy. Changes apply to everyone who has the role, right away.",
+    "selectRole": "Choose a role",
+    "badges": { "added": "Added by you", "removed": "Removed by you" },
+    "locked": "Locked",
+    "lockedExplanation": "This can't be changed for this role.",
+    "ownerRoleNote": "The Clinic Owner role can't be changed, so you can never be locked out.",
+    "customizedCount": "{{count}} customized",
+    "defaultsOnly": "Following the defaults",
+    "reset": {
+      "button": "Reset to defaults",
+      "title": "Reset {{role}} to defaults?",
+      "message": "The changes you made for this role will be removed and it will follow the platform defaults again.",
+      "confirm": "Reset",
+      "done": "{{role}} now follows the defaults."
+    },
+    "revoke": {
+      "title": "Remove this permission?",
+      "message": "{{role}} will no longer be able to {{action}}.",
+      "confirm": "Remove"
+    },
+    "empty": "No roles found for your clinic.",
+    "saveFailed": "The change could not be saved. Please try again.",
+    "modules": {
+      "core": "Clinic operations", "clinical_documents": "Clinical documents", "inventory": "Inventory",
+      "reports": "Reports", "staff_management": "Staff management", "staff": "Staff",
+      "capability": "Clinic features", "commercial": "Plan & trial", "onboarding": "Clinic setup",
+      "therapy_usables": "Therapy supplies", "treatment_order": "Treatment orders",
+      "treatment_session": "Treatment sessions", "treatment_sheet": "Treatment sheets",
+      "billing": "Billing", "rbac": "Roles & permissions", "other": "Other"
+    },
+    "errors": {
+      "ROLE_PERMISSION_LOCKED": "This permission can't be changed. Clinical authoring belongs to doctors, and managing roles belongs to the owner.",
+      "ROLE_OWNER_PROTECTED": "The Clinic Owner role can't be changed, so you can never be locked out.",
+      "ROLE_PERMISSION_OWNER_ONLY_ADMIN_ONLY": "This permission is for the owner. You can give it to the Clinic Admin role, but not to other roles.",
+      "ROLE_PERMISSION_CANNOT_GRANT_UNHELD": "You can't give a permission that you don't have yourself."
+    }
+  },
   "errors": {
+    "permissionDenied": {
+      "title": "You don't have permission",
+      "withRoles": "As {{myRole}}, you don't have permission to {{action}}. Only {{roles}} can do this.",
+      "withRolesNoMine": "You don't have permission to {{action}}. Only {{roles}} can do this.",
+      "noRoles": "As {{myRole}}, you don't have permission to {{action}}. Please ask your clinic owner or administrator for access.",
+      "noRolesNoMine": "You don't have permission to {{action}}. Please ask your clinic owner or administrator for access.",
+      "genericAction": "do this",
+      "backToDashboard": "Back to dashboard",
+      "goBack": "Go back",
+      "actionTemplate": "{{verb}} {{object}}",
+      "listTwo": "{{a}} and {{b}}",
+      "listMany": "{{head}}, and {{last}}",
+      "verbs": {
+        "manage_permissions": "manage permissions for",
+        "read": "view", "view": "view", "list": "view", "create": "create", "update": "update", "delete": "delete",
+        "cancel": "cancel", "sign": "sign", "amend": "amend", "manage": "manage", "approve": "approve",
+        "reject": "reject", "request": "request", "upload": "upload", "share": "share", "print": "print",
+        "close": "close", "reopen": "reopen", "complete": "complete", "start": "start", "hold": "hold",
+        "schedule": "schedule", "order": "order", "pause": "pause", "resume": "resume", "release": "release",
+        "review": "review", "sync": "sync", "activate": "activate", "deactivate": "deactivate",
+        "download_pdf": "download PDFs for", "record_materials": "record materials for",
+        "view_assigned": "view assigned", "collect_payment": "collect payments for",
+        "assign_role": "assign roles to", "remove_role": "remove roles from"
+      },
+      "objects": {
+        "role": "roles",
+        "appointment": "appointments", "casesheet": "case sheets", "client": "clients",
+        "clinical_service": "clinical services", "episode": "episodes", "invoice": "invoices",
+        "payment": "payments", "prescription": "prescriptions", "session": "sessions",
+        "tenant": "clinic settings", "treatment": "treatments", "treatment_plan": "treatment plans",
+        "treatment_sheet": "treatment sheets", "treatment_order": "treatment orders",
+        "treatment_session": "treatment sessions", "inventory": "inventory", "reports": "reports",
+        "staff": "staff", "staff_dashboard": "the staff dashboard", "staff_document": "staff documents",
+        "staff_leave": "staff leave", "user": "users", "capability": "clinic features",
+        "trial": "the clinic trial", "onboarding_workspace_preparation": "workspace setup",
+        "therapy_usables": "therapy supplies"
+      },
+      "rolesAs": {
+        "clinic_owner": "a clinic owner", "clinic_admin": "a clinic admin", "doctor": "a doctor",
+        "receptionist": "a receptionist", "nurse": "a nurse", "pharmacist": "a pharmacist",
+        "therapist": "a therapist"
+      },
+      "rolesPlural": {
+        "clinic_owner": "clinic owners", "clinic_admin": "clinic admins", "doctor": "doctors",
+        "receptionist": "receptionists", "nurse": "nurses", "pharmacist": "pharmacists",
+        "therapist": "therapists"
+      }
+    },
+    "entitlementRequired": {
+      "title": "Your clinic's plan is not active",
+      "message": "You can't {{action}} because your clinic's trial or subscription is not active. Ask the clinic owner to activate or renew it."
+    },
+    "apiState": {
+      "loadFailedTitle": "We couldn't load this",
+      "network": "Check your internet connection and try again.",
+      "server": "Something went wrong on our side. Please try again in a moment.",
+      "notFound": "We couldn't find what you were looking for.",
+      "unauthenticated": "Your session has expired. Please sign in again.",
+      "unknown": "Something went wrong. Please try again."
+    },
     "network": {
       "generic": "Unable to connect to the server. Please check your internet connection.",
       "takingLonger": "Taking longer than usual…",
@@ -335,6 +436,7 @@
         "VALIDATION": "Review the highlighted registration details and try again.",
         "TOO_MANY_ATTEMPTS": "Too many attempts. Please wait a few minutes and try again.",
         "CONFLICT": "This registration conflicts with an existing account. Please review your details and try again.",
+        "SERVICE_UNAVAILABLE": "Registration is temporarily unavailable. Your details are still on this screen - please try again in a few minutes. If this keeps happening, contact support.",
         "UNEXPECTED": "Registration could not be completed. Please try again.",
         "signIn": "Sign in instead",
         "validation": {
@@ -1631,7 +1733,6 @@
             "message": "Your clinic setup is complete. We’re finishing the final readiness check before you start your trial."
           },
           "title": "Clinic readiness",
-          "manageSetup": "Manage clinic setup",
           "screenLabel": "Clinic readiness checklist",
           "loading": "Checking whether your clinic is ready...",
           "refreshing": "Refreshing clinic readiness...",

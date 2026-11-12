@@ -17,6 +17,9 @@ import { useRouter } from 'expo-router';
 import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
+import { mayManageRolePermissions } from '../../../auth/domain/entities/auth.entity';
 
 interface SettingItem {
   key: string;
@@ -80,6 +83,22 @@ const SETTINGS_ITEMS: SettingItem[] = [
 
 export const ClinicSettingsScreen: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
+  const currentUser = useAuthStore(state => state.currentUser);
+  // Role customization is the owner's tool; it is not offered when the session says the user holds another role.
+  const items: SettingItem[] = currentUser && mayManageRolePermissions(currentUser)
+    ? [
+        ...SETTINGS_ITEMS,
+        {
+          key: 'role-permissions',
+          title: t('rolePermissions.title'),
+          description: t('rolePermissions.hubDescription'),
+          icon: 'shield-checkmark-outline',
+          route: '/clinic-admin/settings/role-permissions',
+          color: '#B45309',
+        },
+      ]
+    : SETTINGS_ITEMS;
 
   const renderSettingItem = (item: SettingItem) => (
     <TouchableOpacity
@@ -127,7 +146,7 @@ export const ClinicSettingsScreen: React.FC = () => {
         {/* Settings List */}
         <View style={styles.settingsSection}>
           <Text style={styles.sectionTitle}>Configuration</Text>
-          {SETTINGS_ITEMS.map(renderSettingItem)}
+          {items.map(renderSettingItem)}
         </View>
 
         {/* Help Section */}

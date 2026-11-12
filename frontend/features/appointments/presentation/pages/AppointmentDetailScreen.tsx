@@ -73,6 +73,7 @@ import {
   episodeWorkspaceRoute,
   startConsultationRoute,
 } from '../../../doctorDashboard/application/consultationRoutes';
+import { ApiErrorState } from '../../../../core/components/ui/ApiErrorState';
 
 // ============================================
 // SECTION HEADER COMPONENT
@@ -772,16 +773,7 @@ export const AppointmentDetailScreen: React.FC = () => {
             <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
         </View>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color={colors.error.main} />
-          <Text style={styles.errorTitle}>{t('appointments.loadFailed')}</Text>
-          <Text style={styles.errorText}>
-            {error?.message || t('appointments.notFound')}
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
-          </TouchableOpacity>
-        </View>
+        <ApiErrorState error={error} onRetry={() => refetch()} />
       </SafeAreaView>
     );
   }

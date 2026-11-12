@@ -51,6 +51,22 @@ export interface AuthUserSession {
   };
 }
 
+const NON_OWNER_ROLE_CODES: ReadonlySet<string> = new Set([
+  'doctor', 'receptionist', 'nurse', 'pharmacist', 'therapist', 'clinic_admin',
+]);
+
+/**
+ * Whether to offer the owner's role-permission tool. The session does not always say who the clinic owner is
+ * (`ownedClinics` and `roles` can both be empty for an owner), so this errs towards showing it: it hides the tool
+ * only when the session explicitly lists a non-owner role. The backend still enforces owner-only access and a
+ * non-owner who opens it gets a clear, localized explanation.
+ */
+export const mayManageRolePermissions = (session: AuthUserSession): boolean => {
+  if (isClinicOwner(session)) return true;
+  const roles = session.roles.map(role => role.trim().toLowerCase().replace(/[\s-]+/g, '_'));
+  return !roles.some(role => NON_OWNER_ROLE_CODES.has(role));
+};
+
 /**
  * Check if user is a clinic owner
  */

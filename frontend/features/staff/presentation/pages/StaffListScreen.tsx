@@ -40,6 +40,7 @@ import {
 } from '../../data/models/staff.dtos';
 import { StaffListItem } from '../components/StaffListItem';
 import { StaffForm } from '../components/StaffForm';
+import { ApiErrorState } from '../../../../core/components/ui/ApiErrorState';
 
 const STAFF_TYPE_FILTERS: (StaffType | 'all')[] = [
   'all',
@@ -282,16 +283,7 @@ export const StaffListScreen: React.FC = () => {
   if (isError && !staffData) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color={colors.error.main} />
-          <Text style={styles.errorTitle}>Could not load staff</Text>
-          <Text style={styles.errorText}>
-            Please check your connection and try again
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+        <ApiErrorState error={error} onRetry={() => refetch()} />
       </SafeAreaView>
     );
   }
