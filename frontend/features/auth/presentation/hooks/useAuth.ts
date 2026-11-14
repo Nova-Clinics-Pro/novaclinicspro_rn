@@ -3,6 +3,7 @@
  * Main authentication hook for components
  */
 
+import { resolveDashboardRoute } from '../../domain/dashboardRoute';
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { setLoggingOut } from '../../../../core/api/authGuard';
@@ -47,10 +48,8 @@ function navigateBasedOnStatus(
       router.replace('/');
       break;
     case 'active': {
-      const userRole = user.roles?.[0]?.toLowerCase() || '';
-      if (userRole === 'doctor') router.replace('/doctor');
-      else if (userRole === 'therapist') router.replace('/therapist');
-      else router.replace('/clinic-admin');
+      // The same authority every dashboard guard uses; roles with no dashboard go to the home route, which explains it.
+      router.replace(resolveDashboardRoute(user.roles) ?? '/');
       break;
     }
     default:

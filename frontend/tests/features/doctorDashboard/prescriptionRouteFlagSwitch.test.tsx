@@ -30,6 +30,16 @@ jest.mock('expo-router', () => ({
     return <Text testID="workspace-redirect">{href}</Text>;
   },
 }));
+let mockPermissions: string[] = ['casesheet.create', 'prescription.create'];
+jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
+  useAuth: () => ({ currentUser: { tenantId: 'tenant-1', permissions: mockPermissions } }),
+}));
+jest.mock('../../../features/episodes/presentation/components/NoAuthoringAccessState', () => ({
+  NoAuthoringAccessState: ({ document }: { document: string }) => {
+    const { Text } = require('react-native');
+    return <Text testID="no-authoring-access">{document}</Text>;
+  },
+}));
 jest.mock('../../../core/hooks/useFeatures', () => ({
   useFeatures: jest.fn(),
   isCosV1Enabled: (features: { cos_v1_enabled?: boolean }) => Boolean(features.cos_v1_enabled),
@@ -53,6 +63,7 @@ import NewPrescriptionRoute from '../../../app/clinic-admin/clients/[clientId]/p
 describe('Prescription standalone routes render the canonical core only (R4 · T-E.3b)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPermissions = ['casesheet.create', 'prescription.create'];
     (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: false });
   });
 
@@ -163,5 +174,24 @@ describe('Prescription standalone routes render the canonical core only (R4 · T
       expect(editRoute).not.toMatch(/isClinicalSpineV1Enabled\(/);
       expect(newRoute).not.toMatch(/isClinicalSpineV1Enabled\(/);
     });
+  });
+});
+
+describe('only a doctor reaches the new prescription form', () => {
+  beforeEach(() => {
+    (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: false });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ clientId: 'client-1' });
+  });
+
+  it('shows the no-access message to the owner or admin (no prescription.create), never the form', () => {
+    mockPermissions = ['prescription.read', 'appointment.update'];
+    const { getByTestId } = render(<NewPrescriptionRoute />);
+    expect(getByTestId('no-authoring-access').props.children).toBe('prescription');
+  });
+
+  it('shows the form to a user who holds prescription.create', () => {
+    mockPermissions = ['prescription.create'];
+    const { queryByTestId } = render(<NewPrescriptionRoute />);
+    expect(queryByTestId('no-authoring-access')).toBeNull();
   });
 });

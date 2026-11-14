@@ -20,6 +20,7 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { clinicalAuthoringAccess } from '../../../episodes/domain/clinicalAuthoringAccess';
 import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 import {
   usePrescriptionsListQuery,
@@ -43,6 +44,7 @@ export const PrescriptionsListScreen: React.FC<PrescriptionsListScreenProps> = (
   const router = useRouter();
   const params = useLocalSearchParams<{ clientId: string; clientName?: string }>();
   const { currentUser } = useAuth();
+  const canCreate = clinicalAuthoringAccess(currentUser?.permissions).canCreatePrescription;  // Doctor only; viewing is separate
   const tenantId = currentUser?.tenantId || '';
   const clientId = propClientId || params.clientId;
   const clientName = propClientName || params.clientName;
@@ -109,6 +111,7 @@ export const PrescriptionsListScreen: React.FC<PrescriptionsListScreenProps> = (
           <Text style={styles.headerSubtitle}>{clientName}</Text>
         )}
       </View>
+      {canCreate && (
       <TouchableOpacity
         style={styles.addButton}
         onPress={handleCreatePress}
@@ -117,6 +120,7 @@ export const PrescriptionsListScreen: React.FC<PrescriptionsListScreenProps> = (
       >
         <Ionicons name="add" size={24} color={colors.background.default} />
       </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -192,8 +196,8 @@ export const PrescriptionsListScreen: React.FC<PrescriptionsListScreenProps> = (
               ? 'No prescriptions have been created for this patient yet.'
               : 'No prescriptions found.'
           }
-          actionLabel="Create Prescription"
-          onActionPress={handleCreatePress}
+          actionLabel={canCreate ? 'Create Prescription' : undefined}
+          onActionPress={canCreate ? handleCreatePress : undefined}
         />
       );
     }

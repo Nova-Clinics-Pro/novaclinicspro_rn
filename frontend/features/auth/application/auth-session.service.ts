@@ -1,5 +1,6 @@
 /** Canonical application owner for the Auth session lifecycle. */
 import { logError } from '../../../core/utils/errorHandler';
+import { authorizationChanged, isSameScope } from '../domain/authorizationChange';
 import { getLogoutEpoch, isLoggingOut } from '../../../core/api/authGuard';
 import { authRepository } from '../data/repositories/auth.repository.impl';
 import {
@@ -21,12 +22,16 @@ export interface RecoveryCredentials {
   refreshToken: string;
 }
 
+const AUTHORIZATION_REFRESH_MIN_INTERVAL_MS = 30_000;
+
 export class AuthSessionService {
   private hydratedAccessToken: string | null = null;
   private recoveryMode = false;
   private recoverySessionReady = false;
   /** True while reconcileStaleSessionScope drives its own provider refresh (its auth event must not re-enter hydration). */
   private reconcilingScope = false;
+  private lastAuthorizationRefreshAt = 0;
+  private authorizationRefreshInFlight: Promise<void> | null = null;
 
   private async hydrateCurrentUser(accessToken: string): Promise<AuthUserSession> {
     let user: AuthUserSession;
@@ -175,6 +180,46 @@ export class AuthSessionService {
       }
       return { authenticated: false, session: null, error: message };
     }
+  }
+
+  /**
+   * Re-read the signed-in user's roles and permissions from the backend (the authority) and update the session if they
+   * changed. The session is otherwise hydrated once, at sign-in, so a role the owner assigns or repairs afterwards (for
+   * example a new admin whose role was corrected) stayed invisible, and screens kept hiding actions the server allows,
+   * until the user signed out and in.
+   *
+   * Safe by construction: it only ever replaces authorization for the SAME user and clinic (anything else is left to the
+   * normal session path), it never touches tokens, and it does nothing during logout or recovery. Throttled so focus
+   * events and the periodic timer cannot flood /auth/me.
+   */
+  async refreshAuthorization(options: { force?: boolean } = {}): Promise<void> {
+    const state = useAuthStore.getState();
+    const current = state.currentUser;
+    if (!state.isAuthenticated || !current || this.recoveryMode || this.reconcilingScope || isLoggingOut()) return;
+    if (this.authorizationRefreshInFlight) return this.authorizationRefreshInFlight;
+    const now = Date.now();
+    if (!options.force && now - this.lastAuthorizationRefreshAt < AUTHORIZATION_REFRESH_MIN_INTERVAL_MS) return;
+    this.lastAuthorizationRefreshAt = now;
+
+    this.authorizationRefreshInFlight = (async () => {
+      try {
+        const fresh = await authRepository.getCurrentUser();
+        const latest = useAuthStore.getState().currentUser;
+        // The session may have changed (sign-out, another clinic) while the request was in flight.
+        if (!latest || !isSameScope(latest, fresh) || !authorizationChanged(latest, fresh)) return;
+        useAuthStore.getState().setCurrentUser({
+          ...latest,
+          roles: fresh.roles,
+          roleNames: fresh.roleNames,
+          permissions: fresh.permissions,
+        });
+      } catch (error) {
+        logError('auth.refresh_authorization', error); // a failed refresh keeps the current authorization
+      } finally {
+        this.authorizationRefreshInFlight = null;
+      }
+    })();
+    return this.authorizationRefreshInFlight;
   }
 
   async refresh(): Promise<AuthUserSession> {

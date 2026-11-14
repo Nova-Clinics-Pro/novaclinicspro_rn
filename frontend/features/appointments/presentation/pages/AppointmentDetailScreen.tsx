@@ -55,6 +55,7 @@ import {
 import { EpisodeCard } from '../../../episodes/presentation/components/EpisodeCard';
 import { episodeActionAccess } from '../../../episodes/domain/episodeActionAccess';
 import { appointmentActionAccess } from '../../domain/appointmentActionAccess';
+import { clinicalAuthoringAccess } from '../../../episodes/domain/clinicalAuthoringAccess';
 import { MultiDayTreatmentSection } from '../components/MultiDayTreatmentSection';
 import {
   getStatusLabel,
@@ -170,6 +171,10 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
     ? (t('common.treatment') || 'Treatment') 
     : (t('common.consultation') || 'Consultation');
   
+  // Adding a case sheet or prescription is clinical authoring (Doctor only); viewing an existing one is not.
+  const { currentUser: visitUser } = useAuth();
+  const authoring = clinicalAuthoringAccess(visitUser?.permissions);
+
   // FIX #3: Check for Case Sheet and Prescription existence
   const hasCaseSheet = !!(appointment.case_sheet_id || appointment.has_case_sheet);
   const hasPrescription = !!(appointment.prescription_id || appointment.has_prescription);
@@ -244,7 +249,8 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
 
       {/* FIX #3: Case Sheet & Prescription Links - Show Add/View based on state */}
       <View style={styles.visitCardLinksRow}>
-        {/* Case Sheet CTA - Add or View */}
+        {/* Case Sheet CTA - Add (authors only) or View */}
+        {(hasCaseSheet || authoring.canCreateCasesheet) && (
         <TouchableOpacity 
           style={[styles.visitCardLinkButton, hasCaseSheet && styles.visitCardLinkButtonActive]}
           onPress={handleCaseSheetPress}
@@ -264,8 +270,10 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
               : (t('appointments.addCaseSheet') || 'Add Case Sheet')}
           </Text>
         </TouchableOpacity>
+        )}
 
-        {/* Prescription CTA - Add or View */}
+        {/* Prescription CTA - Add (authors only) or View */}
+        {(hasPrescription || authoring.canCreatePrescription) && (
         <TouchableOpacity 
           style={[styles.visitCardLinkButton, hasPrescription && styles.visitCardLinkButtonActive]}
           onPress={handlePrescriptionPress}
@@ -285,6 +293,7 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
               : (t('appointments.addPrescription') || 'Add Prescription')}
           </Text>
         </TouchableOpacity>
+        )}
       </View>
 
       {/* Payment Details */}

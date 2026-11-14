@@ -8,6 +8,7 @@ import { usePathname } from 'expo-router';
 import { ThemeProvider } from '../theme/useClinicTheme';
 import { useAuthStore } from '../../features/auth/presentation/providers/auth.store';
 import { authSessionService } from '../../features/auth/application/auth-session.service';
+import { useAuthorizationRefresh } from './useAuthorizationRefresh';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -15,6 +16,8 @@ interface AuthProviderProps {
 
 const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isRecoveryRoute = usePathname() === '/reset-password';
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  useAuthorizationRefresh(isAuthenticated && !isRecoveryRoute);
   useEffect(() => {
     // The reset route establishes its provider-only recovery session. Ordinary
     // bootstrap/subscription must not restore or hydrate a login over it.

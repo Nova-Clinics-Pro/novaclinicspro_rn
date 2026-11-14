@@ -809,6 +809,10 @@
   "visitCommandCenter": {
     "title": "Visit Command Center",
     "treatmentPlanUnavailable": "Treatment Plan is not yet available in this workspace.",
+    "noAuthoringAccess": {
+      "casesheet": "Only a doctor can create case sheets. You can view existing case sheets.",
+      "prescription": "Only a doctor can write prescriptions. You can view existing prescriptions."
+    },
     "invalidContext": {
       "title": "Can't open workspace",
       "message": "No active appointment for this episode."
@@ -960,6 +964,10 @@
       "title": "No clinic assigned",
       "description": "Your account is not assigned to a clinic. Please contact your administrator for access.",
       "loggedInAs": "Signed in as: {{email}}"
+    },
+    "noDashboard": {
+      "title": "No dashboard for your role yet",
+      "description": "Your account is signed in, but the roles assigned to you don't have a dashboard yet. Ask your clinic owner or admin to give you a role such as Doctor, Therapist or Receptionist."
     },
     "pendingReview": {
       "title": "Clinic registration under review",
