@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { mayOpenDashboard, resolveDashboardRoute } from '../../../auth/domain/dashboardRoute';
 import {
   View,
   Text,
@@ -173,29 +174,19 @@ export const TherapistDashboardScreen: React.FC = () => {
   const tenantId: string = currentUser?.tenantId ?? '';
   const staffId: string = currentUser?.userId ?? '';
   const displayName: string = currentUser?.fullName ?? '';
-  const userRole: string = (currentUser?.roles?.[0] ?? '').toLowerCase();
 
   // ── RBAC guard ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!currentUser) return;
-    if (userRole === 'therapist') return;
+    if (mayOpenDashboard(currentUser.roles, '/therapist')) return;
 
-    if (userRole === 'doctor') {
-      router.replace('/doctor');
-    } else if (
-      userRole === 'clinic admin' ||
-      userRole === 'clinic_admin' ||
-      userRole === 'receptionist' ||
-      userRole === 'tenant admin' ||
-      userRole === 'tenant_admin'
-    ) {
-      router.replace('/clinic-admin');
-    } else if (currentUser.isOrgAdmin) {
+    if (currentUser.isOrgAdmin) {
       router.replace('/super-admin');
     } else {
-      router.replace('/');
+      // The user's own dashboard, or (no dashboard for these roles) the home route, which explains it.
+      router.replace(resolveDashboardRoute(currentUser.roles) ?? '/');
     }
-  }, [currentUser, userRole, router]);
+  }, [currentUser, router]);
 
   // ── Completion flow state ─────────────────────────────────────────────────
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);

@@ -965,6 +965,10 @@
       "description": "Your account is not assigned to a clinic. Please contact your administrator for access.",
       "loggedInAs": "Signed in as: {{email}}"
     },
+    "noDashboard": {
+      "title": "No dashboard for your role yet",
+      "description": "Your account is signed in, but the roles assigned to you don't have a dashboard yet. Ask your clinic owner or admin to give you a role such as Doctor, Therapist or Receptionist."
+    },
     "pendingReview": {
       "title": "Clinic registration under review",
       "description": "Your clinic registration has been submitted and is awaiting review.",

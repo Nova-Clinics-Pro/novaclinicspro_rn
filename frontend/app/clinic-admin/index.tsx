@@ -34,6 +34,7 @@ import { useNotificationBadgeCount } from '../../features/notifications/presenta
 import { formatInrCurrency } from '../../core/utils/currency';
 import { t } from '../../core/localization';
 import { useStaffListQuery } from '../../features/staff/data/repositories/staff.repository.impl';
+import { mayOpenDashboard, resolveDashboardRoute } from '../../features/auth/domain/dashboardRoute';
 import { useAppointmentsByDateQuery } from '../../features/appointments/data/repositories/appointments.repository.impl';
 import { toISODateString } from '../../features/appointments/domain/helpers';
 import { ClinicFeedbackSummarySection } from '../../features/feedback';
@@ -43,7 +44,11 @@ import { useFeatures, hasTreatmentSheets, isTherapyClinic } from '../../core/hoo
 export default function ClinicAdminDashboard() {
   const router = useRouter();
   const { logout, currentUser, isAuthenticated } = useAuth();
-  const tenantId = currentUser?.tenantId || '';
+  // A user whose role belongs on another dashboard is redirected away by the guard below. Until that happens (and for
+  // good if they have no dashboard) this screen must not fetch clinic data they are not allowed to read: every query
+  // here is enabled only with a tenant id, so withhold it from users who do not belong on this dashboard.
+  const belongsHere = !!currentUser && (currentUser.isOrgAdmin || mayOpenDashboard(currentUser.roles, '/clinic-admin'));
+  const tenantId = belongsHere ? currentUser?.tenantId || '' : '';
   const notificationCount = useNotificationBadgeCount();
 
   const clinicName = currentUser?.clinicName || 'My Clinic';
@@ -59,24 +64,10 @@ export default function ClinicAdminDashboard() {
   // Route guard - only allow clinic owner/admin, receptionist, and tenant_admin roles
   React.useEffect(() => {
     if (currentUser && currentUser.roles && currentUser.roles.length > 0) {
-      const userRole = currentUser.roles[0]?.toLowerCase() || '';
-      console.log('[ClinicAdmin] Route guard checking role:', userRole);
-      
-      // Allow all owner/admin variants that should land in clinic-admin.
-      const allowedRoles = ['clinic owner', 'clinic_owner', 'clinic admin', 'clinic_admin', 'receptionist', 'tenant admin', 'tenant_admin'];
-      
-      if (!allowedRoles.includes(userRole) && !currentUser.isOrgAdmin) {
-        console.log('[ClinicAdmin] Access denied, redirecting to appropriate dashboard');
-        
-        // Redirect to appropriate dashboard based on role
-        if (userRole === 'doctor') {
-          router.replace('/doctor');
-        } else if (userRole === 'therapist') {
-          router.replace('/therapist');
-        } else {
-          // Unknown role, redirect to index for proper routing
-          router.replace('/');
-        }
+      // The same authority the home route uses, so the two can never disagree and bounce the user between them.
+      if (!mayOpenDashboard(currentUser.roles, '/clinic-admin') && !currentUser.isOrgAdmin) {
+        // Another dashboard, or (no dashboard for these roles) the home route, which explains it without redirecting.
+        router.replace(resolveDashboardRoute(currentUser.roles) ?? '/');
       }
     }
   }, [currentUser, router]);
