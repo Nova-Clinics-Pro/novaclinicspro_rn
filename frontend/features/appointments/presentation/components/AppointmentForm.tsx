@@ -3,6 +3,7 @@
  * Form for creating/editing appointments
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React from 'react';
 import {
   View,
@@ -125,13 +126,6 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
   };
 
   // Date input formatter
-  const formatDateInput = (text: string): string => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 4) return cleaned;
-    if (cleaned.length <= 6) return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
-    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
-  };
-
   // Time input formatter
   const formatTimeInput = (text: string): string => {
     const cleaned = text.replace(/\D/g, '');
@@ -263,19 +257,7 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 control={control}
                 name="appointment_date"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={[styles.inputWithIcon, errors.appointment_date && styles.inputError]}>
-                    <Ionicons name="calendar-outline" size={20} color={colors.text.secondary} />
-                    <TextInput
-                      style={styles.iconInput}
-                      value={value}
-                      onChangeText={(text) => onChange(formatDateInput(text))}
-                      onBlur={onBlur}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.text.tertiary}
-                      keyboardType="numeric"
-                      maxLength={10}
-                    />
-                  </View>
+                  <DateField value={value} onChange={onChange} onBlur={onBlur} error={!!errors.appointment_date} />
                 )}
               />
               {errors.appointment_date && (

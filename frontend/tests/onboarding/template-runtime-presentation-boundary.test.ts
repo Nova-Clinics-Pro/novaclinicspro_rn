@@ -75,4 +75,12 @@ describe('template runtime presentation boundaries', () => {
     expect(provider).toContain('completeBootstrap()');
     expect(store).toMatch(/completeBootstrap:\s*\(\)\s*=>\s*set\(\{\s*isLoading:\s*false\s*\}\)/);
   });
+
+  it('does not repeat the journey cards as a second "manage" button list on the Ready to Start screen', () => {
+    const goLive = source('onboarding/presentation/pages/steps/GoLiveScreen.tsx');
+    expect(goLive).not.toContain('manageSetup');
+    expect(goLive).not.toContain('managementSteps');
+    const renderers = source('onboarding/presentation/renderers/onboardingRendererRegistry.tsx');
+    expect(renderers).not.toContain('executeOnboardingAction');
+  });
 });

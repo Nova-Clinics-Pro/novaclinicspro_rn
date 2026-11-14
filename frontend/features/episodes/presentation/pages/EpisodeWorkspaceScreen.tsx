@@ -48,6 +48,7 @@ import {
   ALL_WORKSPACE_TABS,
 } from '../components/EpisodeWorkspaceHeader';
 import { CasesheetTab } from '../components/CasesheetTab';
+import { clinicalAuthoringAccess } from '../../domain/clinicalAuthoringAccess';
 import { TreatmentPlansTab } from '../components/TreatmentPlansTab';
 import { VisitsTab } from '../components/VisitsTab';
 import { SectionError } from '../components/EpisodeWorkspaceShared';
@@ -79,7 +80,16 @@ export const EpisodeWorkspaceScreen: React.FC<EpisodeWorkspaceScreenProps> = ({
   const { currentUser } = useAuth();
   const tenantId = currentUser?.tenantId ?? '';
 
-  const config = episodeWorkspaceConfigByRole[mode];
+  const modeConfig = episodeWorkspaceConfigByRole[mode];
+  // The workspace mode comes from the route, so it can only narrow what the user may do: clinical authoring also
+  // requires the permission the backend enforces (Doctor only).
+  const authoring = clinicalAuthoringAccess(currentUser?.permissions);
+  const config = {
+    ...modeConfig,
+    canEditNotes: modeConfig.canEditNotes && authoring.canCreateCasesheet,
+    canCreateTreatmentSheet: modeConfig.canCreateTreatmentSheet && authoring.canCreateTreatmentSheet,
+    canWriteRx: modeConfig.canWriteRx && authoring.canCreatePrescription,
+  };
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab);
 
   const {

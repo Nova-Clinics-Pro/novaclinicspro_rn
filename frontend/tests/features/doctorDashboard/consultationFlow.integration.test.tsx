@@ -29,7 +29,13 @@ const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
 
 jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
 jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
-  useAuth: () => ({ currentUser: { tenantId: 'tenant-1' }, selectedClinicId: null }),
+  useAuth: () => ({
+    currentUser: {
+      tenantId: 'tenant-1',
+      permissions: ['casesheet.create', 'casesheet.update', 'prescription.create', 'prescription.update', 'treatment_sheet.create'],
+    },
+    selectedClinicId: null,
+  }),
 }));
 jest.mock('../../../core/hooks/useFeatures', () => ({
   useFeatures: () => ({ clinic_type: 'ayurveda' }),

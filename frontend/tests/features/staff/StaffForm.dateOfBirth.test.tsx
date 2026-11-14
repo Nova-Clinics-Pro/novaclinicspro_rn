@@ -21,7 +21,9 @@ jest.mock('../../../core/theme/useClinicTheme', () => ({
 
 jest.mock('../../../core/components/CrossPlatformDateTimePicker', () => {
   const { Text } = require('react-native');
-  return () => <Text testID="staff-date-picker">picker</Text>;
+  const DatePickerMock = () => <Text testID="staff-date-picker">picker</Text>;
+  DatePickerMock.displayName = 'DatePickerMock';
+  return DatePickerMock;
 });
 
 describe('StaffForm date of birth field', () => {
@@ -36,5 +38,22 @@ describe('StaffForm date of birth field', () => {
     fireEvent.press(screen.getByRole('button', { name: label }));
 
     expect(screen.getByTestId('staff-date-picker')).toBeTruthy();
+  });
+});
+
+describe('StaffForm sign-in access needs an email', () => {
+  it('explains that an email is required instead of submitting and failing on the server', async () => {
+    const { Switch } = require('react-native');
+    const { waitFor } = require('@testing-library/react-native');
+    const onSubmit = jest.fn();
+    const screen = render(<StaffForm onSubmit={onSubmit} onCancel={jest.fn()} />);
+
+    fireEvent(screen.UNSAFE_getByType(Switch), 'valueChange', true);
+    fireEvent.press(screen.getByText('Add Staff'));
+
+    await waitFor(() =>
+      expect(screen.getByText('Email is required when the staff member can sign in')).toBeTruthy(),
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

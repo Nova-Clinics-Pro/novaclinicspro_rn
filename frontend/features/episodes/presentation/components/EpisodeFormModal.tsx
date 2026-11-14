@@ -3,7 +3,7 @@
  * Modal wrapper for episode creation/editing
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -50,12 +50,14 @@ export const EpisodeFormModal: React.FC<EpisodeFormModalProps> = ({
   const theme = useClinicTheme();
   const [isDirty, setIsDirty] = useState(false);
 
-  // Reset dirty state when modal opens/closes
-  useEffect(() => {
+  // Reset dirty state when modal opens/closes (adjusted during render, not in an effect).
+  const [syncedVisible, setSyncedVisible] = useState<boolean | null>(null);
+  if (syncedVisible !== visible) {
+    setSyncedVisible(visible);
     if (!visible) {
       setIsDirty(false);
     }
-  }, [visible]);
+  }
 
   const handleClose = () => {
     if (isDirty && !isLoading) {

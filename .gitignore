@@ -241,6 +241,10 @@ frontend/ios/
 frontend/.metro-cache/
 *.md
 !CLAUDE.md
+# Claude agent and command definitions are project instructions referenced by CLAUDE.md: track only these two folders' Markdown.
+# (.claude/settings*.json and .mcp.json stay local via .git/info/exclude; .claude/skills/ stays ignored by the *.md rule above.)
+!/.claude/agents/*.md
+!/.claude/commands/*.md
 frontend/docs/
 !frontend/docs/
 !frontend/docs/Onboarding/

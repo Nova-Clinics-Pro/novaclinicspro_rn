@@ -2,8 +2,17 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { queryClient } from '../../core/api/queryClient';
 import { useClinicEntryOrchestration } from '../../features/onboarding/presentation/hooks/useClinicEntryOrchestration';
+import {
+  getUnsavedWorkSnapshot,
+  isDecisionPending,
+  registerDraft,
+  resetUnsavedWorkForTests,
+  resolveUnsavedWorkDecision,
+} from '../../core/unsavedWork/unsavedWorkRegistry';
 
 const mockReplace = jest.fn();
+const mockDismissAll = jest.fn();
+const mockCanDismiss = jest.fn(() => true);
 const mockRefreshSession = jest.fn();
 const mockLogout = jest.fn();
 const mockSetSelectedClinic = jest.fn();
@@ -23,7 +32,7 @@ let mockOrganizationQuery: any;
 let mockAuth: any;
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => ({ replace: mockReplace, dismissAll: mockDismissAll, canDismiss: () => mockCanDismiss() }),
 }));
 
 jest.mock('../../features/auth/presentation/hooks/useAuth', () => ({
@@ -80,6 +89,8 @@ const context = (effectiveTenantId: string | null, clinics: any[] = []) => ({
 describe('useClinicEntryOrchestration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetUnsavedWorkForTests();
+    mockCanDismiss.mockReturnValue(true);
     mockAuth = {
       currentUser: { userId: 'user-1', tenantId: null },
       selectedClinicId: null,
@@ -242,5 +253,178 @@ describe('useClinicEntryOrchestration', () => {
 
     expect(mockCreateClinic).toHaveBeenCalledTimes(1);
     expect(mockRefreshSession).toHaveBeenCalledTimes(2);
+  });
+
+  describe('clinic switch resets the previous clinic navigation (D7)', () => {
+    const clinics = [
+      { tenantId: 'tenant-1', clinicName: 'Clinic One' },
+      { tenantId: 'tenant-2', clinicName: 'Clinic Two' },
+    ];
+
+    const prepareSwitch = (outgoing: string | null) => {
+      mockAuth = {
+        currentUser: { userId: 'user-1', tenantId: outgoing },
+        selectedClinicId: outgoing,
+        refreshSession: mockRefreshSession,
+        logout: mockLogout,
+        setSelectedClinic: mockSetSelectedClinic,
+      };
+      mockOrganizationQuery.data = context(null, clinics);
+      mockCreateClinic.mockResolvedValue({ effectiveTenantId: null });
+      mockRefreshTenant.mockResolvedValue({ effectiveTenantId: 'tenant-2' });
+      mockRefetchOrganization
+        .mockResolvedValueOnce({ data: context(null, clinics) })
+        .mockResolvedValue({ data: context('tenant-2', clinics) });
+    };
+    const reachChoice = async (hook: ReturnType<typeof renderHook<ReturnType<typeof useClinicEntryOrchestration>, unknown>>) => {
+      await act(async () => { await hook.result.current.submitNewClinic(newClinicInput); });
+      expect(hook.result.current.state).toBe('selecting_tenant');
+    };
+    const draft = (opts: { save?: () => Promise<void> } = {}) => {
+      const save = jest.fn(opts.save ?? (async () => {}));
+      const discard = jest.fn();
+      registerDraft({ id: 'rx', label: 'Prescription draft', save, discard }).setDirty(true);
+      return { save, discard };
+    };
+
+    it('switching A -> B unwinds the stack (dismissAll) BEFORE the new clinic setup replaces the first screen', async () => {
+      prepareSwitch('tenant-1');
+      const hook = renderHook(() => useClinicEntryOrchestration());
+      await reachChoice(hook);
+      await act(async () => { await hook.result.current.chooseTenant('tenant-2'); });
+      expect(mockDismissAll).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith('/onboarding/setup-wizard?tenantId=tenant-2');
+      expect(mockDismissAll.mock.invocationCallOrder[0]).toBeLessThan(mockReplace.mock.invocationCallOrder[0]);
+      expect(mockSetSelectedClinic).toHaveBeenCalledWith('tenant-2');
+    });
+
+    it('does nothing extra when there is nothing to dismiss', async () => {
+      prepareSwitch('tenant-1');
+      mockCanDismiss.mockReturnValue(false);
+      const hook = renderHook(() => useClinicEntryOrchestration());
+      await reachChoice(hook);
+      await act(async () => { await hook.result.current.chooseTenant('tenant-2'); });
+      expect(mockDismissAll).not.toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledWith('/onboarding/setup-wizard?tenantId=tenant-2');
+    });
+
+    it('a FIRST clinic entry (no outgoing clinic) keeps today\'s behavior: a plain replace, no reset', async () => {
+      prepareSwitch(null);
+      const hook = renderHook(() => useClinicEntryOrchestration());
+      await reachChoice(hook);
+      await act(async () => { await hook.result.current.chooseTenant('tenant-2'); });
+      expect(mockDismissAll).not.toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-entering the SAME clinic is not a switch: no reset', async () => {
+      prepareSwitch('tenant-2');
+      const hook = renderHook(() => useClinicEntryOrchestration());
+      await reachChoice(hook);
+      await act(async () => { await hook.result.current.chooseTenant('tenant-2'); });
+      expect(mockDismissAll).not.toHaveBeenCalled();
+    });
+
+    describe('with an unsaved prescription draft in the outgoing clinic', () => {
+      it('asks first: nothing is torn down (no queries cleared, no session refresh) until the user decides', async () => {
+        prepareSwitch('tenant-1');
+        draft();
+        const hook = renderHook(() => useClinicEntryOrchestration());
+        await reachChoice(hook);
+        let pending!: Promise<void>;
+        act(() => { pending = hook.result.current.chooseTenant('tenant-2'); });
+        await act(async () => { await Promise.resolve(); });
+        expect(isDecisionPending()).toBe(true);
+        expect(getUnsavedWorkSnapshot().pending?.intent).toBe('exit');
+        expect(queryClient.clear).not.toHaveBeenCalled();
+        expect(mockRefreshTenant).not.toHaveBeenCalled();
+        expect(mockDismissAll).not.toHaveBeenCalled();
+        await act(async () => { await resolveUnsavedWorkDecision('cancel'); await pending; });
+      });
+
+      it('Cancel while choosing a clinic stays on the choice, draft kept, nothing torn down (no server switch); choosing again asks again', async () => {
+        prepareSwitch('tenant-1');
+        const { save, discard } = draft();
+        const hook = renderHook(() => useClinicEntryOrchestration());
+        await reachChoice(hook);
+        let pending!: Promise<void>;
+        act(() => { pending = hook.result.current.chooseTenant('tenant-2'); });
+        await act(async () => { await Promise.resolve(); });
+        await act(async () => { await resolveUnsavedWorkDecision('cancel'); await pending; });
+        expect(hook.result.current.state).toBe('selecting_tenant');
+        expect(save).not.toHaveBeenCalled();
+        expect(discard).not.toHaveBeenCalled();
+        expect(mockSelectTenant).not.toHaveBeenCalled(); // asked BEFORE the server-side tenant switch
+        expect(mockRefreshTenant).not.toHaveBeenCalled();
+        expect(mockReplace).not.toHaveBeenCalled();
+        act(() => { void hook.result.current.chooseTenant('tenant-2'); });
+        await act(async () => { await Promise.resolve(); });
+        expect(isDecisionPending()).toBe(true); // asks again, no silent proceed
+        await act(async () => { await resolveUnsavedWorkDecision('cancel'); });
+      });
+
+      it('Cancel during an automatic handoff gives a retryable error with the cancel message; retry asks again', async () => {
+        prepareSwitch('tenant-1');
+        mockCreateClinic.mockResolvedValue({ effectiveTenantId: 'tenant-2' });
+        mockRefetchOrganization.mockReset().mockResolvedValue({ data: context('tenant-2', clinics) });
+        draft();
+        const hook = renderHook(() => useClinicEntryOrchestration());
+        let pending!: Promise<void>;
+        act(() => { pending = hook.result.current.submitNewClinic(newClinicInput); });
+        await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
+        await waitFor(() => expect(isDecisionPending()).toBe(true));
+        await act(async () => { await resolveUnsavedWorkDecision('cancel'); await pending; });
+        expect(hook.result.current.state).toBe('error');
+        expect(hook.result.current.errorToken).toBe('errors.clinicEntry.switchCancelled');
+        expect(mockRefreshTenant).not.toHaveBeenCalled();
+        act(() => hook.result.current.retry());
+        await waitFor(() => expect(isDecisionPending()).toBe(true));
+        await act(async () => { await resolveUnsavedWorkDecision('discard'); });
+        await waitFor(() => expect(hook.result.current.state).toBe('complete'));
+        expect(mockDismissAll).toHaveBeenCalledTimes(1);
+      });
+
+      it('Discard then switches with the reset', async () => {
+        prepareSwitch('tenant-1');
+        const { discard } = draft();
+        const hook = renderHook(() => useClinicEntryOrchestration());
+        await reachChoice(hook);
+        let pending!: Promise<void>;
+        act(() => { pending = hook.result.current.chooseTenant('tenant-2'); });
+        await act(async () => { await Promise.resolve(); });
+        await act(async () => { await resolveUnsavedWorkDecision('discard'); await pending; });
+        expect(discard).toHaveBeenCalledTimes(1);
+        expect(mockDismissAll).toHaveBeenCalledTimes(1);
+        expect(mockReplace).toHaveBeenCalledWith('/onboarding/setup-wizard?tenantId=tenant-2');
+      });
+
+      it('Save then switches only after the save succeeded', async () => {
+        prepareSwitch('tenant-1');
+        let release!: () => void;
+        const { save } = draft({ save: () => new Promise<void>((resolve) => { release = resolve; }) });
+        const hook = renderHook(() => useClinicEntryOrchestration());
+        await reachChoice(hook);
+        let pending!: Promise<void>;
+        act(() => { pending = hook.result.current.chooseTenant('tenant-2'); });
+        await act(async () => { await Promise.resolve(); });
+        let deciding!: Promise<void>;
+        await act(async () => { deciding = resolveUnsavedWorkDecision('save'); });
+        expect(mockRefreshTenant).not.toHaveBeenCalled();
+        await act(async () => { release(); await deciding; await pending; });
+        expect(save).toHaveBeenCalledTimes(1);
+        expect(mockDismissAll).toHaveBeenCalledTimes(1);
+        expect(mockReplace).toHaveBeenCalledWith('/onboarding/setup-wizard?tenantId=tenant-2');
+      });
+
+      it('a dirty draft does NOT block a first entry or a same-clinic re-entry (no clinic switch)', async () => {
+        prepareSwitch('tenant-2');
+        draft();
+        const hook = renderHook(() => useClinicEntryOrchestration());
+        await reachChoice(hook);
+        await act(async () => { await hook.result.current.chooseTenant('tenant-2'); });
+        expect(isDecisionPending()).toBe(false);
+        expect(mockReplace).toHaveBeenCalled();
+      });
+    });
   });
 });

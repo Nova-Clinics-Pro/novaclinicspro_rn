@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { ImperativeRouter } from 'expo-router';
 import { logError } from '../../../../core/utils/errorHandler';
 import { colors } from '../../../../core/theme/colors';
@@ -7,7 +7,6 @@ import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import type { JourneyResolvedStep } from '../../domain/entities/journey-visibility.entity';
 import type { AuthUserSession } from '../../../auth/domain/entities/auth.entity';
-import { executeOnboardingAction } from '../actions/onboardingActionRegistry';
 import { GoLiveScreen } from '../pages/steps/GoLiveScreen';
 import { selectRendererAction } from './rendererActionSelection';
 import {
@@ -28,13 +27,21 @@ interface RendererProps {
   readonly onCommercialConfirmationAcknowledged?: () => void;
 }
 
-const GenericConfigurationRenderer = ({ step, tenantId, router }: RendererProps) => {
+/**
+ * Step detail shows only guidance: the step's help text and what is still unmet. The step's card
+ * in the journey list is the single control that opens its configuration screen (it carries the
+ * template-declared corrective/management action), so there is deliberately no second "manage"
+ * button here - it duplicated the card and took a full row of space on small screens. When the
+ * declared action is unavailable, the declared fallback message is still surfaced.
+ */
+const GenericConfigurationRenderer = ({ step }: RendererProps) => {
   const declaredAction = selectRendererAction(step);
-  const action = declaredAction?.availability === 'AVAILABLE' ? declaredAction : null;
+  const unavailable = declaredAction && declaredAction.availability !== 'AVAILABLE' ? declaredAction : null;
+  if (!step.helpToken && step.blockers.length === 0 && !unavailable) return null;
   return <View style={styles.container}>
     {step.helpToken ? <Text style={styles.help}>{translateOnboardingToken(step.helpToken)}</Text> : null}
     {step.blockers.map(blocker => <Text key={blocker.requirementId} style={styles.blocker}>{translateOnboardingBlocker(blocker.blockerToken, blocker.currentValue, blocker.requiredValue, blocker.titleToken)}</Text>)}
-    {action ? <TouchableOpacity style={styles.action} onPress={() => executeOnboardingAction(router, action, { tenant_id: tenantId, step_id: step.stepId })} accessibilityRole="button" accessibilityLabel={translateOnboardingToken(action.labelToken, action.fallbackToken)}><Text style={styles.actionText}>{translateOnboardingToken(action.labelToken, action.fallbackToken)}</Text></TouchableOpacity> : declaredAction ? <Text style={styles.blocker}>{translateOnboardingToken(declaredAction.fallbackToken)}</Text> : null}
+    {unavailable ? <Text style={styles.blocker}>{translateOnboardingToken(unavailable.fallbackToken)}</Text> : null}
   </View>;
 };
 
@@ -101,6 +108,4 @@ const styles = StyleSheet.create({
   container: { gap: spacing.sm, padding: spacing.lg },
   help: { ...typography.body1, color: colors.text.secondary },
   blocker: { ...typography.body2, color: colors.error.main },
-  action: { alignItems: 'center', borderRadius: 8, padding: spacing.md, backgroundColor: colors.primary.main },
-  actionText: { ...typography.button, color: colors.text.light },
 });

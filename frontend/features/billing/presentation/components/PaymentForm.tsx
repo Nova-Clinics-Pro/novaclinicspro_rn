@@ -3,6 +3,7 @@
  * Form for recording payments
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React, { useState } from 'react';
 import {
   View,
@@ -93,13 +94,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       {/* Payment Date */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Payment Date *</Text>
-        <TextInput
-          style={styles.input}
-          value={paymentDate}
-          onChangeText={setPaymentDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={colors.text.tertiary}
-        />
+        <DateField value={paymentDate} onChange={setPaymentDate} />
       </View>
 
       {/* Payment Method */}

@@ -39,7 +39,7 @@ describe('RegistrationErrorNotice', () => {
     expect(onSignIn).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['INVALID_CREDENTIALS', 'TOO_MANY_ATTEMPTS'] as const)(
+  it.each(['INVALID_CREDENTIALS', 'TOO_MANY_ATTEMPTS', 'SERVICE_UNAVAILABLE'] as const)(
     'presents %s as a recoverable feature error without Sign In conflict recovery',
     (kind) => {
       const { getByRole, getByText, queryByRole } = render(

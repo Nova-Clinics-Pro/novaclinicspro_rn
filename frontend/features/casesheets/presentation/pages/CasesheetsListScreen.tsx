@@ -20,6 +20,7 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { clinicalAuthoringAccess } from '../../../episodes/domain/clinicalAuthoringAccess';
 import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
 import { useCasesheetsListQuery } from '../../data/repositories/casesheets.repository.impl';
 import type {
@@ -41,6 +42,7 @@ export const CasesheetsListScreen: React.FC<CasesheetsListScreenProps> = ({
   const router = useRouter();
   const params = useLocalSearchParams<{ clientId: string; clientName?: string }>();
   const { currentUser } = useAuth();
+  const canCreate = clinicalAuthoringAccess(currentUser?.permissions).canCreateCasesheet;  // Doctor only; viewing is separate
   const tenantId = currentUser?.tenantId || '';
   const clientId = propClientId || params.clientId || '';
   const clientName = propClientName || params.clientName;
@@ -93,6 +95,7 @@ export const CasesheetsListScreen: React.FC<CasesheetsListScreenProps> = ({
           <Text style={styles.headerSubtitle}>{clientName}</Text>
         )}
       </View>
+      {canCreate && (
       <TouchableOpacity
         style={styles.addButton}
         onPress={handleCreatePress}
@@ -101,6 +104,7 @@ export const CasesheetsListScreen: React.FC<CasesheetsListScreenProps> = ({
       >
         <Ionicons name="add" size={24} color={colors.background.default} />
       </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -172,8 +176,8 @@ export const CasesheetsListScreen: React.FC<CasesheetsListScreenProps> = ({
         <EmptyCasesheetsState
           title={statusFilter ? `No ${statusFilter.toLowerCase()} casesheets` : 'No Casesheets'}
           message="No casesheets have been created for this patient yet."
-          actionLabel="Create Casesheet"
-          onActionPress={handleCreatePress}
+          actionLabel={canCreate ? 'Create Casesheet' : undefined}
+          onActionPress={canCreate ? handleCreatePress : undefined}
         />
       );
     }

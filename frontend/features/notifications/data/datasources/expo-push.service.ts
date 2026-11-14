@@ -23,6 +23,12 @@ import {
 } from './push.service.interface';
 import { PushNotificationData } from '../models/push.dtos';
 
+/** Whether a push token cannot be requested here: on the web it requires a configured VAPID public key. */
+export const webPushUnavailable = (
+  platform: string,
+  notificationConfig?: { vapidPublicKey?: string } | null,
+): boolean => platform === 'web' && !notificationConfig?.vapidPublicKey;
+
 // Storage keys
 const STORAGE_KEYS = {
   PUSH_TOKEN: '@NovaClinicsPro:pushToken',
@@ -186,6 +192,13 @@ export class ExpoPushNotificationService implements IPushNotificationService {
 
     if (!Device.isDevice) {
       console.log('Push notifications require a physical device');
+      return null;
+    }
+
+    // Web push needs a VAPID key; without one expo-notifications throws, which showed up as a red error on every
+    // web load. The app registers devices as ios/android only, so on the web there is nothing to register.
+    if (webPushUnavailable(Platform.OS, (Constants.expoConfig as { notification?: { vapidPublicKey?: string } } | null)?.notification)) {
+      console.log('Push notifications are not configured for the web (no VAPID key); skipping');
       return null;
     }
 

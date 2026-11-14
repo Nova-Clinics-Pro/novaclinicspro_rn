@@ -28,6 +28,8 @@ export interface AuthUserSession {
   clinicName: string; // Clinic name for the user's assigned tenant
   tenantId: string | null;
   roles: string[];
+  /** Human-readable names of the roles the user holds in the current clinic (from the backend). */
+  roleNames?: string[];
   permissions: string[];
   isOrgAdmin: boolean;
   /** Backend-authoritative; never inferred from application lifecycle state. */
@@ -50,6 +52,22 @@ export interface AuthUserSession {
     sessionRefreshRequired: boolean;
   };
 }
+
+const NON_OWNER_ROLE_CODES: ReadonlySet<string> = new Set([
+  'doctor', 'receptionist', 'nurse', 'pharmacist', 'therapist', 'clinic_admin',
+]);
+
+/**
+ * Whether to offer the owner's role-permission tool. The session does not always say who the clinic owner is
+ * (`ownedClinics` and `roles` can both be empty for an owner), so this errs towards showing it: it hides the tool
+ * only when the session explicitly lists a non-owner role. The backend still enforces owner-only access and a
+ * non-owner who opens it gets a clear, localized explanation.
+ */
+export const mayManageRolePermissions = (session: AuthUserSession): boolean => {
+  if (isClinicOwner(session)) return true;
+  const roles = session.roles.map(role => role.trim().toLowerCase().replace(/[\s-]+/g, '_'));
+  return !roles.some(role => NON_OWNER_ROLE_CODES.has(role));
+};
 
 /**
  * Check if user is a clinic owner
@@ -84,6 +102,7 @@ export const mapCurrentUserToDomain = (dto: {
   clinic_names?: string[];
   tenant_id: string | null;
   roles: string[];
+  role_names?: string[];
   permissions: string[];
   is_org_admin: boolean;
   is_demo_tenant?: boolean;
@@ -121,6 +140,7 @@ export const mapCurrentUserToDomain = (dto: {
     clinicName,
     tenantId: dto.tenant_id,
     roles: dto.roles,
+    roleNames: dto.role_names ?? [],
     permissions: dto.permissions,
     isOrgAdmin: dto.is_org_admin,
     isDemoTenant: dto.is_demo_tenant === true,

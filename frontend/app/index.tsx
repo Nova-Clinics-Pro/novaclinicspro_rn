@@ -20,6 +20,7 @@ import { typography } from '../core/theme/typography';
 import { spacing } from '../core/theme/spacing';
 import { logError } from '../core/utils/errorHandler';
 import { useTranslation } from '../core/localization/useTranslation';
+import { resolveDashboardRoute } from '../features/auth/domain/dashboardRoute';
 import { resolveRegistrationStatusRoute } from '../features/registration/presentation/registrationStatusRouting';
 
 export default function Index() {
@@ -36,7 +37,13 @@ export default function Index() {
   // Note: This query may fail for users without tenant.read permission, which is OK
   const { data: onboardingStatus, isLoading: isLoadingOnboarding } = useOnboardingStatusQuery(
     currentUser?.tenantId || '',
-    { enabled: !!currentUser?.tenantId, retry: false }
+    {
+      // Only needed to pick a destination when /auth/me gave no application status. A user without tenant.read (for
+      // example Staff) is refused: that is expected here and must not raise the global "unexpected error" dialog.
+      enabled: !!currentUser?.tenantId && !currentUser?.applicationStatus,
+      retry: false,
+      meta: { apiFailurePresentation: 'feature' },
+    }
   );
   const registrationRoute = regStatus ? resolveRegistrationStatusRoute(regStatus) : null;
 
@@ -76,18 +83,10 @@ export default function Index() {
           }
           break;
         case 'active':
-          // Route to appropriate dashboard based on role
-          const userRole = currentUser.roles?.[0]?.toLowerCase() || '';
-          
-          if (userRole === 'doctor') {
-            router.replace('/doctor');
-          } else if (userRole === 'therapist') {
-            router.replace('/therapist');
-          } else if (['clinic owner', 'clinic_owner', 'clinic admin', 'clinic_admin', 'receptionist', 'tenant admin', 'tenant_admin'].includes(userRole)) {
-            router.replace('/clinic-admin');
-          } else {
-            // Default to clinic-admin for unknown roles
-            router.replace('/clinic-admin');
+          // Route to the dashboard of the user's role; a role without a dashboard is explained below (no redirect).
+          {
+            const target = resolveDashboardRoute(currentUser.roles);
+            if (target) router.replace(target);
           }
           return;
         case 'approved':
@@ -112,19 +111,9 @@ export default function Index() {
       if (onboardingStatus && !onboardingStatus.is_ready_to_go_live) {
         router.replace(`/onboarding/setup-wizard?tenantId=${currentUser.tenantId}`);
       } else if (onboardingStatus && onboardingStatus.is_ready_to_go_live) {
-        // Route to appropriate dashboard based on role
-        const userRole = currentUser.roles?.[0]?.toLowerCase() || '';
-        
-        if (userRole === 'doctor') {
-          router.replace('/doctor');
-        } else if (userRole === 'therapist') {
-          router.replace('/therapist');
-        } else if (['clinic owner', 'clinic_owner', 'clinic admin', 'clinic_admin', 'receptionist', 'tenant admin', 'tenant_admin'].includes(userRole)) {
-          router.replace('/clinic-admin');
-        } else {
-          // Default to clinic-admin for unknown roles
-          router.replace('/clinic-admin');
-        }
+        // Route to the dashboard of the user's role; a role without a dashboard is explained below (no redirect).
+        const target = resolveDashboardRoute(currentUser.roles);
+        if (target) router.replace(target);
       } else {
         // onboardingStatus is null/undefined (query failed)
         // Assume onboarding is not complete and route to wizard
@@ -175,6 +164,41 @@ export default function Index() {
         <Text style={styles.email}>{t('applicationStatus.noClinic.loggedInAs', { email: currentUser.email })}</Text>
         <TouchableOpacity 
           style={styles.logoutButton} 
+          onPress={async () => {
+            try {
+              await logout();
+            } catch (error) {
+              logError('index.logout', error);
+            }
+          }}
+        >
+          <Ionicons name="log-out-outline" size={20} color={colors.error.main} />
+          <Text style={styles.logoutText}>{t('applicationStatus.actions.signOut')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // A user whose roles have no dashboard (e.g. "Staff") is told so instead of being redirected around in a loop.
+  const dashboardWouldOpen =
+    currentUser?.applicationStatus === 'active' ||
+    (!currentUser?.applicationStatus && !!onboardingStatus?.is_ready_to_go_live);
+  if (
+    isAuthenticated &&
+    currentUser &&
+    !currentUser.isOrgAdmin &&
+    !!currentUser.tenantId &&
+    dashboardWouldOpen &&
+    resolveDashboardRoute(currentUser.roles) === null
+  ) {
+    return (
+      <View style={styles.container}>
+        <Ionicons name="information-circle" size={64} color={colors.warning.main} />
+        <Text style={styles.title}>{t('applicationStatus.noDashboard.title')}</Text>
+        <Text style={styles.text}>{t('applicationStatus.noDashboard.description')}</Text>
+        <Text style={styles.email}>{t('applicationStatus.noClinic.loggedInAs', { email: currentUser.email })}</Text>
+        <TouchableOpacity
+          style={styles.logoutButton}
           onPress={async () => {
             try {
               await logout();

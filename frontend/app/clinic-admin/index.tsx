@@ -14,12 +14,13 @@ import {
   ActivityIndicator,
   Pressable,
   useWindowDimensions,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
 import { DashboardHeader } from '../../core/components/DashboardHeader';
+import { isClinicOwner } from '../../features/auth/domain/entities/auth.entity';
+import { confirmLogout } from '../../features/auth/presentation/utils/confirmLogout';
 import { StatCard } from '../../core/components/StatCard';
 import { QuickActionButton } from '../../core/components/QuickActionButton';
 import { colors } from '../../core/theme/colors';
@@ -31,8 +32,11 @@ import { useSubscriptionSummaryQuery } from '../../features/billing/data/reposit
 import { useTreatmentOrdersQuery } from '../../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import { useNotificationBadgeCount } from '../../features/notifications/presentation/hooks/useNotificationBadgeCount';
 import { formatInrCurrency } from '../../core/utils/currency';
-import { t, ErrorTokens } from '../../core/localization';
+import { t } from '../../core/localization';
 import { useStaffListQuery } from '../../features/staff/data/repositories/staff.repository.impl';
+import { mayOpenDashboard, resolveDashboardRoute } from '../../features/auth/domain/dashboardRoute';
+import { useAppointmentsByDateQuery } from '../../features/appointments/data/repositories/appointments.repository.impl';
+import { toISODateString } from '../../features/appointments/domain/helpers';
 import { ClinicFeedbackSummarySection } from '../../features/feedback';
 import { useOnboardingStatusQuery } from '../../features/onboarding/data/repositories/onboarding.repository.impl';
 import { useFeatures, hasTreatmentSheets, isTherapyClinic } from '../../core/hooks/useFeatures';
@@ -40,7 +44,11 @@ import { useFeatures, hasTreatmentSheets, isTherapyClinic } from '../../core/hoo
 export default function ClinicAdminDashboard() {
   const router = useRouter();
   const { logout, currentUser, isAuthenticated } = useAuth();
-  const tenantId = currentUser?.tenantId || '';
+  // A user whose role belongs on another dashboard is redirected away by the guard below. Until that happens (and for
+  // good if they have no dashboard) this screen must not fetch clinic data they are not allowed to read: every query
+  // here is enabled only with a tenant id, so withhold it from users who do not belong on this dashboard.
+  const belongsHere = !!currentUser && (currentUser.isOrgAdmin || mayOpenDashboard(currentUser.roles, '/clinic-admin'));
+  const tenantId = belongsHere ? currentUser?.tenantId || '' : '';
   const notificationCount = useNotificationBadgeCount();
 
   const clinicName = currentUser?.clinicName || 'My Clinic';
@@ -56,24 +64,10 @@ export default function ClinicAdminDashboard() {
   // Route guard - only allow clinic owner/admin, receptionist, and tenant_admin roles
   React.useEffect(() => {
     if (currentUser && currentUser.roles && currentUser.roles.length > 0) {
-      const userRole = currentUser.roles[0]?.toLowerCase() || '';
-      console.log('[ClinicAdmin] Route guard checking role:', userRole);
-      
-      // Allow all owner/admin variants that should land in clinic-admin.
-      const allowedRoles = ['clinic owner', 'clinic_owner', 'clinic admin', 'clinic_admin', 'receptionist', 'tenant admin', 'tenant_admin'];
-      
-      if (!allowedRoles.includes(userRole) && !currentUser.isOrgAdmin) {
-        console.log('[ClinicAdmin] Access denied, redirecting to appropriate dashboard');
-        
-        // Redirect to appropriate dashboard based on role
-        if (userRole === 'doctor') {
-          router.replace('/doctor');
-        } else if (userRole === 'therapist') {
-          router.replace('/therapist');
-        } else {
-          // Unknown role, redirect to index for proper routing
-          router.replace('/');
-        }
+      // The same authority the home route uses, so the two can never disagree and bounce the user between them.
+      if (!mayOpenDashboard(currentUser.roles, '/clinic-admin') && !currentUser.isOrgAdmin) {
+        // Another dashboard, or (no dashboard for these roles) the home route, which explains it without redirecting.
+        router.replace(resolveDashboardRoute(currentUser.roles) ?? '/');
       }
     }
   }, [currentUser, router]);
@@ -124,6 +118,15 @@ export default function ClinicAdminDashboard() {
     { enabled: !!tenantId }
   );
   
+  // Today's appointments: the same query (and day definition) the Appointments screen uses for its daily summary.
+  const todayDate = toISODateString(new Date());
+  const {
+    data: todaysAppointments,
+    isLoading: appointmentsLoading,
+    isError: appointmentsError,
+  } = useAppointmentsByDateQuery(tenantId, todayDate, { enabled: !!tenantId });
+  const totalAppointmentsToday = todaysAppointments?.summary?.total ?? todaysAppointments?.appointments?.length ?? 0;
+
   // Get staff for display (up to 3)
   const staffMembers = staffData?.items?.slice(0, 3) || [];
   const activeStaffCount = staffData?.total || 0;
@@ -158,43 +161,12 @@ export default function ClinicAdminDashboard() {
     !onboardingStatus.is_ready_to_go_live && 
     currentUser?.applicationStatus === 'onboarding';
 
-  const handleLogout = async () => {
-    // Use confirm for web, Alert for native
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to logout?');
-      if (confirmed) {
-        try {
-          await logout();
-        } catch {
-          window.alert('Logout failed. Please try again.');
-        }
-      }
-    } else {
-      Alert.alert(
-        t('confirmations.logout'),
-        t('confirmations.logout'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('navigation.logout'),
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await logout();
-              } catch {
-                Alert.alert(t('common.error'), t(ErrorTokens.auth.logoutFailed));
-              }
-            },
-          },
-        ]
-      );
-    }
-  };
+  const handleLogout = () => confirmLogout(t, logout);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <DashboardHeader
-        title="Clinic Admin Dashboard"
+        title={currentUser && isClinicOwner(currentUser) ? t('dashboardTitles.clinicOwner') : t('dashboardTitles.clinicAdmin')}
         subtitle={clinicName}
         userName={displayName}
         notificationCount={notificationCount}
@@ -241,7 +213,7 @@ export default function ClinicAdminDashboard() {
             <View style={[styles.statItem, !isMobile && styles.statItemWeb]}>
               <StatCard
                 title="Total Appointments"
-                value="0"
+                value={appointmentsLoading ? '...' : appointmentsError ? '—' : String(totalAppointmentsToday)}
                 icon="calendar"
                 color={colors.primary.main}
               />

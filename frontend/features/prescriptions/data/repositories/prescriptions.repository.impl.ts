@@ -18,6 +18,7 @@ import {
   amendPrescriptionApi,
 } from '../datasources/prescriptions.api';
 import {
+  PrescriptionData,
   PrescriptionCreateRequest,
   PrescriptionUpdateRequest,
   PrescriptionShareRequest,
@@ -181,6 +182,41 @@ export const useUpdatePrescriptionMutation = (
     ...options,
   });
 };
+
+/**
+ * Draft-save variables. Everything a save needs is carried IN THE VARIABLES (tenant, ids, payload), never read from
+ * render-time hook arguments, so a save started for one consultation can only ever act on that consultation even if
+ * the screen has since re-rendered for another one.
+ */
+export interface PrescriptionDraftSaveVariables {
+  tenantId: string;
+  /** Existing prescription to update; null/undefined creates one. */
+  prescriptionId: string | null;
+  /** Identity used when creating, and for cache scoping. */
+  create: { client_id: string; episode_id: string; appointment_id: string };
+  data: PrescriptionData;
+}
+
+/**
+ * Save a prescription DRAFT (create or update). Persists `prescription_data` only: it never sends a status and never
+ * signs or finalizes. No default cache handling: the caller decides (the consultation workspace gates it behind the
+ * freshness flag), receiving the variables the save actually used.
+ */
+export const usePrescriptionDraftSaveMutation = (options?: {
+  onSuccess?: (response: PrescriptionResponse, variables: PrescriptionDraftSaveVariables) => void;
+}) =>
+  useMutation<PrescriptionResponse, Error, PrescriptionDraftSaveVariables>({
+    mutationFn: (variables) =>
+      variables.prescriptionId
+        ? updatePrescriptionApi(variables.tenantId, variables.prescriptionId, { prescription_data: variables.data })
+        : createPrescriptionApi(variables.tenantId, {
+            client_id: variables.create.client_id,
+            prescription_data: variables.data,
+            appointment_id: variables.create.appointment_id,
+            episode_id: variables.create.episode_id,
+          }),
+    onSuccess: options?.onSuccess,
+  });
 
 /**
  * Hook to delete a prescription

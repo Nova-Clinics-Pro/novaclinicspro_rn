@@ -53,6 +53,9 @@ import {
   useEpisodeQuery,
 } from '../../../episodes/data/repositories/episodes.repository.impl';
 import { EpisodeCard } from '../../../episodes/presentation/components/EpisodeCard';
+import { episodeActionAccess } from '../../../episodes/domain/episodeActionAccess';
+import { appointmentActionAccess } from '../../domain/appointmentActionAccess';
+import { clinicalAuthoringAccess } from '../../../episodes/domain/clinicalAuthoringAccess';
 import { MultiDayTreatmentSection } from '../components/MultiDayTreatmentSection';
 import {
   getStatusLabel,
@@ -73,6 +76,7 @@ import {
   episodeWorkspaceRoute,
   startConsultationRoute,
 } from '../../../doctorDashboard/application/consultationRoutes';
+import { ApiErrorState } from '../../../../core/components/ui/ApiErrorState';
 
 // ============================================
 // SECTION HEADER COMPONENT
@@ -167,6 +171,10 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
     ? (t('common.treatment') || 'Treatment') 
     : (t('common.consultation') || 'Consultation');
   
+  // Adding a case sheet or prescription is clinical authoring (Doctor only); viewing an existing one is not.
+  const { currentUser: visitUser } = useAuth();
+  const authoring = clinicalAuthoringAccess(visitUser?.permissions);
+
   // FIX #3: Check for Case Sheet and Prescription existence
   const hasCaseSheet = !!(appointment.case_sheet_id || appointment.has_case_sheet);
   const hasPrescription = !!(appointment.prescription_id || appointment.has_prescription);
@@ -241,7 +249,8 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
 
       {/* FIX #3: Case Sheet & Prescription Links - Show Add/View based on state */}
       <View style={styles.visitCardLinksRow}>
-        {/* Case Sheet CTA - Add or View */}
+        {/* Case Sheet CTA - Add (authors only) or View */}
+        {(hasCaseSheet || authoring.canCreateCasesheet) && (
         <TouchableOpacity 
           style={[styles.visitCardLinkButton, hasCaseSheet && styles.visitCardLinkButtonActive]}
           onPress={handleCaseSheetPress}
@@ -261,8 +270,10 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
               : (t('appointments.addCaseSheet') || 'Add Case Sheet')}
           </Text>
         </TouchableOpacity>
+        )}
 
-        {/* Prescription CTA - Add or View */}
+        {/* Prescription CTA - Add (authors only) or View */}
+        {(hasPrescription || authoring.canCreatePrescription) && (
         <TouchableOpacity 
           style={[styles.visitCardLinkButton, hasPrescription && styles.visitCardLinkButtonActive]}
           onPress={handlePrescriptionPress}
@@ -282,6 +293,7 @@ const VisitHistoryCard: React.FC<VisitHistoryCardProps> = ({ appointment, onPres
               : (t('appointments.addPrescription') || 'Add Prescription')}
           </Text>
         </TouchableOpacity>
+        )}
       </View>
 
       {/* Payment Details */}
@@ -316,7 +328,6 @@ export const AppointmentDetailScreen: React.FC = () => {
   const { appointmentId } = useLocalSearchParams<{ appointmentId: string }>();
   const { currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
-  const userRole = currentUser?.roles?.[0] || 'clinic_admin';
 
   // State for reschedule
   const [showReschedulePicker, setShowReschedulePicker] = useState(false);
@@ -409,94 +420,13 @@ export const AppointmentDetailScreen: React.FC = () => {
   const roomName = appointment?.room_name || null;
   const staffName = appointment ? getStaffName(appointment) : null;
 
-  // ===== RBAC CHECK =====
-  const normalizedRole = userRole?.toLowerCase().replace('_', '-') || 'clinic-admin';
-  const canModifyAppointment = [
-    'clinic-admin', 
-    'clinic_admin', 
-    'receptionist',
-    'tenant admin',
-    'tenant_admin',
-    'Tenant Admin'
-  ].includes(normalizedRole) || [
-    'clinic-admin', 
-    'clinic_admin', 
-    'receptionist',
-    'Tenant Admin'
-  ].includes(userRole);
-  
-  const canStartSession = [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor', 
-    'therapist',
-    'tenant admin',
-    'tenant_admin',
-    'Tenant Admin'
-  ].includes(normalizedRole) || [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor', 
-    'therapist',
-    'Tenant Admin'
-  ].includes(userRole);
-  
-  const canCompleteSession = canStartSession;
-  const canMarkNoShow = canModifyAppointment;
-  
-  const canCall = [
-    'clinic-admin', 
-    'clinic_admin', 
-    'receptionist', 
-    'doctor', 
-    'therapist',
-    'tenant admin',
-    'tenant_admin',
-    'Tenant Admin'
-  ].includes(normalizedRole) || [
-    'clinic-admin', 
-    'clinic_admin', 
-    'receptionist', 
-    'doctor', 
-    'therapist',
-    'Tenant Admin'
-  ].includes(userRole);
-  
-  const canWhatsApp = canModifyAppointment;
+  // ===== ACTION ACCESS =====
+  // Follows the backend's effective permissions (what it enforces), not a list of role names.
+  const { canNotifyClient: canWhatsApp, canCallClient: canCall } = appointmentActionAccess(currentUser?.permissions);
 
-  // Episode RBAC permissions
-  const canLinkAppointment = [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor', 
-    'receptionist',
-    'tenant admin',
-    'tenant_admin',
-    'Tenant Admin'
-  ].includes(normalizedRole) || [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor', 
-    'receptionist',
-    'Tenant Admin'
-  ].includes(userRole);
-  
-  const canCreateEpisode = [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor',
-    'tenant admin',
-    'tenant_admin',
-    'Tenant Admin'
-  ].includes(normalizedRole) || [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor',
-    'Tenant Admin'
-  ].includes(userRole);
+  // Episode actions follow the backend's effective permissions, not a list of role names.
+  const { canCreateEpisode, canLinkEpisode: canLinkAppointment } = episodeActionAccess(currentUser?.permissions);
 
-  console.log('[AppointmentDetail] userRole:', userRole);
-  console.log('[AppointmentDetail] normalizedRole:', normalizedRole);
   console.log('[AppointmentDetail] canLinkAppointment:', canLinkAppointment);
   console.log('[AppointmentDetail] canCreateEpisode:', canCreateEpisode);
 
@@ -772,16 +702,7 @@ export const AppointmentDetailScreen: React.FC = () => {
             <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
         </View>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color={colors.error.main} />
-          <Text style={styles.errorTitle}>{t('appointments.loadFailed')}</Text>
-          <Text style={styles.errorText}>
-            {error?.message || t('appointments.notFound')}
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
-          </TouchableOpacity>
-        </View>
+        <ApiErrorState error={error} onRetry={() => refetch()} />
       </SafeAreaView>
     );
   }
@@ -789,8 +710,6 @@ export const AppointmentDetailScreen: React.FC = () => {
   const statusColor = getStatusColor(appointment.status);
   const duration = calculateDuration(appointment.appointment_start, appointment.appointment_end);
   // FIX: Use case-insensitive status comparison
-  const canModify = canModifyAppointment && ['scheduled', 'confirmed'].includes(appointment.status?.toLowerCase());
-  const canComplete = canCompleteSession && ['confirmed', 'in_progress'].includes(appointment.status?.toLowerCase());
   const isPartOfSeries = Boolean(appointment.series_id && appointment.session_number);
 
   // Display values with fallbacks

@@ -4,7 +4,7 @@
  * Integrated with backend API for preferences management
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -124,12 +124,14 @@ export const NotificationPreferencesScreen: React.FC = () => {
     DEFAULT_NOTIFICATION_PREFERENCES
   );
 
-  // Initialize local state from preferences when available
-  useEffect(() => {
+  // Initialize local state from preferences when available (adjusted during render when they change)
+  const [syncedPreferences, setSyncedPreferences] = useState<{ value: typeof preferences } | null>(null);
+  if (!syncedPreferences || syncedPreferences.value !== preferences) {
+    setSyncedPreferences({ value: preferences });
     if (preferences) {
       setLocalPrefs(preferences);
     }
-  }, [preferences]);
+  }
 
   // Pull-to-refresh handler
   const handleRefresh = useCallback(async () => {

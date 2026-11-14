@@ -8,7 +8,7 @@
  * - Used for both create and edit flows
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -176,15 +176,15 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
 
   // Creation defaults are supplied by the canonical category catalogue. An
   // edit always preserves its saved category, including a historical null.
-  useEffect(() => {
-    if (isEditing || formData.categoryCode !== null) return;
+  // Applied during render (not in an effect); it stops as soon as a category is set.
+  if (!isEditing && formData.categoryCode === null) {
     const defaultCategory = categoriesQuery.data?.find(category => category.is_active && category.is_default);
     if (defaultCategory) {
       setFormData(current => current.categoryCode === null
         ? { ...current, categoryCode: defaultCategory.code }
         : current);
     }
-  }, [categoriesQuery.data, formData.categoryCode, isEditing]);
+  }
 
   // Validation
   const isValid = useMemo(() => {

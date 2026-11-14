@@ -7,6 +7,7 @@
 
 import { ProtectedRoute } from '../core/components/ProtectedRoute';
 import React, { useState, useMemo, useCallback } from 'react';
+import { mayOpenDashboard, resolveDashboardRoute } from '../features/auth/domain/dashboardRoute';
 import {
   View,
   Text,
@@ -14,7 +15,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Platform,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
@@ -29,6 +29,7 @@ import { spacing } from '../core/theme/spacing';
 import { typography } from '../core/theme/typography';
 import { useAuth } from '../features/auth/presentation/hooks/useAuth';
 import { t, ErrorTokens } from '../core/localization';
+import { confirmLogout } from '../features/auth/presentation/utils/confirmLogout';
 import { useDoctorDashboardDate } from '../features/staffDashboards/presentation/hooks/useDashboardDate';
 import { filterAppointmentsByDate } from '../features/staffDashboards/domain/utils/filterAppointments';
 import {
@@ -146,21 +147,9 @@ function DoctorDashboard() {
   // Route guard - only allow doctor role
   React.useEffect(() => {
     if (currentUser && currentUser.roles && currentUser.roles.length > 0) {
-      const userRole = currentUser.roles[0]?.toLowerCase() || '';
-      
-      // Allow: doctor only
-      const allowedRoles = ['doctor'];
-      
-      if (!allowedRoles.includes(userRole) && !currentUser.isOrgAdmin) {
-        // Redirect to appropriate dashboard based on role
-        if (userRole === 'therapist') {
-          router.replace('/therapist');
-        } else if (['clinic owner', 'clinic_owner', 'clinic admin', 'clinic_admin', 'receptionist', 'tenant admin', 'tenant_admin'].includes(userRole)) {
-          router.replace('/clinic-admin');
-        } else {
-          // Unknown role, redirect to index for proper routing
-          router.replace('/');
-        }
+      if (!mayOpenDashboard(currentUser.roles, '/doctor') && !currentUser.isOrgAdmin) {
+        // The user's own dashboard, or (no dashboard for these roles) the home route, which explains it.
+        router.replace(resolveDashboardRoute(currentUser.roles) ?? '/');
       }
     }
   }, [currentUser, router]);
@@ -314,36 +303,7 @@ function DoctorDashboard() {
     },
   ], [dashboardData, handleStartConsultation, router]);
 
-  const handleLogout = () => {
-    if (Platform.OS === 'web') {
-      if (!window.confirm('Are you sure you want to logout?')) {
-        return;
-      }
-      void logout().catch(() => {
-        window.alert('Failed to logout. Please try again.');
-      });
-      return;
-    }
-
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch {
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  };
+  const handleLogout = () => confirmLogout(t, logout);
 
   const getKpiErrorMessage = (error: unknown) => toDoctorDashboardError(error);
 

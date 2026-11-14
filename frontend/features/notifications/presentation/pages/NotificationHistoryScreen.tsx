@@ -142,7 +142,7 @@ const EmptyState: React.FC = () => (
     <Ionicons name="notifications-off-outline" size={64} color={colors.grey[300]} />
     <Text style={styles.emptyTitle}>No Notifications</Text>
     <Text style={styles.emptyDescription}>
-      You'll see your notifications here when you receive them
+      You&apos;ll see your notifications here when you receive them
     </Text>
   </View>
 );
@@ -205,12 +205,13 @@ export const NotificationHistoryScreen: React.FC = () => {
     deleteMutation.mutate(notificationId);
   }, [deleteMutation]);
 
+  const unreadCount = historyData?.unread_count;
   const handleMarkAllRead = useCallback(() => {
-    if (!historyData?.unread_count) return;
+    if (!unreadCount) return;
 
     Alert.alert(
       'Mark All as Read',
-      `Mark all ${historyData.unread_count} unread notifications as read?`,
+      `Mark all ${unreadCount} unread notifications as read?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -219,7 +220,7 @@ export const NotificationHistoryScreen: React.FC = () => {
         },
       ]
     );
-  }, [historyData?.unread_count, markAllReadMutation]);
+  }, [unreadCount, markAllReadMutation]);
 
   const renderItem = useCallback(({ item }: { item: NotificationHistoryItem }) => (
     <NotificationItem

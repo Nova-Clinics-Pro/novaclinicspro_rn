@@ -22,6 +22,8 @@ import { spacing } from '../core/theme/spacing';
 import { typography } from '../core/theme/typography';
 import { useAuth } from '../features/auth/presentation/hooks/useAuth';
 import { isClinicOwner } from '../features/auth/domain/entities/auth.entity';
+import { roleLabelsFor } from '../features/auth/domain/roleLabels';
+import { t } from '../core/localization';
 
 function ProfileScreen() {
   const router = useRouter();
@@ -56,6 +58,8 @@ function ProfileScreen() {
     );
   }
 
+  const roleLabels = roleLabelsFor(t, currentUser);
+
   const handleLogout = () => {
     router.push('/logout');
   };
@@ -88,7 +92,7 @@ function ProfileScreen() {
             </Text>
           </View>
           <Text style={styles.fullName}>{currentUser.fullName || currentUser.email}</Text>
-          <Text style={styles.email}>{currentUser.email}</Text>
+          {roleLabels.length > 0 ? <Text style={styles.email}>{roleLabels.join(' · ')}</Text> : null}
         </View>
 
         {/* Edit Notice */}
@@ -125,19 +129,6 @@ function ProfileScreen() {
               </View>
             </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.detailRow}>
-              <View style={styles.detailIconContainer}>
-                <Ionicons name="key-outline" size={20} color={colors.primary.main} />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>User ID</Text>
-                <Text style={[styles.detailValue, styles.monoText]}>
-                  {currentUser.userId.slice(0, 8)}...
-                </Text>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -167,16 +158,16 @@ function ProfileScreen() {
                 <Ionicons name="people-outline" size={20} color={colors.primary.main} />
               </View>
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Roles</Text>
+                <Text style={styles.detailLabel}>{t('profileScreen.roles')}</Text>
                 <View style={styles.tagsContainer}>
-                  {currentUser.roles.length > 0 ? (
-                    currentUser.roles.map((role) => (
-                      <View key={role} style={styles.tag}>
-                        <Text style={styles.tagText}>{role.replace(/_/g, ' ')}</Text>
+                  {roleLabels.length > 0 ? (
+                    roleLabels.map((label) => (
+                      <View key={label} style={styles.tag}>
+                        <Text style={styles.tagText}>{label}</Text>
                       </View>
                     ))
                   ) : (
-                    <Text style={styles.detailValueMuted}>No roles assigned</Text>
+                    <Text style={styles.detailValueMuted}>{t('profileScreen.noRoles')}</Text>
                   )}
                 </View>
               </View>
@@ -190,9 +181,9 @@ function ProfileScreen() {
                 <Ionicons name="business-outline" size={20} color={colors.primary.main} />
               </View>
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Current Clinic</Text>
+                <Text style={styles.detailLabel}>{t('profileScreen.currentClinic')}</Text>
                 <Text style={currentUser.tenantId ? styles.detailValue : styles.detailValueMuted}>
-                  {currentUser.tenantId ? `Tenant: ${currentUser.tenantId.slice(0, 8)}...` : 'No clinic assigned'}
+                  {currentUser.tenantId ? currentUser.clinicName || t('profileScreen.noClinic') : t('profileScreen.noClinic')}
                 </Text>
               </View>
             </View>

@@ -11,6 +11,7 @@
  * - Employment: employment_start_date, employment_end_date
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -78,6 +79,11 @@ const staffSchema = z.object({
   // Employment Dates
   employment_start_date: z.string().optional().nullable(),
   employment_end_date: z.string().optional().nullable(),
+}).superRefine((value, ctx) => {
+  // A staff member who can sign in needs an email: it is where the sign-in link is sent.
+  if (value.requires_login && !value.email?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['email'], message: 'Email is required when the staff member can sign in' });
+  }
 });
 
 type StaffFormData = z.infer<typeof staffSchema>;
@@ -849,14 +855,7 @@ export const StaffForm: React.FC<StaffFormProps> = ({
                 control={control}
                 name="employment_start_date"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.input}
-                    value={value || ''}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.text.tertiary}
-                  />
+                  <DateField value={value || ''} onChange={onChange} onBlur={onBlur} />
                 )}
               />
             </View>
@@ -868,14 +867,7 @@ export const StaffForm: React.FC<StaffFormProps> = ({
                 control={control}
                 name="employment_end_date"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.input}
-                    value={value || ''}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.text.tertiary}
-                  />
+                  <DateField value={value || ''} onChange={onChange} onBlur={onBlur} />
                 )}
               />
             </View>

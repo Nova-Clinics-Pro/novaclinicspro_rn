@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DateField } from '../../../../core/components/DateField';
 import {
   ActivityIndicator,
   ScrollView,
@@ -148,23 +149,7 @@ export const CreateConsultationScreen: React.FC<CreateConsultationScreenProps> =
 
         <View style={{ gap: spacing.xs }}>
           <Text style={[typography.subtitle2, { color: colors.text.secondary }]}>Case Start Date</Text>
-          <TextInput
-            value={caseStartDate}
-            onChangeText={setCaseStartDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.text.tertiary}
-            style={[
-              typography.body1,
-              styles.input,
-              {
-                color: colors.text.primary,
-                backgroundColor: colors.surface.default,
-                borderColor: colors.border.default,
-                borderRadius: spacing.sm,
-                padding: spacing.md,
-              },
-            ]}
-          />
+          <DateField value={caseStartDate} onChange={setCaseStartDate} />
         </View>
 
         {!!apiError && (

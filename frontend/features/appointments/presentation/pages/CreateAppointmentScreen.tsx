@@ -11,7 +11,7 @@
  * 7. Proper data binding and client info display
  */
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -343,17 +343,31 @@ export const CreateAppointmentScreen: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedClientInfo, setSelectedClientInfo] = useState<{ name: string; phone: string } | null>(null);
 
-  useEffect(() => {
-    if (!params.clientId || params.treatmentSheetId) return;
-
-    setSelectedClientId(params.clientId);
-    if (params.clientName || params.clientPhone) {
-      setSelectedClientInfo({
-        name: params.clientName || 'Client',
-        phone: params.clientPhone || '',
-      });
+  // Route params -> selected client (adjusted during render when the params change, not in an effect)
+  const [syncedClientParams, setSyncedClientParams] = useState<{ clientId?: string; clientName?: string; clientPhone?: string; treatmentSheetId?: string } | null>(null);
+  if (
+    !syncedClientParams ||
+    syncedClientParams.clientId !== params.clientId ||
+    syncedClientParams.clientName !== params.clientName ||
+    syncedClientParams.clientPhone !== params.clientPhone ||
+    syncedClientParams.treatmentSheetId !== params.treatmentSheetId
+  ) {
+    setSyncedClientParams({
+      clientId: params.clientId,
+      clientName: params.clientName,
+      clientPhone: params.clientPhone,
+      treatmentSheetId: params.treatmentSheetId,
+    });
+    if (params.clientId && !params.treatmentSheetId) {
+      setSelectedClientId(params.clientId);
+      if (params.clientName || params.clientPhone) {
+        setSelectedClientInfo({
+          name: params.clientName || 'Client',
+          phone: params.clientPhone || '',
+        });
+      }
     }
-  }, [params.clientId, params.clientName, params.clientPhone, params.treatmentSheetId]);
+  }
   
   // BUG FIX #7: State for conflict modal (instead of raw Alert)
   const [conflictModal, setConflictModal] = useState<{
@@ -407,23 +421,29 @@ export const CreateAppointmentScreen: React.FC = () => {
   // datasource -> transport client -- same fallback order/fields as before).
   const orderingDoctorQuery = useOrderingDoctorQuery(tenantId, selectedClientId, appointmentType === 'MULTI');
 
-  useEffect(() => {
+  // Ordering doctor -> multi-day form (adjusted during render when the query data changes, not in an effect)
+  const [syncedOrderingDoctor, setSyncedOrderingDoctor] = useState<{ value: typeof orderingDoctorQuery.data } | null>(null);
+  if (!syncedOrderingDoctor || syncedOrderingDoctor.value !== orderingDoctorQuery.data) {
+    setSyncedOrderingDoctor({ value: orderingDoctorQuery.data });
     if (orderingDoctorQuery.data) {
       setMultiDayForm(prev => ({
         ...prev,
         selectedDoctorId: orderingDoctorQuery.data as string,
       }));
     }
-  }, [orderingDoctorQuery.data]);
+  }
 
   // Pre-fill form when coming from treatment sheet (T-G.2: moved behind
   // useTreatmentSheetPrefillQuery -- same treatment sheet -> episode ->
   // client waterfall as before).
-  useEffect(() => {
+  // (adjusted during render when the params change, not in an effect)
+  const [syncedSheetParams, setSyncedSheetParams] = useState<{ treatmentSheetId?: string; tab?: string } | null>(null);
+  if (!syncedSheetParams || syncedSheetParams.treatmentSheetId !== params.treatmentSheetId || syncedSheetParams.tab !== params.tab) {
+    setSyncedSheetParams({ treatmentSheetId: params.treatmentSheetId, tab: params.tab });
     if (params.treatmentSheetId && params.tab === 'MULTI') {
       setAppointmentType('MULTI');
     }
-  }, [params.treatmentSheetId, params.tab]);
+  }
 
   const treatmentSheetPrefillQuery = useTreatmentSheetPrefillQuery(
     tenantId,
@@ -433,25 +453,28 @@ export const CreateAppointmentScreen: React.FC = () => {
     params.durationDays
   );
 
-  useEffect(() => {
+  // Treatment-sheet prefill -> forms (adjusted during render when the query data changes, not in an effect)
+  const [syncedPrefill, setSyncedPrefill] = useState<{ value: typeof treatmentSheetPrefillQuery.data } | null>(null);
+  if (!syncedPrefill || syncedPrefill.value !== treatmentSheetPrefillQuery.data) {
+    setSyncedPrefill({ value: treatmentSheetPrefillQuery.data });
     const prefill = treatmentSheetPrefillQuery.data;
-    if (!prefill) return;
-
-    if (prefill.selectedDoctorId || prefill.treatmentId || prefill.numberOfSessions) {
-      setMultiDayForm(prev => ({
-        ...prev,
-        ...(prefill.selectedDoctorId ? { selectedDoctorId: prefill.selectedDoctorId } : {}),
-        ...(prefill.treatmentId ? { selectedTreatmentId: prefill.treatmentId } : {}),
-        ...(prefill.numberOfSessions ? { numberOfSessions: prefill.numberOfSessions } : {}),
-      }));
+    if (prefill) {
+      if (prefill.selectedDoctorId || prefill.treatmentId || prefill.numberOfSessions) {
+        setMultiDayForm(prev => ({
+          ...prev,
+          ...(prefill.selectedDoctorId ? { selectedDoctorId: prefill.selectedDoctorId } : {}),
+          ...(prefill.treatmentId ? { selectedTreatmentId: prefill.treatmentId } : {}),
+          ...(prefill.numberOfSessions ? { numberOfSessions: prefill.numberOfSessions } : {}),
+        }));
+      }
+      if (prefill.clientId) {
+        setSelectedClientId(prefill.clientId);
+      }
+      if (prefill.clientInfo) {
+        setSelectedClientInfo(prefill.clientInfo);
+      }
     }
-    if (prefill.clientId) {
-      setSelectedClientId(prefill.clientId);
-    }
-    if (prefill.clientInfo) {
-      setSelectedClientInfo(prefill.clientInfo);
-    }
-  }, [treatmentSheetPrefillQuery.data]);
+  }
 
   // Handler for appointment type change - FORCE RESET forms to prevent leakage
   const handleAppointmentTypeChange = useCallback((type: AppointmentType) => {
@@ -518,14 +541,14 @@ export const CreateAppointmentScreen: React.FC = () => {
   }, [features.appointments.multiday_appointment_types, treatmentsData?.items]);
   const multiDayAvailable = allowMultiDay && eligibleMultiDayTreatmentIds.size > 0;
 
-  useEffect(() => {
-    if (!multiDayAvailable && appointmentType === 'MULTI') {
-      setAppointmentType('SINGLE');
-    }
-    if (!allowTherapySession && sessionType === 'THERAPY') {
-      setSessionType('DOCTOR');
-    }
-  }, [multiDayAvailable, allowTherapySession, appointmentType, sessionType]);
+  // Fall back to a supported type when the current one is not available (applied during render; each
+  // correction clears its own condition, so it cannot loop).
+  if (!multiDayAvailable && appointmentType === 'MULTI') {
+    setAppointmentType('SINGLE');
+  }
+  if (!allowTherapySession && sessionType === 'THERAPY') {
+    setSessionType('DOCTOR');
+  }
   
   // Staff queries - SEPARATE for doctors and therapists
   // CRITICAL FIX: Fetch doctors for DOCTOR mode and MULTI-DAY (doctor assignment)
@@ -649,9 +672,6 @@ export const CreateAppointmentScreen: React.FC = () => {
   }, [therapistsData]);
 
   // BUG FIX #7: Gender-filtered therapist options based on selected client
-  // Track if there's a gender mismatch conflict
-  const [genderMatchConflict, setGenderMatchConflict] = useState<string | null>(null);
-  
   const genderFilteredTherapistOptions: AppointmentPickerOption[] = useMemo(() => {
     const selectedClient = clientOptions.find(c => c.id === selectedClientId);
     const clientGender = selectedClient?.gender?.toLowerCase();
@@ -681,16 +701,15 @@ export const CreateAppointmentScreen: React.FC = () => {
     return therapistOptions;
   }, [therapistOptions, selectedClientId, clientOptions]);
   
-  // BUG FIX #5: Update gender conflict state based on filtered options
-  useEffect(() => {
+  // BUG FIX #5: Gender conflict derived from the filtered options (a value, not state synced by an effect)
+  const genderMatchConflict: string | null = useMemo(() => {
     const selectedClient = clientOptions.find(c => c.id === selectedClientId);
     const clientGender = selectedClient?.gender?.toLowerCase();
-    
+
     if (clientGender === 'female' && genderFilteredTherapistOptions.length === 0 && therapistOptions.length > 0) {
-      setGenderMatchConflict('No female therapists available. This female client requires a female therapist.');
-    } else {
-      setGenderMatchConflict(null);
+      return 'No female therapists available. This female client requires a female therapist.';
     }
+    return null;
   }, [genderFilteredTherapistOptions, selectedClientId, clientOptions, therapistOptions]);
 
   const treatmentOptions: AppointmentPickerOption[] = useMemo(() => {

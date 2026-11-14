@@ -62,6 +62,7 @@ import { AppointmentRow } from '../components/AppointmentRow';
 import CrossPlatformDateTimePicker, {
   DateTimePickerEvent,
 } from '../../../../core/components/CrossPlatformDateTimePicker';
+import { ApiErrorState } from '../../../../core/components/ui/ApiErrorState';
 
 // ============================================
 // DATE SLIDER COMPONENT - FIXED LAYOUT
@@ -421,16 +422,7 @@ export const AppointmentsListScreen: React.FC = () => {
   if (isError && !appointmentsData) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color={colors.error.main} />
-          <Text style={styles.errorTitle}>Could not load appointments</Text>
-          <Text style={styles.errorText}>
-            {error?.message || 'Please check your connection and try again'}
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+        <ApiErrorState error={error} onRetry={() => refetch()} />
       </SafeAreaView>
     );
   }
@@ -495,6 +487,7 @@ export const AppointmentsListScreen: React.FC = () => {
               appointment={item}
               onPress={() => handleAppointmentPress(item)}
               userRole={currentUser?.roles?.[0] || 'clinic_admin'}
+              permissions={currentUser?.permissions}
               showActions={true}
               onStatusUpdate={handleStatusUpdate}
               onCancel={handleCancel}

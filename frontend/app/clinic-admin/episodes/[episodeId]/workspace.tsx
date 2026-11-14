@@ -20,6 +20,7 @@ import type { WorkspaceMode } from '../../../../features/episodes/presentation/c
 import { useFeatures, isCosV1Enabled } from '../../../../core/hooks/useFeatures';
 import type { CosWorkspaceStep } from '../../../../features/doctorDashboard/application/consultationRoutes';
 import { LegacyRouteUsage } from '../../../../core/observability/legacyRouteUsage';
+import { useCompletionStepGate } from '../../../../features/episodes/presentation/navigation/useCompletionStepGate';
 
 export default function EpisodeWorkspaceRoute() {
   const { episodeId, mode, clientId, initialTab, appointmentId, step } = useLocalSearchParams<{
@@ -32,9 +33,15 @@ export default function EpisodeWorkspaceRoute() {
   }>();
 
   const features = useFeatures();
+  const cosEnabled = isCosV1Enabled(features);
 
-  if (isCosV1Enabled(features)) {
-    if (step === 'completion' && episodeId && appointmentId && clientId) {
+  // Same-appointment navigation reuses this route instance, so a `step=completion` request must not swap the workspace
+  // out from under a dirty prescription draft: the gate asks Save / Discard / Cancel first and only then lets the
+  // displayed step change.
+  const displayedStep = useCompletionStepGate(step, cosEnabled);
+
+  if (cosEnabled) {
+    if (displayedStep === 'completion' && episodeId && appointmentId && clientId) {
       // Completion remains backend-contract-owned. Load this exceptional
       // workspace stage only when it is explicitly requested so the normal
       // VisitCommandCenter route graph remains independent of it.
@@ -53,7 +60,7 @@ export default function EpisodeWorkspaceRoute() {
         episodeId={episodeId ?? ''}
         appointmentId={appointmentId}
         clientId={clientId ?? ''}
-        initialStep={step}
+        initialStep={displayedStep}
       />
     );
   }

@@ -11,7 +11,7 @@
  * re-display contract exists yet).
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -59,13 +59,16 @@ export const SessionNonExecutionModal: React.FC<SessionNonExecutionModalProps> =
   const [reasonText, setReasonText] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Start each time the modal opens with an empty form (adjusted during render, not in an effect).
+  const [syncedVisible, setSyncedVisible] = useState<boolean | null>(null);
+  if (syncedVisible !== visible) {
+    setSyncedVisible(visible);
     if (visible) {
       setReasonCode(null);
       setReasonText('');
       setValidationError(null);
     }
-  }, [visible]);
+  }
 
   const handleSubmit = () => {
     if (!reasonCode) {

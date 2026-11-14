@@ -224,6 +224,16 @@ const TreatmentSheetCard: React.FC<TreatmentSheetCardProps> = ({
     sendToScheduling.mutate({ sheetId: sheet.id, version: sheet.version ?? 1 });
   };
 
+  // Mark the plan as sent as soon as the send succeeds (adjusted during render when the status changes);
+  // the alerts, mutation reset and refreshes stay in the effect below.
+  const [syncedSendStatus, setSyncedSendStatus] = useState<string | null>(null);
+  if (syncedSendStatus !== sendToScheduling.status) {
+    setSyncedSendStatus(sendToScheduling.status);
+    if (sendToScheduling.status === 'success') {
+      setSentSuccessfully(true);
+    }
+  }
+
   React.useEffect(() => {
     if (sendToScheduling.status === 'conflict') {
       Alert.alert(
@@ -235,7 +245,6 @@ const TreatmentSheetCard: React.FC<TreatmentSheetCardProps> = ({
       Alert.alert('Error', sendToScheduling.errorMessage ?? 'Failed to send to scheduling.');
       sendToScheduling.reset();
     } else if (sendToScheduling.status === 'success') {
-      setSentSuccessfully(true);
       sendToScheduling.reset();
       refetchTreatmentOrder();
       onRefresh();

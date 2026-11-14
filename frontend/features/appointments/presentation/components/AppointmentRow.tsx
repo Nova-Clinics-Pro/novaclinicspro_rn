@@ -46,6 +46,7 @@ import { AppointmentResponse } from '../../data/models/appointments.dtos';
 import { getStatusLabel, getStatusColor, getStaffName } from '../../domain/helpers';
 import { formatTime, formatDate } from '../../../../core/utils/dateTimeUtils';
 import { useTreatmentSheetDetailQuery } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
+import { appointmentActionAccess } from '../../domain/appointmentActionAccess';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 
 // ============================================================================
@@ -56,6 +57,8 @@ interface FullAppointmentRowProps {
   appointment: AppointmentResponse;
   onPress?: (appointment: AppointmentResponse) => void;
   userRole?: string;
+  /** The user's effective permissions. When given, front-desk actions follow them instead of the role name. */
+  permissions?: readonly string[];
   showActions?: boolean;
   onStatusUpdate?: (appointmentId: string, newStatus: string) => void;
   onCancel?: (appointmentId: string) => void;
@@ -162,6 +165,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
   appointment,
   onPress,
   userRole = 'clinic_admin',
+  permissions,
   showActions = true,
   onStatusUpdate,
   onCancel,
@@ -241,7 +245,11 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
   const isReceptionist = normalizedRole.includes('receptionist');
   const isDoctor = normalizedRole.includes('doctor');
   const isTherapist = normalizedRole.includes('therapist');
-  const canModify = isClinicAdmin || isReceptionist || isDoctor || isTherapist;
+  const access = permissions ? appointmentActionAccess(permissions) : null;
+  // Front-desk actions (reschedule, record visit, no-show, cancel): by permission when known, else by role name.
+  const isFrontDesk = access ? !isDoctor && !isTherapist && access.canUpdate : isClinicAdmin || isReceptionist;
+  const mayCancel = access ? access.canCancel : true;
+  const canModify = isFrontDesk || isDoctor || isTherapist;
 
   // ===== STATUS-BASED ACTION VISIBILITY =====
   const status = (appointment.status || '').toLowerCase();
@@ -401,7 +409,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
       {/* Quick Actions Row */}
       {showActions && canModify && !isTerminalStatus && !isDoctor && (
         <View style={fullStyles.quickActionsRow} data-testid="appointment-quick-actions">
-          {(isClinicAdmin || isReceptionist) && ['scheduled', 'confirmed', 'in_progress'].includes(status) && (
+          {isFrontDesk && ['scheduled', 'confirmed', 'in_progress'].includes(status) && (
             <>
               {['scheduled', 'confirmed'].includes(status) && (
                 <QuickActionIconButton
@@ -466,7 +474,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
                 />
               )}
 
-              {['scheduled', 'confirmed'].includes(status) && onCancel && (
+              {['scheduled', 'confirmed'].includes(status) && onCancel && mayCancel && (
                 <QuickActionIconButton
                   icon="close-circle-outline"
                   label="Cancel"

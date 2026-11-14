@@ -13,6 +13,9 @@ import { CasesheetStandaloneScreen } from '../../../../../features/casesheets/pr
 import { isCosV1Enabled, useFeatures } from '../../../../../core/hooks/useFeatures';
 import { episodeWorkspaceRoute } from '../../../../../features/doctorDashboard/application/consultationRoutes';
 import { InvalidWorkspaceState } from '../../../../../features/episodes/presentation/components/InvalidWorkspaceState';
+import { useAuth } from '../../../../../features/auth/presentation/hooks/useAuth';
+import { clinicalAuthoringAccess } from '../../../../../features/episodes/domain/clinicalAuthoringAccess';
+import { NoAuthoringAccessState } from '../../../../../features/episodes/presentation/components/NoAuthoringAccessState';
 import { LegacyRouteUsage } from '../../../../../core/observability/legacyRouteUsage';
 
 export default function NewCasesheetRoute() {
@@ -22,8 +25,16 @@ export default function NewCasesheetRoute() {
     episodeId?: string;
   }>();
   const router = useRouter();
+  const { currentUser } = useAuth();
+  const authoring = clinicalAuthoringAccess(currentUser?.permissions);
+  const featuresForRoute = useFeatures();
 
-  if (isCosV1Enabled(useFeatures())) {
+  // Authoring a clinical document needs the Doctor-only permission; nobody reaches the form by a direct link.
+  if (!authoring.canCreateCasesheet) {
+    return <NoAuthoringAccessState document="casesheet" onBack={() => router.back()} />;
+  }
+
+  if (isCosV1Enabled(featuresForRoute)) {
     if (!episodeId || !appointmentId || !clientId) {
       return <InvalidWorkspaceState onBack={() => router.back()} />;
     }
