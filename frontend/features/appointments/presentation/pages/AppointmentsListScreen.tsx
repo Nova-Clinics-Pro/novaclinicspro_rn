@@ -487,6 +487,7 @@ export const AppointmentsListScreen: React.FC = () => {
               appointment={item}
               onPress={() => handleAppointmentPress(item)}
               userRole={currentUser?.roles?.[0] || 'clinic_admin'}
+              permissions={currentUser?.permissions}
               showActions={true}
               onStatusUpdate={handleStatusUpdate}
               onCancel={handleCancel}

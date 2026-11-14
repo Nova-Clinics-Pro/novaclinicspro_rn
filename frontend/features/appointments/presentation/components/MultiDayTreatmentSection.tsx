@@ -54,9 +54,8 @@ export const MultiDayTreatmentSection: React.FC<MultiDayTreatmentSectionProps> =
   const router = useRouter();
   const { currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
-  const isAdmin = ['clinic_admin', 'clinic admin', 'receptionist'].includes(
-    (currentUser?.roles?.[0] || '').toLowerCase()
-  );
+  // Scheduling a treatment plan is the front desk's job: whoever may change appointments (backend: appointment.update).
+  const isAdmin = (currentUser?.permissions ?? []).includes('appointment.update');
 
   // Only fetch if we have a treatment sheet ID
   const {
