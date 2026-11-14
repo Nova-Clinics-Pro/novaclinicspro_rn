@@ -106,10 +106,10 @@ describe('create appointment navigation', () => {
   const single = source.slice(source.indexOf('const handleCreateSingle'), source.indexOf('const handleCreateSingle') + 9000);
   const success = single.slice(single.indexOf('await createMutation.mutateAsync(payload)'), single.indexOf('} catch (error)'));
 
-  it('opens the created appointment after every successful outcome instead of going back', () => {
-    expect(success).toMatch(/created\.id/);
-    expect(success).toMatch(/router\.replace\(`\/clinic-admin\/appointments\/\$\{created\.id\}`/);
+  it('lands on the appointments list (on the new appointment\'s day) after every successful outcome instead of going back', () => {
+    expect(success).toMatch(/router\.replace\(appointmentsListRoute\(toISODateString\(startDateTime\)\)/);
     expect(success).not.toMatch(/router\.back\(\)/);
+    expect(success).not.toMatch(/\/clinic-admin\/appointments\/\$\{/); // not the appointment's own page
     expect((success.match(/openCreated\(\)/g) ?? []).length).toBe(3);
   });
 

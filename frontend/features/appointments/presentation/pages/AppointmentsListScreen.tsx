@@ -26,7 +26,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { parseListDateParam } from '../../domain/appointmentsListRoute';
 import { episodeWorkspaceRoute } from '../../../doctorDashboard/application/consultationRoutes';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
@@ -209,11 +210,12 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, selectedDate }) => {
 
 export const AppointmentsListScreen: React.FC = () => {
   const router = useRouter();
+  const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
   const { currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
 
-  // State
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  // State. Opens on today, or on the day in the `date` route parameter (after creating an appointment for that day).
+  const [selectedDate, setSelectedDate] = useState<Date>(() => parseListDateParam(dateParam));
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 300);
 

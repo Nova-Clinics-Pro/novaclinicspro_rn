@@ -59,6 +59,7 @@ import {
   generateWhatsAppConfirmationMessage,
   toISODateString,
 } from '../../domain/helpers';
+import { appointmentsListRoute } from '../../domain/appointmentsListRoute';
 import { 
   toLocalTimeISO,
   formatTime, 
@@ -1021,9 +1022,10 @@ export const CreateAppointmentScreen: React.FC = () => {
     });
 
     try {
-      const created = await createMutation.mutateAsync(payload);
-      // Land on the appointment that was just created (not back on whatever opened this form).
-      const openCreated = () => router.replace(`/clinic-admin/appointments/${created.id}` as any);
+      await createMutation.mutateAsync(payload);
+      // After creating, land on the appointments list, on the day of the new appointment so it is visible there (not back
+      // on whatever opened this form, and not on the appointment's own page).
+      const openCreated = () => router.replace(appointmentsListRoute(toISODateString(startDateTime)) as any);
 
       const clientPhone = selectedClientInfo?.phone;
       const clientName = selectedClientInfo?.name || 'Client';
@@ -1069,7 +1071,7 @@ export const CreateAppointmentScreen: React.FC = () => {
         Alert.alert(
           'Appointment Created',
           error.message,
-          [{ text: 'OK', onPress: () => router.back() }]
+          [{ text: 'OK', onPress: () => router.replace(appointmentsListRoute(toISODateString(startDateTime)) as any) }]
         );
         return;
       }
