@@ -23,6 +23,10 @@ import { typography } from '../../../../core/theme/typography';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
 import { buildPrescriptionPrintHtml } from '../../../../core/clinicalPrint/adapters';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { useTranslation } from '../../../../core/localization/useTranslation';
+import { classifyApiError } from '../../../../core/api/apiErrorPresentation';
+import { describeApiError } from '../../../../core/localization/apiErrorMessages';
+import { shareOutcome } from '../../domain/shareOutcome';
 import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 import {
   usePrescriptionDetailQuery,
@@ -46,6 +50,7 @@ import { EmptyPrescriptionsState } from '../components/EmptyPrescriptionsState';
 export const PrescriptionDetailScreen: React.FC = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{ clientId?: string; prescriptionId: string }>();
+  const { t } = useTranslation();
   const { currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
   const clientId = params.clientId;
@@ -105,15 +110,20 @@ export const PrescriptionDetailScreen: React.FC = () => {
     try {
       const result = await shareMutation.mutateAsync(request);
       setShowShareModal(false);
-      if (result.success) {
-        Alert.alert('Success', `Prescription shared via ${request.channel} successfully.`);
+      const outcome = shareOutcome(result);
+      if (outcome === 'failed') {
+        Alert.alert(t('common.error'), t('errors.prescriptions.shareFailed'));
+      } else if (outcome === 'recorded_not_sent') {
+        // Recorded, but no messaging provider is configured: never tell the user it was sent.
+        Alert.alert(t('common.info'), t('errors.prescriptions.shareNotDelivered'));
       } else {
-        Alert.alert('Error', result.error || 'Failed to share prescription.');
+        Alert.alert(t('common.success'), t('success.prescriptionShared', { channel: request.channel }));
       }
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to share prescription.');
+    } catch (err: unknown) {
+      // Never show the transport's raw text ("Request failed with status code 500").
+      Alert.alert(t('common.error'), describeApiError(t, classifyApiError(err)).message || t('errors.prescriptions.shareFailed'));
     }
-  }, [shareMutation]);
+  }, [shareMutation, t]);
 
   const handlePrint = useCallback(async () => {
     try {
@@ -297,7 +307,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
             <Text style={styles.infoLabel}>Created:</Text>
             <Text style={styles.infoValue}>{formatDateTime(prescription.created_at)}</Text>
           </View>
-          {prescription.signed_at && (
+          {!!prescription.signed_at && (
             <View style={styles.infoRow}>
               <Ionicons name="shield-checkmark" size={16} color={colors.success.main} />
               <Text style={styles.infoLabel}>Signed:</Text>
@@ -306,7 +316,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
               </Text>
             </View>
           )}
-          {prescription.next_visit_days && (
+          {!!prescription.next_visit_days && (
             <View style={styles.infoRow}>
               <Ionicons name="time-outline" size={16} color={colors.info.main} />
               <Text style={styles.infoLabel}>Follow-up:</Text>
@@ -331,7 +341,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
               <Text style={styles.medicationDetails}>
                 {formatMedication(med)}
               </Text>
-              {med.instructions && (
+              {!!med.instructions && (
                 <Text style={styles.medicationInstructions}>
                   • {med.instructions}
                 </Text>
@@ -341,7 +351,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
         </View>
 
         {/* Dietary Advice */}
-        {prescription.prescription_data?.dietary_advice && (
+        {!!prescription.prescription_data?.dietary_advice && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="nutrition-outline" size={20} color={colors.success.main} />
@@ -354,7 +364,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
         )}
 
         {/* Lifestyle Advice */}
-        {prescription.prescription_data?.lifestyle_advice && (
+        {!!prescription.prescription_data?.lifestyle_advice && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="fitness-outline" size={20} color={colors.info.main} />
@@ -367,7 +377,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
         )}
 
         {/* Notes */}
-        {prescription.notes && (
+        {!!prescription.notes && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="document-text-outline" size={20} color={colors.text.secondary} />

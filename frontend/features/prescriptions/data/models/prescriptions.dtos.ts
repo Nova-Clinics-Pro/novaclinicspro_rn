@@ -162,6 +162,9 @@ export interface PrescriptionShareResponse {
   recipient_phone?: string;
   recipient_email?: string;
   error?: string;
+  /** False when the share was only recorded because no messaging provider is configured: nothing reached the recipient. */
+  delivered?: boolean;
+  message?: string;
 }
 
 // ============================================

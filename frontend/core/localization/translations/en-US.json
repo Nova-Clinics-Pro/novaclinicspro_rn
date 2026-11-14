@@ -668,7 +668,9 @@
     "prescriptions": {
       "loadFailed": "Could not load prescriptions. Please try again.",
       "createFailed": "Could not create prescription. Please try again.",
-      "updateFailed": "Could not update prescription. Please try again."
+      "updateFailed": "Could not update prescription. Please try again.",
+      "shareFailed": "The prescription could not be sent. Please try again.",
+      "shareNotDelivered": "The share was recorded, but sending messages is not set up for this clinic yet, so nothing was sent to the patient."
     },
     "casesheets": {
       "loadFailed": "Could not load case sheets. Please try again.",
@@ -1102,6 +1104,7 @@
     "loading": "Loading episode..."
   },
   "success": {
+    "prescriptionShared": "Prescription sent via {{channel}}.",
     "saved": "Successfully saved.",
     "updated": "Successfully updated.",
     "deleted": "Successfully deleted.",
