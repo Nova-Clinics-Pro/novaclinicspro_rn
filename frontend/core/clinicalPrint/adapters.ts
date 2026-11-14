@@ -36,12 +36,20 @@ const snapshotClinic = (header: any, footer: any): ClinicalPrintClinic => ({
   registrationNo: footer?.registration_no,
 });
 
-const snapshotDoctor = (footer: any): ClinicalPrintParty => ({
-  name: footer?.recorded_by_name,
-  qualification: footer?.recorded_by_qualification,
-  specialization: footer?.recorded_by_specialization,
-  registrationNo: footer?.recorded_by_registration_no,
-});
+/**
+ * The doctor on a signed document, from its frozen footer snapshot. The backend writes `{ doctor: { full_name,
+ * qualification, registration_number, ... } }`; the `recorded_by_*` fields are the older flat shape. Both are read, so the
+ * name and degree print whichever shape the document was signed with.
+ */
+export const snapshotDoctor = (footer: any): ClinicalPrintParty => {
+  const doctor = footer?.doctor ?? {};
+  return {
+    name: footer?.recorded_by_name ?? doctor.full_name,
+    qualification: footer?.recorded_by_qualification ?? doctor.qualification,
+    specialization: footer?.recorded_by_specialization ?? doctor.specialization,
+    registrationNo: footer?.recorded_by_registration_no ?? doctor.registration_number,
+  };
+};
 
 const snapshotClient = (client: any): ClinicalPrintParty => ({
   name: client?.full_name || client?.name,

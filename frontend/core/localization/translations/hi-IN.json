@@ -787,6 +787,11 @@
     "sent": "सफलतापूर्वक भेजा गया।"
   },
   "appointments": {
+    "consultationAction": {
+      "start": "परामर्श शुरू करें",
+      "continue": "परामर्श जारी रखें",
+      "complete": "परामर्श पूरा करें"
+    },
     "noPhoneNumber": "ग्राहक का फोन नंबर उपलब्ध नहीं है",
     "session": "सत्र",
     "notFound": "अपॉइंटमेंट नहीं मिला",

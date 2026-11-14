@@ -75,6 +75,7 @@ export const buildClinicalPrintHtml = (doc: ClinicalPrintDocument): string => {
     .panel-title { font-size: 14px; font-weight: 800; color: #1d4ed8; margin-bottom: 6px; }
     .line { font-size: 13px; margin-bottom: 4px; }
     .label { font-weight: 700; color: #4b5563; }
+    .doctor-degree { text-align: right; }
     .section { margin-bottom: 22px; page-break-inside: avoid; }
     .section h2 { font-size: 16px; color: #1d4ed8; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin: 0 0 10px; }
     .section-body { white-space: pre-wrap; font-size: 14px; }
@@ -104,7 +105,7 @@ export const buildClinicalPrintHtml = (doc: ClinicalPrintDocument): string => {
       <div>
         <div class="panel-title">Doctor</div>
         <div class="line"><span class="label">Name:</span> ${escapeHtml(doc.doctor.name || 'N/A')}</div>
-        ${doc.doctor.qualification ? `<div class="line">${escapeHtml(doc.doctor.qualification)}</div>` : ''}
+        ${doc.doctor.qualification ? `<div class="line doctor-degree">${escapeHtml(doc.doctor.qualification)}</div>` : ''}
         ${doc.doctor.specialization ? `<div class="line">${escapeHtml(doc.doctor.specialization)}</div>` : ''}
         ${doc.doctor.registrationNo ? `<div class="line"><span class="label">Regn No:</span> ${escapeHtml(doc.doctor.registrationNo)}</div>` : ''}
         ${doc.documentDate ? `<div class="line"><span class="label">Date:</span> ${escapeHtml(formatDate(doc.documentDate))}</div>` : ''}

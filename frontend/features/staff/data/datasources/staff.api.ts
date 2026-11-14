@@ -21,6 +21,7 @@ import {
   PaginatedLeaveResponse,
   OnboardingStaffSourceItem,
 } from '../models/staff.dtos';
+import { fromStaffApiList, fromStaffApiRecord, toStaffApiPayload } from '../mappers/staffContract';
 
 const normalizeStaffOperationError = (kind: StaffOperationFailureKind, cause?: unknown): StaffOperationError =>
   new StaffOperationError(kind, cause);
@@ -56,7 +57,7 @@ export const listStaffApi = async (
     `/api/v1/clinic/${tenantId}/staff`,
     { params }
   );
-  return response.data;
+  return fromStaffApiList(response.data);
 };
 
 /**
@@ -80,7 +81,7 @@ export const getStaffApi = async (
 ): Promise<StaffResponse> => {
   try {
     const response = await axiosClient.get(`/api/v1/clinic/${tenantId}/staff/${staffId}`);
-    return response.data;
+    return fromStaffApiRecord(response.data);
   } catch {
     throw normalizeStaffOperationError('LOAD_FAILED');
   }
@@ -95,8 +96,8 @@ export const createStaffApi = async (
   payload: StaffCreate
 ): Promise<StaffResponse> => {
   try {
-    const response = await axiosClient.post(`/api/v1/clinic/${tenantId}/staff`, payload);
-    return response.data;
+    const response = await axiosClient.post(`/api/v1/clinic/${tenantId}/staff`, toStaffApiPayload(payload));
+    return fromStaffApiRecord(response.data);
   } catch (error) {
     throw normalizeStaffCreateError(error);
   }
@@ -112,8 +113,8 @@ export const updateStaffApi = async (
   payload: StaffUpdate
 ): Promise<StaffResponse> => {
   try {
-    const response = await axiosClient.patch(`/api/v1/clinic/${tenantId}/staff/${staffId}`, payload);
-    return response.data;
+    const response = await axiosClient.patch(`/api/v1/clinic/${tenantId}/staff/${staffId}`, toStaffApiPayload(payload));
+    return fromStaffApiRecord(response.data);
   } catch {
     throw normalizeStaffOperationError('SAVE_FAILED');
   }
@@ -255,5 +256,5 @@ export const searchStaffApi = async (
     `/api/v1/clinic/${tenantId}/staff/search`,
     { params: { query, limit } }
   );
-  return response.data;
+  return fromStaffApiList(response.data);
 };
