@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +29,8 @@ import {
   createClinicSummary,
 } from '../../features/owner-dashboard/domain/entities/owner-dashboard.entity';
 import type { OwnerClinicSummary } from '../../features/owner-dashboard/domain/entities/owner-dashboard.entity';
+import { t } from '../../core/localization';
+import { confirmLogout } from '../../features/auth/presentation/utils/confirmLogout';
 
 export default function OwnerDashboardScreen() {
   const router = useRouter();
@@ -73,16 +74,7 @@ export default function OwnerDashboardScreen() {
     void enterClinic(tenantId, '/clinic-admin/staff');
   };
 
-  const handleLogout = async () => {
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to sign out?');
-      if (confirmed) {
-        await logout();
-      }
-    } else {
-      await logout();
-    }
-  };
+  const handleLogout = () => confirmLogout(t, logout);
 
   if (isLoading) {
     return (

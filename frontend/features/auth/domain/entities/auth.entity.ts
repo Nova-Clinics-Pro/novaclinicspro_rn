@@ -28,6 +28,8 @@ export interface AuthUserSession {
   clinicName: string; // Clinic name for the user's assigned tenant
   tenantId: string | null;
   roles: string[];
+  /** Human-readable names of the roles the user holds in the current clinic (from the backend). */
+  roleNames?: string[];
   permissions: string[];
   isOrgAdmin: boolean;
   /** Backend-authoritative; never inferred from application lifecycle state. */
@@ -100,6 +102,7 @@ export const mapCurrentUserToDomain = (dto: {
   clinic_names?: string[];
   tenant_id: string | null;
   roles: string[];
+  role_names?: string[];
   permissions: string[];
   is_org_admin: boolean;
   is_demo_tenant?: boolean;
@@ -137,6 +140,7 @@ export const mapCurrentUserToDomain = (dto: {
     clinicName,
     tenantId: dto.tenant_id,
     roles: dto.roles,
+    roleNames: dto.role_names ?? [],
     permissions: dto.permissions,
     isOrgAdmin: dto.is_org_admin,
     isDemoTenant: dto.is_demo_tenant === true,

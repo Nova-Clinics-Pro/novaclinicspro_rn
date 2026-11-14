@@ -110,8 +110,11 @@ export const useAuth = (): UseAuthReturn => {
     if (hasDirtyDrafts() && !(await confirmUnsavedWork('logout'))) return;
     return unifiedLogoutService.logout({
       navigateToLogin: () => {
-        requestIdleCallback(() => {
-        router.replace('/login');
+        // requestIdleCallback is missing in some browsers (e.g. Safari); fall back to a timer.
+        const defer: (callback: () => void) => unknown =
+          typeof requestIdleCallback === 'function' ? requestIdleCallback : (callback) => setTimeout(callback, 0);
+        defer(() => {
+          router.replace('/login');
         });
       },
     });

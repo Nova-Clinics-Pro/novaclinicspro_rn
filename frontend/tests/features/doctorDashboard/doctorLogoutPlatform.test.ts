@@ -1,19 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const source = fs.readFileSync(path.resolve(__dirname, '../../../app/doctor.tsx'), 'utf8');
+const read = (relative: string) => fs.readFileSync(path.resolve(__dirname, '../../..', relative), 'utf8');
 
-describe('Doctor logout platform boundary', () => {
-  it('uses browser confirmation before invoking the shared logout on web', () => {
-    const logout = source.slice(source.indexOf('const handleLogout'), source.indexOf('// Get error message'));
-    expect(logout).toContain("Platform.OS === 'web'");
-    expect(logout).toContain("window.confirm('Are you sure you want to logout?')");
-    expect(logout).toContain('void logout().catch');
-  });
+describe('Logout confirmation on every dashboard', () => {
+  it.each(['app/doctor.tsx', 'app/owner/index.tsx', 'app/clinic-admin/index.tsx'])(
+    '%s confirms with the shared in-app dialog, never the browser confirm',
+    (file) => {
+      const source = read(file);
+      expect(source).toContain('confirmLogout(t, logout)');
+      // The browser's window.confirm is suppressed by embedded browsers, which answer "cancel": the button did nothing.
+      expect(source).not.toContain('window.confirm');
+    },
+  );
 
-  it('retains native Alert confirmation behavior', () => {
-    const logout = source.slice(source.indexOf('const handleLogout'), source.indexOf('// Get error message'));
-    expect(logout).toContain('Alert.alert(');
-    expect(logout).toContain("text: 'Logout'");
+  it('the shared helper uses Alert.alert, which the web app renders as an in-app dialog', () => {
+    const helper = read('features/auth/presentation/utils/confirmLogout.ts');
+    expect(helper).toContain('Alert.alert(');
+    expect(helper).not.toMatch(/window\.confirm\(/);
   });
 });

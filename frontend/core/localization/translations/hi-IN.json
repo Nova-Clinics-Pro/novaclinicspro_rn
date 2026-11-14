@@ -309,6 +309,22 @@
       }
     }
   },
+  "roles": {
+    "names": {
+      "clinic_owner": "क्लिनिक स्वामी", "clinic_admin": "क्लिनिक प्रशासक", "doctor": "डॉक्टर", "receptionist": "रिसेप्शनिस्ट",
+      "nurse": "नर्स", "pharmacist": "फार्मासिस्ट", "therapist": "थेरेपिस्ट", "admin": "प्रशासक", "owner": "स्वामी"
+    }
+  },
+  "profileScreen": {
+    "roles": "भूमिकाएँ",
+    "noRoles": "कोई भूमिका नहीं सौंपी गई",
+    "currentClinic": "वर्तमान क्लिनिक",
+    "noClinic": "कोई क्लिनिक नहीं सौंपा गया"
+  },
+  "dashboardTitles": {
+    "clinicOwner": "क्लिनिक स्वामी डैशबोर्ड",
+    "clinicAdmin": "क्लिनिक प्रशासक डैशबोर्ड"
+  },
   "rolePermissions": {
     "title": "भूमिकाएँ और अनुमतियाँ",
     "subtitle": "तय करें कि आपके क्लिनिक में प्रत्येक भूमिका क्या कर सकती है",

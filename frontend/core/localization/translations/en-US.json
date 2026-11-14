@@ -309,6 +309,22 @@
       }
     }
   },
+  "roles": {
+    "names": {
+      "clinic_owner": "Clinic Owner", "clinic_admin": "Clinic Admin", "doctor": "Doctor", "receptionist": "Receptionist",
+      "nurse": "Nurse", "pharmacist": "Pharmacist", "therapist": "Therapist", "admin": "Admin", "owner": "Owner"
+    }
+  },
+  "profileScreen": {
+    "roles": "Roles",
+    "noRoles": "No roles assigned",
+    "currentClinic": "Current clinic",
+    "noClinic": "No clinic assigned"
+  },
+  "dashboardTitles": {
+    "clinicOwner": "Clinic Owner Dashboard",
+    "clinicAdmin": "Clinic Admin Dashboard"
+  },
   "rolePermissions": {
     "title": "Roles & permissions",
     "subtitle": "Decide what each role can do in your clinic",
