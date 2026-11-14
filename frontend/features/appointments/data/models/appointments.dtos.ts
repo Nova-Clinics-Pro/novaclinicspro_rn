@@ -151,6 +151,8 @@ export interface AppointmentResponse {
   episode_id?: string | null;
   episode_title?: string;
   episode_status?: 'ACTIVE' | 'CLOSED';
+  /** Doctor dashboard only: where the consultation stands (backend `consultation_progress`). */
+  consultation_progress?: 'not_started' | 'in_progress' | 'documents_finalized' | 'closed';
   // Multi-day treatment fields (optional, nullable)
   treatment_sheet_id?: string | null;
   session_id?: string | null;

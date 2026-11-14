@@ -47,6 +47,7 @@ import { getStatusLabel, getStatusColor, getStaffName } from '../../domain/helpe
 import { formatTime, formatDate } from '../../../../core/utils/dateTimeUtils';
 import { useTreatmentSheetDetailQuery } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { appointmentActionAccess } from '../../domain/appointmentActionAccess';
+import { consultationActionKey } from '../../domain/consultationAction';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 
 // ============================================================================
@@ -245,6 +246,8 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
   const isReceptionist = normalizedRole.includes('receptionist');
   const isDoctor = normalizedRole.includes('doctor');
   const isTherapist = normalizedRole.includes('therapist');
+  // The doctor card's main button follows how far the consultation has got: Start -> Continue -> Complete.
+  const consultationActionLabel = t(`appointments.consultationAction.${consultationActionKey(appointment.consultation_progress)}`);
   const access = permissions ? appointmentActionAccess(permissions) : null;
   // Front-desk actions (reschedule, record visit, no-show, cancel): by permission when known, else by role name.
   const isFrontDesk = access ? !isDoctor && !isTherapist && access.canUpdate : isClinicAdmin || isReceptionist;
@@ -544,13 +547,13 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
             onPress={() => onStartConsultation?.(appointment.id, appointment.client_id)}
             disabled={isStartingConsultation}
             accessibilityRole="button"
-            accessibilityLabel="Start Consultation"
+            accessibilityLabel={consultationActionLabel}
             testID="action-start-consultation"
           >
             {isStartingConsultation ? (
               <ActivityIndicator size="small" color={onPrimaryColor} />
             ) : (
-              <Text style={[fullStyles.startConsultationText, { color: onPrimaryColor }]}>Start Consultation</Text>
+              <Text style={[fullStyles.startConsultationText, { color: onPrimaryColor }]}>{consultationActionLabel}</Text>
             )}
           </TouchableOpacity>
 

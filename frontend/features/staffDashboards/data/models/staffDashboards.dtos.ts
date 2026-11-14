@@ -25,6 +25,8 @@ export interface DoctorAppointmentItem {
   episode_id?: string | null;
   episode_title?: string | null;
   episode_status?: string | null;
+  /** Where the consultation stands (backend `consultation_progress`); absent on older responses. */
+  consultation_progress?: 'not_started' | 'in_progress' | 'documents_finalized' | 'closed';
 }
 
 /** Doctor dashboard response */

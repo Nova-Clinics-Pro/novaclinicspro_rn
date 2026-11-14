@@ -22,7 +22,10 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }));
 jest.mock('../../../core/localization/useTranslation', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  // The doctor card's button label now comes from translations (Start / Continue / Complete Consultation).
+  useTranslation: () => ({
+    t: (key: string) => (key === 'appointments.consultationAction.start' ? 'Start Consultation' : key),
+  }),
 }));
 jest.mock('../../../core/hooks/useFeatures', () => ({
   useFeatures: () => ({

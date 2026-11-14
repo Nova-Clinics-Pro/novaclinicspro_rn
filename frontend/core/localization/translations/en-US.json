@@ -1113,6 +1113,11 @@
     "sent": "Successfully sent."
   },
   "appointments": {
+    "consultationAction": {
+      "start": "Start Consultation",
+      "continue": "Continue Consultation",
+      "complete": "Complete Consultation"
+    },
     "bookingConflict": "Booking Conflict",
     "noPhoneNumber": "Client phone number is not available",
     "session": "Session",
