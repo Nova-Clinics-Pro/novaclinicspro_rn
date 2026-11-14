@@ -29,6 +29,16 @@ jest.mock('expo-router', () => ({
     return <Text testID="workspace-redirect">{href}</Text>;
   },
 }));
+let mockPermissions: string[] = ['casesheet.create', 'prescription.create'];
+jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
+  useAuth: () => ({ currentUser: { tenantId: 'tenant-1', permissions: mockPermissions } }),
+}));
+jest.mock('../../../features/episodes/presentation/components/NoAuthoringAccessState', () => ({
+  NoAuthoringAccessState: ({ document }: { document: string }) => {
+    const { Text } = require('react-native');
+    return <Text testID="no-authoring-access">{document}</Text>;
+  },
+}));
 jest.mock('../../../core/hooks/useFeatures', () => ({
   useFeatures: jest.fn(),
   isCosV1Enabled: (features: { cos_v1_enabled?: boolean }) => Boolean(features.cos_v1_enabled),
@@ -52,6 +62,7 @@ import NewCasesheetRoute from '../../../app/clinic-admin/clients/[clientId]/case
 describe('Case Sheet standalone routes render the canonical core only (R4 · T-E.3b)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPermissions = ['casesheet.create', 'prescription.create'];
     (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: false });
   });
 
@@ -164,5 +175,35 @@ describe('Case Sheet standalone routes render the canonical core only (R4 · T-E
       expect(editRoute).not.toMatch(/isClinicalSpineV1Enabled\(/);
       expect(newRoute).not.toMatch(/isClinicalSpineV1Enabled\(/);
     });
+  });
+});
+
+describe('only a doctor reaches the new case sheet form', () => {
+  beforeEach(() => {
+    (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: false });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ clientId: 'client-1' });
+  });
+
+  it('shows the no-access message to the owner or admin (no casesheet.create), never the form', () => {
+    mockPermissions = ['casesheet.read', 'prescription.read', 'appointment.update'];
+    const { getByTestId, queryByTestId } = render(<NewCasesheetRoute />);
+    expect(getByTestId('no-authoring-access').props.children).toBe('casesheet');
+    expect(queryByTestId('standalone-screen-props')).toBeNull();
+  });
+
+  it('shows the form to a user who holds casesheet.create', () => {
+    mockPermissions = ['casesheet.create'];
+    const { getByTestId, queryByTestId } = render(<NewCasesheetRoute />);
+    expect(getByTestId('standalone-screen-props')).toBeTruthy();
+    expect(queryByTestId('no-authoring-access')).toBeNull();
+  });
+
+  it('also blocks the cos_v1 redirect into the workspace for a user without the permission', () => {
+    (useFeatures as jest.Mock).mockReturnValue({ cos_v1_enabled: true });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ clientId: 'c', appointmentId: 'a', episodeId: 'e' });
+    mockPermissions = [];
+    const { getByTestId, queryByTestId } = render(<NewCasesheetRoute />);
+    expect(getByTestId('no-authoring-access')).toBeTruthy();
+    expect(queryByTestId('workspace-redirect')).toBeNull();
   });
 });

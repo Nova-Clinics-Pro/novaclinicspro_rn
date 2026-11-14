@@ -809,6 +809,10 @@
   "visitCommandCenter": {
     "title": "Visit Command Center",
     "treatmentPlanUnavailable": "Treatment Plan is not yet available in this workspace.",
+    "noAuthoringAccess": {
+      "casesheet": "Only a doctor can create case sheets. You can view existing case sheets.",
+      "prescription": "Only a doctor can write prescriptions. You can view existing prescriptions."
+    },
     "invalidContext": {
       "title": "Can't open workspace",
       "message": "No active appointment for this episode."
