@@ -140,7 +140,7 @@ export const SessionNonExecutionModal: React.FC<SessionNonExecutionModalProps> =
             </View>
           )}
 
-          {(validationError || errorMessage) && (
+          {!!((validationError || errorMessage)) && (
             <Text style={styles.errorText}>{validationError ?? errorMessage}</Text>
           )}
 

@@ -61,7 +61,7 @@ export const EmptyTreatmentSheetsState: React.FC<EmptyTreatmentSheetsStateProps>
       </View>
       <Text style={styles.title}>{title || config.defaultTitle}</Text>
       <Text style={styles.message}>{message || config.defaultMessage}</Text>
-      {actionLabel && onActionPress && (
+      {!!(actionLabel && onActionPress) && (
         <TouchableOpacity
           style={styles.actionButton}
           onPress={onActionPress}

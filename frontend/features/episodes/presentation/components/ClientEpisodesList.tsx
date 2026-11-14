@@ -270,7 +270,7 @@ export const ClientEpisodesList: React.FC<ClientEpisodesListProps> = ({
           <Text style={styles.headerTitle}>
             {t('episodes.episodes') || 'Episodes'}
           </Text>
-          {clientName && (
+          {!!clientName && (
             <Text style={styles.headerSubtitle}>{clientName}</Text>
           )}
         </View>

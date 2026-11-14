@@ -710,25 +710,25 @@ export const TherapistDashboardScreen: React.FC = () => {
                   )}
                   {hasInstructions && isInstructionsExpanded && (
                     <View style={styles.instructionsPanel}>
-                      {session.room_name && (
+                      {!!session.room_name && (
                         <View style={styles.instructionsLine}>
                           <Ionicons name="business-outline" size={14} color={colors.text.secondary} />
                           <Text style={styles.instructionsText} numberOfLines={1}>{session.room_name}</Text>
                         </View>
                       )}
-                      {session.treatment_description && (
+                      {!!session.treatment_description && (
                         <View style={styles.instructionsLine}>
                           <Ionicons name="medical-outline" size={14} color={colors.text.secondary} />
                           <Text style={styles.instructionsText}>{session.treatment_description}</Text>
                         </View>
                       )}
-                      {session.medicines_given && (
+                      {!!session.medicines_given && (
                         <View style={styles.instructionsLine}>
                           <Ionicons name="flask-outline" size={14} color={colors.text.secondary} />
                           <Text style={styles.instructionsText}>{session.medicines_given}</Text>
                         </View>
                       )}
-                      {session.instructions && (
+                      {!!session.instructions && (
                         <View style={styles.instructionsLine}>
                           <Ionicons name="clipboard-outline" size={14} color={colors.text.secondary} />
                           <Text style={styles.instructionsText}>{session.instructions}</Text>

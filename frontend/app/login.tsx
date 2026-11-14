@@ -96,7 +96,7 @@ export default function LoginScreen() {
           </View>
 
           {/* Error Alert */}
-          {error && (
+          {!!error && (
             <View
               style={[
                 styles.errorContainer,

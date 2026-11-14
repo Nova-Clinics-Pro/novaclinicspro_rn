@@ -409,7 +409,7 @@ const DayCard: React.FC<DayCardProps> = ({ dayOfWeek, dayName, hours, onEdit }) 
               {openTime} - {closeTime}
             </Text>
           </View>
-          {hasBreak && (
+          {!!hasBreak && (
             <View style={styles.timeRow}>
               <Ionicons name="cafe-outline" size={16} color="#C28A4B" />
               <Text style={styles.breakText}>

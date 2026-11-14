@@ -60,7 +60,7 @@ export const EmptyDashboardState: React.FC<EmptyDashboardStateProps> = ({
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
-      {actionLabel && onActionPress && (
+      {!!(actionLabel && onActionPress) && (
         <TouchableOpacity style={styles.actionButton} onPress={onActionPress}>
           <Ionicons 
             name={actionLabel.toLowerCase().includes('back') ? 'arrow-back' : actionLabel.toLowerCase().includes('login') ? 'log-in' : 'refresh'} 

@@ -194,7 +194,7 @@ export const MultiDayTreatmentSection: React.FC<MultiDayTreatmentSectionProps> =
         </View>
 
         {/* Treatment Plan — only when we have a matched row */}
-        {treatmentPlan && currentRow && (
+        {!!(treatmentPlan && currentRow) && (
           <View style={styles.treatmentPlanSection}>
             <Text style={[styles.treatmentPlanLabel, { color: theme.colors.text.secondary }]}>
               Treatment Plan:

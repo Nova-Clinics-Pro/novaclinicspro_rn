@@ -33,7 +33,7 @@ export const KpiStatCard: React.FC<KpiStatCardProps> = ({
       <View style={styles.content}>
         <Text style={[styles.value, compact && styles.valueCompact]}>{item.value}</Text>
         <Text style={styles.label}>{item.label}</Text>
-        {item.subtext && <Text style={styles.subtext}>{item.subtext}</Text>}
+        {!!item.subtext && <Text style={styles.subtext}>{item.subtext}</Text>}
       </View>
       {item.trend && (
         <View style={styles.trendContainer}>
@@ -48,7 +48,7 @@ export const KpiStatCard: React.FC<KpiStatCardProps> = ({
                 : colors.text.tertiary
             }
           />
-          {item.trendValue && (
+          {!!item.trendValue && (
             <Text
               style={[
                 styles.trendValue,

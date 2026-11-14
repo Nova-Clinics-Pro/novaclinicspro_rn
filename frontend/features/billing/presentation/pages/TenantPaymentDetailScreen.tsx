@@ -142,13 +142,13 @@ export const TenantPaymentDetailScreen: React.FC = () => {
               <Text style={styles.detailLabel}>Status</Text>
               <PaymentStatusBadge status={payment.status} size="small" />
             </View>
-            {payment.reference && (
+            {!!payment.reference && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Reference</Text>
                 <Text style={styles.detailValue}>{payment.reference}</Text>
               </View>
             )}
-            {payment.razorpay_payment_id && (
+            {!!payment.razorpay_payment_id && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Razorpay ID</Text>
                 <Text style={[styles.detailValue, styles.monoText]}>
@@ -156,7 +156,7 @@ export const TenantPaymentDetailScreen: React.FC = () => {
                 </Text>
               </View>
             )}
-            {payment.razorpay_order_id && (
+            {!!payment.razorpay_order_id && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Razorpay Order</Text>
                 <Text style={[styles.detailValue, styles.monoText]}>

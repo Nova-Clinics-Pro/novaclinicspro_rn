@@ -98,7 +98,7 @@ const VisitCard: React.FC<VisitCardProps> = ({
       </TouchableOpacity>
 
       {/* Staff name */}
-      {visit.staff_name && (
+      {!!visit.staff_name && (
         <View style={styles.metaRow}>
           <Ionicons name="person-outline" size={14} color={colors.text.tertiary} />
           <Text style={[typography.caption, { color: colors.text.secondary }]}>

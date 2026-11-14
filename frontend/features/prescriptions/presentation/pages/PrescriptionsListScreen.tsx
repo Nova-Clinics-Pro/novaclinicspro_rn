@@ -107,7 +107,7 @@ export const PrescriptionsListScreen: React.FC<PrescriptionsListScreenProps> = (
       </TouchableOpacity>
       <View style={styles.headerTitleContainer}>
         <Text style={styles.headerTitle}>Prescriptions</Text>
-        {clientName && (
+        {!!clientName && (
           <Text style={styles.headerSubtitle}>{clientName}</Text>
         )}
       </View>

@@ -78,7 +78,7 @@ export const RoleListItem: React.FC<RoleListItemProps> = ({
               </View>
             )}
           </View>
-          {role.description && (
+          {!!role.description && (
             <Text style={styles.description} numberOfLines={2}>
               {role.description}
             </Text>

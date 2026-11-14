@@ -117,7 +117,7 @@ export const PrescriptionShareModal: React.FC<PrescriptionShareModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {clientName && (
+          {!!clientName && (
             <Text style={styles.clientName}>For: {clientName}</Text>
           )}
 

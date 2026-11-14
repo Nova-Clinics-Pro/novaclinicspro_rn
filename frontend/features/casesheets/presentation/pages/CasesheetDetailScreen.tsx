@@ -497,7 +497,7 @@ export const CasesheetDetailScreen: React.FC = () => {
                 ) : null;
               })()}
             </View>
-            {client.phone && (
+            {!!client.phone && (
               <View style={styles.clientDetail}>
                 <Ionicons name="call-outline" size={14} color={colors.text.secondary} />
                 <Text style={styles.clientDetailText}>{client.phone}</Text>
@@ -513,7 +513,7 @@ export const CasesheetDetailScreen: React.FC = () => {
             <Text style={styles.infoLabel}>Recorded:</Text>
             <Text style={styles.infoValue}>{formatDateTime(casesheet.recorded_at)}</Text>
           </View>
-          {casesheet.signed_at && (
+          {!!casesheet.signed_at && (
             <View style={styles.infoRow}>
               <Ionicons name="shield-checkmark" size={16} color={colors.success.main} />
               <Text style={styles.infoLabel}>Signed:</Text>

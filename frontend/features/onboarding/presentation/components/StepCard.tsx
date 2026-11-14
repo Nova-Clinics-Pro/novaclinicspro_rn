@@ -95,7 +95,7 @@ export const StepCard: React.FC<StepCardProps> = ({ journeyCard, onPress }) => {
         />
         <View style={styles.content}>
           <Text style={styles.title}>{title}</Text>
-          {description && <Text style={styles.description}>{description}</Text>}
+          {!!description && <Text style={styles.description}>{description}</Text>}
           <View style={styles.statusRow}>
             <Ionicons
               name={getStatusIcon(status)}

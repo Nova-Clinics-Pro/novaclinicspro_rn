@@ -106,7 +106,7 @@ const DocumentItem: React.FC<DocumentItemProps> = ({ document, onPress }) => {
           <Text style={[styles.documentMetaText, { color: theme.colors.text.secondary }]}>
             {document.date}
           </Text>
-          {document.clinician && (
+          {!!document.clinician && (
             <>
               <Ionicons name="person-outline" size={12} color={theme.colors.text.tertiary} style={styles.metaIcon} />
               <Text style={[styles.documentMetaText, { color: theme.colors.text.secondary }]}>

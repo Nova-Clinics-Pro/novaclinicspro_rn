@@ -111,7 +111,7 @@ export const JobStatusPanel: React.FC<JobStatusPanelProps> = ({ job }) => {
       )}
 
       {/* File Info */}
-      {job.filename && (
+      {!!job.filename && (
         <View style={styles.fileInfo}>
           <Ionicons name="document" size={16} color={colors.text.tertiary} />
           <Text style={styles.fileName} numberOfLines={1}>

@@ -101,7 +101,7 @@ const TemplateCard: React.FC<TemplateCardProps> = ({ template, onPress, onDelete
           )}
         </View>
         <Text style={styles.templateType}>{metadata.label}</Text>
-        {template.description && (
+        {!!template.description && (
           <Text style={styles.templateDescription} numberOfLines={1}>
             {template.description}
           </Text>

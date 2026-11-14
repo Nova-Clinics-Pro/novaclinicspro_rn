@@ -115,7 +115,7 @@ export const TenantInvoicesListScreen: React.FC = () => {
       <View style={styles.resultsRow}>
         <Text style={styles.resultsText}>
           {displayedInvoices.length} invoice{displayedInvoices.length !== 1 ? 's' : ''}
-          {data?.total && data.total > displayedInvoices.length && ` of ${data.total}`}
+          {!!(data?.total && data.total > displayedInvoices.length) && ` of ${data.total}`}
         </Text>
       </View>
     </View>

@@ -281,7 +281,7 @@ export const LeaveSection: React.FC<LeaveSectionProps> = ({
                     <Text style={styles.leaveItemDates}>
                       {formatDate(leave.start_date)} - {formatDate(leave.end_date)} ({days} day{days > 1 ? 's' : ''})
                     </Text>
-                    {leave.reason && (
+                    {!!leave.reason && (
                       <Text style={styles.leaveItemReason} numberOfLines={1}>
                         {leave.reason}
                       </Text>

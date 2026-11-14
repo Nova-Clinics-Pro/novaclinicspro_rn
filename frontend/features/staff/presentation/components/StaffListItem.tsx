@@ -46,11 +46,11 @@ export const StaffListItem: React.FC<StaffListItemProps> = ({ staff, onPress }) 
                 {getStaffTypeLabel(staff.staff_type)}
               </Text>
             </View>
-            {staff.designation && (
+            {!!staff.designation && (
               <Text style={styles.designation}>{staff.designation}</Text>
             )}
           </View>
-          {staff.phone && (
+          {!!staff.phone && (
             <View style={styles.contactRow}>
               <Ionicons name="call-outline" size={14} color={colors.text.secondary} />
               <Text style={styles.contactText}>{staff.phone}</Text>

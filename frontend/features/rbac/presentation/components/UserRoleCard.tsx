@@ -81,7 +81,7 @@ export const UserRoleCard: React.FC<UserRoleCardProps> = ({
             </View>
           </View>
 
-          {(userName || userEmail) && (
+          {!!((userName || userEmail)) && (
             <Text style={styles.userInfo} numberOfLines={1}>
               {userName || userEmail}
             </Text>
@@ -91,7 +91,7 @@ export const UserRoleCard: React.FC<UserRoleCardProps> = ({
             <Text style={styles.metaText}>
               Assigned: {formatDate(assignment.assigned_at)}
             </Text>
-            {assignment.expires_at && (
+            {!!assignment.expires_at && (
               <Text style={[styles.metaText, isExpired && styles.expiredText]}>
                 {isExpired ? 'Expired' : 'Expires'}: {formatDate(assignment.expires_at)}
               </Text>

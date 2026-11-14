@@ -54,7 +54,7 @@ export const PermissionToggle: React.FC<PermissionToggleProps> = ({
           </View>
         </View>
         <Text style={styles.code}>{permission.code}</Text>
-        {permission.description && (
+        {!!permission.description && (
           <Text style={styles.description} numberOfLines={2}>
             {permission.description}
           </Text>

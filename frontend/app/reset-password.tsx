@@ -240,7 +240,7 @@ export default function ResetPasswordScreen() {
             </Text>
 
             {/* Form Error */}
-            {error && (
+            {!!error && (
               <View
                 style={[
                   styles.formErrorContainer,

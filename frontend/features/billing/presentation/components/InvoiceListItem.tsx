@@ -57,7 +57,7 @@ export const InvoiceListItem: React.FC<InvoiceListItemProps> = ({
           Date: {formatDate(invoice.invoice_date)}
         </Text>
 
-        {invoice.due_date && (
+        {!!invoice.due_date && (
           <Text style={[styles.dueText, isOverdue && styles.dueDateOverdue]}>
             Due: {formatDate(invoice.due_date)}
             {isOverdue && ' (Overdue)'}

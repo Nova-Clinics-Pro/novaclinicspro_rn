@@ -49,7 +49,7 @@ export const FeedbackKpiCard: React.FC<FeedbackKpiCardProps> = ({
                 size={14}
                 color={getTrendColor(trend)}
               />
-              {trendValue && (
+              {!!trendValue && (
                 <Text style={[styles.trendValue, { color: getTrendColor(trend) }]}>
                   {trendValue}
                 </Text>
@@ -57,7 +57,7 @@ export const FeedbackKpiCard: React.FC<FeedbackKpiCardProps> = ({
             </View>
           )}
         </View>
-        {subtext && <Text style={styles.subtext}>{subtext}</Text>}
+        {!!subtext && <Text style={styles.subtext}>{subtext}</Text>}
       </View>
     </View>
   );

@@ -111,13 +111,13 @@ export const AuditHistoryItem: React.FC<AuditHistoryItemProps> = ({
           {roleName || `Role ID: ${item.role_id.slice(0, 8)}...`}
         </Text>
 
-        {performedByName && (
+        {!!performedByName && (
           <Text style={styles.performedBy}>
             By: {performedByName}
           </Text>
         )}
 
-        {item.reason && (
+        {!!item.reason && (
           <View style={styles.reasonContainer}>
             <Ionicons name="chatbubble-outline" size={12} color="#9CA3AF" />
             <Text style={styles.reason} numberOfLines={2}>

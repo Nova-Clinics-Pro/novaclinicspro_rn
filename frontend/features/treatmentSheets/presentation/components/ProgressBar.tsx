@@ -79,7 +79,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         now: clampedProgress,
       }}
     >
-      {labelText && (
+      {!!labelText && (
         <Text
           style={[
             styles.label,

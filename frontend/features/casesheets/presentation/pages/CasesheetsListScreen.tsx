@@ -91,7 +91,7 @@ export const CasesheetsListScreen: React.FC<CasesheetsListScreenProps> = ({
       </TouchableOpacity>
       <View style={styles.headerTitleContainer}>
         <Text style={styles.headerTitle}>Casesheets</Text>
-        {clientName && (
+        {!!clientName && (
           <Text style={styles.headerSubtitle}>{clientName}</Text>
         )}
       </View>

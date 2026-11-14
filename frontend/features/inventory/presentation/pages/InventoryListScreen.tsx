@@ -210,7 +210,7 @@ export const InventoryListScreen: React.FC = () => {
       <View style={styles.resultsRow}>
         <Text style={styles.resultsText}>
           {displayedItems.length} item{displayedItems.length !== 1 ? 's' : ''}
-          {data?.total && data.total > displayedItems.length && ` of ${data.total}`}
+          {!!(data?.total && data.total > displayedItems.length) && ` of ${data.total}`}
         </Text>
       </View>
     </View>

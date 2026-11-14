@@ -38,10 +38,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <Ionicons name={icon} size={48} color={colors.primary.main} />
       </View>
       <Text style={styles.title}>{title}</Text>
-      {description && (
+      {!!description && (
         <Text style={styles.description}>{description}</Text>
       )}
-      {actionLabel && onAction && (
+      {!!(actionLabel && onAction) && (
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary.main }]}
           onPress={onAction}

@@ -284,7 +284,7 @@ export const AppointmentSearchableDropdown: React.FC<SearchableDropdownProps> = 
                         <Text style={[styles.dropdownOptionLabel, isSelected && styles.dropdownOptionLabelSelected]}>
                           {option.label}
                         </Text>
-                        {option.subtitle && <Text style={styles.dropdownOptionSubtitle}>{option.subtitle}</Text>}
+                        {!!option.subtitle && <Text style={styles.dropdownOptionSubtitle}>{option.subtitle}</Text>}
                       </View>
                       {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.primary.main} />}
                     </TouchableOpacity>
@@ -341,7 +341,7 @@ export const AppointmentBookedSlots: React.FC<BookedSlotsProps> = ({ appointment
           <View key={appointment.id} style={styles.bookedSlot}>
             <View style={styles.bookedSlotTimeContainer}>
               <Text style={styles.bookedSlotTime}>{formatTime(appointment.appointment_start)}</Text>
-              {appointment.appointment_end && (
+              {!!appointment.appointment_end && (
                 <Text style={styles.bookedSlotTimeSeparator}> - {formatTime(appointment.appointment_end)}</Text>
               )}
             </View>

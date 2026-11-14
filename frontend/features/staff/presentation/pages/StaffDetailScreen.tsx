@@ -244,7 +244,7 @@ export const StaffDetailScreen: React.FC = () => {
               {getStaffTypeLabel(staff.staff_type)}
             </Text>
           </View>
-          {staff.designation && (
+          {!!staff.designation && (
             <Text style={styles.designation}>{staff.designation}</Text>
           )}
           <View style={styles.statusRow}>
@@ -294,7 +294,7 @@ export const StaffDetailScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Contact Information</Text>
           <View style={styles.infoCard}>
-            {staff.phone && (
+            {!!staff.phone && (
               <View style={styles.infoRow}>
                 <Ionicons name="call-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -303,7 +303,7 @@ export const StaffDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {staff.email && (
+            {!!staff.email && (
               <View style={styles.infoRow}>
                 <Ionicons name="mail-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -312,7 +312,7 @@ export const StaffDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {staff.emergency_contact && (
+            {!!staff.emergency_contact && (
               <View style={styles.infoRow}>
                 <Ionicons name="alert-circle-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -321,7 +321,7 @@ export const StaffDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {staff.address && (
+            {!!staff.address && (
               <View style={styles.infoRow}>
                 <Ionicons name="location-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -337,7 +337,7 @@ export const StaffDetailScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Professional Details</Text>
           <View style={styles.infoCard}>
-            {staff.staff_code && (
+            {!!staff.staff_code && (
               <View style={styles.infoRow}>
                 <Ionicons name="card-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -346,7 +346,7 @@ export const StaffDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {staff.specialization && (
+            {!!staff.specialization && (
               <View style={styles.infoRow}>
                 <Ionicons name="ribbon-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -355,7 +355,7 @@ export const StaffDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {staff.qualifications && (
+            {!!staff.qualifications && (
               <View style={styles.infoRow}>
                 <Ionicons name="school-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>

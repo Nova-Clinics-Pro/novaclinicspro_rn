@@ -87,13 +87,13 @@ const TreatmentCard: React.FC<{
         <Text style={styles.treatmentCode}>{treatment.code}</Text>
 
         <View style={styles.treatmentMeta}>
-          {treatment.duration_minutes && (
+          {!!treatment.duration_minutes && (
             <View style={styles.metaItem}>
               <Ionicons name="time-outline" size={14} color="#6B7280" />
               <Text style={styles.metaText}>{formatDuration(treatment.duration_minutes)}</Text>
             </View>
           )}
-          {effectivePrice && (
+          {!!effectivePrice && (
             <View style={styles.metaItem}>
               <Ionicons name="pricetag-outline" size={14} color="#2F6F4E" />
               <Text style={[styles.metaText, styles.priceText]}>

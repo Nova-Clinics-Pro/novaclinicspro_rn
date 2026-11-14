@@ -69,7 +69,7 @@ export const PaymentListItem: React.FC<PaymentListItemProps> = ({
           {formatDate(payment.payment_date)}
         </Text>
 
-        {payment.reference && (
+        {!!payment.reference && (
           <Text style={styles.referenceText} numberOfLines={1}>
             Ref: {payment.reference}
           </Text>

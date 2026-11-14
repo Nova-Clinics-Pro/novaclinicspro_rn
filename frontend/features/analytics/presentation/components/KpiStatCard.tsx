@@ -47,7 +47,7 @@ export const KpiStatCard: React.FC<KpiStatCardProps> = ({
         {isLoading ? '...' : value}
       </Text>
       
-      {subtitle && (
+      {!!subtitle && (
         <Text style={styles.subtitle}>{subtitle}</Text>
       )}
       

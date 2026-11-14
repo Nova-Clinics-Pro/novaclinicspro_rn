@@ -53,7 +53,7 @@ export const EpisodeListItem: React.FC<EpisodeListItemProps> = ({
         </View>
 
         {/* Description */}
-        {episode.description && (
+        {!!episode.description && (
           <Text
             style={[styles.description, { color: theme.colors.text.secondary }]}
             numberOfLines={2}
@@ -71,7 +71,7 @@ export const EpisodeListItem: React.FC<EpisodeListItemProps> = ({
             </Text>
           </View>
 
-          {episode.last_visit_date && (
+          {!!episode.last_visit_date && (
             <View style={styles.statItem}>
               <Ionicons name="time-outline" size={12} color={theme.colors.text.tertiary} />
               <Text style={[styles.statText, { color: theme.colors.text.tertiary }]}>
@@ -86,7 +86,7 @@ export const EpisodeListItem: React.FC<EpisodeListItemProps> = ({
           <Text style={[styles.dateText, { color: theme.colors.text.tertiary }]}>
             Started: {formatEpisodeDate(episode.start_date)}
           </Text>
-          {episode.end_date && (
+          {!!episode.end_date && (
             <Text style={[styles.dateText, { color: theme.colors.text.tertiary }]}>
               Ended: {formatEpisodeDate(episode.end_date)}
             </Text>

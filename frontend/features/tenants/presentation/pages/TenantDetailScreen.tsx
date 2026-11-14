@@ -519,7 +519,7 @@ export default function TenantDetailScreen() {
             </Text>
           </View>
 
-          {tenant.trial_end_date && (
+          {!!tenant.trial_end_date && (
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, { color: theme.colors.text.secondary }]}>
                 Trial Ends:
@@ -546,7 +546,7 @@ export default function TenantDetailScreen() {
             </Text>
           </View>
 
-          {tenant.updated_at && (
+          {!!tenant.updated_at && (
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, { color: theme.colors.text.secondary }]}>
                 Updated:

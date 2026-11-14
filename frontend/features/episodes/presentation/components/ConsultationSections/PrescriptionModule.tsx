@@ -397,7 +397,7 @@ export const PrescriptionModule: React.FC<PrescriptionModuleProps> = ({ expanded
           }
         />,
       )}
-      {prescriptionId && <PrescriptionVersionPanel tenantId={tenantId} prescriptionId={prescriptionId} signed={false} canAmend={false} onAmended={() => prescriptionByAppointmentQuery.refetch()} />}
+      {!!prescriptionId && <PrescriptionVersionPanel tenantId={tenantId} prescriptionId={prescriptionId} signed={false} canAmend={false} onAmended={() => prescriptionByAppointmentQuery.refetch()} />}
     </>
   );
 };

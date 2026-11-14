@@ -483,7 +483,7 @@ export const BulkSchedulePlanScreen: React.FC = () => {
                       <Text style={[styles.preFillBadgeText, { color: '#EF4444' }]}>Cancelled</Text>
                     </View>
                   )}
-                  {row?.treatment_name && (
+                  {!!row?.treatment_name && (
                     <Text style={[styles.treatmentName, { color: theme.colors.text.secondary }]} numberOfLines={1}>
                       {row.treatment_name}
                     </Text>
@@ -568,7 +568,7 @@ export const BulkSchedulePlanScreen: React.FC = () => {
       </ScrollView>
 
       {/* Date/Time Picker */}
-      {pickerVisible && pickerRowId && (
+      {!!(pickerVisible && pickerRowId) && (
         <CrossPlatformDateTimePicker
           value={pickerValue}
           mode={pickerMode}

@@ -216,28 +216,28 @@ export const InventoryItemDetailScreen: React.FC = () => {
             </View>
           )}
 
-          {item.brand && (
+          {!!item.brand && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Brand</Text>
               <Text style={styles.infoValue}>{item.brand}</Text>
             </View>
           )}
 
-          {item.manufacturer && (
+          {!!item.manufacturer && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Manufacturer</Text>
               <Text style={styles.infoValue}>{item.manufacturer}</Text>
             </View>
           )}
 
-          {item.strength && (
+          {!!item.strength && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Strength</Text>
               <Text style={styles.infoValue}>{item.strength}</Text>
             </View>
           )}
 
-          {item.composition && (
+          {!!item.composition && (
             <View style={styles.infoRowVertical}>
               <Text style={styles.infoLabel}>Composition</Text>
               <Text style={styles.infoValueMultiline}>{item.composition}</Text>
@@ -278,7 +278,7 @@ export const InventoryItemDetailScreen: React.FC = () => {
                 {item.gst_percentage !== null ? `${item.gst_percentage}%` : '—'}
               </Text>
             </View>
-            {item.hsn_code && (
+            {!!item.hsn_code && (
               <View style={styles.priceItem}>
                 <Text style={styles.priceLabel}>HSN Code</Text>
                 <Text style={styles.priceValue}>{item.hsn_code}</Text>
@@ -291,21 +291,21 @@ export const InventoryItemDetailScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Additional Details</Text>
 
-          {item.location && (
+          {!!item.location && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Location</Text>
               <Text style={styles.infoValue}>{formatLocation(item.location)}</Text>
             </View>
           )}
 
-          {item.barcode && (
+          {!!item.barcode && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Barcode</Text>
               <Text style={styles.infoValue}>{item.barcode}</Text>
             </View>
           )}
 
-          {item.sku && (
+          {!!item.sku && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>SKU</Text>
               <Text style={styles.infoValue}>{item.sku}</Text>

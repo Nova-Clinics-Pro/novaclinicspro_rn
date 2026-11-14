@@ -85,7 +85,7 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({ episode, onPress, disabled })
           <EpisodeStatusBadge status={episode.status} size="small" />
         </View>
 
-        {episode.description && (
+        {!!episode.description && (
           <Text
             style={[
               styles.episodeDescription,
@@ -113,7 +113,7 @@ const EpisodeItem: React.FC<EpisodeItemProps> = ({ episode, onPress, disabled })
             </Text>
           </View>
 
-          {episode.last_visit_date && (
+          {!!episode.last_visit_date && (
             <View style={styles.statItem}>
               <Ionicons
                 name="time-outline"

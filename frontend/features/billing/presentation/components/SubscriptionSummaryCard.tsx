@@ -62,7 +62,7 @@ export const SubscriptionSummaryCard: React.FC<SubscriptionSummaryCardProps> = (
         <Text style={[styles.balanceAmount, hasOutstanding && styles.balanceAmountAlert]}>
           {formatCurrency(summary.outstandingBalance)}
         </Text>
-        {hasOutstanding && summary.nextDueDate && (
+        {!!(hasOutstanding && summary.nextDueDate) && (
           <Text style={styles.nextDueText}>
             Next due: {formatDate(summary.nextDueDate)} ({formatCurrency(summary.nextDueAmount)})
           </Text>
@@ -92,7 +92,7 @@ export const SubscriptionSummaryCard: React.FC<SubscriptionSummaryCardProps> = (
       </View>
 
       {/* Last Payment */}
-      {summary.lastPaymentDate && (
+      {!!summary.lastPaymentDate && (
         <View style={styles.lastPaymentRow}>
           <Ionicons name="checkmark-circle" size={16} color={colors.success.main} />
           <Text style={styles.lastPaymentText}>

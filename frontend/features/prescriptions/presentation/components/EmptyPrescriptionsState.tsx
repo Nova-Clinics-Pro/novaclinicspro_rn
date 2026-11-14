@@ -35,7 +35,7 @@ export const EmptyPrescriptionsState: React.FC<EmptyPrescriptionsStateProps> = (
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
-      {actionLabel && onActionPress && (
+      {!!(actionLabel && onActionPress) && (
         <TouchableOpacity
           style={styles.actionButton}
           onPress={onActionPress}

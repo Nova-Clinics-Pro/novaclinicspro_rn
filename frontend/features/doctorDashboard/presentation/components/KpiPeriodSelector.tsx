@@ -116,7 +116,7 @@ export const KpiPeriodSelector: React.FC<KpiPeriodSelectorProps> = ({
       </View>
 
       {/* Show custom date range if selected */}
-      {value === 'custom' && customFromDate && customToDate && (
+      {!!(value === 'custom' && customFromDate && customToDate) && (
         <TouchableOpacity
           style={styles.customDateDisplay}
           onPress={() => setShowCustomModal(true)}
@@ -159,7 +159,7 @@ export const KpiPeriodSelector: React.FC<KpiPeriodSelectorProps> = ({
               <DateField value={toDate} onChange={setToDate} testID={`${testID}-to-date`} />
             </View>
 
-            {dateError && (
+            {!!dateError && (
               <View style={styles.errorContainer}>
                 <Ionicons name="alert-circle" size={16} color={colors.error.main} />
                 <Text style={styles.errorText}>{dateError}</Text>

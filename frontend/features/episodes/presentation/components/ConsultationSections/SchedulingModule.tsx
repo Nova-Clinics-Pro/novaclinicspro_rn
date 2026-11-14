@@ -154,10 +154,10 @@ export const SchedulingModule: React.FC = () => {
 
           {proposal && (
             <View>
-              {proposal.intent && NO_PREGENERATED_DATE_INTENTS.has(proposal.intent) && (
+              {!!(proposal.intent && NO_PREGENERATED_DATE_INTENTS.has(proposal.intent)) && (
                 <Text style={[typography.body2, { color: colors.text.secondary }]}>{t('scheduling.prnLabel')}</Text>
               )}
-              {proposal.intent && REVIEW_BOUNDED_INTENTS.has(proposal.intent) && proposal.bounded_by_milestone && (
+              {!!(proposal.intent && REVIEW_BOUNDED_INTENTS.has(proposal.intent) && proposal.bounded_by_milestone) && (
                 <Text style={[typography.body2, { color: colors.text.secondary }]}>{t('scheduling.reviewDependentLabel')}</Text>
               )}
               <Text style={[typography.caption, { color: colors.text.secondary, marginTop: spacing.xs }]}>

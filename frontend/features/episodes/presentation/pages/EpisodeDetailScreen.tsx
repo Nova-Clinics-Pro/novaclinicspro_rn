@@ -111,7 +111,7 @@ const VisitItem: React.FC<VisitItemProps> = ({
         </View>
       )}
 
-      {appointment.treatment_name && (
+      {!!appointment.treatment_name && (
         <View style={styles.visitDetail}>
           <Ionicons name="medical-outline" size={14} color={theme.colors.text.tertiary} />
           <Text style={[styles.visitDetailText, { color: theme.colors.text.secondary }]}>
@@ -504,7 +504,7 @@ export const EpisodeDetailScreen: React.FC<EpisodeDetailScreenProps> = ({
             </TouchableOpacity>
           </View>
 
-          {episode.description && (
+          {!!episode.description && (
             <Text style={[styles.description, { color: theme.colors.text.secondary }]}>
               {episode.description}
             </Text>
@@ -522,7 +522,7 @@ export const EpisodeDetailScreen: React.FC<EpisodeDetailScreenProps> = ({
           />
 
           {/* Diagnosis Code */}
-          {episode.episode_code && (
+          {!!episode.episode_code && (
             <View style={styles.diagnosisContainer}>
               <Ionicons name="medical-outline" size={16} color={theme.colors.text.tertiary} />
               <View style={styles.diagnosisContent}>
@@ -533,7 +533,7 @@ export const EpisodeDetailScreen: React.FC<EpisodeDetailScreenProps> = ({
                   {episode.episode_code}
                   {episode.episode_code_system && ` (${episode.episode_code_system})`}
                 </Text>
-                {episode.episode_code_display && (
+                {!!episode.episode_code_display && (
                   <Text style={[styles.diagnosisDisplay, { color: theme.colors.text.secondary }]}>
                     {episode.episode_code_display}
                   </Text>

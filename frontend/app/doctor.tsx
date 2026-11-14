@@ -592,7 +592,7 @@ function DoctorDashboard() {
             )}
 
             {/* Time Metrics - Only show if data available */}
-            {(kpiCards.avgDuration || kpiCards.peakHours.length > 0 || kpiCards.busiestDays.length > 0) && (
+            {!!((kpiCards.avgDuration || kpiCards.peakHours.length > 0 || kpiCards.busiestDays.length > 0)) && (
               <View style={styles.section}>
                 <Text style={styles.cardSectionTitle}>
                   <Ionicons name="time" size={16} color={colors.warning.main} /> Time Metrics
@@ -617,7 +617,7 @@ function DoctorDashboard() {
         )}
 
         {/* Patient Feedback Section */}
-        {tenantId && staffId && (
+        {!!(tenantId && staffId) && (
           <View style={styles.section}>
             <StaffFeedbackSection
               tenantId={tenantId}

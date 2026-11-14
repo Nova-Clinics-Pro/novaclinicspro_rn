@@ -75,7 +75,7 @@ const VisitItem: React.FC<VisitItemProps> = ({ appointment, onPress }) => {
         </View>
       )}
 
-      {appointment.treatment_name && (
+      {!!appointment.treatment_name && (
         <View style={styles.visitDetail}>
           <Ionicons name="medical-outline" size={14} color={theme.colors.text.tertiary} />
           <Text style={[styles.visitDetailText, { color: theme.colors.text.secondary }]}>

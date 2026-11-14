@@ -267,7 +267,7 @@ const MaterialNameField: React.FC<MaterialNameFieldProps> = ({
         placeholder="Search inventory or type name"
         accessibilityLabel={`Material ${index + 1} name`}
       />
-      {error && <Text style={styles.fieldError}>{error}</Text>}
+      {!!error && <Text style={styles.fieldError}>{error}</Text>}
       {showSuggestions && (
         <View style={styles.dropdown}>
           {isSearching ? (
@@ -285,7 +285,7 @@ const MaterialNameField: React.FC<MaterialNameFieldProps> = ({
                 accessibilityLabel={`Select ${item.name}`}
               >
                 <Text style={styles.dropdownItemName}>{item.name}</Text>
-                {item.unit && (
+                {!!item.unit && (
                   <Text style={styles.dropdownItemUnit}>{item.unit}</Text>
                 )}
               </TouchableOpacity>
@@ -533,7 +533,7 @@ export const TreatmentSessionCompleteModal: React.FC<TreatmentSessionCompleteMod
               <Text style={styles.errorText}>{errors.materials.message}</Text>
             )}
 
-            {showError && errorMessage && (
+            {!!(showError && errorMessage) && (
               <Text style={styles.errorText}>{errorMessage}</Text>
             )}
           </ScrollView>
