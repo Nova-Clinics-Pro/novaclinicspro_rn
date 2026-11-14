@@ -125,13 +125,16 @@ const EditModal: React.FC<EditModalProps> = ({
   const metadata = rule ? RULE_METADATA[rule.rule_code] : null;
   const [value, setValue] = useState<any>(null);
 
-  // Reset value when modal opens with new rule
-  React.useEffect(() => {
+  // Reset value when modal opens with new rule. Adjusted during render (rather than in an effect) from the
+  // inputs the value is derived from; the first render counts as a change, as the effect's mount run did.
+  const [syncedInputs, setSyncedInputs] = useState<{ visible: boolean; rule: typeof rule } | null>(null);
+  if (!syncedInputs || syncedInputs.visible !== visible || syncedInputs.rule !== rule) {
+    setSyncedInputs({ visible, rule });
     if (visible && rule) {
       const effectiveValue = rule.effective_config?.value ?? rule.org_default_config?.value;
       setValue(effectiveValue);
     }
-  }, [visible, rule]);
+  }
 
   if (!rule || !metadata) return null;
 

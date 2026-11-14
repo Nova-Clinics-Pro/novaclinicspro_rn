@@ -38,7 +38,7 @@ export {
   isHighPriority,
   getTimeAgo,
 } from './domain/entities/notification.entity';
-export * from './domain/repositories/notifications.repository';
+export type { NotificationListResult, INotificationsRepository } from './domain/repositories/notifications.repository';
 
 // Presentation - In-app notification screens
 export { NotificationsListScreen } from './presentation/pages/NotificationsListScreen';

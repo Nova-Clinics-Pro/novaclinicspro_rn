@@ -11,6 +11,7 @@ import { LogBox } from 'react-native';
 import { ApiRequestFallbackProvider } from '../core/providers/ApiRequestFallbackProvider';
 import { installWebAlert } from '../core/utils/webAlert';
 import { WebAlertHost } from '../core/components/WebAlertHost';
+import { UnsavedWorkDialogHost } from '../core/unsavedWork/UnsavedWorkDialogHost';
 
 installWebAlert();
 
@@ -52,6 +53,7 @@ export default function RootLayout() {
             <Stack.Screen name="tenant-localization" />
           </Stack>
           <WebAlertHost />
+          <UnsavedWorkDialogHost />
         </AuthProvider>
       </ApiRequestFallbackProvider>
     </QueryClientProvider>

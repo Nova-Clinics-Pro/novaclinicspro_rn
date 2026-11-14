@@ -6,7 +6,7 @@
  */
 
 const path = require('path');
-const frontendRoot = path.resolve(__dirname, '../../..');
+const frontendRoot = path.resolve(module.path, '../../..');
 
 module.exports = {
   rootDir: frontendRoot,

@@ -26,6 +26,9 @@ const PUBLIC_ROUTES = new Set([
   'feedback/[token].tsx', // token-addressed public patient feedback link
 ]);
 
+// Special files that are not screens (no UI to protect): Expo Router's native link hook.
+const NON_SCREEN_FILES = new Set(['+native-intent.tsx']);
+
 const walk = (dir: string, base = ''): string[] =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const rel = path.posix.join(base, entry.name);
@@ -52,7 +55,7 @@ describe('route protection', () => {
     expect(files).toEqual(expect.arrayContaining(['login.tsx', 'clinic-admin/_layout.tsx', 'onboarding/_layout.tsx']));
   });
 
-  it.each(files.filter(f => !PUBLIC_ROUTES.has(f) && !f.endsWith('/_layout.tsx')))('%s is protected by ProtectedRoute', file => {
+  it.each(files.filter(f => !PUBLIC_ROUTES.has(f) && !NON_SCREEN_FILES.has(f) && !f.endsWith('/_layout.tsx')))('%s is protected by ProtectedRoute', file => {
     expect(isCovered(file)).toBe(true);
   });
 

@@ -194,12 +194,13 @@ export function ChoiceScreen() {
     if (applicationId) setCurrentApplicationId(applicationId);
   }, [applicationId, setCurrentApplicationId]);
 
-  useEffect(() => {
-    if (application?.tenant_name) {
-      if (!clinicName) setClinicName(application.tenant_name);
-      if (!organizationName) setOrganizationName(application.tenant_name);
-    }
-  }, [application, clinicName, organizationName]);
+  // Prefill empty names from the application's tenant name. Applied during render (not in an effect); it only
+  // sets a name that is still empty, so each correction clears its own condition and cannot loop.
+  const applicationTenantName = application?.tenant_name;
+  if (applicationTenantName) {
+    if (!clinicName) setClinicName(applicationTenantName);
+    if (!organizationName) setOrganizationName(applicationTenantName);
+  }
 
   useEffect(() => {
     if (currentUser?.applicationStatus === 'onboarding') router.replace('/onboarding/wizard-flow');

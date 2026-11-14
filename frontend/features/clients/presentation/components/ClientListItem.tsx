@@ -25,7 +25,7 @@ interface ClientListItemProps {
   onPress: (client: ClientResponse) => void;
 }
 
-export const ClientListItem: React.FC<ClientListItemProps> = React.memo(({ client, onPress }) => {
+export const ClientListItem: React.FC<ClientListItemProps> = React.memo(function ClientListItem({ client, onPress }) {
   const genderColor = getGenderColor(client.gender);
   const displayAge = client.age || (client.date_of_birth ? calculateAge(client.date_of_birth) : null);
 

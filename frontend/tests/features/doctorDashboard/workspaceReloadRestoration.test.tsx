@@ -37,6 +37,13 @@ import { axiosClient } from '../../../core/api/axiosClient';
  */
 
 let mockAuth = { currentUser: { tenantId: 'tenant-1' }, selectedClinicId: null as string | null };
+// The workspace host mounts WorkspaceExitGuard, which takes its navigation primitives from the public
+// 'expo-router/react-navigation' entry. This test renders the host WITHOUT a navigator, so a minimal stand-in
+// (no NavigationContext => the guard stays inert) keeps the real, reanimated-dependent module out of the test.
+jest.mock('expo-router/react-navigation', () => ({
+  NavigationContext: jest.requireActual('react').createContext(undefined),
+  usePreventRemove: jest.fn(),
+}));
 jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
   useAuth: () => mockAuth,
 }));

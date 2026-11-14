@@ -49,7 +49,11 @@ const theme = {
 
 jest.mock('react-native', () => {
   const React = require('react');
-  const host = (name: string) => (props: any) => React.createElement(name, props, props.children);
+  const host = (name: string) => {
+    const Host = (props: any) => React.createElement(name, props, props.children);
+    Host.displayName = name;
+    return Host;
+  };
   const Platform = { OS: 'ios', select: (values: Record<string, unknown>) => values.ios ?? values.default };
 
   return {
@@ -91,7 +95,9 @@ jest.mock('react-native/Libraries/Utilities/Platform', () => ({
 }));
 jest.mock('react-native/Libraries/Components/Touchable/TouchableOpacity', () => {
   const React = require('react');
-  return (props: any) => React.createElement('TouchableOpacity', props, props.children);
+  const TouchableOpacity = (props: any) => React.createElement('TouchableOpacity', props, props.children);
+  TouchableOpacity.displayName = 'TouchableOpacity';
+  return TouchableOpacity;
 });
 jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
 

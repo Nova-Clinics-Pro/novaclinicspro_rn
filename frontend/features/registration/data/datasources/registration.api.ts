@@ -21,6 +21,7 @@ export type RegistrationFailureKind =
   | 'VALIDATION'
   | 'TOO_MANY_ATTEMPTS'
   | 'CONFLICT'
+  | 'SERVICE_UNAVAILABLE'
   | 'UNEXPECTED';
 
 export interface RegistrationValidationIssue {
@@ -94,6 +95,12 @@ export const mapRegistrationSubmissionError = (error: unknown): RegistrationSubm
       domainCode,
       issues
     );
+  }
+  // Stable backend contract: a retryable 503 `registration_unavailable` means the platform (not the
+  // applicant's input) cannot complete registration right now - nothing was created and the same
+  // Idempotency-Key may be retried. It is NOT validation, a conflict, or manual review.
+  if (domainCode === 'registration_unavailable') {
+    return new RegistrationSubmissionError('SERVICE_UNAVAILABLE', status, domainCode);
   }
   if (domainCode === 'user_already_exists' || domainCode === 'email_already_registered') {
     return new RegistrationSubmissionError('USER_ALREADY_EXISTS', status, domainCode, issues);

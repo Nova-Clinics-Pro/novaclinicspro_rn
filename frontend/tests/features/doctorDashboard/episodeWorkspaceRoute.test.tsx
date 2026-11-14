@@ -3,7 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useFeatures } from '../../../core/hooks/useFeatures';
 import EpisodeWorkspaceRoute from '../../../app/clinic-admin/episodes/[episodeId]/workspace';
 
-jest.mock('expo-router', () => ({ useLocalSearchParams: jest.fn() }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: jest.fn(), useRouter: () => ({ setParams: jest.fn() }) }));
 jest.mock('../../../core/hooks/useFeatures', () => ({
   useFeatures: jest.fn(),
   isCosV1Enabled: (features: { cos_v1_enabled?: boolean }) => Boolean(features.cos_v1_enabled),

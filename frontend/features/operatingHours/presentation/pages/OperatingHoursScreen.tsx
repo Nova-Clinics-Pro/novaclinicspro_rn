@@ -81,14 +81,16 @@ const TimePickerModal: React.FC<TimePickerModalProps> = ({
     return parts[1] || '00';
   });
 
-  // Reset when modal opens
-  React.useEffect(() => {
+  // Reset when modal opens (adjusted during render, not in an effect).
+  const [syncedInputs, setSyncedInputs] = useState<{ visible: boolean; initialValue: string } | null>(null);
+  if (!syncedInputs || syncedInputs.visible !== visible || syncedInputs.initialValue !== initialValue) {
+    setSyncedInputs({ visible, initialValue });
     if (visible) {
       const parts = initialValue.split(':');
       setHours(parts[0] || '09');
       setMinutes(parts[1] || '00');
     }
-  }, [visible, initialValue]);
+  }
 
   const hourOptions = useMemo(() => 
     Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')),
@@ -465,8 +467,10 @@ const EditModal: React.FC<EditModalProps> = ({
   const [breakStart, setBreakStart] = useState(existingHours?.break_start?.slice(0, 5) || '13:00');
   const [breakEnd, setBreakEnd] = useState(existingHours?.break_end?.slice(0, 5) || '14:00');
 
-  // Reset form when modal opens with new data
-  React.useEffect(() => {
+  // Reset form when modal opens with new data (adjusted during render, not in an effect).
+  const [syncedInputs, setSyncedInputs] = useState<{ visible: boolean; existingHours: typeof existingHours } | null>(null);
+  if (!syncedInputs || syncedInputs.visible !== visible || syncedInputs.existingHours !== existingHours) {
+    setSyncedInputs({ visible, existingHours });
     if (visible) {
       setIsOpen(existingHours?.is_open ?? true);
       setOpenTime(existingHours?.open_time?.slice(0, 5) || '09:00');
@@ -475,7 +479,7 @@ const EditModal: React.FC<EditModalProps> = ({
       setBreakStart(existingHours?.break_start?.slice(0, 5) || '13:00');
       setBreakEnd(existingHours?.break_end?.slice(0, 5) || '14:00');
     }
-  }, [visible, existingHours]);
+  }
 
   // Validation
   const validateTime = (time: string): boolean => {
@@ -983,7 +987,7 @@ export const OperatingHoursScreen: React.FC = () => {
         <View style={styles.helpSection}>
           <Ionicons name="information-circle-outline" size={18} color="#6B7280" />
           <Text style={styles.helpText}>
-            Operating hours define when your clinic accepts appointments. Use "Apply to All Days" to quickly set the same hours for every day.
+            Operating hours define when your clinic accepts appointments. Use &quot;Apply to All Days&quot; to quickly set the same hours for every day.
           </Text>
         </View>
       </ScrollView>

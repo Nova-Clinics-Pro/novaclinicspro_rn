@@ -3,7 +3,7 @@
  * Configure billing settings
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -35,60 +35,86 @@ interface BillingSetupScreenProps {
   draftBaseEvidence?: DraftRevisionEvidence;
 }
 
+interface BillingForm {
+  taxEnabled: boolean;
+  taxRate: string;
+  invoicePrefix: string;
+}
+
+const billingSnapshot = (form: BillingForm): string =>
+  JSON.stringify({ taxEnabled: form.taxEnabled, taxRate: form.taxRate, invoicePrefix: form.invoicePrefix });
+
 export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, onRegisterSaveHandler, draftBaseEvidence }: BillingSetupScreenProps) {
   const theme = useClinicTheme();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [taxEnabled, setTaxEnabled] = useState(true);
-  const [taxRate, setTaxRate] = useState('18');
-  const [invoicePrefix, setInvoicePrefix] = useState('INV');
+  const [form, setForm] = useState<BillingForm>({ taxEnabled: true, taxRate: '18', invoicePrefix: 'INV' });
+  const { taxEnabled, taxRate, invoicePrefix } = form;
   const { setBilling, getStepData } = useWizardStore();
-  const [draftRestored, setDraftRestored] = useState(false);
-  const initialSnapshotRef = useRef<string | null>(null);
-  const restoredSnapshotRef = useRef<string | null>(null);
+  // Content of the server result most recently applied (null until the first one arrives: the loading state).
+  // Compared by content, so a new object with identical content is not treated as new data.
+  const [syncedKey, setSyncedKey] = useState<string | null>(null);
+  // Snapshot of what the server holds (or was last saved): the "no change" baseline for submit.
+  const [baselineSnapshot, setBaselineSnapshot] = useState<string | null>(null);
+  // Snapshot of a restored wizard draft; non-null while the "restored" indicator is shown.
+  const [restoredSnapshot, setRestoredSnapshot] = useState<string | null>(null);
+  // True once the user has edited the form (reset after a successful save).
+  const [edited, setEdited] = useState(false);
+  const loading = syncedKey === null;
+  const draftRestored = restoredSnapshot !== null;
 
   const submitStepMutation = useSubmitStepMutation(tenantId, 'financials_and_tax');
   const billingSettingsQuery = useBillingSettingsQuery(tenantId);
   const saveBillingSettingsMutation = useSaveBillingSettingsMutation(tenantId);
 
-  useEffect(() => {
-    if (!billingSettingsQuery.isLoading && billingSettingsQuery.data) {
-      const settings = billingSettingsQuery.data;
-      setTaxEnabled(settings.taxEnabled);
-      setTaxRate(settings.taxRate);
-      setInvoicePrefix(settings.invoicePrefix);
-      initialSnapshotRef.current = JSON.stringify({
-        taxEnabled: settings.taxEnabled,
-        taxRate: settings.taxRate,
-        invoicePrefix: settings.invoicePrefix,
-      });
-      if (!settings.hasServerBillingSettings) {
+  // Server data -> form, applied during render when a new result arrives (not in an effect).
+  //  - The baseline always follows the server, so "no change" means "equal to what the server holds".
+  //  - The form itself is only replaced while the user has no unsaved edits: a refetch must never overwrite
+  //    in-progress input (the whole form is protected, not just the field last touched).
+  //  - With no server settings, a stored wizard draft is restored (read when the data arrives).
+  const serverSettings = billingSettingsQuery.isLoading ? undefined : billingSettingsQuery.data;
+  const serverKey = serverSettings ? JSON.stringify(serverSettings) : null;
+  if (serverSettings && serverKey !== syncedKey) {
+    setSyncedKey(serverKey);
+    const serverForm: BillingForm = {
+      taxEnabled: serverSettings.taxEnabled,
+      taxRate: serverSettings.taxRate,
+      invoicePrefix: serverSettings.invoicePrefix,
+    };
+    setBaselineSnapshot(billingSnapshot(serverForm));
+    const hasUnsavedEdits = edited && billingSnapshot(form) !== baselineSnapshot;
+    if (!hasUnsavedEdits) {
+      let nextForm = serverForm;
+      let restored: string | null = null;
+      if (!serverSettings.hasServerBillingSettings) {
         const zustandData = getStepData('financials_and_tax');
         if (zustandData) {
-          setTaxEnabled(zustandData.tax_enabled);
-          setTaxRate(String(zustandData.tax_rate));
-          setInvoicePrefix(zustandData.invoice_prefix);
-          restoredSnapshotRef.current = JSON.stringify({
+          nextForm = {
             taxEnabled: zustandData.tax_enabled,
             taxRate: String(zustandData.tax_rate),
             invoicePrefix: zustandData.invoice_prefix,
-          });
-          setDraftRestored(true);
+          };
+          restored = billingSnapshot(nextForm);
         }
       }
-      setLoading(false);
+      setForm(nextForm);
+      setRestoredSnapshot(restored);
+      setEdited(false);
     }
-  }, [billingSettingsQuery.isLoading, billingSettingsQuery.data, getStepData]);
+  }
+
+  // User edits: mark the form edited, and drop the "restored" indicator once it no longer matches the draft.
+  const updateForm = (patch: Partial<BillingForm>) => {
+    const next = { ...form, ...patch };
+    setForm(next);
+    setEdited(true);
+    if (restoredSnapshot !== null && billingSnapshot(next) !== restoredSnapshot) {
+      setRestoredSnapshot(null);
+    }
+  };
 
   // Save to Zustand whenever form data changes
   useEffect(() => {
     if (!loading) {
-      const currentSnapshot = JSON.stringify({ taxEnabled, taxRate, invoicePrefix });
-      if (draftRestored && restoredSnapshotRef.current !== currentSnapshot) {
-        setDraftRestored(false);
-        restoredSnapshotRef.current = null;
-      }
-
       const timeout = setTimeout(() => {
         setBilling({
           tax_enabled: taxEnabled,
@@ -99,7 +125,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
 
       return () => clearTimeout(timeout);
     }
-  }, [taxEnabled, taxRate, invoicePrefix, loading, setBilling, draftRestored, draftBaseEvidence]);
+  }, [taxEnabled, taxRate, invoicePrefix, loading, setBilling, draftBaseEvidence]);
 
   const validateForm = (): boolean => {
     if (taxEnabled && (!taxRate || parseFloat(taxRate) < 0 || parseFloat(taxRate) > 100)) {
@@ -131,12 +157,12 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
     });
     
     // Check if data has changed
-    const hasChanges = currentSnapshot !== initialSnapshotRef.current;
+    const hasChanges = currentSnapshot !== baselineSnapshot;
     
     console.log('[BillingSetupScreen] Change detection:', { hasChanges });
     
     // If no changes, just advance without API call
-    if (!hasChanges && initialSnapshotRef.current !== null) {
+    if (!hasChanges && baselineSnapshot !== null) {
       console.log('[BillingSetupScreen] No changes detected, skipping API call');
       if (isWizardMode && onSuccess) {
         onSuccess();
@@ -169,9 +195,9 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       console.log('[BillingSetupScreen] Backend response:', JSON.stringify(result, null, 2));
       
       // Update snapshot after successful save
-      initialSnapshotRef.current = currentSnapshot;
-      restoredSnapshotRef.current = null;
-      setDraftRestored(false);
+      setBaselineSnapshot(currentSnapshot);
+      setRestoredSnapshot(null);
+      setEdited(false);
       await clearStepDraftAndSync('financials_and_tax');
 
       // In wizard mode, call onSuccess callback
@@ -196,7 +222,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
       }
       throw error;
     }
-  }, [loading, taxEnabled, taxRate, invoicePrefix, submitStepMutation, saveBillingSettingsMutation, isWizardMode, onSuccess, router, validateForm]);
+  }, [loading, taxEnabled, taxRate, invoicePrefix, baselineSnapshot, submitStepMutation, saveBillingSettingsMutation, isWizardMode, onSuccess, router, validateForm]);
 
   // Register/update the save handler with wizard whenever it changes
   useEffect(() => {
@@ -290,7 +316,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
             },
           ]}
           value={invoicePrefix}
-          onChangeText={setInvoicePrefix}
+          onChangeText={(invoicePrefix) => updateForm({ invoicePrefix })}
           placeholder="INV"
           placeholderTextColor={theme.colors.text.disabled}
           autoCapitalize="characters"
@@ -335,7 +361,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
                 justifyContent: 'center',
               },
             ]}
-            onPress={() => setTaxEnabled(!taxEnabled)}
+            onPress={() => updateForm({ taxEnabled: !taxEnabled })}
           >
             <View
               style={[
@@ -375,7 +401,7 @@ export function BillingSetupScreen({ tenantId, isWizardMode = false, onSuccess, 
                 },
               ]}
               value={taxRate}
-              onChangeText={setTaxRate}
+              onChangeText={(taxRate) => updateForm({ taxRate })}
               placeholder="18"
               placeholderTextColor={theme.colors.text.disabled}
               keyboardType="decimal-pad"

@@ -32,6 +32,7 @@ import {
   InventoryCategory,
   ListInventoryParams,
 } from '../../data/models/inventory.dtos';
+import { ApiErrorState } from '../../../../core/components/ui/ApiErrorState';
 
 // Minimum characters before triggering search
 const MIN_SEARCH_LENGTH = 3;
@@ -220,16 +221,7 @@ export const InventoryListScreen: React.FC = () => {
       {isLoading ? (
         <ActivityIndicator size="large" color={colors.primary.main} />
       ) : isError ? (
-        <>
-          <Ionicons name="alert-circle" size={48} color={colors.error.main} />
-          <Text style={styles.emptyTitle}>Unable to Load Inventory</Text>
-          <Text style={styles.emptySubtitle}>
-            {error?.message || 'Please check your connection and try again.'}
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </>
+        <ApiErrorState error={error} onRetry={() => refetch()} />
       ) : (
         <>
           <Ionicons name="cube-outline" size={48} color={colors.text.tertiary} />

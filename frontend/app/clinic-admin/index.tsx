@@ -14,12 +14,13 @@ import {
   ActivityIndicator,
   Pressable,
   useWindowDimensions,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
 import { DashboardHeader } from '../../core/components/DashboardHeader';
+import { isClinicOwner } from '../../features/auth/domain/entities/auth.entity';
+import { confirmLogout } from '../../features/auth/presentation/utils/confirmLogout';
 import { StatCard } from '../../core/components/StatCard';
 import { QuickActionButton } from '../../core/components/QuickActionButton';
 import { colors } from '../../core/theme/colors';
@@ -31,7 +32,7 @@ import { useSubscriptionSummaryQuery } from '../../features/billing/data/reposit
 import { useTreatmentOrdersQuery } from '../../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import { useNotificationBadgeCount } from '../../features/notifications/presentation/hooks/useNotificationBadgeCount';
 import { formatInrCurrency } from '../../core/utils/currency';
-import { t, ErrorTokens } from '../../core/localization';
+import { t } from '../../core/localization';
 import { useStaffListQuery } from '../../features/staff/data/repositories/staff.repository.impl';
 import { ClinicFeedbackSummarySection } from '../../features/feedback';
 import { useOnboardingStatusQuery } from '../../features/onboarding/data/repositories/onboarding.repository.impl';
@@ -158,43 +159,12 @@ export default function ClinicAdminDashboard() {
     !onboardingStatus.is_ready_to_go_live && 
     currentUser?.applicationStatus === 'onboarding';
 
-  const handleLogout = async () => {
-    // Use confirm for web, Alert for native
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to logout?');
-      if (confirmed) {
-        try {
-          await logout();
-        } catch {
-          window.alert('Logout failed. Please try again.');
-        }
-      }
-    } else {
-      Alert.alert(
-        t('confirmations.logout'),
-        t('confirmations.logout'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('navigation.logout'),
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await logout();
-              } catch {
-                Alert.alert(t('common.error'), t(ErrorTokens.auth.logoutFailed));
-              }
-            },
-          },
-        ]
-      );
-    }
-  };
+  const handleLogout = () => confirmLogout(t, logout);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <DashboardHeader
-        title="Clinic Admin Dashboard"
+        title={currentUser && isClinicOwner(currentUser) ? t('dashboardTitles.clinicOwner') : t('dashboardTitles.clinicAdmin')}
         subtitle={clinicName}
         userName={displayName}
         notificationCount={notificationCount}

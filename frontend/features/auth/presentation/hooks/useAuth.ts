@@ -10,6 +10,7 @@ import { logError } from '../../../../core/utils/errorHandler';
 import { useAuthStore } from '../providers/auth.store';
 import { authSessionService } from '../../application/auth-session.service';
 import { unifiedLogoutService } from '../../application/unified-logout.service';
+import { confirmUnsavedWork, hasDirtyDrafts } from '../../../../core/unsavedWork/unsavedWorkRegistry';
 import { AuthUserSession, getLandingRoute } from '../../domain/entities/auth.entity';
 
 interface UseAuthReturn {
@@ -103,10 +104,17 @@ export const useAuth = (): UseAuthReturn => {
 
   /** Presentation-compatible entry point for the canonical explicit-user logout command. */
   const logout = useCallback(async () => {
+    // User-initiated logout asks Save / Discard / Cancel first when a draft is unsaved. No await is added when nothing
+    // is dirty, so the logout path is unchanged. Forced logout and session invalidation never come through here.
+    // Cancel resolves without logging out.
+    if (hasDirtyDrafts() && !(await confirmUnsavedWork('logout'))) return;
     return unifiedLogoutService.logout({
       navigateToLogin: () => {
-        requestIdleCallback(() => {
-        router.replace('/login');
+        // requestIdleCallback is missing in some browsers (e.g. Safari); fall back to a timer.
+        const defer: (callback: () => void) => unknown =
+          typeof requestIdleCallback === 'function' ? requestIdleCallback : (callback) => setTimeout(callback, 0);
+        defer(() => {
+          router.replace('/login');
         });
       },
     });

@@ -5,7 +5,7 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/tests/**/*.test.ts', '**/tests/**/*.test.tsx'],
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@tanstack/.*|zustand))',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@tanstack/.*|zustand|standard-navigation))',
   ],
   moduleNameMapper: {
     '^immer$': '<rootDir>/node_modules/immer/dist/cjs/immer.cjs.development.js',

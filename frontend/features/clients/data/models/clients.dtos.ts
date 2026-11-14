@@ -11,7 +11,7 @@
 export interface ClientCreate {
   full_name: string;
   gender: string; // Required
-  age: number; // Required
+  age?: number | null; // Optional: calculated from date_of_birth when that is given
   phone?: string | null;
   mobile_code?: string;
   alt_mobile?: string | null;

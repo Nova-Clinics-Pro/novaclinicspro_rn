@@ -3,6 +3,7 @@
  * Form for creating/editing inventory batches
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React, { useState } from 'react';
 import {
   View,
@@ -11,7 +12,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../core/theme/colors';
@@ -159,38 +159,20 @@ export const BatchForm: React.FC<BatchFormProps> = ({
       {/* Dates */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Expiry Date</Text>
-        <TextInput
-          style={styles.input}
-          value={expiryDate}
-          onChangeText={setExpiryDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={colors.text.tertiary}
-        />
+        <DateField value={expiryDate} onChange={setExpiryDate} />
         <Text style={styles.hint}>Format: 2025-12-31</Text>
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Manufacture Date</Text>
-        <TextInput
-          style={styles.input}
-          value={manufactureDate}
-          onChangeText={setManufactureDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={colors.text.tertiary}
-        />
+        <DateField value={manufactureDate} onChange={setManufactureDate} />
       </View>
 
       {/* Purchase Date (only for create) */}
       {!isEdit && (
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Purchase Date</Text>
-          <TextInput
-            style={styles.input}
-            value={purchaseDate}
-            onChangeText={setPurchaseDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.text.tertiary}
-          />
+          <DateField value={purchaseDate} onChange={setPurchaseDate} />
         </View>
       )}
 

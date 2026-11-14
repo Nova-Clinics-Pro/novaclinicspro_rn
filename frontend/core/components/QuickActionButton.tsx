@@ -28,7 +28,7 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   href,
   color = colors.primary.main,
 }) => {
-  const ButtonContent = () => (
+  const buttonContent = (
     <>
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
         <Ionicons name={icon} size={24} color={color} />
@@ -44,7 +44,7 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({
     return (
       <Link href={href as any} asChild>
         <Pressable style={styles.button}>
-          <ButtonContent />
+          {buttonContent}
         </Pressable>
       </Link>
     );
@@ -60,7 +60,7 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({
 
   return (
     <Pressable style={styles.button} onPress={handlePress}>
-      <ButtonContent />
+      {buttonContent}
     </Pressable>
   );
 };

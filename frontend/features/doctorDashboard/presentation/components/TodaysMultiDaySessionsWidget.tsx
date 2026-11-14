@@ -71,7 +71,7 @@ export const TodaysMultiDaySessionsWidget: React.FC<TodaysMultiDaySessionsWidget
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Ionicons name="calendar" size={20} color={colors.primary.main} />
-            <Text style={styles.title}>Today's Multi-Day Sessions</Text>
+            <Text style={styles.title}>Today&apos;s Multi-Day Sessions</Text>
           </View>
         </View>
         <View style={styles.loadingContainer}>
@@ -89,7 +89,7 @@ export const TodaysMultiDaySessionsWidget: React.FC<TodaysMultiDaySessionsWidget
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Ionicons name="calendar" size={20} color={colors.primary.main} />
-            <Text style={styles.title}>Today's Multi-Day Sessions</Text>
+            <Text style={styles.title}>Today&apos;s Multi-Day Sessions</Text>
           </View>
         </View>
         <View style={styles.emptyContainer}>
@@ -106,7 +106,7 @@ export const TodaysMultiDaySessionsWidget: React.FC<TodaysMultiDaySessionsWidget
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Ionicons name="calendar" size={20} color={colors.primary.main} />
-          <Text style={styles.title}>Today's Multi-Day Sessions</Text>
+          <Text style={styles.title}>Today&apos;s Multi-Day Sessions</Text>
         </View>
         {onViewAll && (
           <TouchableOpacity onPress={onViewAll} testID={`${testID}-view-all`}>

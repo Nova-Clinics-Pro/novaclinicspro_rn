@@ -36,6 +36,26 @@ describe('useRegisterClinicOwner Idempotency-Key reuse', () => {
     expect(keys[1]).toBe(keys[0]);
   });
 
+  it('reuses the key for every retry while registration is temporarily unavailable (503), so the retry cannot duplicate a registration', async () => {
+    const unavailable = Object.assign(new Error('unavailable'), {
+      isAxiosError: true,
+      response: { status: 503, data: { detail: { error: 'registration_unavailable', retryable: true } } },
+    });
+    register
+      .mockRejectedValueOnce(unavailable)
+      .mockRejectedValueOnce(unavailable)
+      .mockResolvedValueOnce({ success: true });
+    const hook = mount();
+
+    await submit(hook, payload);
+    await submit(hook, { ...payload });
+    await submit(hook, { ...payload });
+
+    const keys = register.mock.calls.map(call => call[1]);
+    expect(keys).toHaveLength(3);
+    expect(new Set(keys).size).toBe(1);
+  });
+
   it('uses a new key when the payload was edited between attempts', async () => {
     register.mockRejectedValue(new Error('network'));
     const hook = mount();

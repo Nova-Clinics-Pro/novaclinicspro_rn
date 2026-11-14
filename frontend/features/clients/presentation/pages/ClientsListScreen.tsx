@@ -32,6 +32,7 @@ import {
 import { ClientResponse, ClientCreate, ClientUpdate } from '../../data/models/clients.dtos';
 import { ClientListItem } from '../components/ClientListItem';
 import { ClientForm } from '../components/ClientForm';
+import { ApiErrorState } from '../../../../core/components/ui/ApiErrorState';
 
 // Debounce delay in milliseconds
 const DEBOUNCE_DELAY = 300;
@@ -129,16 +130,7 @@ export const ClientsListScreen: React.FC = () => {
   if (isError && !clientsData) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color={colors.error.main} />
-          <Text style={styles.errorTitle}>Could not load clients</Text>
-          <Text style={styles.errorText}>
-            {error?.message || 'Please check your connection and try again'}
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+        <ApiErrorState error={error} onRetry={() => refetch()} />
       </SafeAreaView>
     );
   }

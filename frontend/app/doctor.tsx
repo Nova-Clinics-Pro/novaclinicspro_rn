@@ -14,7 +14,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Platform,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
@@ -29,6 +28,7 @@ import { spacing } from '../core/theme/spacing';
 import { typography } from '../core/theme/typography';
 import { useAuth } from '../features/auth/presentation/hooks/useAuth';
 import { t, ErrorTokens } from '../core/localization';
+import { confirmLogout } from '../features/auth/presentation/utils/confirmLogout';
 import { useDoctorDashboardDate } from '../features/staffDashboards/presentation/hooks/useDashboardDate';
 import { filterAppointmentsByDate } from '../features/staffDashboards/domain/utils/filterAppointments';
 import {
@@ -314,36 +314,7 @@ function DoctorDashboard() {
     },
   ], [dashboardData, handleStartConsultation, router]);
 
-  const handleLogout = () => {
-    if (Platform.OS === 'web') {
-      if (!window.confirm('Are you sure you want to logout?')) {
-        return;
-      }
-      void logout().catch(() => {
-        window.alert('Failed to logout. Please try again.');
-      });
-      return;
-    }
-
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch {
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  };
+  const handleLogout = () => confirmLogout(t, logout);
 
   const getKpiErrorMessage = (error: unknown) => toDoctorDashboardError(error);
 

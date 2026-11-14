@@ -39,6 +39,7 @@ import { WorkspaceSaveStatusProvider } from '../context/WorkspaceSaveStatusConte
 import { WorkspaceHeader } from '../components/WorkspaceHeader';
 import { ClinicalTimeline } from '../components/ClinicalTimeline';
 import { ConsultationWorkspaceScreen } from './ConsultationWorkspaceScreen';
+import { WorkspaceExitGuard } from '../navigation/WorkspaceExitGuard';
 
 export interface ClinicalWorkspaceProps {
   episodeId: string;
@@ -63,6 +64,7 @@ export const ClinicalWorkspace: React.FC<ClinicalWorkspaceProps> = ({
     <WorkspaceProvider tenantId={tenantId} episodeId={episodeId} appointmentId={appointmentId} clientId={clientId}>
       <WorkspaceSaveStatusProvider>
         <View style={{ flex: 1 }}>
+          <WorkspaceExitGuard />
           <WorkspaceHeader />
           <View style={{ flex: timelineEnabled ? 2 : 1 }}>
             <ConsultationWorkspaceScreen episodeId={episodeId} appointmentId={appointmentId} clientId={clientId} />

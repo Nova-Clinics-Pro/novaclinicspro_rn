@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { episodeActionAccess } from '../../domain/episodeActionAccess';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { useTranslation } from '../../../../core/localization/useTranslation';
 import { 
@@ -45,7 +46,6 @@ export const ClientEpisodesList: React.FC<ClientEpisodesListProps> = ({
   const { t } = useTranslation();
   const { currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
-  const userRole = currentUser?.roles?.[0] || 'clinic_admin';
   
   console.log('[ClientEpisodesList] Render:', {
     tenantId,
@@ -60,24 +60,9 @@ export const ClientEpisodesList: React.FC<ClientEpisodesListProps> = ({
   // Ensure clientId is a string, not an array from route params
   const clientIdString = Array.isArray(clientId) ? clientId[0] : clientId;
 
-  // RBAC permissions
-  const normalizedRole = userRole?.toLowerCase().replace('_', '-') || 'clinic-admin';
-  const canCreateEpisode = [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor',
-    'tenant admin',
-    'tenant_admin',
-    'Tenant Admin'
-  ].includes(normalizedRole) || [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor',
-    'Tenant Admin'
-  ].includes(userRole);
+  // Follows the backend's effective permissions (episode.create), not a list of role names.
+  const { canCreateEpisode } = episodeActionAccess(currentUser?.permissions);
 
-  console.log('[ClientEpisodesList] userRole:', userRole);
-  console.log('[ClientEpisodesList] normalizedRole:', normalizedRole);
   console.log('[ClientEpisodesList] canCreateEpisode:', canCreateEpisode);
 
   // Query with infinite scroll

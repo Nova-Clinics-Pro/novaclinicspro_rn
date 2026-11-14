@@ -7,6 +7,7 @@
 import { Stack } from 'expo-router';
 import { colors } from '../../core/theme/colors';
 import { ProtectedRoute } from '../../core/components/ProtectedRoute';
+import { workspaceRouteIdentity } from '../../features/episodes/presentation/navigation/workspaceRouteIdentity';
 
 export default function ClinicAdminLayout() {
   return (
@@ -54,7 +55,8 @@ export default function ClinicAdminLayout() {
         <Stack.Screen name="branding" />
         <Stack.Screen name="feedback" />
         <Stack.Screen name="episodes/[episodeId]/index" />
-        <Stack.Screen name="episodes/[episodeId]/workspace" />
+        {/* One workspace instance per appointment: re-navigation reuses it (and its draft). */}
+        <Stack.Screen name="episodes/[episodeId]/workspace" dangerouslySingular={workspaceRouteIdentity} />
         <Stack.Screen
           name="appointments/[appointmentId]/start-consultation"
           options={{ title: 'New Consultation', headerShown: false }}
@@ -62,6 +64,7 @@ export default function ClinicAdminLayout() {
         <Stack.Screen
           name="episodes/[episodeId]/consultation"
           options={{ title: 'Consultation', headerShown: false }}
+          dangerouslySingular={workspaceRouteIdentity}
         />
         <Stack.Screen
           name="episodes/[episodeId]/complete-consultation"

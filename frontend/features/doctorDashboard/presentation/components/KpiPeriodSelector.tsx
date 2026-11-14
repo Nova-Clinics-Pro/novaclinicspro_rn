@@ -3,6 +3,7 @@
  * Reusable period selector for dashboards with custom date range support
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -10,8 +11,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  TextInput,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../core/theme/colors';
@@ -152,30 +151,12 @@ export const KpiPeriodSelector: React.FC<KpiPeriodSelectorProps> = ({
 
             <View style={styles.dateInputContainer}>
               <Text style={styles.dateLabel}>Start Date</Text>
-              <TextInput
-                style={styles.dateInput}
-                value={fromDate}
-                onChangeText={setFromDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.text.tertiary}
-                keyboardType={Platform.OS === 'ios' ? 'default' : 'default'}
-                autoCapitalize="none"
-                testID={`${testID}-from-date`}
-              />
+              <DateField value={fromDate} onChange={setFromDate} testID={`${testID}-from-date`} />
             </View>
 
             <View style={styles.dateInputContainer}>
               <Text style={styles.dateLabel}>End Date</Text>
-              <TextInput
-                style={styles.dateInput}
-                value={toDate}
-                onChangeText={setToDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.text.tertiary}
-                keyboardType={Platform.OS === 'ios' ? 'default' : 'default'}
-                autoCapitalize="none"
-                testID={`${testID}-to-date`}
-              />
+              <DateField value={toDate} onChange={setToDate} testID={`${testID}-to-date`} />
             </View>
 
             {dateError && (
