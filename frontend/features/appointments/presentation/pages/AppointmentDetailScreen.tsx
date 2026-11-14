@@ -53,6 +53,7 @@ import {
   useEpisodeQuery,
 } from '../../../episodes/data/repositories/episodes.repository.impl';
 import { EpisodeCard } from '../../../episodes/presentation/components/EpisodeCard';
+import { episodeActionAccess } from '../../../episodes/domain/episodeActionAccess';
 import { MultiDayTreatmentSection } from '../components/MultiDayTreatmentSection';
 import {
   getStatusLabel,
@@ -465,36 +466,8 @@ export const AppointmentDetailScreen: React.FC = () => {
   
   const canWhatsApp = canModifyAppointment;
 
-  // Episode RBAC permissions
-  const canLinkAppointment = [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor', 
-    'receptionist',
-    'tenant admin',
-    'tenant_admin',
-    'Tenant Admin'
-  ].includes(normalizedRole) || [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor', 
-    'receptionist',
-    'Tenant Admin'
-  ].includes(userRole);
-  
-  const canCreateEpisode = [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor',
-    'tenant admin',
-    'tenant_admin',
-    'Tenant Admin'
-  ].includes(normalizedRole) || [
-    'clinic-admin', 
-    'clinic_admin', 
-    'doctor',
-    'Tenant Admin'
-  ].includes(userRole);
+  // Episode actions follow the backend's effective permissions, not a list of role names.
+  const { canCreateEpisode, canLinkEpisode: canLinkAppointment } = episodeActionAccess(currentUser?.permissions);
 
   console.log('[AppointmentDetail] userRole:', userRole);
   console.log('[AppointmentDetail] normalizedRole:', normalizedRole);
