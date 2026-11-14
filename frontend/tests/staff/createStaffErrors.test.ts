@@ -46,6 +46,22 @@ describe('creating a staff member: failures say what happened', () => {
     expect(createStaffErrorMessage(t, await reason())).toMatch(/कुछ देर बाद/);
   });
 
+  it('an email with an unlinked sign-in account gets its own explanation', async () => {
+    fail(409, { detail: { error_code: 'AUTH_EMAIL_REGISTERED' } });
+    const error = await reason();
+    expect(error.kind).toBe('AUTH_EMAIL_REGISTERED');
+    expect(createStaffErrorMessage(t, error)).toMatch(/not linked to a staff member/);
+  });
+
+  it('an incomplete form names the problem instead of a generic failure', async () => {
+    fail(422, { detail: [{ loc: ['body'], msg: 'Email is required for staff with login access' }] });
+    const error = await reason();
+    expect(error.kind).toBe('INVALID_DETAILS');
+    expect(createStaffErrorMessage(t, error)).toMatch(/Enter an email address/);
+    fail(422, { detail: [{ loc: ['body', 'gender'], msg: 'field required' }] });
+    expect(createStaffErrorMessage(t, await reason())).toMatch(/missing or not valid/);
+  });
+
   it('a refusal explains who can do it, in the user\'s language', async () => {
     fail(403, { detail: { error_code: 'MISSING_PERMISSION', details: { required_permission: 'staff.create', permitted_roles: ['Clinic Admin', 'Clinic Owner'] } } });
     const error = await reason();

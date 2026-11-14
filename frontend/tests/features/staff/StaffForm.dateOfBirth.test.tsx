@@ -40,3 +40,20 @@ describe('StaffForm date of birth field', () => {
     expect(screen.getByTestId('staff-date-picker')).toBeTruthy();
   });
 });
+
+describe('StaffForm sign-in access needs an email', () => {
+  it('explains that an email is required instead of submitting and failing on the server', async () => {
+    const { Switch } = require('react-native');
+    const { waitFor } = require('@testing-library/react-native');
+    const onSubmit = jest.fn();
+    const screen = render(<StaffForm onSubmit={onSubmit} onCancel={jest.fn()} />);
+
+    fireEvent(screen.UNSAFE_getByType(Switch), 'valueChange', true);
+    fireEvent.press(screen.getByText('Add Staff'));
+
+    await waitFor(() =>
+      expect(screen.getByText('Email is required when the staff member can sign in')).toBeTruthy(),
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});

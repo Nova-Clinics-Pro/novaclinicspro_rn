@@ -591,6 +591,10 @@
     "staff": {
       "loadFailed": "Could not load staff members. Please try again.",
       "loadDetailsFailed": "Could not load staff details. Please try again.",
+      "emailRequired": "Enter an email address. A staff member who can sign in needs one, because the sign-in link is sent to it.",
+      "phoneInvalid": "Enter a valid phone number for the staff member.",
+      "invalidDetails": "Some of the details are missing or not valid. Check the form and try again.",
+      "emailRegistered": "A sign-in account already exists for this email, but it is not linked to a staff member in your clinic. Use a different email, or ask support to remove the unused account.",
       "phoneExists": "A staff member with this phone number already exists in your clinic. Use a different phone number.",
       "rateLimited": "Too many sign-up emails were sent recently, so the account could not be created. Please wait a while and try again.",
       "emailExists": "A staff member with this email already exists in your clinic. Use a different email, or open the existing staff member instead.",

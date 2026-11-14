@@ -32,7 +32,9 @@ const normalizeStaffCreateError = (error: unknown): StaffOperationError => {
   const detail = response?.data?.detail;
   const code = typeof detail === 'object' && detail !== null ? detail.error_code : undefined;
   if (status === 409 && code === 'STAFF_PHONE_EXISTS') return normalizeStaffOperationError('PHONE_EXISTS');
+  if (status === 409 && code === 'AUTH_EMAIL_REGISTERED') return normalizeStaffOperationError('AUTH_EMAIL_REGISTERED');
   if (status === 409) return normalizeStaffOperationError('EMAIL_EXISTS');
+  if (status === 422) return normalizeStaffOperationError('INVALID_DETAILS', error);
   if (status === 429) return normalizeStaffOperationError('RATE_LIMITED');
   if (status === 403) return normalizeStaffOperationError('PERMISSION_DENIED', error);
   return normalizeStaffOperationError('SAVE_FAILED');

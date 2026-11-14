@@ -79,6 +79,11 @@ const staffSchema = z.object({
   // Employment Dates
   employment_start_date: z.string().optional().nullable(),
   employment_end_date: z.string().optional().nullable(),
+}).superRefine((value, ctx) => {
+  // A staff member who can sign in needs an email: it is where the sign-in link is sent.
+  if (value.requires_login && !value.email?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['email'], message: 'Email is required when the staff member can sign in' });
+  }
 });
 
 type StaffFormData = z.infer<typeof staffSchema>;

@@ -71,6 +71,8 @@ export const StaffListScreen: React.FC = () => {
   const [selectedType, setSelectedType] = useState<StaffType | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>('active');
   const [showAddModal, setShowAddModal] = useState(false);
+  // Shown inside the Add Staff dialog: on web an alert opened from here would sit behind this dialog and trap focus.
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Debounce search query - only trigger API call after user stops typing
   const debouncedSearchQuery = useDebounce(searchQuery, DEBOUNCE_DELAY);
@@ -152,12 +154,13 @@ export const StaffListScreen: React.FC = () => {
 
   const handleCreateStaff = useCallback(
     async (data: StaffCreate) => {
+      setCreateError(null);
       try {
         await createMutation.mutateAsync(data);
         setShowAddModal(false);
         Alert.alert(t('common.success'), t('success.created'));
       } catch (error) {
-        Alert.alert(t('common.error'), createStaffErrorMessage(t, error));
+        setCreateError(createStaffErrorMessage(t, error));
       }
     },
     [createMutation]
@@ -307,7 +310,10 @@ export const StaffListScreen: React.FC = () => {
         </View>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => setShowAddModal(true)}
+          onPress={() => {
+            setCreateError(null);
+            setShowAddModal(true);
+          }}
         >
           <Ionicons name="add" size={24} color={colors.background.default} />
         </TouchableOpacity>
@@ -355,6 +361,12 @@ export const StaffListScreen: React.FC = () => {
             <Text style={styles.modalTitle}>Add New Staff</Text>
             <View style={{ width: 24 }} />
           </View>
+          {createError ? (
+            <View style={styles.createErrorBanner} accessibilityRole="alert">
+              <Ionicons name="alert-circle" size={20} color={colors.error.main} />
+              <Text style={styles.createErrorText}>{createError}</Text>
+            </View>
+          ) : null}
           <StaffForm
             onSubmit={(data) => handleCreateStaff(data as StaffCreate)}
             onCancel={() => setShowAddModal(false)}
@@ -533,6 +545,23 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background.paper,
+  },
+  createErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.error.main,
+    backgroundColor: colors.error[50],
+  },
+  createErrorText: {
+    flex: 1,
+    color: colors.error.dark,
+    fontSize: 14,
   },
   modalHeader: {
     flexDirection: 'row',
