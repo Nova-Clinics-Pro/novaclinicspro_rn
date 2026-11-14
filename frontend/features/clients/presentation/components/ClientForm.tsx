@@ -20,6 +20,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../core/theme/colors';
+import { DateField } from '../../../../core/components/DateField';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import {
@@ -116,13 +117,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
   };
 
   // Date input formatter
-  const formatDateInput = (text: string): string => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 4) return cleaned;
-    if (cleaned.length <= 6) return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
-    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -289,19 +283,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({
               control={control}
               name="date_of_birth"
               render={({ field: { onChange, onBlur, value } }) => (
-                <View style={styles.inputWithIcon}>
-                  <Ionicons name="calendar-outline" size={20} color={colors.text.secondary} />
-                  <TextInput
-                    style={styles.dateInput}
-                    value={value || ''}
-                    onChangeText={(text) => onChange(formatDateInput(text))}
-                    onBlur={onBlur}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.text.tertiary}
-                    keyboardType="numeric"
-                    maxLength={10}
-                  />
-                </View>
+                <DateField
+                  value={value || ''}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  maximumDate={new Date()}
+                  accessibilityLabel="Date of Birth"
+                  testID="client-date-of-birth"
+                />
               )}
             />
           </View>
@@ -634,22 +623,6 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: colors.primary.main,
     fontWeight: '600',
-  },
-  inputWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background.default,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    borderRadius: 8,
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  dateInput: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    ...typography.body1,
-    color: colors.text.primary,
   },
   bloodGroupGrid: {
     flexDirection: 'row',

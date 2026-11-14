@@ -3,6 +3,7 @@
  * Form for creating leave requests
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React from 'react';
 import {
   View,
@@ -81,15 +82,6 @@ export const StaffLeaveForm: React.FC<StaffLeaveFormProps> = ({
   };
 
   // Simple date input helper (YYYY-MM-DD format)
-  const formatDateInput = (text: string): string => {
-    // Remove non-numeric characters
-    const cleaned = text.replace(/\D/g, '');
-    // Add dashes for YYYY-MM-DD format
-    if (cleaned.length <= 4) return cleaned;
-    if (cleaned.length <= 6) return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
-    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -146,19 +138,7 @@ export const StaffLeaveForm: React.FC<StaffLeaveFormProps> = ({
                 control={control}
                 name="start_date"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={[styles.inputWithIcon, errors.start_date && styles.inputError]}>
-                    <Ionicons name="calendar-outline" size={20} color={colors.text.secondary} />
-                    <TextInput
-                      style={styles.dateInput}
-                      value={value}
-                      onChangeText={(text) => onChange(formatDateInput(text))}
-                      onBlur={onBlur}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.text.tertiary}
-                      keyboardType="numeric"
-                      maxLength={10}
-                    />
-                  </View>
+                  <DateField value={value} onChange={onChange} onBlur={onBlur} error={!!errors.start_date} />
                 )}
               />
               {errors.start_date && (
@@ -172,19 +152,7 @@ export const StaffLeaveForm: React.FC<StaffLeaveFormProps> = ({
                 control={control}
                 name="end_date"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={[styles.inputWithIcon, errors.end_date && styles.inputError]}>
-                    <Ionicons name="calendar-outline" size={20} color={colors.text.secondary} />
-                    <TextInput
-                      style={styles.dateInput}
-                      value={value}
-                      onChangeText={(text) => onChange(formatDateInput(text))}
-                      onBlur={onBlur}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.text.tertiary}
-                      keyboardType="numeric"
-                      maxLength={10}
-                    />
-                  </View>
+                  <DateField value={value} onChange={onChange} onBlur={onBlur} error={!!errors.end_date} />
                 )}
               />
               {errors.end_date && (

@@ -11,6 +11,7 @@
  * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -18,7 +19,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  TextInput,
   ScrollView,
 } from 'react-native';
 import { colors } from '../../../../core/theme/colors';
@@ -233,25 +233,11 @@ export const TherapistKpiSection: React.FC<TherapistKpiSectionProps> = ({
           <View style={styles.customRangeRow}>
             <View style={styles.customRangeField}>
               <Text style={styles.customRangeLabel}>Start Date</Text>
-              <TextInput
-                style={styles.customRangeInput}
-                value={customStart}
-                onChangeText={setCustomStart}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.grey[400]}
-                accessibilityLabel="Custom range start date"
-              />
+              <DateField value={customStart} onChange={setCustomStart} accessibilityLabel="Custom range start date" />
             </View>
             <View style={styles.customRangeField}>
               <Text style={styles.customRangeLabel}>End Date</Text>
-              <TextInput
-                style={styles.customRangeInput}
-                value={customEnd}
-                onChangeText={setCustomEnd}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.grey[400]}
-                accessibilityLabel="Custom range end date"
-              />
+              <DateField value={customEnd} onChange={setCustomEnd} accessibilityLabel="Custom range end date" />
             </View>
           </View>
           <TouchableOpacity

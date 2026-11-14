@@ -28,8 +28,9 @@
  * the already-public Row/Order contract and need no `plan_id` -- both
  * predate this closure and are unchanged.
  */
+import { DateField } from '../../../../../core/components/DateField';
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
 import { useTranslation } from '../../../../../core/localization/useTranslation';
@@ -130,19 +131,7 @@ export const SchedulingModule: React.FC = () => {
         <View style={{ marginBottom: spacing.md, gap: spacing.xs }}>
           <Text style={[typography.caption, { color: colors.text.secondary }]}>{t('scheduling.startDateLabel')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <TextInput
-              value={startDate}
-              onChangeText={setStartDate}
-              placeholder="YYYY-MM-DD"
-              style={{
-                flex: 1,
-                borderColor: colors.border.default,
-                borderWidth: borderWidths.default,
-                borderRadius: radii.small,
-                padding: spacing.sm,
-                color: colors.text.primary,
-              }}
-            />
+            <DateField value={startDate} onChange={setStartDate} style={{ flex: 1 }} />
             <TouchableOpacity
               onPress={() => setProposalRequested(true)}
               accessibilityRole="button"

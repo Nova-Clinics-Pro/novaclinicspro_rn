@@ -34,8 +34,9 @@ describe('post-activation presentation boundaries', () => {
     const field = source('features/staff/presentation/components/StaffDateOfBirthField.tsx');
     expect(form).not.toContain('<Text style={styles.label}>Date of Birth');
     expect(field).toContain("dateOfBirth.label");
-    expect(field).toContain('CrossPlatformDateTimePicker');
-    expect(field).toContain('toCanonicalDate(nextDate)');
+    // The picker is the shared DateField (calendar on web and phones, YYYY-MM-DD value, no future dates).
+    expect(field).toContain('<DateField');
+    expect(field).toContain('maximumDate={new Date()}');
   });
 
   it('keeps permanent configuration destinations in dashboard modules, not the onboarding wizard', () => {

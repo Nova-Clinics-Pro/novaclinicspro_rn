@@ -3,6 +3,7 @@
  * Form for creating/editing invoices
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React, { useState } from 'react';
 import {
   View,
@@ -168,25 +169,12 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
         <View style={styles.row}>
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <Text style={styles.label}>Invoice Date *</Text>
-            <TextInput
-              style={[styles.input, isEdit && styles.inputDisabled]}
-              value={invoiceDate}
-              onChangeText={setInvoiceDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.text.tertiary}
-              editable={!isEdit}
-            />
+            <DateField value={invoiceDate} onChange={setInvoiceDate} disabled={isEdit} />
           </View>
           <View style={{ width: spacing.md }} />
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <Text style={styles.label}>Due Date</Text>
-            <TextInput
-              style={styles.input}
-              value={dueDate}
-              onChangeText={setDueDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.text.tertiary}
-            />
+            <DateField value={dueDate} onChange={setDueDate} />
           </View>
         </View>
 

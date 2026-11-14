@@ -13,6 +13,7 @@ interface CrossPlatformDateTimePickerProps {
   mode: PickerMode;
   display?: ComponentProps<typeof NativeDateTimePicker>['display'];
   minimumDate?: Date;
+  maximumDate?: Date;
   minuteInterval?: number;
   onChange: (event: DateTimePickerEvent, selectedDate?: Date) => void;
   style?: ViewStyle;
@@ -57,6 +58,7 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
   value,
   mode,
   minimumDate,
+  maximumDate,
   minuteInterval,
   onChange,
   style,
@@ -69,6 +71,7 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
         value={value}
         mode={mode}
         minimumDate={minimumDate}
+        maximumDate={maximumDate}
         minuteInterval={minuteInterval}
         onChange={onChange}
         display={display as never}
@@ -79,6 +82,7 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
 
   const inputValue = mode === 'date' ? toDateInputValue(value) : toTimeInputValue(value);
   const minimumValue = minimumDate && mode === 'date' ? toDateInputValue(minimumDate) : undefined;
+  const maximumValue = maximumDate && mode === 'date' ? toDateInputValue(maximumDate) : undefined;
   const step = mode === 'time' && minuteInterval ? minuteInterval * 60 : undefined;
 
   // react-native-web's TextInput forces type="text", so render a real DOM input to get the
@@ -87,6 +91,7 @@ const CrossPlatformDateTimePicker: React.FC<CrossPlatformDateTimePickerProps> = 
     type: mode,
     value: inputValue,
     min: minimumValue,
+    max: maximumValue,
     step,
     style: { ...webInputStyle, ...(StyleSheet.flatten(style) as object) },
     onChange: (event: { target: { value: string } }) => {

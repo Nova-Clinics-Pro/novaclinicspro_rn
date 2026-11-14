@@ -11,6 +11,7 @@
  * - Employment: employment_start_date, employment_end_date
  */
 
+import { DateField } from '../../../../core/components/DateField';
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -849,14 +850,7 @@ export const StaffForm: React.FC<StaffFormProps> = ({
                 control={control}
                 name="employment_start_date"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.input}
-                    value={value || ''}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.text.tertiary}
-                  />
+                  <DateField value={value || ''} onChange={onChange} onBlur={onBlur} />
                 )}
               />
             </View>
@@ -868,14 +862,7 @@ export const StaffForm: React.FC<StaffFormProps> = ({
                 control={control}
                 name="employment_end_date"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.input}
-                    value={value || ''}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.text.tertiary}
-                  />
+                  <DateField value={value || ''} onChange={onChange} onBlur={onBlur} />
                 )}
               />
             </View>
