@@ -213,7 +213,7 @@ export default function ApplicationDetailScreen() {
               {application.clinic_type}
             </Text>
           </View>
-          {application.region && (
+          {!!application.region && (
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, { color: theme.colors.text.secondary }]}>
                 Region:
@@ -306,7 +306,7 @@ export default function ApplicationDetailScreen() {
         )}
 
         {/* Review Information */}
-        {application.reviewed_at && (
+        {!!application.reviewed_at && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
               Review Information
@@ -319,7 +319,7 @@ export default function ApplicationDetailScreen() {
                 {new Date(application.reviewed_at).toLocaleString()}
               </Text>
             </View>
-            {application.reviewer_notes && (
+            {!!application.reviewer_notes && (
               <View style={styles.notesContainer}>
                 <Text style={[styles.notesLabel, { color: theme.colors.text.secondary }]}>
                   Reviewer Notes:
@@ -345,7 +345,7 @@ export default function ApplicationDetailScreen() {
               {new Date(application.submitted_at).toLocaleString()}
             </Text>
           </View>
-          {application.activated_at && (
+          {!!application.activated_at && (
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, { color: theme.colors.text.secondary }]}>
                 Activated:

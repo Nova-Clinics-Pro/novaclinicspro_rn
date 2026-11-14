@@ -133,7 +133,7 @@ export default function ForgotPasswordScreen() {
             </Text>
 
             {/* Error Alert */}
-            {error && (
+            {!!error && (
               <View
                 style={[
                   styles.errorContainer,

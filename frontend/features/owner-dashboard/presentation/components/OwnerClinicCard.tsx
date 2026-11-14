@@ -62,7 +62,7 @@ export const OwnerClinicCard: React.FC<OwnerClinicCardProps> = ({
               </View>
             )}
           </View>
-          {clinic.city && (
+          {!!clinic.city && (
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color={colors.text.secondary} />
               <Text style={styles.cityText}>{clinic.city}</Text>

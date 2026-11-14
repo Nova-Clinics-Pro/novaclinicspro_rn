@@ -211,7 +211,7 @@ function ProfileScreen() {
                           </View>
                         )}
                       </View>
-                      {clinic.city && (
+                      {!!clinic.city && (
                         <Text style={styles.detailLabel}>{clinic.city}</Text>
                       )}
                     </View>

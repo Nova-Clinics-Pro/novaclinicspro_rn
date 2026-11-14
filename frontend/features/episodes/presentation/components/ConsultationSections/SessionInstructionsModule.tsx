@@ -424,7 +424,7 @@ export const SessionInstructionsModule: React.FC = () => {
             </View>
           )}
 
-          {bulkError && (
+          {!!bulkError && (
             <Text style={[typography.body2, { color: colors.feedback.error }]} accessibilityRole="alert">
               {bulkError}
             </Text>
@@ -506,7 +506,7 @@ export const SessionInstructionsModule: React.FC = () => {
               </TouchableOpacity>
             </View>
           )}
-          {saveError && (
+          {!!saveError && (
             <Text style={[typography.body2, { color: colors.feedback.error }]}>{saveError}</Text>
           )}
 

@@ -187,7 +187,7 @@ export const PreviewClientSummary: React.FC<PreviewClientSummaryProps> = ({
     </View>
     <View style={styles.clientInfo}>
       <Text style={styles.clientName}>{clientName}</Text>
-      {clientPhone && <Text style={styles.clientPhone}>{clientPhone}</Text>}
+      {!!clientPhone && <Text style={styles.clientPhone}>{clientPhone}</Text>}
       <Text style={styles.clientDetails}>{treatmentName} • {sessionCount} {t('appointments.sessions')}</Text>
       <Text style={styles.clientDetails}>{staffNames || t('appointments.therapistsAssigned')}</Text>
       <Text style={styles.clientDetails}>
@@ -342,7 +342,7 @@ export const PreviewSessionCard: React.FC<PreviewSessionCardProps> = ({
 
       {hasConflict && isExpanded && (
         <View style={styles.conflictSection}>
-          {conflictMessage && (
+          {!!conflictMessage && (
             <View style={styles.conflictReason}>
               <Ionicons name="alert-circle" size={16} color={colors.error.main} />
               <Text style={styles.conflictReasonText}>{conflictMessage}</Text>
@@ -370,7 +370,7 @@ export const PreviewSessionCard: React.FC<PreviewSessionCardProps> = ({
                     <View style={styles.alternativeContent}>
                       <Text style={[styles.alternativeTime, isSelected && styles.alternativeTextSelected]}>{formatLocalTime(alternative.start)} - {formatLocalTime(alternative.end)}</Text>
                       <Text style={[styles.alternativeStaff, isSelected && styles.alternativeTextSelected]}>
-                        {firstStaff?.full_name || t('common.therapist') || 'Therapist'}{firstRoom?.name && ` • ${firstRoom.name}`}
+                        {firstStaff?.full_name || t('common.therapist') || 'Therapist'}{!!firstRoom?.name && ` • ${firstRoom.name}`}
                       </Text>
                       {alternative.available_staff?.length > 1 && <Text style={styles.moreOptionsText}>+{alternative.available_staff.length - 1} more staff options</Text>}
                     </View>
@@ -466,7 +466,7 @@ export const PreviewSuccessModal: React.FC<PreviewSuccessModalProps> = ({ visibl
         <Text style={styles.successModalText}>{createdCount} {t('appointments.sessionsScheduled') || 'sessions have been scheduled'}</Text>
         <View style={styles.successModalActions}>
           <TouchableOpacity style={styles.successModalDoneButton} onPress={onDone}><Text style={styles.successModalDoneText}>{t('common.done') || 'Done'}</Text></TouchableOpacity>
-          {whatsappUrl && <TouchableOpacity style={styles.successModalWhatsAppButton} onPress={onSendWhatsApp}><Ionicons name="logo-whatsapp" size={20} color="#fff" /><Text style={styles.successModalWhatsAppText}>{t('appointments.sendWhatsApp') || 'Send WhatsApp'}</Text></TouchableOpacity>}
+          {!!whatsappUrl && <TouchableOpacity style={styles.successModalWhatsAppButton} onPress={onSendWhatsApp}><Ionicons name="logo-whatsapp" size={20} color="#fff" /><Text style={styles.successModalWhatsAppText}>{t('appointments.sendWhatsApp') || 'Send WhatsApp'}</Text></TouchableOpacity>}
         </View>
       </View>
     </View>

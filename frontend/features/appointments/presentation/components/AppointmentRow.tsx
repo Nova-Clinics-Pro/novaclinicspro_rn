@@ -310,7 +310,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
             <Ionicons name="time-outline" size={14} color={themeColors.text.secondary} />
             <Text style={fullStyles.timeText} data-testid="appointment-time">
               {timeDisplay}
-              {endTimeDisplay && <Text style={fullStyles.timeEndText}> - {endTimeDisplay}</Text>}
+              {!!endTimeDisplay && <Text style={fullStyles.timeEndText}> - {endTimeDisplay}</Text>}
             </Text>
           </View>
 
@@ -326,7 +326,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
                     <Text style={fullStyles.multiDayText} numberOfLines={1}>
                       {multiDayTreatmentName}
                     </Text>
-                    {dayNumber && totalDays && (
+                    {!!(dayNumber && totalDays) && (
                       <Text style={fullStyles.dayNumberText}>
                         {' '}
                         • Day {dayNumber}/{totalDays}
@@ -359,7 +359,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
                 {displayStaffName}
               </Text>
             </View>
-            {treatmentName && (
+            {!!treatmentName && (
               <View style={fullStyles.detailItem}>
                 <Ionicons name="medical-outline" size={14} color={themeColors.text.secondary} />
                 <Text style={fullStyles.detailText} numberOfLines={1} data-testid="appointment-treatment">
@@ -370,12 +370,12 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
           </View>
 
           {/* Series Badge (if applicable) */}
-          {isSeriesAppointment && (
+          {!!isSeriesAppointment && (
             <View style={fullStyles.seriesBadge} data-testid="appointment-series-badge">
               <Ionicons name="repeat" size={12} color={themeColors.primary.default} />
               <Text style={fullStyles.seriesText}>
                 {t('appointments.session') || 'Session'} {appointment.session_number}
-                {appointment.total_sessions && `/${appointment.total_sessions}`}
+                {!!appointment.total_sessions && `/${appointment.total_sessions}`}
               </Text>
             </View>
           )}
@@ -493,7 +493,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
                 />
               )}
 
-              {isMultiDayAppointment && appointment.treatment_sheet_id && (
+              {!!(isMultiDayAppointment && appointment.treatment_sheet_id) && (
                 <QuickActionIconButton
                   icon="calendar-number-outline"
                   label="Schedule"

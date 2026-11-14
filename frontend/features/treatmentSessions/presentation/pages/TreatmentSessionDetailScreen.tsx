@@ -213,9 +213,9 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
             <Ionicons name="time" size={20} color={colors.text.secondary} />
             <Text style={styles.timeText}>
               {formatTime(session.scheduled_start)}
-              {session.scheduled_end && ` - ${formatTime(session.scheduled_end)}`}
+              {!!session.scheduled_end && ` - ${formatTime(session.scheduled_end)}`}
             </Text>
-            {duration && (
+            {!!duration && (
               <View style={styles.durationBadge}>
                 <Text style={styles.durationText}>{formatDuration(duration)}</Text>
               </View>
@@ -264,7 +264,7 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
                 </Text>
               </View>
             </View>
-            {session.therapist_name && (
+            {!!session.therapist_name && (
               <View style={styles.infoRow}>
                 <Ionicons name="medkit" size={20} color={colors.primary.main} />
                 <View style={styles.infoContent}>
@@ -273,7 +273,7 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {session.room_name && (
+            {!!session.room_name && (
               <View style={styles.infoRow}>
                 <Ionicons name="location" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -286,11 +286,11 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
         </View>
 
         {/* Actual Times (if started/completed) */}
-        {(session.actual_start || session.actual_end) && (
+        {!!((session.actual_start || session.actual_end)) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Actual Times</Text>
             <View style={styles.infoCard}>
-              {session.actual_start && (
+              {!!session.actual_start && (
                 <View style={styles.infoRow}>
                   <Ionicons name="play" size={20} color={colors.success.main} />
                   <View style={styles.infoContent}>
@@ -299,7 +299,7 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
                   </View>
                 </View>
               )}
-              {session.actual_end && (
+              {!!session.actual_end && (
                 <View style={styles.infoRow}>
                   <Ionicons name="stop" size={20} color={colors.error.main} />
                   <View style={styles.infoContent}>
@@ -308,7 +308,7 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
                   </View>
                 </View>
               )}
-              {actualDuration && (
+              {!!actualDuration && (
                 <View style={styles.infoRow}>
                   <Ionicons name="timer" size={20} color={colors.text.secondary} />
                   <View style={styles.infoContent}>
@@ -322,7 +322,7 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
         )}
 
         {/* Notes */}
-        {session.notes && (
+        {!!session.notes && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Session Notes</Text>
             <View style={styles.notesCard}>
@@ -332,7 +332,7 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
         )}
 
         {/* Observations */}
-        {session.observations && (
+        {!!session.observations && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Observations</Text>
             <View style={styles.notesCard}>
@@ -342,7 +342,7 @@ export const TreatmentSessionDetailScreen: React.FC = () => {
         )}
 
         {/* Progress Notes */}
-        {session.progress_notes && (
+        {!!session.progress_notes && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Progress Notes</Text>
             <View style={styles.notesCard}>

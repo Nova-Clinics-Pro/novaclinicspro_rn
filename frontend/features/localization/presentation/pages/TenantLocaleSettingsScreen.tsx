@@ -105,7 +105,7 @@ export function TenantLocaleSettingsScreen() {
               disabled={isApiNotAvailable}
             />
 
-            {!isApiNotAvailable && selectedLocale && selectedLocale !== tenantLocale?.defaultLocaleCode && (
+            {!!(!isApiNotAvailable && selectedLocale && selectedLocale !== tenantLocale?.defaultLocaleCode) && (
               <Pressable
                 style={[
                   styles.saveButton,

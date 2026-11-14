@@ -477,7 +477,7 @@ export const CaseSheetModule = forwardRef<CaseSheetModuleHandle, CaseSheetModule
             semantics), never editable, never merged into the draft
             above. */}
         <CaseSheetContributionHistory />
-        {casesheetId && <CaseSheetVersionPanel tenantId={tenantId} casesheetId={casesheetId} signed={false} canAmend={false} onAmended={refetchEpisode} />}
+        {!!casesheetId && <CaseSheetVersionPanel tenantId={tenantId} casesheetId={casesheetId} signed={false} canAmend={false} onAmended={refetchEpisode} />}
       </>
     );
   },

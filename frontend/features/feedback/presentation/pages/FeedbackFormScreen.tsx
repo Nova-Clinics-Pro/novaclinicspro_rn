@@ -207,7 +207,7 @@ export const FeedbackFormScreen: React.FC = () => {
             Your feedback has been submitted successfully. We appreciate your time and input.
           </Text>
           
-          {showGoogleReviewPrompt && (
+          {!!showGoogleReviewPrompt && (
             <View style={styles.googleReviewContainer}>
               <Text style={styles.googleReviewText}>
                 Would you like to share your experience on Google Reviews?
@@ -510,7 +510,7 @@ export const FeedbackFormScreen: React.FC = () => {
           </View>
 
           {/* Google Review Opt-in */}
-          {formData.google_review_link && (
+          {!!formData.google_review_link && (
             <View style={styles.googleOptInContainer}>
               <Controller
                 control={control}

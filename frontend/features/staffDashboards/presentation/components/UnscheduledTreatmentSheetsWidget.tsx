@@ -147,7 +147,7 @@ export const UnscheduledTreatmentSheetsWidget: React.FC<UnscheduledTreatmentShee
             </View>
 
             {/* Client info */}
-            {sheet.client_name && (
+            {!!sheet.client_name && (
               <View style={styles.infoRow}>
                 <Ionicons name="person-outline" size={14} color={colors.text.secondary} />
                 <Text style={styles.infoText}>Client: {sheet.client_name}</Text>
@@ -155,7 +155,7 @@ export const UnscheduledTreatmentSheetsWidget: React.FC<UnscheduledTreatmentShee
             )}
 
             {/* Episode info */}
-            {sheet.episode_title && (
+            {!!sheet.episode_title && (
               <View style={styles.infoRow}>
                 <Ionicons name="document-text-outline" size={14} color={colors.text.secondary} />
                 <Text style={styles.infoText}>Episode: {sheet.episode_title}</Text>
@@ -171,7 +171,7 @@ export const UnscheduledTreatmentSheetsWidget: React.FC<UnscheduledTreatmentShee
             </View>
 
             {/* Package cost */}
-            {sheet.agreed_package_cost && (
+            {!!sheet.agreed_package_cost && (
               <View style={styles.infoRow}>
                 <Ionicons name="cash-outline" size={14} color={colors.text.secondary} />
                 <Text style={styles.infoText}>

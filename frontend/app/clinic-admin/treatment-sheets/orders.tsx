@@ -161,7 +161,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
       <Text style={styles.clientName} numberOfLines={1}>{clientName}</Text>
 
       {/* Doctor who ordered */}
-      {doctorName && (
+      {!!doctorName && (
         <View style={styles.metaRow}>
           <Ionicons name="person-circle-outline" size={13} color={colors.text.secondary} />
           <Text style={styles.cardMeta}>Dr. {doctorName}</Text>
@@ -169,7 +169,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
       )}
 
       {/* Recommended therapy — as submitted by the doctor */}
-      {therapy && (
+      {!!therapy && (
         <View style={styles.metaRow}>
           <Ionicons name="medical-outline" size={13} color={colors.text.secondary} />
           <Text style={styles.cardMeta} numberOfLines={2}>{therapy}</Text>
@@ -190,7 +190,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
         <Text style={styles.cardMeta}>
           {sessions ? `${sessions} sessions` : 'Sessions TBD'}
         </Text>
-        {order.ordered_at && (
+        {!!order.ordered_at && (
           <>
             <Text style={styles.metaDot}>·</Text>
             <Text style={styles.cardMeta}>Ordered {formatShortDate(order.ordered_at)}</Text>

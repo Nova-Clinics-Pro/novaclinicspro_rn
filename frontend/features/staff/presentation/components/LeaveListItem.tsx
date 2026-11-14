@@ -79,14 +79,14 @@ export const LeaveListItem: React.FC<LeaveListItemProps> = ({
         </View>
       </View>
 
-      {leave.reason && (
+      {!!leave.reason && (
         <View style={styles.reasonContainer}>
           <Text style={styles.reasonLabel}>Reason:</Text>
           <Text style={styles.reasonText}>{leave.reason}</Text>
         </View>
       )}
 
-      {leave.review_notes && (
+      {!!leave.review_notes && (
         <View style={styles.notesContainer}>
           <Text style={styles.notesLabel}>Review Notes:</Text>
           <Text style={styles.notesText}>{leave.review_notes}</Text>

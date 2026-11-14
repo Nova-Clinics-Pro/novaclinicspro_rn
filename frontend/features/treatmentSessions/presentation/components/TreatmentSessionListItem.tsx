@@ -45,7 +45,7 @@ export const TreatmentSessionListItem: React.FC<TreatmentSessionListItemProps> =
         {/* Time Column */}
         <View style={styles.timeColumn}>
           <Text style={styles.time}>{formatTime(session.scheduled_start)}</Text>
-          {duration && (
+          {!!duration && (
             <Text style={styles.duration}>{formatDuration(duration)}</Text>
           )}
         </View>
@@ -67,7 +67,7 @@ export const TreatmentSessionListItem: React.FC<TreatmentSessionListItemProps> =
             </View>
           </View>
 
-          {session.treatment_name && (
+          {!!session.treatment_name && (
             <View style={styles.metaRow}>
               <Ionicons name="leaf-outline" size={14} color={colors.primary.main} />
               <Text style={styles.metaText} numberOfLines={1}>
@@ -76,7 +76,7 @@ export const TreatmentSessionListItem: React.FC<TreatmentSessionListItemProps> =
             </View>
           )}
 
-          {session.therapist_name && (
+          {!!session.therapist_name && (
             <View style={styles.metaRow}>
               <Ionicons name="person-outline" size={14} color={colors.text.secondary} />
               <Text style={styles.metaText} numberOfLines={1}>
@@ -85,7 +85,7 @@ export const TreatmentSessionListItem: React.FC<TreatmentSessionListItemProps> =
             </View>
           )}
 
-          {session.room_name && (
+          {!!session.room_name && (
             <View style={styles.metaRow}>
               <Ionicons name="location-outline" size={14} color={colors.text.secondary} />
               <Text style={styles.metaText} numberOfLines={1}>

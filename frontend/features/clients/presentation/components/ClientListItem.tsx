@@ -46,18 +46,18 @@ export const ClientListItem: React.FC<ClientListItemProps> = React.memo(function
         <View style={styles.info}>
           <Text style={styles.name}>{client.full_name}</Text>
           <View style={styles.metaRow}>
-            {client.gender && (
+            {!!client.gender && (
               <View style={[styles.genderBadge, { backgroundColor: genderColor + '15' }]}>
                 <Text style={[styles.genderText, { color: genderColor }]}>
                   {client.gender}
                 </Text>
               </View>
             )}
-            {displayAge && (
+            {!!displayAge && (
               <Text style={styles.ageText}>{displayAge} yrs</Text>
             )}
           </View>
-          {client.phone && (
+          {!!client.phone && (
             <View style={styles.contactRow}>
               <Ionicons name="call-outline" size={14} color={colors.text.secondary} />
               <Text style={styles.contactText}>

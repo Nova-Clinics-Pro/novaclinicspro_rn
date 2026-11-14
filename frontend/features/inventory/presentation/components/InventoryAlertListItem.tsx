@@ -83,7 +83,7 @@ export const InventoryAlertListItem: React.FC<InventoryAlertListItemProps> = ({
           {formatDateTime(alert.created_at)}
         </Text>
 
-        {alert.is_acknowledged && alert.acknowledged_at && (
+        {!!(alert.is_acknowledged && alert.acknowledged_at) && (
           <Text style={styles.acknowledgedText}>
             Acknowledged: {formatDateTime(alert.acknowledged_at)}
           </Text>

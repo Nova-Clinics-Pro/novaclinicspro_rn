@@ -39,7 +39,7 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({
 
   return (
     <View style={styles.container} testID={testID}>
-      {label && (
+      {!!label && (
         <Text style={[styles.label, error && styles.labelError]}>
           {label}
           {required && <Text style={styles.required}> *</Text>}
@@ -65,7 +65,7 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({
           </TouchableOpacity>
         ))}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 };

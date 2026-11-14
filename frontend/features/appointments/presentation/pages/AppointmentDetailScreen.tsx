@@ -823,7 +823,7 @@ export const AppointmentDetailScreen: React.FC = () => {
 
         {/* VISITS IN THIS EPISODE SECTION (Replaces "Previous Visits") */}
         {/* BUG FIX #1: Only show this section if there are previous visits (episodeAppointments.length > 0) */}
-        {episodeId && episodeAppointments.length > 0 && (
+        {!!(episodeId && episodeAppointments.length > 0) && (
           <View style={styles.section} data-testid="detail-visit-history-section">
             <SectionHeader 
               title={t('episodes.visitsInEpisode') || 'Visits in This Episode'} 

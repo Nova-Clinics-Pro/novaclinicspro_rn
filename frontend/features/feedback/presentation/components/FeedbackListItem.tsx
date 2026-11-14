@@ -44,7 +44,7 @@ export const FeedbackListItem: React.FC<FeedbackListItemProps> = ({
         )}
       </View>
 
-      {item.comments && (
+      {!!item.comments && (
         <Text style={styles.comments} numberOfLines={3}>
           &ldquo;{item.comments}&rdquo;
         </Text>

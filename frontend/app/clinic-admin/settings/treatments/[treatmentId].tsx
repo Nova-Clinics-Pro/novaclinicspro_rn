@@ -207,7 +207,7 @@ export default function TreatmentDetailScreen() {
                 <View style={[styles.doshaIndicator, { backgroundColor: DOSHA_COLORS.vata }]} />
                 <View style={styles.doshaContent}>
                   <Text style={styles.doshaName}>Balances Vata</Text>
-                  {treatment.dosha_benefits.vata.notes && (
+                  {!!treatment.dosha_benefits.vata.notes && (
                     <Text style={styles.doshaNote}>{treatment.dosha_benefits.vata.notes}</Text>
                   )}
                 </View>
@@ -219,7 +219,7 @@ export default function TreatmentDetailScreen() {
                 <View style={[styles.doshaIndicator, { backgroundColor: DOSHA_COLORS.pitta }]} />
                 <View style={styles.doshaContent}>
                   <Text style={styles.doshaName}>Balances Pitta</Text>
-                  {treatment.dosha_benefits.pitta.notes && (
+                  {!!treatment.dosha_benefits.pitta.notes && (
                     <Text style={styles.doshaNote}>{treatment.dosha_benefits.pitta.notes}</Text>
                   )}
                 </View>
@@ -231,7 +231,7 @@ export default function TreatmentDetailScreen() {
                 <View style={[styles.doshaIndicator, { backgroundColor: DOSHA_COLORS.kapha }]} />
                 <View style={styles.doshaContent}>
                   <Text style={styles.doshaName}>Balances Kapha</Text>
-                  {treatment.dosha_benefits.kapha.notes && (
+                  {!!treatment.dosha_benefits.kapha.notes && (
                     <Text style={styles.doshaNote}>{treatment.dosha_benefits.kapha.notes}</Text>
                   )}
                 </View>

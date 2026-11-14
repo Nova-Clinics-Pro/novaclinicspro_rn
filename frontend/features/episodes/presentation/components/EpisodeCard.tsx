@@ -197,7 +197,7 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
         <EpisodeStatusBadge status={episode.status} />
       </View>
 
-      {episode.description && (
+      {!!episode.description && (
         <Text
           style={[styles.description, { color: theme.colors.text.secondary }]}
           numberOfLines={2}
@@ -217,7 +217,7 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
           </Text>
         </View>
 
-        {episode.last_visit_date && (
+        {!!episode.last_visit_date && (
           <View style={styles.statItem}>
             <Ionicons name="time-outline" size={14} color={theme.colors.text.tertiary} />
             <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>

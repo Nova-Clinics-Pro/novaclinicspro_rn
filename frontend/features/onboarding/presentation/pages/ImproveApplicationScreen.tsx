@@ -259,7 +259,7 @@ export function ImproveApplicationScreen() {
             <Text style={[theme.typography.caption, { color: theme.colors.text.secondary }]}>
               {issue.message || 'No details available'}
             </Text>
-            {issue.example && (
+            {!!issue.example && (
               <Text style={[
                 theme.typography.caption, 
                 { 

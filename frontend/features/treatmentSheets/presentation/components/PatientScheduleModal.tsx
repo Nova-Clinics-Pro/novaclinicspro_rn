@@ -132,10 +132,10 @@ export const PatientScheduleModal: React.FC<PatientScheduleModalProps> = ({
                     <Text style={styles.rowDate}>{formatScheduleDate(row.scheduled_date!)}</Text>
                   </View>
                   <View style={styles.rowRight}>
-                    {row.scheduled_time && (
+                    {!!row.scheduled_time && (
                       <Text style={styles.rowTime}>{formatScheduleTime(row.scheduled_time)}</Text>
                     )}
-                    {row.treatment_name && (
+                    {!!row.treatment_name && (
                       <Text style={styles.rowTreatment} numberOfLines={1}>
                         {row.treatment_name}
                       </Text>

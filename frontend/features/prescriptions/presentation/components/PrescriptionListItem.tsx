@@ -62,7 +62,7 @@ export const PrescriptionListItem: React.FC<PrescriptionListItemProps> = ({
       </View>
 
       {/* Notes (if available) */}
-      {prescription.notes && (
+      {!!prescription.notes && (
         <View style={styles.notesContainer}>
           <Ionicons name="document-text-outline" size={14} color={colors.text.secondary} />
           <Text style={styles.notesText} numberOfLines={1}>
@@ -76,7 +76,7 @@ export const PrescriptionListItem: React.FC<PrescriptionListItemProps> = ({
         <View style={styles.versionContainer}>
           <Text style={styles.versionLabel}>v{prescription.document_version}</Text>
         </View>
-        {prescription.next_visit_days && (
+        {!!prescription.next_visit_days && (
           <View style={styles.nextVisitContainer}>
             <Ionicons name="time-outline" size={12} color={colors.info.main} />
             <Text style={styles.nextVisitText}>Follow-up in {prescription.next_visit_days} days</Text>

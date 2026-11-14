@@ -52,7 +52,7 @@ export const CasesheetListItem: React.FC<CasesheetListItemProps> = ({
       </View>
 
       {/* Diagnosis (if available) */}
-      {diagnosis && (
+      {!!diagnosis && (
         <View style={styles.diagnosisContainer}>
           <Ionicons name="medical-outline" size={14} color={colors.info.main} />
           <Text style={styles.diagnosisText} numberOfLines={1}>
@@ -66,7 +66,7 @@ export const CasesheetListItem: React.FC<CasesheetListItemProps> = ({
         <View style={styles.versionContainer}>
           <Text style={styles.versionLabel}>v{casesheet.document_version}</Text>
         </View>
-        {casesheet.signed_at && (
+        {!!casesheet.signed_at && (
           <View style={styles.signedContainer}>
             <Ionicons name="shield-checkmark" size={12} color={colors.success.main} />
             <Text style={styles.signedText}>Signed {formatDate(casesheet.signed_at)}</Text>

@@ -35,7 +35,7 @@ describe('Admin Visit History card characterization (R3B · T-0.4, baseline for 
 
   it('the section is titled "Visits in This Episode" (renamed from "Previous Visits"), only shown when the appointment has an episode with other visits', () => {
     expect(source).toContain("t('episodes.visitsInEpisode') || 'Visits in This Episode'");
-    expect(source).toContain('{episodeId && episodeAppointments.length > 0 && (');
+    expect(source).toContain('{!!(episodeId && episodeAppointments.length > 0) && (');
   });
 
   it('sources its data client-side from the existing generic appointments-list query, scoped by episode_id — no dedicated history/timeline backend endpoint', () => {

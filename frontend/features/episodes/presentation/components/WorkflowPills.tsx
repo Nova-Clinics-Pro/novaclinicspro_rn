@@ -386,7 +386,7 @@ const WorkflowPill: React.FC<{ stage: WorkflowStage; onLayout: (event: LayoutCha
           {t('visitCommandCenter.workflowPills.optional')}
         </Text>
       )}
-      {stage.state === 'waiting' && stage.waiting_permission && (
+      {!!(stage.state === 'waiting' && stage.waiting_permission) && (
         <Text
           style={[typography.caption, { color: colors.text.tertiary, marginLeft: spacing.xs }]}
           numberOfLines={1}

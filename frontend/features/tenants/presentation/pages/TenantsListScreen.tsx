@@ -117,7 +117,7 @@ export default function TenantsListScreen() {
             {item.subscription_plan} • {item.subscription_status}
           </Text>
         </View>
-        {item.trial_end_date && (
+        {!!item.trial_end_date && (
           <View style={styles.detailRow}>
             <Ionicons name="time-outline" size={14} color={theme.colors.feedback.warning} />
             <Text style={[styles.detailText, { color: theme.colors.feedback.warning }]}>

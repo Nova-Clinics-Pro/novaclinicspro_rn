@@ -661,7 +661,7 @@ export default function ClinicAdminDashboard() {
         </View>
 
         {/* Patient Feedback Summary */}
-        {tenantId && (
+        {!!tenantId && (
           <View style={styles.section}>
             <ClinicFeedbackSummarySection
               tenantId={tenantId}

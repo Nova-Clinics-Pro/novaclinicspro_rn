@@ -104,7 +104,7 @@ export function UserLocaleSettingsScreen() {
               disabled={isApiNotAvailable}
             />
 
-            {!isApiNotAvailable && selectedLocale && selectedLocale !== userLocale?.localeCode && (
+            {!!(!isApiNotAvailable && selectedLocale && selectedLocale !== userLocale?.localeCode) && (
               <Pressable
                 style={[
                   styles.saveButton,

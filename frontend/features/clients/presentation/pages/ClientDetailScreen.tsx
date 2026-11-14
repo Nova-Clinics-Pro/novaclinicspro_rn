@@ -199,14 +199,14 @@ export const ClientDetailScreen: React.FC = () => {
           </View>
           <Text style={styles.name}>{client.full_name}</Text>
           <View style={styles.metaRow}>
-            {client.gender && (
+            {!!client.gender && (
               <View style={[styles.genderBadge, { backgroundColor: genderColor + '15' }]}>
                 <Text style={[styles.genderText, { color: genderColor }]}>
                   {client.gender}
                 </Text>
               </View>
             )}
-            {displayAge && (
+            {!!displayAge && (
               <Text style={styles.ageText}>{displayAge} years old</Text>
             )}
           </View>
@@ -249,7 +249,7 @@ export const ClientDetailScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Contact Information</Text>
           <View style={styles.infoCard}>
-            {client.phone && (
+            {!!client.phone && (
               <View style={styles.infoRow}>
                 <Ionicons name="call-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -260,7 +260,7 @@ export const ClientDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {client.email && (
+            {!!client.email && (
               <View style={styles.infoRow}>
                 <Ionicons name="mail-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -269,7 +269,7 @@ export const ClientDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {(client.address_line || client.city) && (
+            {!!((client.address_line || client.city)) && (
               <View style={styles.infoRow}>
                 <Ionicons name="location-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -289,7 +289,7 @@ export const ClientDetailScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Medical Information</Text>
           <View style={styles.infoCard}>
-            {client.blood_group && (
+            {!!client.blood_group && (
               <View style={styles.infoRow}>
                 <Ionicons name="water-outline" size={20} color={colors.error.main} />
                 <View style={styles.infoContent}>
@@ -298,7 +298,7 @@ export const ClientDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {client.date_of_birth && (
+            {!!client.date_of_birth && (
               <View style={styles.infoRow}>
                 <Ionicons name="calendar-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -307,7 +307,7 @@ export const ClientDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {client.allergies && (
+            {!!client.allergies && (
               <View style={styles.infoRow}>
                 <Ionicons name="warning-outline" size={20} color={colors.warning.main} />
                 <View style={styles.infoContent}>
@@ -316,7 +316,7 @@ export const ClientDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {client.medical_history && (
+            {!!client.medical_history && (
               <View style={styles.infoRow}>
                 <Ionicons name="document-text-outline" size={20} color={colors.text.secondary} />
                 <View style={styles.infoContent}>
@@ -334,11 +334,11 @@ export const ClientDetailScreen: React.FC = () => {
         </View>
 
         {/* Emergency Contact */}
-        {(client.emergency_contact_name || client.emergency_contact_phone) && (
+        {!!((client.emergency_contact_name || client.emergency_contact_phone)) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Emergency Contact</Text>
             <View style={styles.infoCard}>
-              {client.emergency_contact_name && (
+              {!!client.emergency_contact_name && (
                 <View style={styles.infoRow}>
                   <Ionicons name="person-outline" size={20} color={colors.text.secondary} />
                   <View style={styles.infoContent}>
@@ -347,7 +347,7 @@ export const ClientDetailScreen: React.FC = () => {
                   </View>
                 </View>
               )}
-              {client.emergency_contact_phone && (
+              {!!client.emergency_contact_phone && (
                 <View style={styles.infoRow}>
                   <Ionicons name="call-outline" size={20} color={colors.text.secondary} />
                   <View style={styles.infoContent}>
@@ -361,7 +361,7 @@ export const ClientDetailScreen: React.FC = () => {
         )}
 
         {/* Notes */}
-        {client.notes && (
+        {!!client.notes && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notes</Text>
             <View style={styles.notesCard}>

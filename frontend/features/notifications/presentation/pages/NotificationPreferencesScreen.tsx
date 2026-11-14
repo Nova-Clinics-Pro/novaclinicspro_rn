@@ -249,7 +249,7 @@ export const NotificationPreferencesScreen: React.FC = () => {
         }
       >
         {/* Error Banner */}
-        {error && (
+        {!!error && (
           <View style={styles.errorBanner}>
             <Ionicons name="alert-circle" size={20} color={colors.error.main} />
             <Text style={styles.errorText}>{error}</Text>

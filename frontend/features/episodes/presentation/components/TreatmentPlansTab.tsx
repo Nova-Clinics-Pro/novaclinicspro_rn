@@ -395,7 +395,7 @@ export const TreatmentPlansTab: React.FC<TreatmentPlansTabProps> = ({
 
   return (
     <>
-      {casesheetId && (
+      {!!casesheetId && (
         <CreateTreatmentSheetModal
           visible={showCreateModal}
           casesheetId={casesheetId}
@@ -417,7 +417,7 @@ export const TreatmentPlansTab: React.FC<TreatmentPlansTabProps> = ({
           >
             {t('episodeWorkspace.treatmentPlans.empty')}
           </Text>
-          {canCreate && casesheetId && (
+          {!!(canCreate && casesheetId) && (
             <TouchableOpacity
               style={[cta.primaryCta, { backgroundColor: colors.primary.default }]}
               onPress={() => setShowCreateModal(true)}
@@ -443,7 +443,7 @@ export const TreatmentPlansTab: React.FC<TreatmentPlansTabProps> = ({
               onRefresh={onRefreshSheet}
             />
           ))}
-          {canCreate && casesheetId && (
+          {!!(canCreate && casesheetId) && (
             <TouchableOpacity
               style={[cta.secondaryCta, { borderColor: colors.primary.default, marginTop: spacing.xs }]}
               onPress={() => setShowCreateModal(true)}

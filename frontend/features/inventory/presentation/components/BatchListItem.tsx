@@ -107,7 +107,7 @@ export const BatchListItem: React.FC<BatchListItemProps> = ({
           <Text style={styles.dateText}>
             Manufactured: {formatDate(batch.manufacture_date)}
           </Text>
-          {batch.purchase_date && (
+          {!!batch.purchase_date && (
             <Text style={styles.dateText}>
               Purchased: {formatDate(batch.purchase_date)}
             </Text>

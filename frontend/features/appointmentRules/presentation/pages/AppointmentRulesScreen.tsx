@@ -185,7 +185,7 @@ const EditModal: React.FC<EditModalProps> = ({
               keyboardType="numeric"
               placeholder="0"
             />
-            {metadata.unit && <Text style={styles.unitLabel}>{metadata.unit}</Text>}
+            {!!metadata.unit && <Text style={styles.unitLabel}>{metadata.unit}</Text>}
           </View>
         );
 

@@ -75,7 +75,7 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
         <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
       </View>
 
-      {description && (
+      {!!description && (
         <Text
           style={[styles.episodeDescription, { color: theme.colors.text.secondary }]}
           numberOfLines={2}
@@ -92,7 +92,7 @@ const EpisodeCard: React.FC<EpisodeCardProps> = ({
           </Text>
         </View>
 
-        {lastVisitDate && (
+        {!!lastVisitDate && (
           <View style={styles.metadataItem}>
             <Ionicons name="time-outline" size={14} color={theme.colors.text.tertiary} />
             <Text style={[styles.metadataText, { color: theme.colors.text.secondary }]}>
@@ -213,7 +213,7 @@ export const AllEpisodesScreen: React.FC<AllEpisodesScreenProps> = ({
             <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
               {t('episodes.episodes')}
             </Text>
-            {clientName && (
+            {!!clientName && (
               <Text style={[styles.headerSubtitle, { color: theme.colors.text.secondary }]}>
                 {clientName}
               </Text>

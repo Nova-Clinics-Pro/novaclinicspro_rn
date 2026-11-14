@@ -75,7 +75,7 @@ export const MovementListItem: React.FC<MovementListItemProps> = ({ movement }) 
           )}
         </View>
 
-        {movement.notes && (
+        {!!movement.notes && (
           <Text style={styles.notes} numberOfLines={2}>
             {movement.notes}
           </Text>

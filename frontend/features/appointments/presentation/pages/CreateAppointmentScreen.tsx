@@ -1291,7 +1291,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                 </View>
 
                 {/* Booked Slots Display */}
-                {doctorForm.selectedDoctorId && (
+                {!!doctorForm.selectedDoctorId && (
                   <View style={styles.section}>
                     <AppointmentBookedSlots
                       appointments={doctorBookedAppointments} 
@@ -1323,7 +1323,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Therapists (Max 2)</Text>
                   {/* BUG FIX #5: Show gender matching conflict warning */}
-                  {genderMatchConflict && (
+                  {!!genderMatchConflict && (
                     <View style={styles.genderConflictBanner}>
                       <Ionicons name="warning" size={18} color={colors.warning.main} />
                       <Text style={styles.genderConflictText}>{genderMatchConflict}</Text>
@@ -1380,7 +1380,7 @@ export const CreateAppointmentScreen: React.FC = () => {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Therapists * (Max 2)</Text>
                   {/* BUG FIX #5: Show gender matching conflict warning */}
-                  {genderMatchConflict && (
+                  {!!genderMatchConflict && (
                     <View style={styles.genderConflictBanner}>
                       <Ionicons name="warning" size={18} color={colors.warning.main} />
                       <Text style={styles.genderConflictText}>{genderMatchConflict}</Text>

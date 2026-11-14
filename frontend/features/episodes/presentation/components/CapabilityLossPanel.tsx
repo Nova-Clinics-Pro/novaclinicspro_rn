@@ -15,6 +15,6 @@ export const CapabilityLossPanel: React.FC<{ tenantId: string; clientId: string;
   return <View testID="capability-loss-panel" style={{ backgroundColor: colors.surface.default, borderColor: colors.border.default, borderWidth: borderWidths.default, borderRadius: radii.medium, padding: spacing.md, gap: spacing.xs }}>
     <Text style={[typography.subtitle2, { color: colors.text.primary }]}>{t('visitCommandCenter.capabilityLoss.title')}</Text>
     {losses.map((loss) => <Text key={`${loss.code}:${loss.capability_code}:${loss.stage ?? ''}`} testID={`capability-loss-${loss.code}`} style={[typography.body2, { color: colors.text.secondary }]}>{t(`visitCommandCenter.capabilityLoss.${loss.code}`)}</Text>)}
-    {waiting && <Text testID="capability-loss-waiting-owner" style={[typography.body2, { color: colors.text.secondary }]}>{t('visitCommandCenter.capabilityLoss.waitingOwner', { permission: waiting })}</Text>}
+    {!!waiting && <Text testID="capability-loss-waiting-owner" style={[typography.body2, { color: colors.text.secondary }]}>{t('visitCommandCenter.capabilityLoss.waitingOwner', { permission: waiting })}</Text>}
   </View>;
 };

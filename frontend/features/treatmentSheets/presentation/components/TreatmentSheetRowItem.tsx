@@ -81,14 +81,14 @@ export const TreatmentSheetRowItem: React.FC<TreatmentSheetRowItemProps> = ({
         </View>
 
         {/* Treatment Description */}
-        {row.treatment_description && (
+        {!!row.treatment_description && (
           <Text style={styles.treatmentText} numberOfLines={2}>
             {row.treatment_description}
           </Text>
         )}
 
         {/* Medicines */}
-        {row.medicines_given && (
+        {!!row.medicines_given && (
           <View style={styles.medicinesRow}>
             <Ionicons name="medkit-outline" size={12} color={colors.success.main} />
             <Text style={styles.medicinesText} numberOfLines={1}>
@@ -98,7 +98,7 @@ export const TreatmentSheetRowItem: React.FC<TreatmentSheetRowItemProps> = ({
         )}
 
         {/* Instructions */}
-        {row.instructions && (
+        {!!row.instructions && (
           <View style={styles.instructionsRow}>
             <Ionicons name="information-circle-outline" size={12} color={colors.info.main} />
             <Text style={styles.instructionsText} numberOfLines={1}>
