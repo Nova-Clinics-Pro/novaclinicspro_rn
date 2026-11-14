@@ -40,6 +40,7 @@ import {
 } from '../../data/models/staff.dtos';
 import { StaffListItem } from '../components/StaffListItem';
 import { StaffForm } from '../components/StaffForm';
+import { createStaffErrorMessage } from '../../domain/createStaffErrorMessage';
 import { ApiErrorState } from '../../../../core/components/ui/ApiErrorState';
 
 const STAFF_TYPE_FILTERS: (StaffType | 'all')[] = [
@@ -155,8 +156,8 @@ export const StaffListScreen: React.FC = () => {
         await createMutation.mutateAsync(data);
         setShowAddModal(false);
         Alert.alert(t('common.success'), t('success.created'));
-      } catch {
-        Alert.alert(t('common.error'), t(ErrorTokens.staff.createFailed));
+      } catch (error) {
+        Alert.alert(t('common.error'), createStaffErrorMessage(t, error));
       }
     },
     [createMutation]

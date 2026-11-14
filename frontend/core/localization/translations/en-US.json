@@ -591,6 +591,9 @@
     "staff": {
       "loadFailed": "Could not load staff members. Please try again.",
       "loadDetailsFailed": "Could not load staff details. Please try again.",
+      "phoneExists": "A staff member with this phone number already exists in your clinic. Use a different phone number.",
+      "rateLimited": "Too many sign-up emails were sent recently, so the account could not be created. Please wait a while and try again.",
+      "emailExists": "A staff member with this email already exists in your clinic. Use a different email, or open the existing staff member instead.",
       "createFailed": "Could not create staff member. Please try again.",
       "updateFailed": "Could not update staff information. Please try again.",
       "deleteFailed": "Could not remove staff member. Please try again.",

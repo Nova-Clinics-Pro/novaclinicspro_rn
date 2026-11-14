@@ -22,8 +22,21 @@ import {
   OnboardingStaffSourceItem,
 } from '../models/staff.dtos';
 
-const normalizeStaffOperationError = (kind: StaffOperationFailureKind): StaffOperationError =>
-  new StaffOperationError(kind);
+const normalizeStaffOperationError = (kind: StaffOperationFailureKind, cause?: unknown): StaffOperationError =>
+  new StaffOperationError(kind, cause);
+
+/** Create failures the user can act on: a duplicate email, or being refused. Everything else stays a generic save failure. */
+const normalizeStaffCreateError = (error: unknown): StaffOperationError => {
+  const response = (error as { response?: { status?: unknown; data?: { detail?: { error_code?: unknown } | string } } } | undefined)?.response;
+  const status = response?.status;
+  const detail = response?.data?.detail;
+  const code = typeof detail === 'object' && detail !== null ? detail.error_code : undefined;
+  if (status === 409 && code === 'STAFF_PHONE_EXISTS') return normalizeStaffOperationError('PHONE_EXISTS');
+  if (status === 409) return normalizeStaffOperationError('EMAIL_EXISTS');
+  if (status === 429) return normalizeStaffOperationError('RATE_LIMITED');
+  if (status === 403) return normalizeStaffOperationError('PERMISSION_DENIED', error);
+  return normalizeStaffOperationError('SAVE_FAILED');
+};
 
 // ============================================
 // STAFF CRUD
@@ -82,8 +95,8 @@ export const createStaffApi = async (
   try {
     const response = await axiosClient.post(`/api/v1/clinic/${tenantId}/staff`, payload);
     return response.data;
-  } catch {
-    throw normalizeStaffOperationError('SAVE_FAILED');
+  } catch (error) {
+    throw normalizeStaffCreateError(error);
   }
 };
 
