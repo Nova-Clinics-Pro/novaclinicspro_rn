@@ -29,6 +29,7 @@ import {
   ClientResponse,
   GENDERS,
   BLOOD_GROUPS,
+  calculateAge,
 } from '../../data/models/clients.dtos';
 
 // ============================================
@@ -41,7 +42,7 @@ const clientSchema = z.object({
   mobile_code: z.string().max(5).optional(),
   email: z.string().email('Invalid email').optional().nullable().or(z.literal('')),
   gender: z.string().min(1, 'Gender is required'),
-  age: z.number().min(0, 'Age must be 0 or greater').max(150, 'Age must be less than 150'),
+  age: z.number().min(0, 'Age must be 0 or greater').max(150, 'Age must be less than 150').optional().nullable(),
   date_of_birth: z.string().optional().nullable(),
   address_line: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
@@ -80,6 +81,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
   const {
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
@@ -104,6 +107,11 @@ export const ClientForm: React.FC<ClientFormProps> = ({
       notes: initialData?.notes || '',
     },
   });
+
+  // Age is optional: when a date of birth is given, the age is calculated from it (and is not typed by hand).
+  const dateOfBirth = watch('date_of_birth');
+  const ageFromDateOfBirth = dateOfBirth ? calculateAge(dateOfBirth) : null;
+  const hasCalculatedAge = ageFromDateOfBirth !== null && Number.isFinite(ageFromDateOfBirth) && ageFromDateOfBirth >= 0;
 
   const onFormSubmit = (data: ClientFormData) => {
     // Clean up empty strings to null
@@ -251,26 +259,30 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
           {/* Age */}
           <View style={styles.field}>
-            <Text style={styles.label}>Age *</Text>
+            <Text style={styles.label}>Age (Optional)</Text>
             <Controller
               control={control}
               name="age"
               render={({ field: { onChange, onBlur, value } }) => (
                 <TextInput
                   style={[styles.input, errors.age && styles.inputError]}
-                  value={value !== undefined ? String(value) : ''}
+                  value={hasCalculatedAge ? String(ageFromDateOfBirth) : value !== undefined && value !== null ? String(value) : ''}
+                  editable={!hasCalculatedAge}
                   onChangeText={(text) => {
                     const numValue = text === '' ? undefined : parseInt(text, 10);
-                    onChange(numValue);
+                    onChange(Number.isNaN(numValue) ? undefined : numValue);
                   }}
                   onBlur={onBlur}
-                  placeholder="Enter age"
+                  placeholder="Enter age or date of birth"
                   placeholderTextColor={colors.text.tertiary}
                   keyboardType="numeric"
                   maxLength={3}
                 />
               )}
             />
+            {hasCalculatedAge ? (
+              <Text style={styles.hint}>Calculated from the date of birth</Text>
+            ) : null}
             {errors.age && (
               <Text style={styles.errorText}>{errors.age.message}</Text>
             )}
@@ -285,7 +297,13 @@ export const ClientForm: React.FC<ClientFormProps> = ({
               render={({ field: { onChange, onBlur, value } }) => (
                 <DateField
                   value={value || ''}
-                  onChange={onChange}
+                  onChange={(next) => {
+                    onChange(next);
+                    const calculated = next ? calculateAge(next) : null;
+                    if (calculated !== null && Number.isFinite(calculated) && calculated >= 0) {
+                      setValue('age', calculated, { shouldValidate: true });
+                    }
+                  }}
                   onBlur={onBlur}
                   maximumDate={new Date()}
                   accessibilityLabel="Date of Birth"
@@ -582,6 +600,11 @@ const styles = StyleSheet.create({
   },
   multilineInput: {
     minHeight: 80,
+  },
+  hint: {
+    ...typography.caption,
+    color: colors.text.secondary,
+    marginTop: 4,
   },
   errorText: {
     ...typography.caption,
