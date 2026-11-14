@@ -34,6 +34,8 @@ import { useNotificationBadgeCount } from '../../features/notifications/presenta
 import { formatInrCurrency } from '../../core/utils/currency';
 import { t } from '../../core/localization';
 import { useStaffListQuery } from '../../features/staff/data/repositories/staff.repository.impl';
+import { useAppointmentsByDateQuery } from '../../features/appointments/data/repositories/appointments.repository.impl';
+import { toISODateString } from '../../features/appointments/domain/helpers';
 import { ClinicFeedbackSummarySection } from '../../features/feedback';
 import { useOnboardingStatusQuery } from '../../features/onboarding/data/repositories/onboarding.repository.impl';
 import { useFeatures, hasTreatmentSheets, isTherapyClinic } from '../../core/hooks/useFeatures';
@@ -125,6 +127,15 @@ export default function ClinicAdminDashboard() {
     { enabled: !!tenantId }
   );
   
+  // Today's appointments: the same query (and day definition) the Appointments screen uses for its daily summary.
+  const todayDate = toISODateString(new Date());
+  const {
+    data: todaysAppointments,
+    isLoading: appointmentsLoading,
+    isError: appointmentsError,
+  } = useAppointmentsByDateQuery(tenantId, todayDate, { enabled: !!tenantId });
+  const totalAppointmentsToday = todaysAppointments?.summary?.total ?? todaysAppointments?.appointments?.length ?? 0;
+
   // Get staff for display (up to 3)
   const staffMembers = staffData?.items?.slice(0, 3) || [];
   const activeStaffCount = staffData?.total || 0;
@@ -211,7 +222,7 @@ export default function ClinicAdminDashboard() {
             <View style={[styles.statItem, !isMobile && styles.statItemWeb]}>
               <StatCard
                 title="Total Appointments"
-                value="0"
+                value={appointmentsLoading ? '...' : appointmentsError ? '—' : String(totalAppointmentsToday)}
                 icon="calendar"
                 color={colors.primary.main}
               />
