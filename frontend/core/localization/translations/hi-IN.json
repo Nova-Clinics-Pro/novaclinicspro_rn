@@ -787,6 +787,8 @@
     "sent": "सफलतापूर्वक भेजा गया।"
   },
   "appointments": {
+    "appointmentDetails": "अपॉइंटमेंट",
+    "detail": {"date": "तारीख", "time": "समय", "service": "सेवा", "staff": "किसके साथ", "room": "कक्ष", "session": "सत्र"},
     "consultationAction": {
       "start": "परामर्श शुरू करें",
       "continue": "परामर्श जारी रखें",
