@@ -44,6 +44,7 @@ import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useFeatures, hasMultiDayAppointments } from '../../../../core/hooks/useFeatures';
 import { AppointmentResponse } from '../../data/models/appointments.dtos';
 import { getStatusLabel, getStatusColor, getStaffName } from '../../domain/helpers';
+import { appointmentAccent } from '../../domain/appointmentAccent';
 import { formatTime, formatDate } from '../../../../core/utils/dateTimeUtils';
 import { useTreatmentSheetDetailQuery } from '../../../treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 import { appointmentActionAccess } from '../../domain/appointmentActionAccess';
@@ -276,15 +277,16 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
   const endTimeDisplay = appointment.appointment_end ? formatTime(appointment.appointment_end) : null;
   const isSeriesAppointment = appointment.series_id && appointment.session_number;
 
-  const isTherapyAppointment = appointment.therapist_ids && appointment.therapist_ids.length > 0;
+  const isTherapyAppointment = !!(appointment.therapist_ids && appointment.therapist_ids.length > 0);
+  const accent = appointmentAccent(appointment.status, isTherapyAppointment, statusColor);
   const staffIcon = isTherapyAppointment ? 'people-outline' : 'person-circle-outline';
 
   return (
     <View
       style={[
         fullStyles.container,
-        { borderLeftColor: statusColor },
-        isTherapyAppointment && fullStyles.therapyAppointmentContainer,
+        { borderLeftColor: accent.border },
+        accent.tint ? { backgroundColor: accent.tint } : null,
       ]}
       data-testid="appointment-list-item"
     >
@@ -601,7 +603,6 @@ const fullStyles = StyleSheet.create({
     elevation: 1,
     overflow: 'hidden',
   },
-  therapyAppointmentContainer: { backgroundColor: colors.grey[50] },
   mainRow: { flexDirection: 'row', alignItems: 'center' },
   content: { flex: 1, padding: spacing.md },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs / 2 },
