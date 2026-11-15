@@ -37,10 +37,13 @@ export const test = base.extend<{ copCase: { api: ApiSession | null; evidence: s
     const skipped = testInfo.status === 'skipped';
     const status = skipped ? 'Blocked' : testInfo.status === 'passed' ? 'Pass' : 'Fail';
     const skipNote = testInfo.annotations.find(a => a.type === 'skip' || a.type === 'blocked')?.description;
+    // Cases written for another role but run with the clinic Owner's login (who holds the admin and front-desk permissions)
+    // say so in the result, so a pass is never read as proof for the role the case names.
+    const executedAs = testInfo.annotations.find(a => a.type === 'executed-as')?.description;
     const err = testInfo.error?.message?.split('\n').slice(0, 3).join(' ').replace(/\x1b\[[0-9;]*m/g, '').replace(/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '<jwt>').slice(0, 400);
     const result: CopResult = {
       caseId: id, status,
-      actual: status === 'Pass' ? 'As expected (automated).' : skipped ? `Not executed: ${skipNote ?? 'skipped'}` : `Failed: ${err}`,
+      actual: `${executedAs ? `[executed as ${executedAs}] ` : ''}${status === 'Pass' ? 'As expected (automated).' : skipped ? `Not executed: ${skipNote ?? 'skipped'}` : `Failed: ${err}`}`,
       knownGap: /@known-gap/.test(testInfo.title), durationMs: Date.now() - started, finishedAt: new Date().toISOString(),
       apiEvidence: state.evidence.slice(-12),
     };

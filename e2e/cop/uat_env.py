@@ -31,7 +31,7 @@ if not vals.get("SUPABASE_ANON_KEY"):
 env = {"PATH": os.environ["PATH"], "HOME": os.environ["HOME"],
        "NC_SUPABASE_URL": vals["SUPABASE_URL"], "NC_SUPABASE_ANON_KEY": vals["SUPABASE_ANON_KEY"],
        "NC_API_BASE_URL": os.environ.get("NC_API_BASE_URL", "http://localhost:8000"), "NC_ALLOWED_SUPABASE_REF": TESTING_REF}
-for k in ("NC_RUN_ID", "NC_EMAIL_DOMAIN", "NC_RESULTS_ROOT", "NC_WEB_BASE_URL"):
+for k in ("NC_RUN_ID", "NC_EMAIL_DOMAIN", "NC_RESULTS_ROOT", "NC_WEB_BASE_URL", "NC_ROLE_PASSWORD_FILE", "NC_ROLE_EMAIL_BASE", "NC_ROLE_AUTH_IDS_FILE"):
     if k in os.environ:
         env[k] = os.environ[k]
 os.execvpe(sys.argv[1], sys.argv[1:], env)

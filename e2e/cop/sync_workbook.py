@@ -10,7 +10,7 @@ For every <TC id>.json written by cop/fixture.ts:
   * FAIL on a case that carries a KNOWN GAP: writes the matching pre-logged Defect ID in the case's Comments / Bug ID.
   * FAIL on any other case: drafts a new defect (status Open, severity from the case priority) and links it.
   * Defect status is decided per defect over all its linked cases: any Fail -> New becomes Open; all linked cases ran
-    and passed -> Retest Passed (re-run manually before closing); otherwise unchanged.
+    and passed -> Retest Passed, only for a defect already marked Fixed; otherwise unchanged.
 Needs openpyxl (pip install openpyxl). Nothing is written with --dry-run.
 """
 import argparse, datetime as dt, glob, json, os, re
@@ -127,7 +127,7 @@ def main():
                 first = next(i for i in linked if i in results and results[i]["status"] == "Fail")
                 dws.cell(r, dcol["Found By / Date"]).value = f"Confirmed by Playwright ({first}), {today}"
                 summary["confirmed"] += 1
-        elif len(ran) == len(linked) and all(x == "Pass" for x in ran) and status in ("New", "Open", "In Progress", "Fixed"):
+        elif len(ran) == len(linked) and all(x == "Pass" for x in ran) and status == "Fixed":
             dws.cell(r, dcol["Retest Result"]).value = "Pass"
             dws.cell(r, dcol["Retest Date"]).value = today
             dws.cell(r, dcol["Status"]).value = "Retest Passed"
