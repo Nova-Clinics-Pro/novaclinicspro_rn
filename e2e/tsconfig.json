@@ -10,5 +10,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["shared", "web", "reporting", "scenarios", "profiles"]
+  "include": ["shared", "web", "cop", "reporting", "scenarios", "profiles"]
 }
