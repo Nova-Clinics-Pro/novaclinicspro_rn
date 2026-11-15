@@ -22,7 +22,7 @@ test.describe('Ayurveda clinic: booking and conflicts', () => {
     const c = await clinic('ayurveda'); needSeed(c);
     const { api, seed } = c!;
     const t = slot(DAY, 10, 0);
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Male'], doctor_id: seed.staff.D1, therapist_ids: [], room_id: seed.rooms['C-1'], appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Male'], doctor_id: seed.staff.D1, therapist_ids: [], room_id: seed.rooms['C-1'], appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     expect(ok(res.status), `create returned ${res.status}: ${JSON.stringify(res.body)?.slice(0, 200)}`).toBe(true);
     expect(res.body.id).toBeTruthy();
   });
@@ -32,7 +32,7 @@ test.describe('Ayurveda clinic: booking and conflicts', () => {
     const c = await clinic('ayurveda'); needSeed(c);
     const { api, seed } = c!;
     const t = slot(DAY, 10, 15);
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], doctor_id: seed.staff.D1, therapist_ids: [], room_id: seed.rooms['C-2'], appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], doctor_id: seed.staff.D1, therapist_ids: [], room_id: seed.rooms['C-2'], appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     why(res);
     expect(rejected(res.status), `double-booking D1 returned ${res.status}; expected a 4xx conflict`).toBe(true);
   });
@@ -41,7 +41,7 @@ test.describe('Ayurveda clinic: booking and conflicts', () => {
     const c = await clinic('ayurveda'); needSeed(c);
     const { api, seed } = c!;
     const t = slot(DAY, 11, 0, 60);
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], therapist_ids: [seed.staff.T1], room_id: seed.rooms['T-1'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], therapist_ids: [seed.staff.T1], room_id: seed.rooms['T-1'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     expect(ok(res.status), `create returned ${res.status}: ${JSON.stringify(res.body)?.slice(0, 200)}`).toBe(true);
   });
 
@@ -50,7 +50,7 @@ test.describe('Ayurveda clinic: booking and conflicts', () => {
     const c = await clinic('ayurveda'); needSeed(c);
     const { api, seed } = c!;
     const t = slot(DAY, 11, 30, 60);
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female2'], therapist_ids: [seed.staff.T1], room_id: seed.rooms['T-2'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female2'], therapist_ids: [seed.staff.T1], room_id: seed.rooms['T-2'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     why(res);
     expect(rejected(res.status), `double-booking T1 returned ${res.status}; expected a 4xx conflict`).toBe(true);
   });
@@ -61,7 +61,7 @@ test.describe('Ayurveda clinic: booking and conflicts', () => {
     const { api, seed } = c!;
     const t = slot(DAY, 11, 30, 60);
     // P-Female3 has no other booking and T3 is free and the same gender, so only the room (T-1, taken by RCP_006) can cause a refusal.
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female3'], therapist_ids: [seed.staff.T3], room_id: seed.rooms['T-1'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female3'], therapist_ids: [seed.staff.T3], room_id: seed.rooms['T-1'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     why(res);
     expect(rejected(res.status), `double-booking room T-1 returned ${res.status}; expected a 4xx conflict`).toBe(true);
   });
@@ -74,16 +74,33 @@ test.describe('Ayurveda clinic: booking and conflicts', () => {
     const features = await api.get(`/api/v1/tenants/${seed.tenantId}/features`);
     test.info().annotations.push({ type: 'features-flag', description: `enable_gender_matching=${features.body?.appointments?.enable_gender_matching}` });
     const t = slot(DAY, 15, 0, 60);
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], therapist_ids: [seed.staff.T2], room_id: seed.rooms['T-2'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], therapist_ids: [seed.staff.T2], room_id: seed.rooms['T-2'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     why(res);
     expect(rejected(res.status), `female patient with male therapist returned ${res.status}; an Ayurveda clinic should block it`).toBe(true);
+    // Gender matching is on by default for an Ayurveda clinic, so the setting the app is shown must say so (DEF_COP_015).
+    expect(features.body?.appointments?.enable_gender_matching, 'the gender matching setting shown to the app').toBe(true);
+  });
+
+  test('TC_COP_CNF_016 a doctor booking made without therapist_ids still detects a double booking', async ({ clinic }) => {
+    const c = await clinic('ayurveda'); needSeed(c);
+    const { api, seed } = c!;
+    // An API client may omit therapist_ids (optional in the schema). That used to store a JSON null, and the next overlapping
+    // booking for the doctor failed with a 500 instead of a conflict message (DEF_COP_016).
+    const t = slot(DAY, 14, 30);
+    const first = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Male'], doctor_id: seed.staff.D2, room_id: seed.rooms['C-2'], appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
+    expect(ok(first.status), `first booking (no therapist_ids) returned ${first.status}: ${JSON.stringify(first.body)?.slice(0, 200)}`).toBe(true);
+    const overlap = slot(DAY, 14, 45);
+    const second = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Minor'], doctor_id: seed.staff.D2, room_id: seed.rooms['C-1'], appointment_start: overlap.start, appointment_end: overlap.end, status: 'scheduled', appointment_type: 'SINGLE' });
+    why(second);
+    expect(second.status, 'an overlapping booking must be a conflict (4xx), never a server error').not.toBeGreaterThanOrEqual(500);
+    expect(rejected(second.status), `overlapping booking for the same doctor returned ${second.status}`).toBe(true);
   });
 
   test('TC_COP_RCP_005 consultation in a therapy room is refused @known-gap', async ({ clinic }) => {
     const c = await clinic('ayurveda'); needSeed(c);
     const { api, seed } = c!;
     const t = slot(DAY, 16, 0);
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Minor'], doctor_id: seed.staff.D2, therapist_ids: [], room_id: seed.rooms['T-2'], appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Minor'], doctor_id: seed.staff.D2, therapist_ids: [], room_id: seed.rooms['T-2'], appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     why(res);
     expect(rejected(res.status), `consultation in therapy room T-2 returned ${res.status}; README §5-16: room type is not enforced yet`).toBe(true);
   });
@@ -92,7 +109,7 @@ test.describe('Ayurveda clinic: booking and conflicts', () => {
     const c = await clinic('ayurveda'); needSeed(c);
     const { api, seed } = c!;
     const t = slot(DAY, 16, 30, 60);
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], therapist_ids: [seed.staff.T3], room_id: seed.rooms['C-2'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], therapist_ids: [seed.staff.T3], room_id: seed.rooms['C-2'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     why(res);
     expect(rejected(res.status), `therapy in consultation room C-2 returned ${res.status}; README §5-16: room type is not enforced yet`).toBe(true);
   });
@@ -106,7 +123,7 @@ test.describe('General clinic: therapy is not gender-restricted', () => {
     // NC-UAT-17 establishes that a General clinic rejects therapy appointments altogether; then there is nothing to book.
     test.skip(features.body?.appointments?.multiday_appointment_types?.length === 0 && !features.body?.treatment_sheets?.enable_treatment_sheets, 'General clinic has therapy appointments disabled (NC-UAT-17): case applies to clinics with therapy enabled');
     const t = slot(DAY, 11, 0, 60);
-    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], therapist_ids: [seed.staff.T2], room_id: seed.rooms['T-1'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'single' });
+    const res = await api.post(apptPath(seed.tenantId), { client_id: seed.patients['P-Female'], therapist_ids: [seed.staff.T2], room_id: seed.rooms['T-1'], treatment_id: seed.treatments.COPABH, appointment_start: t.start, appointment_end: t.end, status: 'scheduled', appointment_type: 'SINGLE' });
     expect(ok(res.status), `returned ${res.status}: ${JSON.stringify(res.body)?.slice(0, 200)}`).toBe(true);
   });
 });
