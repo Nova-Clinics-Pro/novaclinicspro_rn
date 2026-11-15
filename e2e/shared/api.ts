@@ -46,6 +46,12 @@ export class ApiSession {
     await this.signIn();
     return !(await this.get('/api/v1/auth/me')).body?.session_refresh_required;
   }
+  /** For non-JSON responses (CSV exports): returns the status and the raw text. */
+  async text(path: string): Promise<{ status: number; text: string }> {
+    const res = await fetch(`${config.apiBaseUrl}${path}`, { headers: { Authorization: `Bearer ${this.token}` } });
+    this.evidence.push(`GET ${path.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, '{id}')} -> ${res.status}`);
+    return { status: res.status, text: await res.text() };
+  }
   get = (p: string) => this.request('GET', p);
   post = (p: string, b?: unknown, h?: Record<string, string>) => this.request('POST', p, b, h);
 }
