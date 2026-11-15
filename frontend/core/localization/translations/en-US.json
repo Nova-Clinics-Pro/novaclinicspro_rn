@@ -1113,6 +1113,8 @@
     "sent": "Successfully sent."
   },
   "appointments": {
+    "appointmentDetails": "Appointment",
+    "detail": {"date": "Date", "time": "Time", "service": "Service", "staff": "With", "room": "Room", "session": "Session"},
     "consultationAction": {
       "start": "Start Consultation",
       "continue": "Continue Consultation",

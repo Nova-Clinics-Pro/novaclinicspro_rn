@@ -77,6 +77,20 @@ import {
   startConsultationRoute,
 } from '../../../doctorDashboard/application/consultationRoutes';
 import { ApiErrorState } from '../../../../core/components/ui/ApiErrorState';
+import {
+  appointmentDetailRows,
+  showsEpisodeSection,
+  type AppointmentDetailKey,
+} from '../../domain/appointmentDetails';
+
+const DETAIL_ROW_ICONS: Record<AppointmentDetailKey, React.ComponentProps<typeof Ionicons>['name']> = {
+  date: 'calendar-outline',
+  time: 'time-outline',
+  service: 'medkit-outline',
+  staff: 'person-outline',
+  room: 'business-outline',
+  session: 'repeat',
+};
 
 // ============================================
 // SECTION HEADER COMPONENT
@@ -776,7 +790,24 @@ export const AppointmentDetailScreen: React.FC = () => {
           sessionId={(appointment as any)?.session_id || appointment?.id}
         />
 
-        {/* EPISODE SECTION */}
+        {/* APPOINTMENT DETAILS: when, what, with whom, where */}
+        <View style={styles.section} data-testid="detail-appointment-section">
+          <SectionHeader title={t('appointments.appointmentDetails') || 'Appointment'} icon="calendar" />
+          <View style={styles.detailsCard}>
+            {appointmentDetailRows(appointment).map(row => (
+              <View key={row.key} style={styles.detailRow} data-testid={`detail-row-${row.key}`}>
+                <Ionicons name={DETAIL_ROW_ICONS[row.key]} size={18} color={colors.text.secondary} />
+                <View style={styles.detailRowText}>
+                  <Text style={styles.detailLabel}>{t(`appointments.detail.${row.key}`)}</Text>
+                  <Text style={styles.detailValue}>{row.value}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* EPISODE SECTION: only where an episode makes sense (not an episode-less therapy appointment) */}
+        {showsEpisodeSection(appointment) && (
         <View style={styles.section} data-testid="detail-episode-section">
           <SectionHeader title={t('episodes.episode') || 'Episode'} icon="folder" />
           <EpisodeCard
@@ -791,6 +822,7 @@ export const AppointmentDetailScreen: React.FC = () => {
             onChangeEpisodePress={canLinkAppointment ? handleLinkEpisodePress : undefined}
           />
         </View>
+        )}
 
         {/* CLIENT SECTION */}
         <View style={styles.section} data-testid="detail-client-section">
@@ -1089,6 +1121,31 @@ const styles = StyleSheet.create({
   },
 
   // Client Card
+  detailsCard: {
+    backgroundColor: colors.background.default,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  detailRowText: {
+    flex: 1,
+  },
+  detailLabel: {
+    ...typography.caption,
+    color: colors.text.secondary,
+  },
+  detailValue: {
+    ...typography.body1,
+    color: colors.text.primary,
+    fontWeight: '600',
+  },
   clientCard: {
     flexDirection: 'row',
     alignItems: 'center',
