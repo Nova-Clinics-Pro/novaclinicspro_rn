@@ -36,6 +36,19 @@ export const config = {
   resultsRoot: process.env.NC_RESULTS_ROOT ?? path.join(E2E_ROOT, 'results'),
 };
 
+/**
+ * Hard stop: automation may only talk to the Testing Supabase project. Called before every Supabase request, so a
+ * stale or wrong config (for example ~/.novaclinics-local/frontend/.env pointing at another project) can never be
+ * used to create users or read data. Override only with NC_ALLOWED_SUPABASE_REF for a different NON-production project.
+ */
+export const ALLOWED_SUPABASE_REF = process.env.NC_ALLOWED_SUPABASE_REF ?? 'ptcclwkribsicydlxeyi';
+export function assertTestingSupabase(): void {
+  const ref = /^https:\/\/([a-z0-9]+)\.supabase\.co/.exec(config.supabaseUrl)?.[1];
+  if (ref !== ALLOWED_SUPABASE_REF) {
+    throw new Error(`refusing to use Supabase project "${ref ?? 'unset'}": only "${ALLOWED_SUPABASE_REF}" (Testing) is allowed. Start the run through cop/uat_env.py so the Testing config is used.`);
+  }
+}
+
 function defaultRunId(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
