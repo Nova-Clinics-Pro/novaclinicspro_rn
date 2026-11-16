@@ -110,13 +110,17 @@ test.describe('Web UI: sign-in, dashboards, settings', () => {
 
 test.describe('Web UI: appointments and series', () => {
   test('TC_COP_RCP_015 the day list colours doctor and therapy cards differently and counts correctly', async ({ page }) => {
-    const w = await world(); const d = workday(1); const day = ymd(d);
-    const t1 = slot(d, 14, 0); const t2 = slot(d, 15, 0, 60);
-    const a = await (await need('receptionist')).post(`${w.b}/appointments`, { client_id: w.seed.patients['P-Male'], doctor_id: w.doctor.id, therapist_ids: [], room_id: w.seed.rooms['C-1'], appointment_start: t1.start, appointment_end: t1.end, status: 'scheduled', appointment_type: 'SINGLE' });
-    const b = await (await need('receptionist')).post(`${w.b}/appointments`, { client_id: w.seed.patients['P-Female2'], therapist_ids: [w.therapist.id], room_id: w.seed.rooms['T-1'], treatment_id: w.seed.treatments.COPABH, appointment_start: t2.start, appointment_end: t2.end, status: 'scheduled', appointment_type: 'SINGLE' });
+    const w = await world(); const rec = await need('receptionist'); let d = workday(1); let day = ymd(d); let a: any, b: any;
+    // Earlier runs leave bookings in the next few weeks, so look for a free day inside the date strip (about three weeks).
+    for (let k = 0; k < 8; k++) {
+      d = workday(1 + Math.floor(Math.random() * 18)); day = ymd(d); const t1 = slot(d, 14, 0); const t2 = slot(d, 15, 0, 60);
+      a = await rec.post(`${w.b}/appointments`, { client_id: w.seed.patients['P-Male'], doctor_id: w.doctor.id, therapist_ids: [], room_id: w.seed.rooms['C-1'], appointment_start: t1.start, appointment_end: t1.end, status: 'scheduled', appointment_type: 'SINGLE' });
+      b = await rec.post(`${w.b}/appointments`, { client_id: w.seed.patients['P-Female2'], therapist_ids: [w.therapist.id], room_id: w.seed.rooms['T-1'], treatment_id: w.seed.treatments.COPABH, appointment_start: t2.start, appointment_end: t2.end, status: 'scheduled', appointment_type: 'SINGLE' });
+      if (ok(a.status) && ok(b.status)) break;
+    }
     test.skip(!ok(a.status) || !ok(b.status), `blocked: the two bookings could not be made (${a.status}, ${b.status})`);
     await signIn(page, 'receptionist'); await open(page, '/clinic-admin/appointments', 6000);
-    await page.getByText(String(d.getDate()), { exact: true }).first().click(); await page.waitForTimeout(4000);
+    await page.locator(`xpath=//*[normalize-space(text())="${d.getDate()}"][following-sibling::*[normalize-space(text())="${d.toLocaleString('en', { month: 'short' })}"]]`).first().click();
     const colour = async (name: string) => page.getByText(name).first().evaluate(el => { let e: HTMLElement | null = el as HTMLElement; while (e) { const bg = getComputedStyle(e).backgroundColor; const bl = getComputedStyle(e).borderLeftColor; if (bg && bg !== 'rgba(0, 0, 0, 0)' && e.getBoundingClientRect().width > 200) return `${bg}|${bl}`; e = e.parentElement; } return 'none'; });
     const doctorCard = await colour('COP Patient Male'); const therapyCard = await colour('COP Patient Female Two');
     note(`on ${day}: doctor card ${doctorCard}; therapy card ${therapyCard}; list: ${(await text(page)).slice(0, 200)}`);

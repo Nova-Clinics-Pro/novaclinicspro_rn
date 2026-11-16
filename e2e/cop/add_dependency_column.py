@@ -12,8 +12,8 @@ from openpyxl.styles import Alignment
 
 DEVICE = "Android or iOS device (or emulator) running the native app build; the test machine does not have the memory to run an emulator"
 PUSH = "Physical Android and iOS devices with a native app build and push notifications (FCM/APNs) enabled; push cannot be tested on web or at API level"
-SERIES = ("Multi-day booking switched on in the test deployment: Capability Platform flag (CAPABILITY_PLATFORM_V1_ENABLED) is off; the Ayurveda clinic "
-          "must also opt in to appointments.multiday and have multi-day treatment types configured (Physio has it by default; General never)")
+SERIES = ("Defect fix DEF_COP_060: no migration or seed writes appointments.core.settings.multiday_appointment_types, so the booking form offers no series "
+          "even with the Capability Platform flag on and appointments.multiday enabled for the clinic (both done for this run). Ayurveda and Physio only; never General")
 INVOICE = "Defect fix: invoice and payment creation answer 500 (DEF_COP_018, finance_router user_context.user_id); billing cannot run until it is fixed"
 
 DEPENDENCY = {
