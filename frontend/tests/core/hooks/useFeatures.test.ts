@@ -381,3 +381,18 @@ describe('normalizeClinicType fallback behavior intact (source inspection — pr
     expect(fnBody).toContain("(value || 'general').toLowerCase()");
   });
 });
+
+describe('series doctor and capability screen helpers', () => {
+  const { seriesUsesDoctor, isCapabilityPlatformEnabled } = require('../../../core/hooks/useFeatures');
+  const base = { appointments: { allow_multiday: true, enable_gender_matching: true }, treatment_sheets: { enable_treatment_sheets: true, enable_sheet_sync: false } };
+
+  it('does not ask for a doctor on an Ayurveda series, and does on a Physio series', () => {
+    expect(seriesUsesDoctor({ ...base, clinic_type: 'ayurveda' })).toBe(false);
+    expect(seriesUsesDoctor({ ...base, clinic_type: 'physio' })).toBe(true);
+  });
+
+  it('offers the capabilities screen only where the Capability Platform is on', () => {
+    expect(isCapabilityPlatformEnabled({ ...base, clinic_type: 'ayurveda', capability_platform_v1_enabled: true })).toBe(true);
+    expect(isCapabilityPlatformEnabled({ ...base, clinic_type: 'ayurveda', capability_platform_v1_enabled: false })).toBe(false);
+  });
+});

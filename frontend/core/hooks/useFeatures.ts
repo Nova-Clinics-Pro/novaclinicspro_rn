@@ -60,6 +60,11 @@ export interface FeatureConfig {
    * is unreachable or the field is absent.
    */
   cos_v1_enabled: boolean;
+  /**
+   * The Capability Platform rollout flag (GET /tenants/{id}/features). The capabilities settings screen exists only where it is
+   * on: the capability endpoints answer 404 otherwise. Global, not clinic-type-derived; false when absent or unreachable.
+   */
+  capability_platform_v1_enabled: boolean;
 }
 
 const DEFAULT_FEATURES: FeatureConfig = {
@@ -75,6 +80,7 @@ const DEFAULT_FEATURES: FeatureConfig = {
   freshness_v1_enabled: false,
   clinical_spine_v1_enabled: false,
   cos_v1_enabled: false,
+  capability_platform_v1_enabled: false,
 };
 
 function normalizeClinicType(value?: string): FeatureConfig['clinic_type'] {
@@ -124,6 +130,7 @@ function normalizeFeatures(raw?: any): FeatureConfig {
     // R7 · T-FE-A.3 (FR-FLAG-1): same shape as clinical_spine_v1_enabled
     // above — global rollout flag, not clinic-type-derived.
     cos_v1_enabled: !!raw?.cos_v1_enabled,
+    capability_platform_v1_enabled: !!raw?.capability_platform_v1_enabled,
   };
 }
 
@@ -263,6 +270,19 @@ export function isFreshnessV1Enabled(features: FeatureConfig): boolean {
 /** Phase 3B (R3B) · T-A.1 (ADR-R3B-04). */
 export function isClinicalSpineV1Enabled(features: FeatureConfig): boolean {
   return features.clinical_spine_v1_enabled;
+}
+
+/** Whether this deployment has the Capability Platform on (the capabilities settings screen needs it). */
+export function isCapabilityPlatformEnabled(features: FeatureConfig): boolean {
+  return features.capability_platform_v1_enabled;
+}
+
+/**
+ * Whether a multi-day series is planned with a doctor. Ayurveda series are therapist-only, so no doctor is asked for; in
+ * physiotherapy the therapist is often the doctor too, so the field stays and the planner counts that person once.
+ */
+export function seriesUsesDoctor(features: FeatureConfig): boolean {
+  return features.clinic_type !== 'ayurveda';
 }
 
 /** R7 · T-FE-A.3 (FR-FLAG-1). */

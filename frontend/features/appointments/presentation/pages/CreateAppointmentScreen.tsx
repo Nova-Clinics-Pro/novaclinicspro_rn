@@ -68,7 +68,7 @@ import {
 } from '../../../../core/utils/dateTimeUtils';
 import { validateAppointmentTime, formatValidationMessage, ValidationResult } from '../../utils/appointmentValidation';
 import { useDebounce } from '../../../../core/hooks/useDebounce';
-import { useFeatures } from '../../../../core/hooks/useFeatures';
+import { seriesUsesDoctor, useFeatures } from '../../../../core/hooks/useFeatures';
 import { TreatmentResponse } from '../../../treatments/data/models/treatments.dtos';
 import {
   useOrderingDoctorQuery,
@@ -1402,22 +1402,24 @@ export const CreateAppointmentScreen: React.FC = () => {
                   />
                 </View>
 
-                {/* Doctor - Optional, required for doctor dashboard visibility */}
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Doctor (Optional)</Text>
-                  <Text style={{ color: colors.text.secondary, fontSize: 12, marginBottom: 6 }}>
-                    Assign a doctor so this schedule appears on the Doctor Dashboard
-                  </Text>
-                  <AppointmentSearchableDropdown
-                    title="Select Doctor"
-                    options={doctorOptions}
-                    selectedId={multiDayForm.selectedDoctorId}
-                    onSelect={(id) => setMultiDayForm(prev => ({ ...prev, selectedDoctorId: id }))}
-                    isLoading={isLoadingDoctors}
-                    emptyText="No doctors available"
-                    autoCloseOnSelect={true}
-                  />
-                </View>
+                {/* Doctor - optional; asked for only where a series involves one (not Ayurveda), see seriesUsesDoctor */}
+                {seriesUsesDoctor(features) && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Doctor (Optional)</Text>
+                    <Text style={{ color: colors.text.secondary, fontSize: 12, marginBottom: 6 }}>
+                      Assign a doctor so this schedule appears on the Doctor Dashboard
+                    </Text>
+                    <AppointmentSearchableDropdown
+                      title="Select Doctor"
+                      options={doctorOptions}
+                      selectedId={multiDayForm.selectedDoctorId}
+                      onSelect={(id) => setMultiDayForm(prev => ({ ...prev, selectedDoctorId: id }))}
+                      isLoading={isLoadingDoctors}
+                      emptyText="No doctors available"
+                      autoCloseOnSelect={true}
+                    />
+                  </View>
+                )}
               </>
             )}
 

@@ -95,7 +95,9 @@ function buildRows(
   for (const entry of sorted.filter((e) => !e.parent_code)) {
     appendWithChildren(entry, 0);
   }
-  return rows;
+  // A capability the clinic's template does not offer has no switch here. Showing it and enabling it are separate: this only
+  // decides what is listed; the backend still decides what may be enabled.
+  return rows.filter((row) => row.state?.visible !== false);
 }
 
 function CapabilitiesSettingsScreenInner(): React.ReactElement {
