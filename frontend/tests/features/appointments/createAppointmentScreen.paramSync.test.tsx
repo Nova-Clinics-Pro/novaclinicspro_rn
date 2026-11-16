@@ -50,10 +50,12 @@ jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
 }));
 jest.mock('../../../core/hooks/useFeatures', () => {
   const features = {
+    clinic_type: 'physio',
     appointments: { allow_multiday: true, multiday_appointment_types: MULTIDAY_TYPES },
     treatment_sheets: { enable_treatment_sheets: true },
   };
-  return { useFeatures: () => features };
+  // the real helpers (seriesUsesDoctor, ...) stay real; only the hook returns this fixture
+  return { ...jest.requireActual('../../../core/hooks/useFeatures'), useFeatures: () => features };
 });
 jest.mock('../../../features/clients/data/repositories/clients.repository.impl', () => ({
   useClientsListQuery: () => ({ data: { items: CLIENTS }, isLoading: false }),

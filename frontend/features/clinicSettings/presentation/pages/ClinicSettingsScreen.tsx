@@ -18,6 +18,7 @@ import { DashboardHeader } from '../../../../core/components/DashboardHeader';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useTranslation } from '../../../../core/localization/useTranslation';
+import { isCapabilityPlatformEnabled, useFeatures } from '../../../../core/hooks/useFeatures';
 import { useAuthStore } from '../../../auth/presentation/providers/auth.store';
 import { mayManageRolePermissions } from '../../../auth/domain/entities/auth.entity';
 
@@ -85,8 +86,9 @@ export const ClinicSettingsScreen: React.FC = () => {
   const router = useRouter();
   const { t } = useTranslation();
   const currentUser = useAuthStore(state => state.currentUser);
+  const features = useFeatures();
   // Role customization is the owner's tool; it is not offered when the session says the user holds another role.
-  const items: SettingItem[] = currentUser && mayManageRolePermissions(currentUser)
+  const allItems: SettingItem[] = currentUser && mayManageRolePermissions(currentUser)
     ? [
         ...SETTINGS_ITEMS,
         {
@@ -99,6 +101,8 @@ export const ClinicSettingsScreen: React.FC = () => {
         },
       ]
     : SETTINGS_ITEMS;
+  // The capabilities screen needs the Capability Platform; where it is off, its endpoints answer 404, so the entry is not offered.
+  const items = allItems.filter(item => item.key !== 'capabilities' || isCapabilityPlatformEnabled(features));
 
   const renderSettingItem = (item: SettingItem) => (
     <TouchableOpacity

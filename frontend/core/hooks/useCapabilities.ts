@@ -52,6 +52,9 @@ export interface CapabilityState {
    * OCC convention) — supply this as `useToggleCapability().toggle`'s own
    * `version` arg for a correct `If-Match` on the first toggle attempt. */
   version: number;
+  /** Whether the switch is shown to this clinic (a template setting); independent of whether the capability is enabled.
+   * Absent from an older backend, which means shown. */
+  visible?: boolean;
 }
 
 export interface TenantCapabilitiesResponse {

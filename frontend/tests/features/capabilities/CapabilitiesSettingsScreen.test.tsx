@@ -132,6 +132,37 @@ describe('<CapabilitiesSettingsScreen> (R5 · T-E.3)', () => {
     expect(getByText('Reports')).toBeTruthy();
   });
 
+  it('lists a capability whose template does not offer a switch only when the backend marks it visible', () => {
+    setupHooks({
+      catalog: [
+        catalogEntry({ code: 'core', name: 'Core', display_order: 0 }),
+        catalogEntry({ code: 'appointments.multiday', name: 'Multi-Day Appointments', display_order: 1 }),
+      ],
+      capabilities: {
+        core: capState({ code: 'core' }),
+        'appointments.multiday': capState({ code: 'appointments.multiday', name: 'Multi-Day Appointments', effective_enabled: false, visible: false }),
+      },
+    });
+    const hidden = render(<CapabilitiesSettingsScreen />);
+    expect(hidden.getByText('Core')).toBeTruthy();
+    expect(hidden.queryByText('Multi-Day Appointments')).toBeNull(); // not offered to this clinic type
+    hidden.unmount();
+
+    setupHooks({
+      catalog: [catalogEntry({ code: 'appointments.multiday', name: 'Multi-Day Appointments' })],
+      capabilities: { 'appointments.multiday': capState({ code: 'appointments.multiday', name: 'Multi-Day Appointments', effective_enabled: false, visible: true }) },
+    });
+    expect(render(<CapabilitiesSettingsScreen />).getByText('Multi-Day Appointments')).toBeTruthy(); // shown, and still off
+  });
+
+  it('keeps showing a capability when an older backend sends no visible flag', () => {
+    setupHooks({
+      catalog: [catalogEntry({ code: 'inventory', name: 'Inventory' })],
+      capabilities: { inventory: capState({ code: 'inventory', name: 'Inventory' }) },
+    });
+    expect(render(<CapabilitiesSettingsScreen />).getByText('Inventory')).toBeTruthy();
+  });
+
   it('renders top-level and child capabilities from the catalog hierarchy', () => {
     setupHooks({
       catalog: [
