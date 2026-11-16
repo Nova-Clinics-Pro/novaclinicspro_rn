@@ -99,12 +99,25 @@ const RUN: Record<string, Runner> = {
     return true;
   },
   S03: async c => {
-    if (APPLY) for (const h of OPERATING_HOURS) {
-      const body: any = { ...h }; for (const k of ['open_time', 'close_time', 'break_start', 'break_end']) if (!body[k]) delete body[k];
-      const r = await c.api.post(`${c.base}/operating-hours`, body);
-      if (r.status >= 300 && r.status !== 409) { log(`    ! hours day ${h.day_of_week}: ${r.status}`); return false; }
-    } else log('    + operating hours (would apply, 7 days)');
-    return !APPLY || (await list(c, 'operating-hours')).length >= 7;
+    // Upsert by day: create the day if it is missing, otherwise PATCH it to the wanted values (a plain POST of an existing
+    // day answers 409 and would leave wrong hours in place).
+    const have = APPLY ? await list(c, 'operating-hours', '&is_active=true') : [];
+    for (const h of OPERATING_HOURS) {
+      // A closed day must carry no times (check constraint ck_tenant_operating_hours_open_times), so they are sent as null.
+      const body: any = { ...h }; for (const k of ['open_time', 'close_time', 'break_start', 'break_end']) if (!body[k]) body[k] = null;
+      if (!APPLY) continue;
+      // The API accepts several rows for one day (DEF_COP_017 note): keep the first and remove the rest, so the wanted hours
+      // are the only hours for that day.
+      const rows = have.filter(x => Number(x.day_of_week) === h.day_of_week);
+      for (const extra of rows.slice(1)) await c.api.request('DELETE', `${c.base}/operating-hours/${extra.id}`);
+      const row = rows[0];
+      const r = row ? await c.api.request('PATCH', `${c.base}/operating-hours/${row.id}`, body) : await c.api.post(`${c.base}/operating-hours`, body);
+      if (r.status >= 300) { log(`    ! hours day ${h.day_of_week}: ${r.status} ${JSON.stringify(r.body)?.slice(0, 120)}`); return false; }
+    }
+    if (!APPLY) { log('    + operating hours (would apply, 7 days, 0 = Monday)'); return true; }
+    const after = await list(c, 'operating-hours', '&is_active=true');
+    // exactly one row per day, with the wanted open/closed state
+    return after.length === OPERATING_HOURS.length && OPERATING_HOURS.every(h => after.filter(x => Number(x.day_of_week) === h.day_of_week).every(x => x.is_open === h.is_open));
   },
   S04: async c => {
     const ok = await seq(ROOMS.map(r => () => ensure(c, 'room', 'rooms', x => x.name === r.name, { name: r.name, room_type: r.room_type, capacity: r.capacity }, c.map.rooms, r.key)));

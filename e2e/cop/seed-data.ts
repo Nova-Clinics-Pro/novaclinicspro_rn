@@ -56,6 +56,9 @@ export const PATIENTS = [
   { key: 'P-Minor', full_name: 'COP Patient Minor', gender: 'male', phone: '+919100000203', date_of_birth: '2015-03-10' },
 ] as const;
 
-/** Operating hours used by CNF_006/007: 09:00-18:00, break 13:00-14:00, Sunday (0) closed. */
-export const OPERATING_HOURS = [1, 2, 3, 4, 5, 6].map(d => ({ day_of_week: d, is_open: true, open_time: '09:00:00', close_time: '18:00:00', break_start: '13:00:00', break_end: '14:00:00' }))
-  .concat([{ day_of_week: 0, is_open: false, open_time: '', close_time: '', break_start: '', break_end: '' }]);
+/**
+ * Operating hours used by CNF_006..CNF_008: 09:00-18:00, break 13:00-14:00, Monday to Saturday open, Sunday closed.
+ * day_of_week follows the app and the backend: 0 = Monday ... 6 = Sunday (NOT the JavaScript Date.getDay() order).
+ */
+export const OPERATING_HOURS = [0, 1, 2, 3, 4, 5].map(d => ({ day_of_week: d, is_open: true, open_time: '09:00:00', close_time: '18:00:00', break_start: '13:00:00', break_end: '14:00:00' }))
+  .concat([{ day_of_week: 6, is_open: false, open_time: '', close_time: '', break_start: '', break_end: '' }]);
