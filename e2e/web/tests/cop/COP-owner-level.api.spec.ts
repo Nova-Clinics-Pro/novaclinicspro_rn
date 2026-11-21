@@ -1,3 +1,4 @@
+import { config } from '../../../shared/config';
 import { ApiSession } from '../../../shared/api';
 import { identityFor } from '../../../shared/identities';
 import { readRoleIdentities } from '../../../cop/provision-roles';
@@ -521,6 +522,13 @@ test.describe('14_NonFunctional_Arch_Perf_RLS', () => {
       const res = await c.api.get(p);
       expect.soft([401, 403, 404], `reading ${p.replace(other, '{other}')} returned ${res.status}`).toContain(res.status);
     }
+    // without any sign-in at all: user, role and setup data of a clinic must not be readable, and organisation users are for platform administrators
+    for (const p of [`/api/v1/rbac/${other}/tenant-users`, `/api/v1/rbac/${other}/tenant-user-roles`, `/api/v1/rbac/${other}/tenant-user-role-history`, `/api/v1/${other}/setup-progress`, '/api/v1/org/users']) {
+      const res = await fetch(`${config.apiBaseUrl}${p}`);
+      expect.soft(res.status, `GET ${p.replace(other, '{other}')} with no sign-in returned ${res.status}`).toBe(401);
+    }
+    const asClinicOwner = await c.api.get('/api/v1/org/users');
+    expect.soft(asClinicOwner.status, `a clinic owner listing all organisation users returned ${asClinicOwner.status}`).toBe(403);
     const write = await c.api.post(`/api/v1/clinic/${other}/clients`, { full_name: 'COP cross-clinic write', phone: '+919199999999', gender: 'male' });
     why(write, 'write into another clinic');
     // remove what this test just wrote, so a failing run does not leave a record in the other clinic
