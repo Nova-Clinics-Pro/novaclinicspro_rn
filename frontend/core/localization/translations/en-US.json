@@ -321,6 +321,9 @@
     "currentClinic": "Current clinic",
     "noClinic": "No clinic assigned"
   },
+  "clinicDashboard": {
+    "dailyRevenue": "Daily Revenue"
+  },
   "dashboardTitles": {
     "clinicOwner": "Clinic Owner Dashboard",
     "clinicAdmin": "Clinic Admin Dashboard"

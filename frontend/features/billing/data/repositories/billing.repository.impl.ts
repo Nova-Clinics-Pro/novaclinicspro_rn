@@ -13,6 +13,7 @@ import {
   listPaymentsForInvoiceApi,
   getPaymentApi,
   createPaymentApi,
+  getDailyFinanceSummaryApi,
 } from '../datasources/billing.api';
 import {
   InvoiceCreateRequest,
@@ -23,6 +24,7 @@ import {
   InvoiceListResponse,
   PaymentResponse,
   PaymentListResponse,
+  DailyFinanceSummaryResponse,
   ListInvoicesParams,
   ListPaymentsParams,
   SubscriptionSummary,
@@ -51,6 +53,10 @@ export const billingKeys = {
   // Summary
   summary: (tenantId: string) =>
     [...billingKeys.all, 'summary', tenantId] as const,
+  // The day's billed / collected / outstanding figures (clinic dashboard)
+  dailySummaries: () => [...billingKeys.all, 'daily-summary'] as const,
+  dailySummary: (tenantId: string, date?: string) =>
+    [...billingKeys.dailySummaries(), tenantId, date ?? 'today'] as const,
 };
 
 // ============================================
@@ -200,7 +206,31 @@ export const useCreatePaymentMutation = (
       queryClient.invalidateQueries({ queryKey: billingKeys.payments() });
       queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
       queryClient.invalidateQueries({ queryKey: billingKeys.summary(tenantId) });
+      // a collected payment changes the day's revenue
+      queryClient.invalidateQueries({ queryKey: billingKeys.dailySummaries() });
     },
+    ...options,
+  });
+};
+
+// ============================================
+// DAILY SUMMARY HOOK
+// ============================================
+
+/**
+ * Hook for the day's billed / collected / outstanding amounts (default: today at the clinic).
+ * `collected_amount` is the figure the dashboard shows as Daily Revenue.
+ */
+export const useDailyFinanceSummaryQuery = (
+  tenantId: string,
+  date?: string,
+  options?: Omit<UseQueryOptions<DailyFinanceSummaryResponse, Error>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<DailyFinanceSummaryResponse, Error>({
+    queryKey: billingKeys.dailySummary(tenantId, date),
+    queryFn: () => getDailyFinanceSummaryApi(tenantId, date),
+    enabled: !!tenantId,
+    staleTime: 30 * 1000,
     ...options,
   });
 };

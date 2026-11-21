@@ -58,10 +58,11 @@ export const TenantInvoiceDetailScreen: React.FC = () => {
   const isPaid = invoice ? isInvoicePaid(invoice) : false;
   const isOverdue = invoice ? isInvoiceOverdue(invoice) : false;
 
-  // Calculate remaining balance
-  const totalPaid = payments.reduce((sum, p) => sum + parseAmount(p.amount), 0);
+  // What has been collected and what is still owed come from the server (it counts only collected payments); the payment list
+  // is only the fallback for a backend that does not send them yet.
   const totalAmount = invoice ? parseAmount(invoice.total_amount) : 0;
-  const remainingBalance = totalAmount - totalPaid;
+  const totalPaid = invoice?.amount_paid != null ? parseAmount(invoice.amount_paid) : payments.reduce((sum, p) => sum + parseAmount(p.amount), 0);
+  const remainingBalance = invoice?.balance_due != null ? parseAmount(invoice.balance_due) : totalAmount - totalPaid;
 
   if (isLoading) {
     return (
