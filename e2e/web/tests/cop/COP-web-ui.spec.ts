@@ -339,3 +339,35 @@ test.describe('Web UI: resilience and performance', () => {
     expect(after.filter(s => s.full_name === name), 'no staff record was left behind').toHaveLength(0);
   });
 });
+
+test.describe('Web UI: money', () => {
+  /** Bills a client and takes the full payment today through the API, as the front desk would; returns what was paid. */
+  const takePaymentToday = async (amount: number) => {
+    const w = await world(); const adm = await need('admin'); const today = ymd(new Date());
+    const inv = await adm.post(`/api/v1/finance/${w.t}/invoices`, { client_id: w.seed.patients['P-Male'], invoice_number: `COP-REV-${Date.now()}`, invoice_date: today, status: 'sent', lines: [{ line_type: 'service', description: 'COP revenue check', quantity: '1', unit_price: String(amount) }] });
+    expect(ok(inv.status), `invoice: ${inv.status} ${JSON.stringify(inv.body)?.slice(0, 160)}`).toBe(true);
+    const pay = await adm.post(`/api/v1/finance/${w.t}/payments`, { invoice_id: inv.body.id, client_id: w.seed.patients['P-Male'], payment_date: today, amount: String(amount), payment_method: 'CASH' });
+    expect(ok(pay.status), `payment: ${pay.status} ${JSON.stringify(pay.body)?.slice(0, 160)}`).toBe(true);
+    const summary = (await adm.get(`/api/v1/finance/${w.t}/summary/daily`)).body;
+    return { summary, invoice: (await adm.get(`/api/v1/finance/${w.t}/invoices/${inv.body.id}`)).body };
+  };
+  const rupees = (v: string) => `₹${Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; // as the app prints it
+  const compact = (t: string) => t.replace(/\s+/g, '');
+
+  test('TC_COP_DSH_004 the dashboard shows the day\'s collected revenue', async ({ page }) => {
+    const { summary, invoice } = await takePaymentToday(2000);
+    expect(invoice.status, 'the invoice is paid').toBe('paid'); expect(Number(summary.collected_amount), 'today\'s collected amount includes the payment').toBeGreaterThanOrEqual(2000);
+    await signIn(page, 'admin'); await open(page, '/clinic-admin', 9000);
+    const t = await text(page); note(`summary ${JSON.stringify(summary)}; screen: ${t.slice(0, 260)}`);
+    expect(compact(t), `Daily Revenue shows ${rupees(summary.collected_amount)} (screen: ${t.slice(0, 300)})`).toContain(`DailyRevenue|${rupees(summary.collected_amount)}`);
+    expect(compact(t), 'it is not the placeholder zero').not.toContain('DailyRevenue|₹0.00');
+  });
+
+  test('TC_COP_OWN_003 the owner\'s dashboard Daily Revenue reflects today\'s payments', async ({ page }) => {
+    const { summary } = await takePaymentToday(100);
+    await signIn(page, 'owner', { settle: 5000 }); await open(page, '/clinic-admin', 9000);
+    const t = await text(page); note(`summary ${JSON.stringify(summary)}; screen: ${t.slice(0, 260)}`);
+    expect(compact(t), `Daily Revenue shows ${rupees(summary.collected_amount)} (screen: ${t.slice(0, 300)})`).toContain(`DailyRevenue|${rupees(summary.collected_amount)}`);
+  });
+});
+

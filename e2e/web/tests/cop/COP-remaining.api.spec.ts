@@ -29,13 +29,6 @@ test.describe('00 / 01 / 02 setup, owner and admin', () => {
     const alerts = list((await owner.get(`${w.b}/inventory/alerts`)).body); expect.soft(alerts.length, `Inventory Alerts (${alerts.length}) = items at or below reorder point (${low.length})`).toBe(low.length);
   });
 
-  test('TC_COP_OWN_003 daily revenue reflects today\'s payments @known-gap', async () => {
-    const w = await world(); const owner = await need('owner');
-    const inv = await owner.post(`/api/v1/finance/${w.t}/invoices`, { client_id: w.seed.patients['P-Male'], invoice_number: `COP-OWN003-${Date.now()}`, invoice_date: ymd(new Date()), status: 'issued', subtotal_amount: '100', tax_amount: '0', discount_amount: '0', total_amount: '100', lines: [{ line_type: 'service', description: 'COP', quantity: '1', unit_price: '100', discount_amount: '0', tax_percentage: '0', tax_amount: '0', line_total: '100' }] });
-    why(inv, 'create an invoice to have a payment today');
-    expect(ok(inv.status), `no payment can be recorded today: invoice creation returned ${inv.status} (DEF_COP_018), and the dashboard shows a fixed 0 (DEF_COP_007)`).toBe(true);
-  });
-
   test('TC_COP_OWN_004 a Clinic Admin with a login exists and has the admin role', async () => {
     const w = await world(); const adm = await need('admin'); const owner = await need('owner');
     const entry = list((await owner.get(`${w.b}/staff?limit=500&has_login=true`)).body).find(s => s.staff_type === 'admin');
@@ -84,12 +77,22 @@ test.describe('00 / 01 / 02 setup, owner and admin', () => {
     } finally { await adm.request('DELETE', `${w.b}/treatments/${tr.body.id}`); }
   });
 
-  test('TC_COP_ADM_015 a completed visit produces an automated, editable draft invoice @known-gap', async () => {
+  test('TC_COP_ADM_015 a completed visit produces an automated, editable draft invoice', async () => {
     const w = await world(); const c = await consultAndSign(w, 'P-Female', far()); const doc = await need('doctor'); const adm = await need('admin');
     const done = await doc.request('PATCH', `${w.b}/appointments/${c.ap.id}`, { status: 'COMPLETED' }); expect(ok(done.status), `complete: ${done.status}`).toBe(true);
-    const invs = list((await adm.get(`/api/v1/finance/${w.t}/invoices?client_id=${w.seed.patients['P-Female']}&limit=200`)).body).filter(i => i.appointment_id === c.ap.id);
-    expect(invs.length, 'a draft invoice exists for the completed consultation').toBeGreaterThan(0);
+    const find = async () => list((await adm.get(`/api/v1/finance/${w.t}/invoices?client_id=${w.seed.patients['P-Female']}&limit=200`)).body).filter(i => i.appointment_id === c.ap.id);
+    const invs = await find();
+    expect(invs.length, 'one draft invoice exists for the completed consultation').toBe(1);
+    expect(invs[0].status, 'it is a draft').toBe('draft');
+    // completing again does not make a second one
+    await doc.request('PATCH', `${w.b}/appointments/${c.ap.id}`, { status: 'COMPLETED' });
+    expect((await find()).length, 'still one invoice').toBe(1);
+    // the staff can edit it before finalizing: new lines, totals follow, still a draft
+    const edit = await adm.request('PUT', `/api/v1/finance/${w.t}/invoices/${invs[0].id}/lines`, { lines: [{ line_type: 'service', description: 'Consultation', quantity: '1', unit_price: '700', discount_amount: '100' }] });
+    expect(ok(edit.status), `edit lines: ${edit.status} ${JSON.stringify(edit.body)?.slice(0, 160)}`).toBe(true);
+    expect(Number(edit.body.total_amount), 'the total follows the edited line').toBe(600); expect(edit.body.status).toBe('draft');
   });
+
 });
 
 test.describe('03 Receptionist', () => {
@@ -298,13 +301,21 @@ test.describe('05 Therapist', () => {
     expect(ok(a.status), `first completion ${a.status}`).toBe(true); expect(s2 - s1, `the second completion changed stock by ${s2 - s1}`).toBe(0); note(`stock ${s0} -> ${s1} -> ${s2}; second completion answered ${b.status}`);
   });
 
-  test('TC_COP_THR_009 stock is deducted only after the bill is created and paid @known-gap', async () => {
-    const w = await world(); const th = await need('therapist'); const p = await scheduledPlan(w, 'P-Female2', far(), 2); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
+  test('TC_COP_THR_009 stock is deducted only after the bill is created and paid', async () => {
+    const w = await world(); const th = await need('therapist'); const adm = await need('admin'); const p = await scheduledPlan(w, 'P-Female2', far(), 2); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
+    const item = w.seed.inventory['COP Sesame oil'];
     const row = p.order.rows[0]; await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(p.order));
-    const s0 = await stock(w, 'COP Sesame oil'); await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 50, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: w.seed.inventory['COP Sesame oil'] }] });
-    expect.soft(await stock(w, 'COP Sesame oil'), 'unchanged right after completion').toBe(s0);
-    const inv = await (await need('admin')).post(`/api/v1/finance/${w.t}/invoices`, { client_id: w.seed.patients['P-Female2'], invoice_number: `COP-THR009-${Date.now()}`, invoice_date: ymd(new Date()), status: 'issued', subtotal_amount: '1500', tax_amount: '0', discount_amount: '0', total_amount: '1500', lines: [{ line_type: 'service', description: 'COP', quantity: '1', unit_price: '1500', discount_amount: '0', tax_percentage: '0', tax_amount: '0', line_total: '1500' }] });
-    why(inv, 'create the bill'); expect(ok(inv.status), `the bill cannot be created (${inv.status}), so stock can never be deducted after payment (DEF_COP_018)`).toBe(true);
+    const s0 = await stock(w, 'COP Sesame oil');
+    await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 50, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: item }] });
+    expect(await stock(w, 'COP Sesame oil'), 'unchanged right after completion').toBe(s0);
+    const inv = await adm.post(`/api/v1/finance/${w.t}/invoices`, { client_id: w.seed.patients['P-Female2'], invoice_number: `COP-THR009-${Date.now()}`, invoice_date: ymd(new Date()), status: 'sent',
+      lines: [{ line_type: 'item', description: 'Sesame oil used in the session', inventory_item_id: item, quantity: '50', unit_price: '2' }] });
+    why(inv, 'create the bill'); expect(ok(inv.status), `the bill: ${inv.status} ${JSON.stringify(inv.body)?.slice(0, 160)}`).toBe(true);
+    expect(await stock(w, 'COP Sesame oil'), 'still unchanged once billed but unpaid').toBe(s0);
+    const pay = await adm.post(`/api/v1/finance/${w.t}/payments`, { invoice_id: inv.body.id, client_id: w.seed.patients['P-Female2'], payment_date: ymd(new Date()), amount: '100', payment_method: 'CASH' });
+    expect(ok(pay.status), `payment: ${pay.status} ${JSON.stringify(pay.body)?.slice(0, 160)}`).toBe(true);
+    let after = s0; for (let i = 0; i < 15 && after === s0; i++) { await new Promise(r => setTimeout(r, 1000)); after = await stock(w, 'COP Sesame oil'); }
+    expect(s0 - after, `stock deducted by the 50 ml billed once the invoice is paid (before ${s0}, after ${after})`).toBe(50);
   });
 
   test('TC_COP_THR_010 insufficient stock blocks completion with a clear message', async () => {
@@ -336,10 +347,15 @@ test.describe('07 journey tail', () => {
     expect((await fetchOrder(w, p.sheet.id)).completed_count).toBe(1);
   });
 
-  test('TC_COP_JRN_012 the front desk bills the consultation, session and medicines @known-gap', async () => {
+  test('TC_COP_JRN_012 the front desk bills the consultation, session and medicines and takes payment', async () => {
     const w = await world(); const adm = await need('admin');
-    const r = await adm.post(`/api/v1/finance/${w.t}/invoices`, { client_id: w.seed.patients['P-Female'], invoice_number: `COP-JRN012-${Date.now()}`, invoice_date: ymd(new Date()), status: 'issued', subtotal_amount: '2000', tax_amount: '0', discount_amount: '0', total_amount: '2000', lines: [{ line_type: 'service', description: 'Consultation', quantity: '1', unit_price: '500', discount_amount: '0', tax_percentage: '0', tax_amount: '0', line_total: '500' }, { line_type: 'treatment', description: 'Abhyanga', quantity: '1', unit_price: '1500', discount_amount: '0', tax_percentage: '0', tax_amount: '0', line_total: '1500' }] });
-    why(r, 'bill the visit'); expect(ok(r.status), `billing returned ${r.status} (DEF_COP_018)`).toBe(true);
+    const r = await adm.post(`/api/v1/finance/${w.t}/invoices`, { client_id: w.seed.patients['P-Female'], invoice_number: `COP-JRN012-${Date.now()}`, invoice_date: ymd(new Date()), status: 'sent',
+      lines: [{ line_type: 'consultation', description: 'Consultation', quantity: '1', unit_price: '500' }, { line_type: 'treatment', description: 'Session', quantity: '1', unit_price: '1000' }, { line_type: 'item', description: 'Medicines', quantity: '1', unit_price: '500' }] });
+    why(r, 'bill the visit'); expect(ok(r.status), `billing returned ${r.status}: ${JSON.stringify(r.body)?.slice(0, 160)}`).toBe(true);
+    expect(Number(r.body.total_amount), 'consultation, session and medicines').toBe(2000);
+    const pay = await adm.post(`/api/v1/finance/${w.t}/payments`, { invoice_id: r.body.id, client_id: w.seed.patients['P-Female'], payment_date: ymd(new Date()), amount: '2000', payment_method: 'CASH' });
+    expect(ok(pay.status), `payment: ${pay.status}`).toBe(true);
+    expect((await adm.get(`/api/v1/finance/${w.t}/invoices/${r.body.id}`)).body.status, 'the invoice is paid').toBe('paid');
   });
 
   test('TC_COP_JRN_013 the Doctor completes the consultation', async () => {
