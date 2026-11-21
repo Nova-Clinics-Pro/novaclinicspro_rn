@@ -261,7 +261,7 @@ test.describe('01_Owner and 02_Admin settings', () => {
 
   test('TC_COP_ADM_012 a low-stock item appears in the alerts @known-gap', async () => {
     asOwner('Admin'); const c = await need();
-    const alerts = list((await c.api.get(`${c.b}/inventory/alerts`)).body);
+    const alerts = list((await c.api.get(`${c.b}/inventory/alerts?is_acknowledged=false&limit=500`)).body);
     expect(JSON.stringify(alerts), 'Tablet X (10 in stock, reorder point 20) is listed as an alert').toContain('Tablet X');
   });
 
@@ -502,7 +502,7 @@ test.describe('11_Dashboards_Metrics: figures come from the same lists', () => {
     asOwner('Owner'); const c = await need();
     const inv = list((await c.api.get(`${c.b}/inventory?limit=500`)).body);
     const low = inv.filter(i => Number(i.current_stock) <= Number(i.reorder_point));
-    const alerts = list((await c.api.get(`${c.b}/inventory/alerts`)).body);
+    const alerts = list((await c.api.get(`${c.b}/inventory/alerts?is_acknowledged=false&limit=500`)).body);
     expect(alerts.length, `alerts (${alerts.length}) vs items at or below reorder point (${low.length})`).toBe(low.length);
   });
 });
