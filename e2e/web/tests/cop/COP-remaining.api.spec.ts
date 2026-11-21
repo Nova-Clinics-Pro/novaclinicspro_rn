@@ -229,7 +229,7 @@ test.describe('04 Doctor', () => {
 
   test('TC_COP_DOC_018 the Doctor completes the consultation', async () => {
     const w = await world(); const doc = await need('doctor'); const c = await consultAndSign(w, 'P-Minor', far());
-    const r = await doc.request('PATCH', `${w.b}/appointments/${c.ap.id}`, { status: 'COMPLETED' }); expect(ok(r.status), `complete returned ${r.status}`).toBe(true);
+    const r = await doc.request('PATCH', `${w.b}/appointments/${c.ap.id}`, { status: 'COMPLETED' }); expect(ok(r.status), `complete returned ${r.status} ${JSON.stringify(r.body)?.slice(0, 240)}`).toBe(true);
     const a = list({ items: (await doc.get(`${w.b}/staff/me/dashboard/doctor?date=${ymd(c.day)}`)).body.appointments }).find(x => x.id === c.ap.id); expect(a?.consultation_progress).toBe('closed');
   });
 
