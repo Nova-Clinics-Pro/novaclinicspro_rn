@@ -26,7 +26,7 @@ test.describe('00 / 01 / 02 setup, owner and admin', () => {
     const appts = list((await owner.get(`${w.b}/appointments?date=${d}&limit=100`)).body); expect.soft(appts.length, 'appointments that day').toBeGreaterThan(0);
     const staff = list((await owner.get(`${w.b}/staff?limit=500`)).body).filter(s => s.is_active !== false); expect.soft(list((await owner.get(`${w.b}/staff?limit=500&is_active=true`)).body).length, 'Active Staff = active staff list').toBe(staff.length);
     const low = list((await owner.get(`${w.b}/inventory?limit=500`)).body).filter(i => Number(i.current_stock) <= Number(i.reorder_point));
-    const alerts = list((await owner.get(`${w.b}/inventory/alerts`)).body); expect.soft(alerts.length, `Inventory Alerts (${alerts.length}) = items at or below reorder point (${low.length})`).toBe(low.length);
+    const alerts = list((await owner.get(`${w.b}/inventory/alerts?is_acknowledged=false&limit=500`)).body); expect.soft(alerts.length, `Inventory Alerts (${alerts.length}) = items at or below reorder point (${low.length})`).toBe(low.length);
   });
 
   test('TC_COP_OWN_004 a Clinic Admin with a login exists and has the admin role', async () => {
@@ -139,9 +139,21 @@ test.describe('03 Receptionist', () => {
     });
   }
 
-  test('TC_COP_RCP_023 medicines can be dispensed against a signed prescription @known-gap', async () => {
-    const s = await spec(); const paths = Object.keys(s.paths).filter(p => /dispens/i.test(p));
-    expect(paths.length, 'an API route to dispense a prescription exists').toBeGreaterThan(0);
+  test('TC_COP_RCP_023 a signed prescription is dispensed against a bill; stock leaves once the bill is paid @known-gap', async () => {
+    const w = await world(); const doc = await need('doctor'); const adm = await need('admin'); const c = await consultAndSign(w, 'P-Male', far());
+    const rx = await doc.post(`${w.b}/prescriptions`, { client_id: w.seed.patients['P-Male'], episode_id: c.ep.id, appointment_id: c.ap.id, prescription_data: { medications: [{ name: 'COP Tablet X', dosage: '1', frequency: 'bd', duration: '3 days' }] } });
+    await doc.request('PATCH', `${w.b}/prescriptions/${rx.body.id}`, { status: 'SIGNED' });
+    const item = w.seed.inventory['COP Tablet X (below reorder point)']; const s0 = await stock(w, 'COP Tablet X (below reorder point)');
+    const r = await adm.post(`${w.b}/prescriptions/${rx.body.id}/dispense`, { lines: [{ inventory_item_id: item, quantity: '1' }] });
+    why(r, 'dispense the signed prescription'); expect(ok(r.status), `dispense: ${r.status} ${JSON.stringify(r.body)?.slice(0, 200)}`).toBe(true);
+    expect(r.body.lines?.length, 'the bill has one line per medicine').toBe(1);
+    expect(await stock(w, 'COP Tablet X (below reorder point)'), 'dispensing alone does not take stock').toBe(s0);
+    const again = await adm.post(`${w.b}/prescriptions/${rx.body.id}/dispense`, { lines: [{ inventory_item_id: item, quantity: '1' }] });
+    expect(again.status, 'a prescription is dispensed once').toBe(409);
+    const pay = await adm.post(`/api/v1/finance/${w.t}/payments`, { invoice_id: r.body.id, client_id: w.seed.patients['P-Male'], payment_date: ymd(new Date()), amount: String(r.body.total_amount), payment_method: 'CASH' });
+    expect(ok(pay.status), `payment: ${pay.status} ${JSON.stringify(pay.body)?.slice(0, 160)}`).toBe(true);
+    let after = s0; for (let i = 0; i < 20 && after === s0; i++) { await new Promise(r2 => setTimeout(r2, 1000)); after = await stock(w, 'COP Tablet X (below reorder point)'); }
+    expect(s0 - after, `the dispensed tablet leaves stock once the bill is paid (before ${s0}, after ${after})`).toBe(1);
   });
 
   test('TC_COP_RCP_024 a shared prescription reaches the patient @known-gap', async () => {
@@ -301,27 +313,29 @@ test.describe('05 Therapist', () => {
     expect(ok(a.status), `first completion ${a.status}`).toBe(true); expect(s2 - s1, `the second completion changed stock by ${s2 - s1}`).toBe(0); note(`stock ${s0} -> ${s1} -> ${s2}; second completion answered ${b.status}`);
   });
 
-  test('TC_COP_THR_009 stock is deducted only after the bill is created and paid', async () => {
+  test('TC_COP_THR_009 session materials leave stock at completion; billed items leave stock only once the bill is paid', async () => {
     const w = await world(); const th = await need('therapist'); const adm = await need('admin'); const p = await scheduledPlan(w, 'P-Female2', far(), 2); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
     const item = w.seed.inventory['COP Sesame oil'];
     const row = p.order.rows[0]; await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(p.order));
     const s0 = await stock(w, 'COP Sesame oil');
-    await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 50, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: item }] });
-    expect(await stock(w, 'COP Sesame oil'), 'unchanged right after completion').toBe(s0);
+    const done = await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 50, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: item }] });
+    why(done, 'complete the session with 50 ml of oil'); expect(ok(done.status), `completion: ${done.status} ${JSON.stringify(done.body)?.slice(0, 200)}`).toBe(true);
+    const s1 = await stock(w, 'COP Sesame oil');
+    expect(s0 - s1, `the 50 ml the therapist used leaves stock at completion (before ${s0}, after ${s1}); therapist materials are not billed`).toBe(50);
     const inv = await adm.post(`/api/v1/finance/${w.t}/invoices`, { client_id: w.seed.patients['P-Female2'], invoice_number: `COP-THR009-${Date.now()}`, invoice_date: ymd(new Date()), status: 'sent',
-      lines: [{ line_type: 'item', description: 'Sesame oil used in the session', inventory_item_id: item, quantity: '50', unit_price: '2' }] });
+      lines: [{ line_type: 'item', description: 'Sesame oil sold', inventory_item_id: item, quantity: '50', unit_price: '2' }] });
     why(inv, 'create the bill'); expect(ok(inv.status), `the bill: ${inv.status} ${JSON.stringify(inv.body)?.slice(0, 160)}`).toBe(true);
-    expect(await stock(w, 'COP Sesame oil'), 'still unchanged once billed but unpaid').toBe(s0);
+    expect(await stock(w, 'COP Sesame oil'), 'a billed but unpaid item has not left stock').toBe(s1);
     const pay = await adm.post(`/api/v1/finance/${w.t}/payments`, { invoice_id: inv.body.id, client_id: w.seed.patients['P-Female2'], payment_date: ymd(new Date()), amount: '100', payment_method: 'CASH' });
     expect(ok(pay.status), `payment: ${pay.status} ${JSON.stringify(pay.body)?.slice(0, 160)}`).toBe(true);
-    let after = s0; for (let i = 0; i < 15 && after === s0; i++) { await new Promise(r => setTimeout(r, 1000)); after = await stock(w, 'COP Sesame oil'); }
-    expect(s0 - after, `stock deducted by the 50 ml billed once the invoice is paid (before ${s0}, after ${after})`).toBe(50);
+    let after = s1; for (let i = 0; i < 20 && after === s1; i++) { await new Promise(r => setTimeout(r, 1000)); after = await stock(w, 'COP Sesame oil'); }
+    expect(s1 - after, `the 50 ml billed leave stock once the bill is paid (before ${s1}, after ${after})`).toBe(50);
   });
 
   test('TC_COP_THR_010 insufficient stock blocks completion with a clear message', async () => {
     const w = await world(); const th = await need('therapist'); const p = await scheduledPlan(w, 'P-Female', far(), 2); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
     const row = p.order.rows[0]; await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(p.order));
-    const r = await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Herbal powder (zero stock)', quantity_used: 20, unit: 'g', ml_per_unit: 1, category: 'powder', inventory_item_id: w.seed.inventory['COP Herbal powder (zero stock)'] }] });
+    const r = await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Herbal powder (zero stock)', quantity_used: 20, unit: 'g', ml_per_unit: 1, category: 'medicine', inventory_item_id: w.seed.inventory['COP Herbal powder (zero stock)'] }] });
     why(r, 'complete needing 20 g from an item at 0'); expect(refused(r.status), `completion returned ${r.status}`).toBe(true); expect(JSON.stringify(r.body)).toMatch(/herbal|stock|insufficient/i);
     expect(String((await fetchOrder(w, p.sheet.id)).rows[0].status), 'nothing partially recorded').not.toBe('COMPLETED');
   });
