@@ -321,6 +321,9 @@
     "currentClinic": "वर्तमान क्लिनिक",
     "noClinic": "कोई क्लिनिक नहीं सौंपा गया"
   },
+  "clinicDashboard": {
+    "dailyRevenue": "दैनिक राजस्व"
+  },
   "dashboardTitles": {
     "clinicOwner": "क्लिनिक स्वामी डैशबोर्ड",
     "clinicAdmin": "क्लिनिक प्रशासक डैशबोर्ड"

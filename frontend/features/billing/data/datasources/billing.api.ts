@@ -17,6 +17,7 @@ import {
   ListInvoicesParams,
   ListPaymentsParams,
   VisitScopedInvoiceCreateRequest,
+  DailyFinanceSummaryResponse,
 } from '../models/billing.dtos';
 
 // ============================================
@@ -136,3 +137,23 @@ export const createPaymentApi = async (
   );
   return response.data;
 };
+
+// ============================================
+// DAILY SUMMARY
+// ============================================
+
+/**
+ * What the clinic billed and collected on a day (default: today at the clinic) and what it is still owed
+ * GET /api/v1/finance/{tenant_id}/summary/daily
+ */
+export const getDailyFinanceSummaryApi = async (
+  tenantId: string,
+  date?: string
+): Promise<DailyFinanceSummaryResponse> => {
+  const response = await axiosClient.get(
+    `/api/v1/finance/${tenantId}/summary/daily`,
+    { params: date ? { date } : undefined }
+  );
+  return response.data;
+};
+

@@ -28,7 +28,7 @@ import { spacing } from '../../core/theme/spacing';
 import { typography } from '../../core/theme/typography';
 import { useAuth } from '../../features/auth/presentation/hooks/useAuth';
 import { useInventoryItemsListQuery, useInventoryAlertsListQuery } from '../../features/inventory/data/repositories/inventory.repository.impl';
-import { useSubscriptionSummaryQuery } from '../../features/billing/data/repositories/billing.repository.impl';
+import { useDailyFinanceSummaryQuery, useSubscriptionSummaryQuery } from '../../features/billing/data/repositories/billing.repository.impl';
 import { useTreatmentOrdersQuery } from '../../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import { useNotificationBadgeCount } from '../../features/notifications/presentation/hooks/useNotificationBadgeCount';
 import { formatInrCurrency } from '../../core/utils/currency';
@@ -101,6 +101,13 @@ export default function ClinicAdminDashboard() {
   // Fetch billing summary for dashboard
   const { data: billingSummary, isLoading: billingLoading } = useSubscriptionSummaryQuery(
     tenantId,
+    { enabled: !!tenantId }
+  );
+
+  // Today's revenue: what the clinic collected today (clinic time), from the server, not computed here
+  const { data: dailySummary, isLoading: revenueLoading, isError: revenueError } = useDailyFinanceSummaryQuery(
+    tenantId,
+    undefined,
     { enabled: !!tenantId }
   );
 
@@ -228,8 +235,8 @@ export default function ClinicAdminDashboard() {
             </View>
             <View style={[styles.statItem, !isMobile && styles.statItemWeb]}>
               <StatCard
-                title="Daily Revenue"
-                value={formatInrCurrency(0)}
+                title={t('clinicDashboard.dailyRevenue')}
+                value={revenueLoading ? '...' : revenueError ? '—' : formatInrCurrency(dailySummary?.collected_amount ?? 0)}
                 icon="cash"
                 color={colors.warning.main}
               />

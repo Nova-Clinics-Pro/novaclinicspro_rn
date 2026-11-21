@@ -179,6 +179,19 @@ export interface InvoiceResponse {
   created_at: string;
   updated_at: string;
   lines?: InvoiceLineResponse[];
+  /** Collected against this invoice and still owed: derived by the server from its payments. */
+  amount_paid?: string;
+  balance_due?: string | null;
+}
+
+/** Billed, collected and outstanding amounts for one clinic-local day (GET /finance/{tenant}/summary/daily). */
+export interface DailyFinanceSummaryResponse {
+  date: string;
+  /** Payments dated that day: the day's revenue shown on the dashboard. */
+  collected_amount: string;
+  billed_amount: string;
+  payments_count: number;
+  outstanding_amount: string;
 }
 
 /** Payment response */

@@ -159,7 +159,7 @@ test.describe('01_Owner and 02_Admin settings', () => {
     asOwner('Admin'); const c = await need();
     const tr = list((await c.api.get(`${c.b}/treatments?limit=500&code=COPABH`)).body)[0];
     const inv = await invoiceOrBlock(c, {
-      client_id: c.seed.patients['P-Male'], invoice_number: `COP-ADM006-${Date.now()}`, invoice_date: ymd(new Date()), status: 'issued',
+      client_id: c.seed.patients['P-Male'], invoice_number: `COP-ADM006-${Date.now()}`, invoice_date: ymd(new Date()), status: 'sent',
       subtotal_amount: '1500', tax_amount: '0', discount_amount: '0', total_amount: '1500',
       lines: [{ line_type: 'treatment', treatment_id: tr.id, description: 'Abhyanga', quantity: '1', unit_price: '1500', discount_amount: '0', tax_percentage: '0', tax_amount: '0', line_total: '1500' }],
     });
@@ -206,7 +206,7 @@ test.describe('01_Owner and 02_Admin settings', () => {
     asOwner('Admin'); const c = await need(); const w = when(DAY + 5, 9, 0);
     const a = await consult(c, 'P-Male', 'D1', 'C-1', w); expect(ok(a.status), `appointment: ${a.status}`).toBe(true);
     const inv = await c.api.post(`/api/v1/finance/${c.t}/invoices`, {
-      client_id: c.seed.patients['P-Male'], appointment_id: a.body.id, invoice_number: `COP-ADM014-${Date.now()}`, invoice_date: ymd(new Date()), status: 'issued',
+      client_id: c.seed.patients['P-Male'], appointment_id: a.body.id, invoice_number: `COP-ADM014-${Date.now()}`, invoice_date: ymd(new Date()), status: 'sent',
       subtotal_amount: '500', tax_amount: '0', discount_amount: '0', total_amount: '500',
       lines: [{ line_type: 'service', description: 'Consultation fee', quantity: '1', unit_price: '500', discount_amount: '0', tax_percentage: '0', tax_amount: '0', line_total: '500' }],
     });
@@ -380,7 +380,7 @@ test.describe('03_Receptionist (front-desk work)', () => {
     asOwner('Receptionist'); const c = await need();
     const tr = list((await c.api.get(`${c.b}/treatments?limit=500&code=COPABH`)).body)[0];
     const mk = await invoiceOrBlock(c, {
-      client_id: c.seed.patients['P-Male'], invoice_number: `COP-RCP021-${Date.now()}`, invoice_date: ymd(new Date()), status: 'issued',
+      client_id: c.seed.patients['P-Male'], invoice_number: `COP-RCP021-${Date.now()}`, invoice_date: ymd(new Date()), status: 'sent',
       subtotal_amount: '2000', tax_amount: '0', discount_amount: '0', total_amount: '2000',
       lines: [
         { line_type: 'service', description: 'Consultation fee', quantity: '1', unit_price: '500', discount_amount: '0', tax_percentage: '0', tax_amount: '0', line_total: '500' },
@@ -398,7 +398,7 @@ test.describe('03_Receptionist (front-desk work)', () => {
   test('TC_COP_RCP_022 a partial payment leaves the balance outstanding', async () => {
     asOwner('Receptionist'); const c = await need();
     const mk = await invoiceOrBlock(c, {
-      client_id: c.seed.patients['P-Male'], invoice_number: `COP-RCP022-${Date.now()}`, invoice_date: ymd(new Date()), status: 'issued',
+      client_id: c.seed.patients['P-Male'], invoice_number: `COP-RCP022-${Date.now()}`, invoice_date: ymd(new Date()), status: 'sent',
       subtotal_amount: '2000', tax_amount: '0', discount_amount: '0', total_amount: '2000',
       lines: [{ line_type: 'service', description: 'Course of therapy', quantity: '1', unit_price: '2000', discount_amount: '0', tax_percentage: '0', tax_amount: '0', line_total: '2000' }],
     });
@@ -406,8 +406,9 @@ test.describe('03_Receptionist (front-desk work)', () => {
     expect(ok(pay.status), `payment: ${pay.status}`).toBe(true);
     const inv = (await c.api.get(`/api/v1/finance/${c.t}/invoices/${mk.body.id}`)).body;
     expect(String(inv.status).toLowerCase(), 'status').toMatch(/partial/);
-    const paid = list((await c.api.get(`/api/v1/finance/${c.t}/invoices/${mk.body.id}/payments`)).body).reduce((s, p) => s + Number(p.amount), 0);
-    expect(2000 - paid, 'outstanding').toBe(1000);
+    // the front desk reads the invoice, not the payment list (payment.read is for owner and admin): the server reports the balance on it
+    expect(Number(inv.amount_paid), 'the invoice reports what was collected').toBe(1000);
+    expect(Number(inv.balance_due), 'and what is still owed').toBe(1000);
   });
 });
 
