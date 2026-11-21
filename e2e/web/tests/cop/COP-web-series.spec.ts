@@ -66,16 +66,19 @@ async function seriesCreated(w: World, start: Date, patient = 'P-Female2', days 
 
 test.describe('Web UI: multi-day series booking', () => {
   test('TC_COP_RCP_009 a 7-day series can be previewed before booking', async ({ page }) => {
-    const w = await world(); const start = monday(); await signIn(page);
-    await openPreview(page, w, { start, days: 7 }); const t = await text(page); note(`preview: ${t.slice(0, 700)}`);
-    const dated = (t.match(/Session \d \| (Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d+ \w+/g) ?? []).length;
-    expect(dated, 'seven dated sessions are listed').toBe(7);
+    const w = await world(); await signIn(page); let t = '';
+    // bookings left by earlier runs can sit in a random week: look for a week without any (a leftover is not what is under test)
+    for (let attempt = 0; attempt < 4; attempt++) { await openPreview(page, w, { start: monday(), days: 7 }); t = await text(page); if (/All 7 sessions are available/.test(t)) break; }
+    note(`preview: ${t.slice(0, 700)}`);
+    const dated = t.match(/Session \d \| (Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d+ \w+/g) ?? [];
+    expect(dated.length, 'seven dated sessions are listed').toBe(7);
+    // the clinic is closed on Sundays: a closed day is not counted, so the series runs on to the next Monday
+    expect(dated.some(d => /\| Sun,/.test(d)), `no session falls on the closed Sunday (${dated.join(' ; ')})`).toBe(false);
+    expect(dated[6], 'the seventh session is the following Monday').toMatch(/\| Mon,/);
+    expect(t, `the whole series is available (screen: ${t.slice(260, 1500)})`).toMatch(/All 7 sessions are available/);
     expect(t, 'the therapist is named').toContain('COP Login Therapist');
     expect(t, 'no therapy session is placed in a consultation room').not.toMatch(/Consultation/);
-    expect(t, 'six sessions have a therapy room').toMatch(/Therapy/);
-    // the 7th day is a Sunday and the clinic is closed: it is marked as a conflict instead of being offered
-    expect(t, 'the closed Sunday is the one conflict').toMatch(/1 conflict\(s\) remaining/);
-    const rows = t.split(/Session (?=\d)/).slice(1); expect(rows.map((r, i) => /Not assigned/.test(r) ? i + 1 : 0).filter(Boolean), 'only day 7 is unassigned').toEqual([7]);
+    expect(t, 'every session has a therapy room').not.toMatch(/Not assigned/);
   });
 
   test('TC_COP_RCP_010 the series is confirmed as one series with a session number on each appointment', async ({ page }) => {
