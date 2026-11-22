@@ -155,7 +155,7 @@ test.describe('07 journey: the 7-day treatment plan, with the real roles', () =>
       const without = await adm.request('PATCH', `${w.ts}/${J.sheet.id}/rows/bulk-schedule`, { assignments: mk() }, ver(await fetchOrder(w, J.sheet.id)));
       note(`scheduling without a time answers ${without.status}`);
     }
-    expect(ok(withTime.status), `bulk schedule with scheduled_time (what the app always sends) returned ${withTime.status}`).toBe(true);
+    expect(ok(withTime.status), `bulk schedule with scheduled_time (what the app always sends) returned ${withTime.status} ${JSON.stringify(withTime.body)?.slice(0, 300)}`).toBe(true);
   });
 
   test('TC_COP_JRN_010 after scheduling, the plan is fully scheduled and each day has a date', async () => {

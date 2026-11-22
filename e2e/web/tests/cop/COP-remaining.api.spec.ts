@@ -131,7 +131,7 @@ test.describe('03 Receptionist', () => {
       const r = call === 'schedule' ? await rec.request('PATCH', `${w.ts}/${mk.body.id}/rows/bulk-schedule`, { assignments: o.rows.map((x: any, i: number) => ({ row_id: x.id, assigned_staff_id: w.therapist.id, therapist_ids: [w.therapist.id], room_id: w.seed.rooms['T-1'], scheduled_date: ymd(workday(far() + i)) })) }, ver(o))
         : call === 'hold' ? await rec.post(`${w.ts}/${mk.body.id}/hold`, { hold_expires_at: new Date(Date.now() + 7 * 864e5).toISOString() }, ver(o))
         : await rec.post(`${w.ts}/${mk.body.id}/cancel`, { reason_code: 'COST', reason_text: 'COP' }, ver(o));
-      why(r, `Receptionist ${call}`); expect(ok(r.status), `the Receptionist's ${call} returned ${r.status}`).toBe(true);
+      why(r, `Receptionist ${call}`); expect(ok(r.status), `the Receptionist's ${call} returned ${r.status} ${JSON.stringify(r.body).slice(0, 300)}`).toBe(true);
       void adm;
     });
   }
