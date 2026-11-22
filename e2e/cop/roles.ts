@@ -49,13 +49,20 @@ export const fetchOrder = async (w: World, id: string) => list((await (await nee
 
 /** A plan with `rows` daily rows, ordered and scheduled (without a time: scheduling with a time answers 500, DEF_COP_029) to the logged-in therapist. */
 export async function scheduledPlan(w: World, patient: string, day: number, rows = 3) {
+  // The suite reuses one therapist and picks random far-off dates, so a date can already be taken by an earlier run's plan: the
+  // booking rules then refuse the clash (correctly). Try another date rather than report a blocked plan.
+  let plan = await schedulePlanOnce(w, patient, day, rows);
+  for (let attempt = 0; attempt < 4 && !plan.scheduled && /already has an appointment/i.test(plan.scheduleError); attempt++) plan = await schedulePlanOnce(w, patient, far(), rows);
+  return plan;
+}
+async function schedulePlanOnce(w: World, patient: string, day: number, rows: number) {
   const c = await consultAndSign(w, patient, day); const doc = await need('doctor'); const adm = await need('admin');
   const mk = await doc.post(`/api/v1/clinic/tenants/${w.t}/treatment-sheets`, { client_id: w.seed.patients[patient], treatment_id: w.seed.treatments.COPABH, start_date: ymd(c.day), duration_days: rows, case_sheet_id: c.cs.id, episode_id: c.ep.id, appointment_id: c.ap.id });
   await doc.post(`${w.ts}/${mk.body.id}/send-to-scheduling`, { planned_sessions: rows, frequency: 'daily', recommended_therapy: 'Abhyanga' }, ver(mk.body));
   const o = await fetchOrder(w, mk.body.id); const days: string[] = []; const d = new Date(c.day); while (days.length < o.rows.length) { if (d.getDay() !== 0) days.push(ymd(d)); d.setDate(d.getDate() + 1); }
   const sc = await adm.request('PATCH', `${w.ts}/${mk.body.id}/rows/bulk-schedule`, { assignments: o.rows.map((r: any, i: number) => ({ row_id: r.id, assigned_staff_id: w.therapist.id, therapist_ids: [w.therapist.id], room_id: w.seed.rooms['T-1'], scheduled_date: days[i] })) }, ver(o));
   const sched = await fetchOrder(w, mk.body.id);
-  return { ...c, sheet: mk.body, order: sched, days, scheduled: ok(sc.status) };
+  return { ...c, sheet: mk.body, order: sched, days, scheduled: ok(sc.status), scheduleError: ok(sc.status) ? '' : `${sc.status} ${JSON.stringify(sc.body).slice(0, 200)}` };
 }
 export const stock = async (w: World, name: string) => Number(list((await (await need('admin')).get(`${w.b}/inventory?limit=500`)).body).find(i => i.name === name)?.current_stock);
 

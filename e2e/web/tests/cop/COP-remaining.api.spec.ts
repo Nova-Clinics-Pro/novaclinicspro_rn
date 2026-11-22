@@ -133,8 +133,8 @@ test.describe('03 Receptionist', () => {
       const o = await fetchOrder(w, mk.body.id);
       const r = call === 'schedule' ? await rec.request('PATCH', `${w.ts}/${mk.body.id}/rows/bulk-schedule`, { assignments: o.rows.map((x: any, i: number) => ({ row_id: x.id, assigned_staff_id: w.therapist.id, therapist_ids: [w.therapist.id], room_id: w.seed.rooms['T-1'], scheduled_date: ymd(workday(far() + i)) })) }, ver(o))
         : call === 'hold' ? await rec.post(`${w.ts}/${mk.body.id}/hold`, { hold_expires_at: new Date(Date.now() + 7 * 864e5).toISOString() }, ver(o))
-        : await rec.post(`${w.ts}/${mk.body.id}/cancel`, { reason_code: 'COST', reason_text: 'COP' }, ver(o));
-      why(r, `Receptionist ${call}`); expect(ok(r.status), `the Receptionist's ${call} returned ${r.status}`).toBe(true);
+        : await rec.post(`${w.ts}/${mk.body.id}/cancel`, { reason_code: 'financial', reason_text: 'COP' }, ver(o));
+      why(r, `Receptionist ${call}`); expect(ok(r.status), `the Receptionist's ${call} returned ${r.status} ${JSON.stringify(r.body).slice(0, 300)}`).toBe(true);
       void adm;
     });
   }
@@ -385,13 +385,14 @@ test.describe('07 journey tail', () => {
   });
 
   test('TC_COP_JRN_015 after all sessions are completed the plan is COMPLETED', async () => {
-    const w = await world(); const th = await need('therapist'); const p = await scheduledPlan(w, 'P-Female3', far(), 7); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
-    let order = p.order;
+    const w = await world(); const th = await need('therapist'); const p = await scheduledPlan(w, 'P-Female3', far(), 7); test.skip(!p.scheduled, `blocked: the plan could not be scheduled (${p.scheduleError})`);
+    let order = p.order; const steps: string[] = [];
     for (const row of order.rows) {
-      await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(await fetchOrder(w, p.sheet.id)));
-      await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 5, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: w.seed.inventory['COP Sesame oil'] }] });
+      const st = await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(await fetchOrder(w, p.sheet.id)));
+      const done = await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 5, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: w.seed.inventory['COP Sesame oil'] }] });
+      steps.push(`start ${st.status} complete ${done.status}${ok(done.status) ? '' : ' ' + JSON.stringify(done.body).slice(0, 160)}`);
     }
-    order = await fetchOrder(w, p.sheet.id); expect(order?.completed_count, 'all 7 completed').toBe(7); expect(String(order?.state), 'plan state').toBe('COMPLETED');
+    order = (await th.get(`${w.ts}/${p.sheet.id}`)).body; note(`sheet after the last session: ${JSON.stringify({ state: order?.state, keys: Object.keys(order ?? {}).slice(0, 40), rows: (order?.rows ?? []).map((r: any) => r.status) })}`); expect(order?.completed_count, `all 7 completed (rows ${(order?.rows ?? []).map((r: any) => r.status).join(',')}; state ${order?.state}; ${steps.join(' | ')})`).toBe(7); expect(String(order?.state), 'plan state').toBe('COMPLETED');
   });
 
   test('TC_COP_JRN_016 a therapy works without any episode', async () => {
@@ -408,8 +409,11 @@ test.describe('07 journey tail', () => {
     try {
       await adm.request('PATCH', `${w.b}/leave/${lv.body.id}/approve`, {});
       const a = (await adm.get(`${w.b}/appointments/${ids[3]}`)).body; note(`day-4 appointment after leave: ${JSON.stringify({ status: a.status, flags: Object.keys(a).filter(k => /conflict|flag|warn/i.test(k) && a[k]) })}`);
-      expect(JSON.stringify(a), 'the day-4 appointment is flagged as conflicted').toMatch(/conflict/i);
-    } finally { await adm.request('PATCH', `${w.b}/leave/${lv.body.id}/cancel`, {}); }
+      expect(a.is_conflicted, 'the day-4 appointment is flagged as conflicted').toBe(true);
+      expect((a.conflicts ?? []).map((c: any) => c.kind), 'the reason is the therapist leave').toContain('therapist_on_leave');
+      expect((await adm.get(`${w.b}/appointments/${ids[0]}`)).body.is_conflicted, 'the other days stay unflagged').toBe(false);
+    } finally { const cancel = await adm.request('PATCH', `${w.b}/leave/${lv.body.id}/cancel?staff_id=${w.seed.staff.T3}`, {}); expect(ok(cancel.status), `cancel leave ${cancel.status}`).toBe(true); }
+    expect((await adm.get(`${w.b}/appointments/${ids[3]}`)).body.is_conflicted, 'cancelling the leave clears the flag').toBe(false);
   });
 
   test('TC_COP_JRN_018 a room made inactive flags its appointments and takes no new bookings', async () => {
@@ -420,7 +424,7 @@ test.describe('07 journey tail', () => {
       const off = await adm.request('PATCH', `${w.b}/rooms/${room.body.id}`, { is_active: false }); expect(ok(off.status), `deactivate ${off.status}`).toBe(true);
       const again = await book(w, 'receptionist', { client_id: w.seed.patients['P-Female3'], therapist_ids: [w.seed.staff.T3], room_id: room.body.id, treatment_id: w.seed.treatments.COPABH, appointment_start: slot(workday(far()), 9, 0, 60).start, appointment_end: slot(workday(far()), 9, 0, 60).end }); why(again, 'book into an inactive room');
       expect.soft(refused(again.status), `a new booking in the inactive room returned ${again.status}`).toBe(true);
-      const old = (await adm.get(`${w.b}/appointments/${a.body.id}`)).body; expect.soft(JSON.stringify(old), 'the existing appointment is flagged').toMatch(/room.*(inactive|unavailable)|conflict/i);
+      const old = (await adm.get(`${w.b}/appointments/${a.body.id}`)).body; expect.soft(old.is_conflicted, 'the existing appointment is flagged').toBe(true); expect.soft((old.conflicts ?? []).map((c: any) => c.kind), 'the reason is the room').toContain('room_unavailable');
     } finally { await adm.request('DELETE', `${w.b}/rooms/${room.body.id}`); }
   });
 });

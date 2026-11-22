@@ -155,7 +155,7 @@ test.describe('07 journey: the 7-day treatment plan, with the real roles', () =>
       const without = await adm.request('PATCH', `${w.ts}/${J.sheet.id}/rows/bulk-schedule`, { assignments: mk() }, ver(await fetchOrder(w, J.sheet.id)));
       note(`scheduling without a time answers ${without.status}`);
     }
-    expect(ok(withTime.status), `bulk schedule with scheduled_time (what the app always sends) returned ${withTime.status}`).toBe(true);
+    expect(ok(withTime.status), `bulk schedule with scheduled_time (what the app always sends) returned ${withTime.status} ${JSON.stringify(withTime.body)?.slice(0, 300)}`).toBe(true);
   });
 
   test('TC_COP_JRN_010 after scheduling, the plan is fully scheduled and each day has a date', async () => {
@@ -181,7 +181,7 @@ test.describe('07 journey: 6b defer and 6c reject', () => {
   test('TC_COP_JRN_009 6c rejects: the plan is cancelled with a recorded reason', async () => {
     const w = await world(); const adm = await need('admin');
     const p = await orderedPlan(w, 'P-Female3', FAR()); test.skip(!ok(p.sent.status), `blocked: could not order a plan (${p.sent.status})`);
-    const reasons = list((await adm.get(`${w.ts}/denial-reasons`)).body); const code = reasons[0]?.code ?? reasons[0]?.reason_code ?? 'cost';
+    const reasons = (await adm.get(`${w.ts}/denial-reasons`)).body?.reasons ?? []; const code = reasons[0]?.code; expect(code, 'the clinic offers denial reasons').toBeTruthy();
     const res = await adm.post(`${w.ts}/${p.sheet.id}/cancel`, { reason_code: code, reason_text: 'COP: patient declined' }, ver(await fetchOrder(w, p.sheet.id))); why(res, 'cancel with a reason');
     expect(ok(res.status), `cancel returned ${res.status}`).toBe(true);
     const o = await fetchOrder(w, p.sheet.id); const state = o ? String(o.state) : 'removed from the worklist';
