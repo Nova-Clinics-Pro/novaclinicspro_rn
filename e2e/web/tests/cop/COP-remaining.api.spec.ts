@@ -130,7 +130,7 @@ test.describe('03 Receptionist', () => {
       const o = await fetchOrder(w, mk.body.id);
       const r = call === 'schedule' ? await rec.request('PATCH', `${w.ts}/${mk.body.id}/rows/bulk-schedule`, { assignments: o.rows.map((x: any, i: number) => ({ row_id: x.id, assigned_staff_id: w.therapist.id, therapist_ids: [w.therapist.id], room_id: w.seed.rooms['T-1'], scheduled_date: ymd(workday(far() + i)) })) }, ver(o))
         : call === 'hold' ? await rec.post(`${w.ts}/${mk.body.id}/hold`, { hold_expires_at: new Date(Date.now() + 7 * 864e5).toISOString() }, ver(o))
-        : await rec.post(`${w.ts}/${mk.body.id}/cancel`, { reason_code: 'COST', reason_text: 'COP' }, ver(o));
+        : await rec.post(`${w.ts}/${mk.body.id}/cancel`, { reason_code: 'financial', reason_text: 'COP' }, ver(o));
       why(r, `Receptionist ${call}`); expect(ok(r.status), `the Receptionist's ${call} returned ${r.status} ${JSON.stringify(r.body).slice(0, 300)}`).toBe(true);
       void adm;
     });
@@ -355,13 +355,14 @@ test.describe('07 journey tail', () => {
   });
 
   test('TC_COP_JRN_015 after all sessions are completed the plan is COMPLETED', async () => {
-    const w = await world(); const th = await need('therapist'); const p = await scheduledPlan(w, 'P-Female3', far(), 7); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
-    let order = p.order;
+    const w = await world(); const th = await need('therapist'); const p = await scheduledPlan(w, 'P-Female3', far(), 7); test.skip(!p.scheduled, `blocked: the plan could not be scheduled (${p.scheduleError})`);
+    let order = p.order; const steps: string[] = [];
     for (const row of order.rows) {
-      await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(await fetchOrder(w, p.sheet.id)));
-      await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 5, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: w.seed.inventory['COP Sesame oil'] }] });
+      const st = await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(await fetchOrder(w, p.sheet.id)));
+      const done = await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 5, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: w.seed.inventory['COP Sesame oil'] }] });
+      steps.push(`start ${st.status} complete ${done.status}${ok(done.status) ? '' : ' ' + JSON.stringify(done.body).slice(0, 160)}`);
     }
-    order = await fetchOrder(w, p.sheet.id); expect(order?.completed_count, 'all 7 completed').toBe(7); expect(String(order?.state), 'plan state').toBe('COMPLETED');
+    order = (await th.get(`${w.ts}/${p.sheet.id}`)).body; note(`sheet after the last session: ${JSON.stringify({ state: order?.state, keys: Object.keys(order ?? {}).slice(0, 40), rows: (order?.rows ?? []).map((r: any) => r.status) })}`); expect(order?.completed_count, `all 7 completed (rows ${(order?.rows ?? []).map((r: any) => r.status).join(',')}; state ${order?.state}; ${steps.join(' | ')})`).toBe(7); expect(String(order?.state), 'plan state').toBe('COMPLETED');
   });
 
   test('TC_COP_JRN_016 a therapy works without any episode', async () => {
