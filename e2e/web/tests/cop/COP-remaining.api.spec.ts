@@ -378,8 +378,11 @@ test.describe('07 journey tail', () => {
     try {
       await adm.request('PATCH', `${w.b}/leave/${lv.body.id}/approve`, {});
       const a = (await adm.get(`${w.b}/appointments/${ids[3]}`)).body; note(`day-4 appointment after leave: ${JSON.stringify({ status: a.status, flags: Object.keys(a).filter(k => /conflict|flag|warn/i.test(k) && a[k]) })}`);
-      expect(JSON.stringify(a), 'the day-4 appointment is flagged as conflicted').toMatch(/conflict/i);
-    } finally { await adm.request('PATCH', `${w.b}/leave/${lv.body.id}/cancel`, {}); }
+      expect(a.is_conflicted, 'the day-4 appointment is flagged as conflicted').toBe(true);
+      expect((a.conflicts ?? []).map((c: any) => c.kind), 'the reason is the therapist leave').toContain('therapist_on_leave');
+      expect((await adm.get(`${w.b}/appointments/${ids[0]}`)).body.is_conflicted, 'the other days stay unflagged').toBe(false);
+    } finally { const cancel = await adm.request('PATCH', `${w.b}/leave/${lv.body.id}/cancel?staff_id=${w.seed.staff.T3}`, {}); expect(ok(cancel.status), `cancel leave ${cancel.status}`).toBe(true); }
+    expect((await adm.get(`${w.b}/appointments/${ids[3]}`)).body.is_conflicted, 'cancelling the leave clears the flag').toBe(false);
   });
 
   test('TC_COP_JRN_018 a room made inactive flags its appointments and takes no new bookings', async () => {
@@ -390,7 +393,7 @@ test.describe('07 journey tail', () => {
       const off = await adm.request('PATCH', `${w.b}/rooms/${room.body.id}`, { is_active: false }); expect(ok(off.status), `deactivate ${off.status}`).toBe(true);
       const again = await book(w, 'receptionist', { client_id: w.seed.patients['P-Female3'], therapist_ids: [w.seed.staff.T3], room_id: room.body.id, treatment_id: w.seed.treatments.COPABH, appointment_start: slot(workday(far()), 9, 0, 60).start, appointment_end: slot(workday(far()), 9, 0, 60).end }); why(again, 'book into an inactive room');
       expect.soft(refused(again.status), `a new booking in the inactive room returned ${again.status}`).toBe(true);
-      const old = (await adm.get(`${w.b}/appointments/${a.body.id}`)).body; expect.soft(JSON.stringify(old), 'the existing appointment is flagged').toMatch(/room.*(inactive|unavailable)|conflict/i);
+      const old = (await adm.get(`${w.b}/appointments/${a.body.id}`)).body; expect.soft(old.is_conflicted, 'the existing appointment is flagged').toBe(true); expect.soft((old.conflicts ?? []).map((c: any) => c.kind), 'the reason is the room').toContain('room_unavailable');
     } finally { await adm.request('DELETE', `${w.b}/rooms/${room.body.id}`); }
   });
 });
