@@ -8,6 +8,7 @@ jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 
 const fillRequired = (screen: ReturnType<typeof render>) => {
   fireEvent.changeText(screen.getByPlaceholderText('Enter full name'), 'P-2');
+  fireEvent.changeText(screen.getByPlaceholderText('Phone number'), '9100000201');
   fireEvent.press(screen.getByText('Female'));
 };
 
