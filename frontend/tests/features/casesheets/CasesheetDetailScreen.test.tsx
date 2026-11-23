@@ -35,6 +35,10 @@ jest.mock('../../../features/casesheets/data/repositories/casesheets.repository.
   useTransitionCasesheetStatusMutation: jest.fn(),
   usePrintCasesheetMutation: jest.fn(),
   useArchiveCasesheetMutation: jest.fn(),
+  useCasesheetVersionQuery: jest.fn(() => ({ data: undefined, isLoading: false })),
+  useCasesheetVersionsQuery: jest.fn(() => ({ data: [], isLoading: false })),
+  useAmendCasesheetMutation: jest.fn(() => ({ mutateAsync: jest.fn(), isPending: false })),
+  usePrintCasesheetVersionMutation: jest.fn(() => ({ mutateAsync: jest.fn(), isPending: false })),
 }));
 jest.mock('../../../features/clients/data/repositories/clients.repository.impl', () => ({
   useClientDetailQuery: jest.fn(),

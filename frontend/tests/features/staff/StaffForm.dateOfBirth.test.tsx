@@ -12,11 +12,8 @@ jest.mock('../../../core/localization/useTranslation', () => ({
 }));
 
 jest.mock('../../../core/theme/useClinicTheme', () => ({
-  useClinicTheme: () => ({
-    colors: { text: { primary: '#000', secondary: '#666' }, border: { default: '#ddd' } },
-    spacing: { xs: 4, md: 16, xxl: 48 },
-    typography: { body2: {} },
-  }),
+  useClinicTheme: () => jest.requireActual('../../../core/theme/useClinicTheme').getTheme(),
+  getTheme: jest.requireActual('../../../core/theme/useClinicTheme').getTheme,
 }));
 
 jest.mock('../../../core/components/CrossPlatformDateTimePicker', () => {

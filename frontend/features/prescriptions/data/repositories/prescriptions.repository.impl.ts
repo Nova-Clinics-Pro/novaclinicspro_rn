@@ -3,6 +3,7 @@
  * React Query hooks for prescriptions
  */
 
+import type { PrintQuery } from '../../../../core/clinicalPrint/printOptions';
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import {
   listPrescriptionsApi,
@@ -266,7 +267,7 @@ export const usePrescriptionPrintMutation = (
 };
 
 export const usePrescriptionVersionPrintMutation = (tenantId: string, prescriptionId: string) =>
-  useMutation<string, Error, string>({ mutationFn: (versionId) => printPrescriptionVersionApi(tenantId, prescriptionId, versionId) });
+  useMutation<string, Error, { versionId: string; query?: PrintQuery }>({ mutationFn: ({ versionId, query }) => printPrescriptionVersionApi(tenantId, prescriptionId, versionId, query) });
 
 export const useAmendPrescriptionMutation = (tenantId: string, prescriptionId: string) => {
   const queryClient = useQueryClient();

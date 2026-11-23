@@ -3,6 +3,7 @@
  * Main screen for viewing and managing inventory items
  */
 
+import { t } from '../../../../core/localization';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -17,7 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
@@ -39,15 +40,17 @@ const MIN_SEARCH_LENGTH = 3;
 // Debounce delay in milliseconds
 const DEBOUNCE_DELAY = 300;
 
-const CATEGORIES: { value: InventoryCategory | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'medicine', label: 'Medicine' },
-  { value: 'supplement', label: 'Supplement' },
-  { value: 'equipment', label: 'Equipment' },
-  { value: 'consumable', label: 'Consumable' },
+const CATEGORIES: { value: InventoryCategory | 'all'; labelKey: string }[] = [
+  { value: 'all', labelKey: 'clinicAdmin.common.all' },
+  { value: 'medicine', labelKey: 'clinicAdmin.inventoryList.categoryMedicine' },
+  { value: 'supplement', labelKey: 'clinicAdmin.inventoryList.categorySupplement' },
+  { value: 'equipment', labelKey: 'clinicAdmin.inventoryList.categoryEquipment' },
+  { value: 'consumable', labelKey: 'clinicAdmin.inventoryList.categoryConsumable' },
 ];
 
 export const InventoryListScreen: React.FC = () => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const { currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
@@ -141,17 +144,17 @@ export const InventoryListScreen: React.FC = () => {
     <View style={styles.headerContainer}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={colors.text.tertiary} />
+        <Ionicons name="search" size={20} color={theme.colors.text.tertiary} />
         <TextInput
           style={styles.searchInput}
-          placeholder={`Search inventory... (min ${MIN_SEARCH_LENGTH} chars)`}
-          placeholderTextColor={colors.text.tertiary}
+          placeholder={t('clinicAdmin.inventoryList.searchPlaceholder', { min: MIN_SEARCH_LENGTH })}
+          placeholderTextColor={theme.colors.text.tertiary}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={20} color={colors.text.tertiary} />
+            <Ionicons name="close-circle" size={20} color={theme.colors.text.tertiary} />
           </TouchableOpacity>
         )}
       </View>
@@ -177,7 +180,7 @@ export const InventoryListScreen: React.FC = () => {
                 selectedCategory === item.value && styles.categoryChipTextActive,
               ]}
             >
-              {item.label}
+              {t(item.labelKey)}
             </Text>
           </TouchableOpacity>
         )}
@@ -194,7 +197,7 @@ export const InventoryListScreen: React.FC = () => {
         <Ionicons
           name="warning"
           size={16}
-          color={showLowStockOnly ? colors.text.light : colors.warning.main}
+          color={showLowStockOnly ? theme.colors.text.onPrimary : theme.colors.feedback.warning}
         />
         <Text
           style={[
@@ -202,15 +205,21 @@ export const InventoryListScreen: React.FC = () => {
             showLowStockOnly && styles.lowStockToggleTextActive,
           ]}
         >
-          Low Stock Only
+          {t('clinicAdmin.inventoryList.lowStockOnly')}
         </Text>
       </TouchableOpacity>
 
       {/* Results count */}
       <View style={styles.resultsRow}>
         <Text style={styles.resultsText}>
-          {displayedItems.length} item{displayedItems.length !== 1 ? 's' : ''}
-          {!!(data?.total && data.total > displayedItems.length) && ` of ${data.total}`}
+          {data?.total && data.total > displayedItems.length
+            ? t('clinicAdmin.inventoryList.itemCountOf', { shown: displayedItems.length, total: data.total })
+            : t(
+                displayedItems.length === 1
+                  ? 'clinicAdmin.inventoryList.itemCountOne'
+                  : 'clinicAdmin.inventoryList.itemCountMany',
+                { count: displayedItems.length }
+              )}
         </Text>
       </View>
     </View>
@@ -219,26 +228,26 @@ export const InventoryListScreen: React.FC = () => {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       {isLoading ? (
-        <ActivityIndicator size="large" color={colors.primary.main} />
+        <ActivityIndicator size="large" color={theme.colors.primary.default} />
       ) : isError ? (
         <ApiErrorState error={error} onRetry={() => refetch()} />
       ) : (
         <>
-          <Ionicons name="cube-outline" size={48} color={colors.text.tertiary} />
+          <Ionicons name="cube-outline" size={48} color={theme.colors.text.tertiary} />
           <Text style={styles.emptyTitle}>
             {searchQuery || selectedCategory !== 'all'
-              ? 'No items found'
-              : 'No Inventory Items Yet'}
+              ? t('clinicAdmin.inventoryList.emptyFiltered')
+              : t('clinicAdmin.inventoryList.emptyNone')}
           </Text>
           <Text style={styles.emptySubtitle}>
             {searchQuery || selectedCategory !== 'all'
-              ? 'Try adjusting your filters'
-              : 'Add your first inventory item to get started'}
+              ? t('clinicAdmin.inventoryList.emptyFilteredHint')
+              : t('clinicAdmin.inventoryList.emptyNoneHint')}
           </Text>
           {!searchQuery && selectedCategory === 'all' && (
             <TouchableOpacity style={styles.emptyButton} onPress={handleCreateItem}>
-              <Ionicons name="add" size={20} color={colors.text.light} />
-              <Text style={styles.emptyButtonText}>Add Item</Text>
+              <Ionicons name="add" size={20} color={theme.colors.text.onPrimary} />
+              <Text style={styles.emptyButtonText}>{t('clinicAdmin.inventoryList.addItem')}</Text>
             </TouchableOpacity>
           )}
         </>
@@ -251,17 +260,17 @@ export const InventoryListScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Inventory</Text>
-          <Text style={styles.headerSubtitle}>Manage stock & supplies</Text>
+          <Text style={styles.headerTitle}>{t('clinicAdmin.inventoryList.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('clinicAdmin.inventoryList.subtitle')}</Text>
         </View>
         <TouchableOpacity
           style={styles.alertsButton}
           onPress={() => router.push('/clinic-admin/inventory/alerts')}
         >
-          <Ionicons name="notifications" size={24} color={colors.warning.main} />
+          <Ionicons name="notifications" size={24} color={theme.colors.feedback.warning} />
         </TouchableOpacity>
       </View>
 
@@ -278,32 +287,32 @@ export const InventoryListScreen: React.FC = () => {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={refetch}
-            colors={[colors.primary.main]}
+            colors={[theme.colors.primary.default]}
           />
         }
       />
 
       {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={handleCreateItem}>
-        <Ionicons name="add" size={28} color={colors.text.light} />
+        <Ionicons name="add" size={28} color={theme.colors.text.onPrimary} />
       </TouchableOpacity>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: theme.colors.border.subtle,
   },
   backButton: {
     padding: spacing.xs,
@@ -314,11 +323,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   headerSubtitle: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   alertsButton: {
     padding: spacing.xs,
@@ -330,19 +339,19 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
     marginBottom: spacing.md,
   },
   searchInput: {
     flex: 1,
     marginLeft: spacing.sm,
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   categoriesContainer: {
     gap: spacing.xs,
@@ -352,19 +361,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 20,
-    backgroundColor: colors.grey[100],
+    backgroundColor: theme.colors.background.muted,
     marginRight: spacing.xs,
   },
   categoryChipActive: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
   },
   categoryChipText: {
     ...typography.body2,
     fontWeight: '600',
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   categoryChipTextActive: {
-    color: colors.text.light,
+    color: theme.colors.text.onPrimary,
   },
   lowStockToggle: {
     flexDirection: 'row',
@@ -374,26 +383,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 20,
-    backgroundColor: colors.warning.main + '15',
+    backgroundColor: theme.colors.feedback.warning + '15',
     marginBottom: spacing.md,
   },
   lowStockToggleActive: {
-    backgroundColor: colors.warning.main,
+    backgroundColor: theme.colors.feedback.warning,
   },
   lowStockToggleText: {
     ...typography.body2,
     fontWeight: '600',
-    color: colors.warning.main,
+    color: theme.colors.feedback.warning,
   },
   lowStockToggleTextActive: {
-    color: colors.text.light,
+    color: theme.colors.text.onPrimary,
   },
   resultsRow: {
     marginBottom: spacing.sm,
   },
   resultsText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   listContent: {
     paddingHorizontal: spacing.md,
@@ -406,13 +415,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: spacing.md,
     textAlign: 'center',
   },
   emptySubtitle: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: spacing.xs,
     textAlign: 'center',
   },
@@ -420,7 +429,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: 12,
@@ -429,10 +438,10 @@ const styles = StyleSheet.create({
   emptyButtonText: {
     ...typography.body1,
     fontWeight: '600',
-    color: colors.text.light,
+    color: theme.colors.text.onPrimary,
   },
   retryButton: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: 12,
@@ -441,7 +450,7 @@ const styles = StyleSheet.create({
   retryButtonText: {
     ...typography.body1,
     fontWeight: '600',
-    color: colors.text.light,
+    color: theme.colors.text.onPrimary,
   },
   fab: {
     position: 'absolute',
@@ -450,7 +459,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,

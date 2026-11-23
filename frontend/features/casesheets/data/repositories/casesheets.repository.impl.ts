@@ -3,6 +3,7 @@
  * React Query hooks for clinical case sheets
  */
 
+import type { PrintQuery } from '../../../../core/clinicalPrint/printOptions';
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import {
   listCasesheetsApi,
@@ -213,16 +214,16 @@ export const useTransitionCasesheetStatusMutation = (
 export const usePrintCasesheetMutation = (
   tenantId: string,
   casesheetId: string,
-  options?: UseMutationOptions<CasesheetPrintResponse, Error, void>
+  options?: UseMutationOptions<CasesheetPrintResponse, Error, PrintQuery | void>
 ) => {
-  return useMutation<CasesheetPrintResponse, Error, void>({
-    mutationFn: () => printCasesheetApi(tenantId, casesheetId),
+  return useMutation<CasesheetPrintResponse, Error, PrintQuery | void>({
+    mutationFn: (query) => printCasesheetApi(tenantId, casesheetId, query ?? undefined),
     ...options,
   });
 };
 
 export const usePrintCasesheetVersionMutation = (tenantId: string, casesheetId: string) =>
-  useMutation<string, Error, string>({ mutationFn: (versionId) => printCasesheetVersionApi(tenantId, casesheetId, versionId) });
+  useMutation<string, Error, { versionId: string; query?: PrintQuery }>({ mutationFn: ({ versionId, query }) => printCasesheetVersionApi(tenantId, casesheetId, versionId, query) });
 
 export const useAmendCasesheetMutation = (tenantId: string, casesheetId: string) => {
   const queryClient = useQueryClient();

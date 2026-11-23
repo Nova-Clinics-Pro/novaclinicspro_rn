@@ -1,4 +1,5 @@
-import { buildClinicalPrintHtml } from './html';
+import { t } from '../localization/i18n';
+import { buildClinicalPrintHtml, type PrintHtmlOptions } from './html';
 import { ClinicalPrintClinic, ClinicalPrintDocument, ClinicalPrintParty, ClinicalPrintSection } from './types';
 
 const parsePayload = (result: any): any => {
@@ -59,16 +60,18 @@ const snapshotClient = (client: any): ClinicalPrintParty => ({
   email: client?.email,
 });
 
-export const buildPrescriptionPrintHtml = (result: any): string => {
+const label = (key: string, params?: Record<string, string | number>): string => t(`print.labels.${key}`, params);
+
+export const buildPrescriptionPrintHtml = (result: any, options?: PrintHtmlOptions): string => {
   const data = parsePayload(result);
   if (data.html) return data.html;
   const branding = data.branding || {};
   const medications = data.prescription_data?.medications || [];
   const sections: ClinicalPrintSection[] = [
     {
-      title: 'Medications',
+      title: label('medications'),
       table: {
-        headers: ['#', 'Medicine', 'Dosage', 'Frequency', 'Duration', 'Instructions'],
+        headers: ['#', label('medicine'), label('dosage'), label('frequency'), label('duration'), label('instructions')],
         rows: medications.map((med: any, index: number) => [
           index + 1,
           med.name,
@@ -79,16 +82,16 @@ export const buildPrescriptionPrintHtml = (result: any): string => {
         ]),
       },
     },
-    data.prescription_data?.dietary_advice && { title: 'Dietary Advice', body: data.prescription_data.dietary_advice },
-    data.prescription_data?.lifestyle_advice && { title: 'Lifestyle Advice', body: data.prescription_data.lifestyle_advice },
-    data.prescription_data?.follow_up_instructions && { title: 'Follow-up Instructions', body: data.prescription_data.follow_up_instructions },
-    data.notes && { title: 'Notes', body: data.notes },
-    data.next_visit_days && { title: 'Follow-up', body: `Follow-up in ${data.next_visit_days} days` },
+    data.prescription_data?.dietary_advice && { title: label('dietaryAdvice'), body: data.prescription_data.dietary_advice },
+    data.prescription_data?.lifestyle_advice && { title: label('lifestyleAdvice'), body: data.prescription_data.lifestyle_advice },
+    data.prescription_data?.follow_up_instructions && { title: label('followUpInstructions'), body: data.prescription_data.follow_up_instructions },
+    data.notes && { title: label('notes'), body: data.notes },
+    data.next_visit_days && { title: label('followUp'), body: label('followUpInDays', { days: data.next_visit_days }) },
   ].filter(Boolean) as ClinicalPrintSection[];
 
   return buildClinicalPrintHtml({
     type: 'Prescription',
-    title: `Prescription - ${data.patient_name || 'Patient'}`,
+    title: `${label('prescription')} - ${data.patient_name || label('patient')}`,
     clinic: {
       name: branding.clinic_name,
       address: branding.clinic_address,
@@ -109,10 +112,10 @@ export const buildPrescriptionPrintHtml = (result: any): string => {
     },
     documentDate: data.issued_date,
     sections,
-  });
+  }, options);
 };
 
-export const buildCasesheetPrintHtml = (result: any): string => {
+export const buildCasesheetPrintHtml = (result: any, options?: PrintHtmlOptions): string => {
   const data = parsePayload(result);
   if (data.html) return data.html;
   const casesheet = data.casesheet || data;
@@ -140,10 +143,10 @@ export const buildCasesheetPrintHtml = (result: any): string => {
     documentDate: casesheet.recorded_at || casesheet.created_at,
     status: casesheet.status,
     sections,
-  });
+  }, options);
 };
 
-export const buildTreatmentSheetPrintHtml = (result: any): string => {
+export const buildTreatmentSheetPrintHtml = (result: any, options?: PrintHtmlOptions): string => {
   const data = parsePayload(result);
   if (data.html) return data.html;
   const sheet = data.treatment_sheet || data;
@@ -182,5 +185,5 @@ export const buildTreatmentSheetPrintHtml = (result: any): string => {
     documentDate: sheet.recorded_at || sheet.created_at || sheet.start_date,
     status: sheet.status,
     sections,
-  });
+  }, options);
 };

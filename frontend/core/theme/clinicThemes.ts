@@ -25,7 +25,7 @@ export const ayurvedaTheme: SemanticColors = {
   },
 
   secondary: {
-    default: '#C28A4B', // Warm earthy accent
+    default: '#926431', // Warm earthy accent
     light: '#D5A46F', // Lighter variant
     dark: '#A67339', // Darker variant
     onSecondary: '#FFFFFF',
@@ -57,7 +57,7 @@ export const ayurvedaTheme: SemanticColors = {
   text: {
     primary: '#1C2B23', // Dark green-gray
     secondary: '#556B5E', // Medium green-gray
-    tertiary: '#7A8B82', // Light green-gray
+    tertiary: '#5D6B63', // Light green-gray
     disabled: '#A3B5AC', // Very light
     inverse: '#F8F4EC', // Cream on dark backgrounds
     onPrimary: '#FFFFFF',
@@ -67,11 +67,11 @@ export const ayurvedaTheme: SemanticColors = {
   feedback: {
     success: '#2F6F4E', // Use primary for success (herbal green)
     successLight: '#E8F3EE',
-    warning: '#D6A055', // Soft amber
+    warning: '#946524', // Soft amber
     warningLight: '#FDF3E5',
-    error: '#B85450', // Desaturated red/brown-red
+    error: '#B14C48', // Desaturated red/brown-red
     errorLight: '#FDEEED',
-    info: '#5B8FA8', // Muted blue
+    info: '#487388', // Muted blue
     infoLight: '#EDF5F9',
   },
 
@@ -130,8 +130,8 @@ export const generalMedicineTheme: SemanticColors = {
 
   text: {
     primary: '#111827',
-    secondary: '#6B7280',
-    tertiary: '#9CA3AF',
+    secondary: '#686E7C',
+    tertiary: '#666F7F',
     disabled: '#D1D5DB',
     inverse: '#F9FAFB',
     onPrimary: '#FFFFFF',
@@ -139,13 +139,13 @@ export const generalMedicineTheme: SemanticColors = {
   },
 
   feedback: {
-    success: '#10B981',
+    success: '#0B815A',
     successLight: '#ECFDF5',
-    warning: '#F59E0B',
+    warning: '#9E6506',
     warningLight: '#FFFBEB',
-    error: '#EF4444',
+    error: '#DB1313',
     errorLight: '#FEF2F2',
-    info: '#3B82F6',
+    info: '#0D64F4',
     infoLight: '#EFF6FF',
   },
 
@@ -163,7 +163,7 @@ export const generalMedicineTheme: SemanticColors = {
  */
 export const dentalTheme: SemanticColors = {
   primary: {
-    default: '#0891B2', // Turquoise
+    default: '#077B97', // Turquoise
     light: '#22D3EE',
     dark: '#0E7490',
     onPrimary: '#FFFFFF',
@@ -173,7 +173,7 @@ export const dentalTheme: SemanticColors = {
   },
 
   secondary: {
-    default: '#06B6D4', // Cyan
+    default: '#047D91', // Cyan
     light: '#67E8F9',
     dark: '#0891B2',
     onSecondary: '#FFFFFF',
@@ -209,17 +209,17 @@ export const dentalTheme: SemanticColors = {
     disabled: '#A5F3FC',
     inverse: '#F0FDFF',
     onPrimary: '#FFFFFF',
-    link: '#0891B2',
+    link: '#077B97',
   },
 
   feedback: {
-    success: '#10B981',
+    success: '#0B815A',
     successLight: '#ECFDF5',
-    warning: '#F59E0B',
+    warning: '#9E6506',
     warningLight: '#FFFBEB',
-    error: '#EF4444',
+    error: '#DB1313',
     errorLight: '#FEF2F2',
-    info: '#0891B2',
+    info: '#077B97',
     infoLight: '#ECFEFF',
   },
 
@@ -237,7 +237,7 @@ export const dentalTheme: SemanticColors = {
  */
 export const physiotherapyTheme: SemanticColors = {
   primary: {
-    default: '#EA580C', // Vibrant orange
+    default: '#C3490A', // Vibrant orange
     light: '#FB923C',
     dark: '#C2410C',
     onPrimary: '#FFFFFF',
@@ -247,7 +247,7 @@ export const physiotherapyTheme: SemanticColors = {
   },
 
   secondary: {
-    default: '#DC2626', // Red accent
+    default: '#DC2424', // Red accent
     light: '#F87171',
     dark: '#B91C1C',
     onSecondary: '#FFFFFF',
@@ -279,21 +279,21 @@ export const physiotherapyTheme: SemanticColors = {
   text: {
     primary: '#431407',
     secondary: '#7C2D12',
-    tertiary: '#C2410C',
+    tertiary: '#C0400C',
     disabled: '#FDBA74',
     inverse: '#FFF8F1',
     onPrimary: '#FFFFFF',
-    link: '#EA580C',
+    link: '#C3490A',
   },
 
   feedback: {
-    success: '#10B981',
+    success: '#0B815A',
     successLight: '#ECFDF5',
-    warning: '#F59E0B',
+    warning: '#9E6506',
     warningLight: '#FFFBEB',
-    error: '#DC2626',
+    error: '#D52222',
     errorLight: '#FEF2F2',
-    info: '#3B82F6',
+    info: '#0D64F4',
     infoLight: '#EFF6FF',
   },
 

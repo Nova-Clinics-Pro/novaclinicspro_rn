@@ -1,3 +1,4 @@
+import { getDateLocale } from '../localization/dateLocale';
 /**
  * Centralized Date/Time Utilities
  * 
@@ -86,7 +87,7 @@ export const formatDate = (dateStr: string | Date | undefined | null): string =>
   try {
     const date = typeof dateStr === 'string' ? parseBackendDateTime(dateStr) : dateStr;
     if (isNaN(date.getTime())) return '—';
-    return date.toLocaleDateString('en-IN', {
+    return date.toLocaleDateString(getDateLocale(), {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -108,7 +109,7 @@ export const formatShortDate = (dateStr: string | Date | undefined | null): stri
   try {
     const date = typeof dateStr === 'string' ? parseBackendDateTime(dateStr) : dateStr;
     if (isNaN(date.getTime())) return '—';
-    return date.toLocaleDateString('en-IN', {
+    return date.toLocaleDateString(getDateLocale(), {
       day: 'numeric',
       month: 'short',
     });
@@ -129,7 +130,7 @@ export const formatDayOfWeek = (dateStr: string | Date | undefined | null): stri
   try {
     const date = typeof dateStr === 'string' ? parseBackendDateTime(dateStr) : dateStr;
     if (isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('en-IN', { 
+    return date.toLocaleDateString(getDateLocale(), { 
       weekday: 'short',
     });
   } catch {
@@ -153,7 +154,7 @@ export const formatTime = (dateStr: string | Date | undefined | null): string =>
     // If it's a Date object, use it directly
     if (dateStr instanceof Date) {
       if (isNaN(dateStr.getTime())) return '—';
-      return dateStr.toLocaleTimeString('en-IN', {
+      return dateStr.toLocaleTimeString(getDateLocale(), {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
@@ -165,7 +166,7 @@ export const formatTime = (dateStr: string | Date | undefined | null): string =>
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '—';
     
-    return date.toLocaleTimeString('en-IN', {
+    return date.toLocaleTimeString(getDateLocale(), {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,

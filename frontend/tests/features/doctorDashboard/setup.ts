@@ -120,7 +120,10 @@ jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   return { SafeAreaView: (props: any) => React.createElement('SafeAreaView', props, props.children) };
 });
-jest.mock('../../../core/theme/useClinicTheme', () => ({ useClinicTheme: () => theme }));
+jest.mock('../../../core/theme/useClinicTheme', () => ({
+  useClinicTheme: () => jest.requireActual('../../../core/theme/useClinicTheme').getTheme(),
+  getTheme: jest.requireActual('../../../core/theme/useClinicTheme').getTheme,
+}));
 jest.mock('../../../core/localization/useTranslation', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 
 global.console = { ...console, warn: jest.fn(), error: jest.fn(), log: jest.fn() };

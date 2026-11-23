@@ -27,6 +27,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
 import { buildTreatmentSheetPrintHtml } from '../../../../core/clinicalPrint/adapters';
+import { printQuery } from '../../../../core/clinicalPrint/printOptions';
+import { usePrintOptions } from '../../../../core/clinicalPrint/usePrintOptions';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { useEpisodeQuery } from '../../../episodes/data/repositories/episodes.repository.impl';
 import {
@@ -138,15 +140,19 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
     onError: (err: Error) => Alert.alert('Error', err.message || 'Failed to cancel treatment series'),
   });
 
+  const { askForPrintOptions, printOptionsDialog } = usePrintOptions();
+
   const handlePrint = useCallback(async () => {
+    const options = await askForPrintOptions();   // letterhead or plain paper, before every print
+    if (!options) return;
     try {
-      const result = await printMutation.mutateAsync();
-      setPrintHtmlContent(buildTreatmentSheetPrintHtml(result));
+      const result = await printMutation.mutateAsync(printQuery(options));
+      setPrintHtmlContent(buildTreatmentSheetPrintHtml(result, { paper: options.paper, accent: theme.colors.primary.default }));
       setShowPrintPreview(true);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to print.');
     }
-  }, [printMutation]);
+  }, [askForPrintOptions, printMutation, theme]);
 
   const handleArchive = useCallback(async () => {
     try {
@@ -322,6 +328,7 @@ export const TreatmentSheetDetailScreen: React.FC = () => {
         onCancel={() => setShowCancelDialog(false)}
         loading={cancelMutation.isPending}
       />
+      {printOptionsDialog}
       <ClinicalPrintPreviewModal
         visible={showPrintPreview}
         html={printHtmlContent}

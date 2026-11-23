@@ -7,6 +7,8 @@
  * DRY IMPROVEMENT: Uses centralized getStatusKey() to normalize status strings.
  */
 
+import { hasTranslation, t } from '../../../../core/localization';
+
 // ============================================
 // STATUS NORMALIZATION (DRY)
 // ============================================
@@ -31,17 +33,9 @@ export const getStatusKey = (status: string | null | undefined): string => {
  * @returns Human-readable status label
  */
 export const getStatusLabel = (status: string): string => {
-  const labels: Record<string, string> = {
-    scheduled: 'Scheduled',
-    confirmed: 'Confirmed',
-    in_progress: 'In Progress',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-    no_show: 'No Show',
-  };
-  
   const key = getStatusKey(status);
-  return labels[key] || status;
+  const translationKey = `clinicAdmin.appointmentStatus.${key}`;
+  return hasTranslation(translationKey) ? t(translationKey) : status;
 };
 
 /**

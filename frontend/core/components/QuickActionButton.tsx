@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, StyleSheet, View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
-import { colors } from '../theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../theme/useClinicTheme';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
@@ -26,8 +26,11 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   label,
   onPress,
   href,
-  color = colors.primary.main,
+  color: colorOverride,
 }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const color = colorOverride ?? theme.colors.primary.default;
   const buttonContent = (
     <>
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
@@ -65,7 +68,7 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   button: {
     alignItems: 'center',
     width: '30%',
@@ -81,7 +84,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.caption,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
     fontWeight: '500',
   },

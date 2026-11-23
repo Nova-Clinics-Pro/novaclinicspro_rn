@@ -3,9 +3,9 @@
  * Period selector for KPI and feedback date filtering
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import type { KPIPeriod } from '../../data/models/feedback.dtos';
@@ -31,6 +31,8 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
   disabled = false,
   testID,
 }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const options = showCustom
     ? [...PERIOD_OPTIONS, { value: 'custom' as KPIPeriod, label: 'Custom' }]
     : PERIOD_OPTIONS;
@@ -64,10 +66,10 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.grey[100],
+    backgroundColor: theme.colors.background.muted,
     borderRadius: 8,
     padding: 2,
   },
@@ -79,7 +81,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   optionActive: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -91,15 +93,15 @@ const styles = StyleSheet.create({
   },
   optionText: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     fontWeight: '500',
   },
   optionTextActive: {
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
     fontWeight: '600',
   },
   optionTextDisabled: {
-    color: colors.text.disabled,
+    color: theme.colors.text.disabled,
   },
 });
 

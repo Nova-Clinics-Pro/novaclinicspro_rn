@@ -6,6 +6,7 @@
  * Casesheets are CLIENT-SCOPED - list/create requires client_id in path
  */
 
+import type { PrintQuery } from '../../../../core/clinicalPrint/printOptions';
 import { axiosClient } from '../../../../core/api/axiosClient';
 import { isAxiosError } from 'axios';
 import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
@@ -142,10 +143,12 @@ export const transitionCasesheetStatusApi = async (
  */
 export const printCasesheetApi = async (
   tenantId: string,
-  casesheetId: string
+  casesheetId: string,
+  query?: PrintQuery
 ): Promise<CasesheetPrintResponse> => {
   const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/print`
+    `/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/print`,
+    { params: query }
   );
   return response.data;
 };
@@ -157,8 +160,8 @@ export const getCasesheetVersionApi = async (tenantId: string, casesheetId: stri
   (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions/${versionId}`)).data;
 
 /** HTML is authored and version-labelled by the backend; the frontend never modifies it. */
-export const printCasesheetVersionApi = async (tenantId: string, casesheetId: string, versionId: string): Promise<string> =>
-  (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions/${versionId}/print`, { responseType: 'text' })).data;
+export const printCasesheetVersionApi = async (tenantId: string, casesheetId: string, versionId: string, query?: PrintQuery): Promise<string> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/versions/${versionId}/print`, { responseType: 'text', params: query })).data;
 
 export const amendCasesheetApi = async (tenantId: string, casesheetId: string): Promise<CasesheetResponse> =>
   (await axiosClient.post(`/api/v1/clinic/${tenantId}/casesheets/${casesheetId}/amend`)).data;

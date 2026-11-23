@@ -3,10 +3,11 @@
  * Displays a single inventory item in a list with stock status indicators
  */
 
-import React from 'react';
+import { t } from '../../../../core/localization';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import {
@@ -30,21 +31,23 @@ export const InventoryItemListItem: React.FC<InventoryItemListItemProps> = ({
   item,
   onPress,
 }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const stock = parseStock(item.current_stock);
   const lowStock = isLowStock(item);
   const criticalStock = isCriticalStock(item);
   const doshaLabels = getDoshaLabels(item.dosha_properties);
 
   const getStockColor = () => {
-    if (criticalStock) return colors.error.main;
-    if (lowStock) return colors.warning.main;
-    return colors.success.main;
+    if (criticalStock) return theme.colors.feedback.error;
+    if (lowStock) return theme.colors.feedback.warning;
+    return theme.colors.feedback.success;
   };
 
   const getStockLabel = () => {
-    if (criticalStock) return 'Critical';
-    if (lowStock) return 'Low';
-    return 'In Stock';
+    if (criticalStock) return t('clinicAdmin.inventoryList.statusCritical');
+    if (lowStock) return t('clinicAdmin.inventoryList.statusLow');
+    return t('clinicAdmin.inventoryList.statusInStock');
   };
 
   return (
@@ -67,15 +70,15 @@ export const InventoryItemListItem: React.FC<InventoryItemListItemProps> = ({
         {/* Category/Type Tags */}
         <View style={styles.tagsRow}>
           {item.category && (
-            <View style={[styles.tag, { backgroundColor: colors.primary.main + '15' }]}>
-              <Text style={[styles.tagText, { color: colors.primary.main }]}>
+            <View style={[styles.tag, { backgroundColor: theme.colors.primary.default + '15' }]}>
+              <Text style={[styles.tagText, { color: theme.colors.primary.default }]}>
                 {getCategoryLabel(item.category)}
               </Text>
             </View>
           )}
           {item.medicine_type && (
-            <View style={[styles.tag, { backgroundColor: colors.secondary.main + '15' }]}>
-              <Text style={[styles.tagText, { color: colors.secondary.main }]}>
+            <View style={[styles.tag, { backgroundColor: theme.colors.secondary.default + '15' }]}>
+              <Text style={[styles.tagText, { color: theme.colors.secondary.default }]}>
                 {getMedicineTypeLabel(item.medicine_type)}
               </Text>
             </View>
@@ -96,13 +99,13 @@ export const InventoryItemListItem: React.FC<InventoryItemListItemProps> = ({
         {/* Stock info */}
         <View style={styles.stockRow}>
           <Text style={styles.stockLabel}>
-            Stock: <Text style={[styles.stockValue, { color: getStockColor() }]}>
+            {t('clinicAdmin.inventoryList.stock')}: <Text style={[styles.stockValue, { color: getStockColor() }]}>
               {formatStock(item.current_stock, item.unit)}
             </Text>
           </Text>
           {item.reorder_point > 0 && (
             <Text style={styles.reorderLabel}>
-              (Reorder at {item.reorder_point})
+              {t('clinicAdmin.inventoryList.reorderAt', { point: item.reorder_point })}
             </Text>
           )}
         </View>
@@ -119,21 +122,21 @@ export const InventoryItemListItem: React.FC<InventoryItemListItemProps> = ({
         {item.mrp !== null && (
           <Text style={styles.price}>{formatCurrency(item.mrp)}</Text>
         )}
-        <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
+        <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
       </View>
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
     alignItems: 'center',
   },
   iconContainer: {
@@ -151,7 +154,7 @@ const styles = StyleSheet.create({
   name: {
     ...typography.body1,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   tagsRow: {
@@ -179,12 +182,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 8,
-    backgroundColor: colors.grey[100],
+    backgroundColor: theme.colors.background.muted,
   },
   doshaText: {
     ...typography.caption,
     fontSize: 9,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   stockRow: {
     flexDirection: 'row',
@@ -193,14 +196,14 @@ const styles = StyleSheet.create({
   },
   stockLabel: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   stockValue: {
     fontWeight: '600',
   },
   reorderLabel: {
     ...typography.caption,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
   rightContainer: {
     alignItems: 'flex-end',
@@ -226,6 +229,6 @@ const styles = StyleSheet.create({
   price: {
     ...typography.body2,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
 });

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
+import { printQuery, type PrintQuery } from '../../../../core/clinicalPrint/printOptions';
+import { usePrintOptions } from '../../../../core/clinicalPrint/usePrintOptions';
 import { useTranslation } from '../../../../core/localization/useTranslation';
 import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { LivingDocumentVersionSummary } from '../../data/models/livingDocuments.dtos';
@@ -14,7 +16,7 @@ interface Props {
   selectedSnapshot: Record<string, unknown> | undefined;
   isSnapshotLoading: boolean;
   isSnapshotError: boolean;
-  onPrintVersion: (versionId: string) => Promise<string>;
+  onPrintVersion: (versionId: string, query?: PrintQuery) => Promise<string>;
   canAmend: boolean;
   onAmend: () => Promise<void>;
   isAmending: boolean;
@@ -32,9 +34,13 @@ export const LivingDocumentVersionHistory: React.FC<Props> = ({
   const [printError, setPrintError] = useState(false);
   const selectedVersion = versions?.find((version) => version.version_id === selectedVersionId);
 
+  const { askForPrintOptions, printOptionsDialog } = usePrintOptions();
+
   const print = async (versionId: string) => {
     setPrintError(false);
-    try { setPrintHtml(await onPrintVersion(versionId)); } catch { setPrintError(true); }
+    const options = await askForPrintOptions();   // letterhead or plain paper, before every print
+    if (!options) return;
+    try { setPrintHtml(await onPrintVersion(versionId, printQuery(options))); } catch { setPrintError(true); }
   };
 
   return (
@@ -68,6 +74,7 @@ export const LivingDocumentVersionHistory: React.FC<Props> = ({
           <TouchableOpacity accessibilityRole="button" onPress={() => onSelectVersion('')}><Text style={[typography.button, { color: colors.primary.default }]}>{t('common.close')}</Text></TouchableOpacity>
         </ScrollView>
       </Modal>
+      {printOptionsDialog}
       <ClinicalPrintPreviewModal visible={!!printHtml} html={printHtml ?? ''} title={t('livingDocuments.printVersion')} onClose={() => setPrintHtml(null)} />
     </View>
   );

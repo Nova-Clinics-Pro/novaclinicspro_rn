@@ -4,11 +4,12 @@
  * Used in both Doctor and Therapist dashboards
  */
 
+import { t } from '../../../../core/localization';
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import {
@@ -19,7 +20,7 @@ import {
 } from '../components';
 import { useStaffKpisQuery } from '../../data/repositories/feedback.repository.impl';
 import { getRatingDistributionPercentages, formatPercentage } from '../../domain/entities/feedback.entity';
-import { getTrendColor, getTrendIcon } from '../../data/models/feedback.dtos';
+import { getTrendIcon } from '../../data/models/feedback.dtos';
 import type { KPIPeriod, StaffType } from '../../data/models/feedback.dtos';
 
 interface StaffFeedbackSectionProps {
@@ -35,6 +36,10 @@ export const StaffFeedbackSection: React.FC<StaffFeedbackSectionProps> = ({
   staffType,
   testID,
 }) => {
+  const theme = useClinicTheme();
+  const trendColor = (trend: string) =>
+    trend === 'up' ? theme.colors.feedback.success : trend === 'down' ? theme.colors.feedback.error : theme.colors.text.secondary;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const [period, setPeriod] = useState<KPIPeriod>('30d');
 
@@ -81,13 +86,13 @@ export const StaffFeedbackSection: React.FC<StaffFeedbackSectionProps> = ({
       <View style={styles.container} testID={testID}>
         <View style={styles.header}>
           <View style={styles.titleRow}>
-            <Ionicons name="chatbubbles" size={20} color={colors.warning.main} />
-            <Text style={styles.title}>Patient Feedback</Text>
+            <Ionicons name="chatbubbles" size={20} color={theme.colors.feedback.warning} />
+            <Text style={styles.title}>{t('clinicAdmin.feedbackSummary.title')}</Text>
           </View>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.primary.main} />
-          <Text style={styles.loadingText}>Loading feedback...</Text>
+          <ActivityIndicator size="small" color={theme.colors.primary.default} />
+          <Text style={styles.loadingText}>{t('clinicAdmin.feedbackSummary.loading')}</Text>
         </View>
       </View>
     );
@@ -99,15 +104,15 @@ export const StaffFeedbackSection: React.FC<StaffFeedbackSectionProps> = ({
       <View style={styles.container} testID={testID}>
         <View style={styles.header}>
           <View style={styles.titleRow}>
-            <Ionicons name="chatbubbles" size={20} color={colors.warning.main} />
-            <Text style={styles.title}>Patient Feedback</Text>
+            <Ionicons name="chatbubbles" size={20} color={theme.colors.feedback.warning} />
+            <Text style={styles.title}>{t('clinicAdmin.feedbackSummary.title')}</Text>
           </View>
         </View>
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={24} color={colors.text.tertiary} />
-          <Text style={styles.errorText}>Could not load feedback data</Text>
+          <Ionicons name="alert-circle-outline" size={24} color={theme.colors.text.tertiary} />
+          <Text style={styles.errorText}>{t('clinicAdmin.feedbackSummary.loadFailed')}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('clinicAdmin.feedbackSummary.retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -120,13 +125,13 @@ export const StaffFeedbackSection: React.FC<StaffFeedbackSectionProps> = ({
       <View style={styles.container} testID={testID}>
         <View style={styles.header}>
           <View style={styles.titleRow}>
-            <Ionicons name="chatbubbles" size={20} color={colors.warning.main} />
-            <Text style={styles.title}>Patient Feedback</Text>
+            <Ionicons name="chatbubbles" size={20} color={theme.colors.feedback.warning} />
+            <Text style={styles.title}>{t('clinicAdmin.feedbackSummary.title')}</Text>
           </View>
         </View>
         <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubble-outline" size={32} color={colors.text.tertiary} />
-          <Text style={styles.emptyTitle}>No Feedback Yet</Text>
+          <Ionicons name="chatbubble-outline" size={32} color={theme.colors.text.tertiary} />
+          <Text style={styles.emptyTitle}>{t('clinicAdmin.feedbackSummary.emptyTitle')}</Text>
           <Text style={styles.emptyMessage}>
             No patient feedback received for this period.
           </Text>
@@ -143,11 +148,11 @@ export const StaffFeedbackSection: React.FC<StaffFeedbackSectionProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Ionicons name="chatbubbles" size={20} color={colors.warning.main} />
-          <Text style={styles.title}>Patient Feedback</Text>
+          <Ionicons name="chatbubbles" size={20} color={theme.colors.feedback.warning} />
+          <Text style={styles.title}>{t('clinicAdmin.feedbackSummary.title')}</Text>
         </View>
         <TouchableOpacity onPress={handleViewAllFeedback} testID={`${testID}-view-all`}>
-          <Text style={styles.viewAllText}>View All</Text>
+          <Text style={styles.viewAllText}>{t('clinicAdmin.feedbackSummary.viewAll')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -170,16 +175,16 @@ export const StaffFeedbackSection: React.FC<StaffFeedbackSectionProps> = ({
           <View style={styles.ratingRight}>
             <View style={styles.statRow}>
               <Text style={styles.statValue}>{satisfactionData.total_responses}</Text>
-              <Text style={styles.statLabel}>responses</Text>
+              <Text style={styles.statLabel}>{t('clinicAdmin.feedbackSummary.responses')}</Text>
             </View>
             <View style={styles.trendRow}>
               <Ionicons
                 name={getTrendIcon(satisfactionData.trend) as any}
                 size={14}
-                color={getTrendColor(satisfactionData.trend)}
+                color={trendColor(satisfactionData.trend)}
               />
-              <Text style={[styles.trendText, { color: getTrendColor(satisfactionData.trend) }]}>
-                {satisfactionData.trend === 'up' ? 'Improving' : satisfactionData.trend === 'down' ? 'Declining' : 'Stable'}
+              <Text style={[styles.trendText, { color: trendColor(satisfactionData.trend) }]}>
+                {t(satisfactionData.trend === 'up' ? 'clinicAdmin.feedbackSummary.trendUp' : satisfactionData.trend === 'down' ? 'clinicAdmin.feedbackSummary.trendDown' : 'clinicAdmin.feedbackSummary.trendStable')}
               </Text>
             </View>
           </View>
@@ -187,21 +192,21 @@ export const StaffFeedbackSection: React.FC<StaffFeedbackSectionProps> = ({
 
         {/* Response Rate */}
         <View style={styles.responseRateRow}>
-          <Text style={styles.responseRateLabel}>Response Rate</Text>
+          <Text style={styles.responseRateLabel}>{t('clinicAdmin.feedbackSummary.responseRate')}</Text>
           <Text style={styles.responseRateValue}>{formatPercentage(satisfactionData.response_rate)}</Text>
         </View>
       </View>
 
       {/* Rating Distribution */}
       <View style={styles.distributionContainer}>
-        <Text style={styles.distributionTitle}>Rating Distribution</Text>
+        <Text style={styles.distributionTitle}>{t('clinicAdmin.feedbackSummary.ratingDistribution')}</Text>
         <RatingDistributionBars distribution={ratingDistribution} testID={`${testID}-distribution`} />
       </View>
 
       {/* Question Scores (if available) */}
       {Object.keys(satisfactionData.question_scores).length > 0 && (
         <View style={styles.scoresContainer}>
-          <Text style={styles.scoresTitle}>Detailed Scores</Text>
+          <Text style={styles.scoresTitle}>{t('clinicAdmin.feedbackSummary.detailedScores')}</Text>
           <View style={styles.scoresGrid}>
             {Object.entries(satisfactionData.question_scores).map(([key, score]) => (
               <View key={key} style={styles.scoreItem}>
@@ -221,21 +226,21 @@ export const StaffFeedbackSection: React.FC<StaffFeedbackSectionProps> = ({
         onPress={handleViewAllFeedback}
         testID={`${testID}-view-all-button`}
       >
-        <Ionicons name="list" size={18} color={colors.primary.main} />
-        <Text style={styles.viewAllButtonText}>View All Feedback</Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.primary.main} />
+        <Ionicons name="list" size={18} color={theme.colors.primary.default} />
+        <Text style={styles.viewAllButtonText}>{t('clinicAdmin.feedbackSummary.viewAllFeedback')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.primary.default} />
       </TouchableOpacity>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   header: {
     flexDirection: 'row',
@@ -250,12 +255,12 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.subtitle1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
   },
   viewAllText: {
     ...typography.body2,
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
     fontWeight: '600',
   },
   periodContainer: {
@@ -270,7 +275,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   errorContainer: {
     alignItems: 'center',
@@ -279,7 +284,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   retryButton: {
     paddingVertical: spacing.xs,
@@ -287,7 +292,7 @@ const styles = StyleSheet.create({
   },
   retryText: {
     ...typography.button,
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -296,15 +301,15 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...typography.subtitle2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   emptyMessage: {
     ...typography.caption,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     textAlign: 'center',
   },
   summaryCard: {
-    backgroundColor: colors.grey[50],
+    backgroundColor: theme.colors.background.muted,
     borderRadius: 8,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -319,7 +324,7 @@ const styles = StyleSheet.create({
   },
   ratingValue: {
     ...typography.h3,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '700',
   },
   ratingRight: {
@@ -332,12 +337,12 @@ const styles = StyleSheet.create({
   },
   statValue: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '700',
   },
   statLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   trendRow: {
     flexDirection: 'row',
@@ -356,15 +361,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border.light,
+    borderTopColor: theme.colors.border.subtle,
   },
   responseRateLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   responseRateValue: {
     ...typography.body2,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
   },
   distributionContainer: {
@@ -372,7 +377,7 @@ const styles = StyleSheet.create({
   },
   distributionTitle: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     fontWeight: '500',
     marginBottom: spacing.xs,
   },
@@ -381,7 +386,7 @@ const styles = StyleSheet.create({
   },
   scoresTitle: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     fontWeight: '500',
     marginBottom: spacing.xs,
   },
@@ -394,7 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.grey[50],
+    backgroundColor: theme.colors.background.muted,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 6,
@@ -402,12 +407,12 @@ const styles = StyleSheet.create({
   },
   scoreLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     flex: 1,
   },
   scoreValue: {
     ...typography.body2,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
   },
   viewAllButton: {
@@ -416,12 +421,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.primary[50],
+    backgroundColor: theme.colors.primary.soft,
     borderRadius: 8,
   },
   viewAllButtonText: {
     ...typography.button,
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
   },
 });
 

@@ -22,6 +22,9 @@ import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
 import { buildPrescriptionPrintHtml } from '../../../../core/clinicalPrint/adapters';
+import { printQuery } from '../../../../core/clinicalPrint/printOptions';
+import { usePrintOptions } from '../../../../core/clinicalPrint/usePrintOptions';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { useTranslation } from '../../../../core/localization/useTranslation';
 import { classifyApiError } from '../../../../core/api/apiErrorPresentation';
@@ -125,15 +128,20 @@ export const PrescriptionDetailScreen: React.FC = () => {
     }
   }, [shareMutation, t]);
 
+  const { askForPrintOptions, printOptionsDialog } = usePrintOptions();
+  const clinicTheme = useClinicTheme();
+
   const handlePrint = useCallback(async () => {
+    const options = await askForPrintOptions();   // letterhead or plain paper, before every print
+    if (!options) return;
     try {
       const printData = await printMutation.mutateAsync();
-      setPrintHtmlContent(buildPrescriptionPrintHtml(printData));
+      setPrintHtmlContent(buildPrescriptionPrintHtml(printData, { paper: options.paper, accent: clinicTheme.colors.primary.default }));
       setShowPrintPreview(true);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to prepare prescription for print.');
     }
-  }, [printMutation]);
+  }, [askForPrintOptions, printMutation, clinicTheme]);
 
   const handleEdit = useCallback(() => {
     if (clientId) {
@@ -407,6 +415,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
         onShare={handleShare}
         isLoading={shareMutation.isPending}
       />
+      {printOptionsDialog}
       <ClinicalPrintPreviewModal
         visible={showPrintPreview}
         html={printHtmlContent}

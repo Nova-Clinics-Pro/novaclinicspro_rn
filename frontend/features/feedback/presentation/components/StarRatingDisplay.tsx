@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { getStarIcons, getRatingLabel, getRatingColor } from '../../domain/entities/feedback.entity';
@@ -26,6 +26,7 @@ export const StarRatingDisplay: React.FC<StarRatingDisplayProps> = ({
   size = 16,
   testID,
 }) => {
+  const theme = useClinicTheme();
   const stars = getStarIcons(rating);
   const ratingColor = getRatingColor(rating);
 
@@ -37,7 +38,7 @@ export const StarRatingDisplay: React.FC<StarRatingDisplayProps> = ({
             key={index}
             name={star}
             size={size}
-            color={colors.warning.main}
+            color={theme.colors.feedback.warning}
           />
         ))}
         {showNumeric && (

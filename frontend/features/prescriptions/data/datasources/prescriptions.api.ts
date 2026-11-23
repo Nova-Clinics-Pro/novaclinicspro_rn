@@ -6,6 +6,7 @@
  * Prescriptions are TENANT-SCOPED - can filter by client_id
  */
 
+import type { PrintQuery } from '../../../../core/clinicalPrint/printOptions';
 import { axiosClient } from '../../../../core/api/axiosClient';
 import { isAxiosError } from 'axios';
 import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
@@ -181,8 +182,8 @@ export const listPrescriptionVersionsApi = async (tenantId: string, prescription
 export const getPrescriptionVersionApi = async (tenantId: string, prescriptionId: string, versionId: string): Promise<PrescriptionSignedVersionSnapshot> =>
   (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions/${versionId}`)).data;
 
-export const printPrescriptionVersionApi = async (tenantId: string, prescriptionId: string, versionId: string): Promise<string> =>
-  (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions/${versionId}/print`, { responseType: 'text' })).data;
+export const printPrescriptionVersionApi = async (tenantId: string, prescriptionId: string, versionId: string, query?: PrintQuery): Promise<string> =>
+  (await axiosClient.get(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/versions/${versionId}/print`, { responseType: 'text', params: query })).data;
 
 export const amendPrescriptionApi = async (tenantId: string, prescriptionId: string): Promise<PrescriptionResponse> =>
   (await axiosClient.post(`/api/v1/clinic/${tenantId}/prescriptions/${prescriptionId}/amend`)).data;

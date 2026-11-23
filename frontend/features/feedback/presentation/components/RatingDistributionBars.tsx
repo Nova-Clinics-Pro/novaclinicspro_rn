@@ -3,10 +3,10 @@
  * Displays rating distribution as horizontal bars
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 
@@ -23,6 +23,8 @@ export const RatingDistributionBars: React.FC<RatingDistributionProps> = ({
   distribution,
   testID,
 }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   // Reverse to show 5 stars at top
   const sortedDistribution = [...distribution].sort((a, b) => b.rating - a.rating);
 
@@ -32,7 +34,7 @@ export const RatingDistributionBars: React.FC<RatingDistributionProps> = ({
         <View key={item.rating} style={styles.row}>
           <View style={styles.labelContainer}>
             <Text style={styles.ratingLabel}>{item.rating}</Text>
-            <Ionicons name="star" size={12} color={colors.warning.main} />
+            <Ionicons name="star" size={12} color={theme.colors.feedback.warning} />
           </View>
           <View style={styles.barContainer}>
             <View
@@ -52,7 +54,7 @@ export const RatingDistributionBars: React.FC<RatingDistributionProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     gap: spacing.xs,
   },
@@ -69,13 +71,13 @@ const styles = StyleSheet.create({
   },
   ratingLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     fontWeight: '500',
   },
   barContainer: {
     flex: 1,
     height: 8,
-    backgroundColor: colors.grey[100],
+    backgroundColor: theme.colors.background.muted,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -85,17 +87,17 @@ const styles = StyleSheet.create({
     minWidth: 4,
   },
   barGood: {
-    backgroundColor: colors.success.main,
+    backgroundColor: theme.colors.feedback.success,
   },
   barNeutral: {
-    backgroundColor: colors.warning.main,
+    backgroundColor: theme.colors.feedback.warning,
   },
   barPoor: {
-    backgroundColor: colors.error.main,
+    backgroundColor: theme.colors.feedback.error,
   },
   countText: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     width: 30,
     textAlign: 'right',
   },

@@ -1,11 +1,11 @@
 /**
  * Auth Provider Wrapper
- * Wraps the app with ThemeProvider and initializes auth on startup
+ * Wraps the app with the clinic-type theme and initializes auth on startup
  */
 
 import React, { useEffect } from 'react';
 import { usePathname } from 'expo-router';
-import { ThemeProvider } from '../theme/useClinicTheme';
+import { TenantThemeProvider } from '../theme/TenantThemeProvider';
 import { useAuthStore } from '../../features/auth/presentation/providers/auth.store';
 import { authSessionService } from '../../features/auth/application/auth-session.service';
 import { useAuthorizationRefresh } from './useAuthorizationRefresh';
@@ -54,8 +54,8 @@ const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return (
-    <ThemeProvider clinicType="AYURVEDA">
+    <TenantThemeProvider>
       <AuthInitializer>{children}</AuthInitializer>
-    </ThemeProvider>
+    </TenantThemeProvider>
   );
 };

@@ -3,6 +3,7 @@
  * React Query hooks for treatment sheets
  */
 
+import type { PrintQuery } from '../../../../core/clinicalPrint/printOptions';
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import {
   createTreatmentSheetApi,
@@ -169,10 +170,10 @@ export const useSyncTreatmentSheetMutation = (
 export const usePrintTreatmentSheetMutation = (
   tenantId: string,
   treatmentSheetId: string,
-  options?: UseMutationOptions<TreatmentSheetPrintResponse, Error, void>
+  options?: UseMutationOptions<TreatmentSheetPrintResponse, Error, PrintQuery | void>
 ) => {
-  return useMutation<TreatmentSheetPrintResponse, Error, void>({
-    mutationFn: () => printTreatmentSheetApi(tenantId, treatmentSheetId),
+  return useMutation<TreatmentSheetPrintResponse, Error, PrintQuery | void>({
+    mutationFn: (query) => printTreatmentSheetApi(tenantId, treatmentSheetId, query ?? undefined),
     ...options,
   });
 };

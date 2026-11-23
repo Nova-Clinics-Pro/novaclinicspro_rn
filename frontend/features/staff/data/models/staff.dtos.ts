@@ -3,6 +3,7 @@
  * Data Transfer Objects matching OpenAPI schemas
  */
 
+import { hasTranslation, t } from '../../../../core/localization';
 // ============================================
 // ENUMS & TYPES
 // ============================================
@@ -234,17 +235,8 @@ export interface PaginatedLeaveResponse {
 
 /** Get display name for staff type */
 export const getStaffTypeLabel = (type: StaffType): string => {
-  const labels: Record<StaffType, string> = {
-    doctor: 'Doctor',
-    therapist: 'Therapist',
-    nurse: 'Nurse',
-    receptionist: 'Receptionist',
-    pharmacist: 'Pharmacist',
-    physiotherapist: 'Physiotherapist',
-    dentist: 'Dentist',
-    admin: 'Admin',
-  };
-  return labels[type] || type;
+  const key = `clinicAdmin.staffTypes.${type}`;
+  return hasTranslation(key) ? t(key) : type;
 };
 
 /** Get color for staff type */

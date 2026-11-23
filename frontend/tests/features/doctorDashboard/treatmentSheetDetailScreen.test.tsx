@@ -55,13 +55,8 @@ jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
   useAuth: jest.fn(),
 }));
 jest.mock('../../../core/theme/useClinicTheme', () => ({
-  useClinicTheme: () => ({
-    colors: {
-      background: { default: '#fff' },
-      primary: { default: '#2563EB' },
-      text: { primary: '#111', secondary: '#666' },
-    },
-  }),
+  useClinicTheme: () => jest.requireActual('../../../core/theme/useClinicTheme').getTheme(),
+  getTheme: jest.requireActual('../../../core/theme/useClinicTheme').getTheme,
 }));
 jest.mock('../../../features/treatmentSheets/index', () => ({
   useTreatmentSheetDetailQuery: jest.fn(),

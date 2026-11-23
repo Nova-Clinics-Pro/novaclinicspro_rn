@@ -3,7 +3,7 @@
  * Main dashboard for clinic administrators
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import { isClinicOwner } from '../../features/auth/domain/entities/auth.entity';
 import { confirmLogout } from '../../features/auth/presentation/utils/confirmLogout';
 import { StatCard } from '../../core/components/StatCard';
 import { QuickActionButton } from '../../core/components/QuickActionButton';
-import { colors } from '../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../core/theme/useClinicTheme';
 import { spacing } from '../../core/theme/spacing';
 import { typography } from '../../core/theme/typography';
 import { useAuth } from '../../features/auth/presentation/hooks/useAuth';
@@ -32,7 +32,7 @@ import { useDailyFinanceSummaryQuery, useSubscriptionSummaryQuery } from '../../
 import { useTreatmentOrdersQuery } from '../../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import { useNotificationBadgeCount } from '../../features/notifications/presentation/hooks/useNotificationBadgeCount';
 import { formatInrCurrency } from '../../core/utils/currency';
-import { t } from '../../core/localization';
+import { hasTranslation, t } from '../../core/localization';
 import { useStaffListQuery } from '../../features/staff/data/repositories/staff.repository.impl';
 import { mayOpenDashboard, resolveDashboardRoute } from '../../features/auth/domain/dashboardRoute';
 import { useAppointmentsByDateQuery } from '../../features/appointments/data/repositories/appointments.repository.impl';
@@ -42,6 +42,8 @@ import { useOnboardingStatusQuery } from '../../features/onboarding/data/reposit
 import { useFeatures, hasTreatmentSheets, isTherapyClinic } from '../../core/hooks/useFeatures';
 
 export default function ClinicAdminDashboard() {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const { logout, currentUser, isAuthenticated } = useAuth();
   // A user whose role belongs on another dashboard is redirected away by the guard below. Until that happens (and for
@@ -51,8 +53,8 @@ export default function ClinicAdminDashboard() {
   const tenantId = belongsHere ? currentUser?.tenantId || '' : '';
   const notificationCount = useNotificationBadgeCount();
 
-  const clinicName = currentUser?.clinicName || 'My Clinic';
-  const displayName = currentUser?.fullName || currentUser?.email || 'Admin';
+  const clinicName = currentUser?.clinicName || t('clinicAdmin.dashboard.fallbackClinicName');
+  const displayName = currentUser?.fullName || currentUser?.email || t('clinicAdmin.dashboard.fallbackUserName');
   const { width } = useWindowDimensions();
   
   // Determine if we're on mobile (< 768px) or web
@@ -201,36 +203,36 @@ export default function ClinicAdminDashboard() {
             }}
           >
             <View style={styles.setupBannerContent}>
-              <Ionicons name="rocket" size={32} color={colors.primary.main} />
+              <Ionicons name="rocket" size={32} color={theme.colors.primary.default} />
               <View style={styles.setupBannerText}>
                 <Text style={styles.setupBannerTitle}>{t('onboarding.progressiveExperience.dashboard.finishPreparingClinic')}</Text>
                 <Text style={styles.setupBannerSubtitle}>
                   {t('onboarding.progressiveExperience.dashboard.readinessStepsComplete', { completed: onboardingStatus?.completed_steps || 0, total: onboardingStatus?.total_steps || 0 })}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.primary.main} />
+              <Ionicons name="chevron-forward" size={24} color={theme.colors.primary.default} />
             </View>
           </TouchableOpacity>
         )}
 
         {/* Clinic Stats */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today&apos;s Overview</Text>
+          <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.todaysOverview')}</Text>
           <View style={[styles.statsGrid, isMobile ? styles.statsGridMobile : styles.statsGridWeb]}>
             <View style={[styles.statItem, !isMobile && styles.statItemWeb]}>
               <StatCard
-                title="Total Appointments"
+                title={t('clinicAdmin.dashboard.totalAppointments')}
                 value={appointmentsLoading ? '...' : appointmentsError ? '—' : String(totalAppointmentsToday)}
                 icon="calendar"
-                color={colors.primary.main}
+                color={theme.colors.primary.default}
               />
             </View>
             <View style={[styles.statItem, !isMobile && styles.statItemWeb]}>
               <StatCard
-                title="Active Staff"
+                title={t('clinicAdmin.dashboard.activeStaff')}
                 value={staffLoading ? '...' : activeStaffCount.toString()}
                 icon="people"
-                color={colors.success.main}
+                color={theme.colors.feedback.success}
               />
             </View>
             <View style={[styles.statItem, !isMobile && styles.statItemWeb]}>
@@ -238,16 +240,16 @@ export default function ClinicAdminDashboard() {
                 title={t('clinicDashboard.dailyRevenue')}
                 value={revenueLoading ? '...' : revenueError ? '—' : formatInrCurrency(dailySummary?.collected_amount ?? 0)}
                 icon="cash"
-                color={colors.warning.main}
+                color={theme.colors.feedback.warning}
               />
             </View>
             <View style={[styles.statItem, !isMobile && styles.statItemWeb]}>
               <StatCard
-                title="Inventory Alerts"
+                title={t('clinicAdmin.dashboard.inventoryAlerts')}
                 value={alertsLoading ? '...' : totalAlertCount.toString()}
                 icon="warning"
-                color={colors.error.main}
-                trend={lowStockCount > 0 ? { value: `${lowStockCount} low stock`, isPositive: false } : undefined}
+                color={theme.colors.feedback.error}
+                trend={lowStockCount > 0 ? { value: t('clinicAdmin.dashboard.lowStockTrend', { count: lowStockCount }), isPositive: false } : undefined}
               />
             </View>
           </View>
@@ -256,90 +258,90 @@ export default function ClinicAdminDashboard() {
         {/* Treatment Plans Pending Scheduling Banner */}
         {treatmentSheetsEnabled && (pendingOrdersData?.total ?? 0) > 0 && (
           <TouchableOpacity
-            style={[styles.pendingOrdersBanner, { backgroundColor: colors.info.main + '12', borderColor: colors.info.main + '40' }]}
+            style={[styles.pendingOrdersBanner, { backgroundColor: theme.colors.feedback.info + '12', borderColor: theme.colors.feedback.info + '40' }]}
             onPress={() => router.push('/clinic-admin/treatment-sheets/orders' as any)}
             activeOpacity={0.8}
           >
-            <View style={[styles.pendingOrdersIcon, { backgroundColor: colors.info.main + '20' }]}>
-              <Ionicons name="calendar-number" size={22} color={colors.info.main} />
+            <View style={[styles.pendingOrdersIcon, { backgroundColor: theme.colors.feedback.info + '20' }]}>
+              <Ionicons name="calendar-number" size={22} color={theme.colors.feedback.info} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.pendingOrdersTitle, { color: colors.info.main }]}>
-                {pendingOrdersData!.total} Treatment Plan{pendingOrdersData!.total !== 1 ? 's' : ''} to Schedule
+              <Text style={[styles.pendingOrdersTitle, { color: theme.colors.feedback.info }]}>
+                {t(pendingOrdersData!.total === 1 ? 'clinicAdmin.dashboard.plansToScheduleOne' : 'clinicAdmin.dashboard.plansToScheduleMany', { count: pendingOrdersData!.total })}
               </Text>
-              <Text style={[styles.pendingOrdersSubtitle, { color: colors.text.secondary }]}>
-                Tap to open the scheduling worklist
+              <Text style={[styles.pendingOrdersSubtitle, { color: theme.colors.text.secondary }]}>
+                {t('clinicAdmin.dashboard.plansToScheduleHint')}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.info.main} />
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.feedback.info} />
           </TouchableOpacity>
         )}
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.quickActions')}</Text>
           <View style={styles.quickActions}>
             <QuickActionButton
               icon="people"
-              label="Staff"
+              label={t('navigation.staff')}
               href="/clinic-admin/staff"
-              color={colors.primary.main}
+              color={theme.colors.primary.default}
             />
             <QuickActionButton
               icon="person"
-              label="Clients"
+              label={t('navigation.clients')}
               href="/clinic-admin/clients"
-              color={colors.success.main}
+              color={theme.colors.feedback.success}
             />
             <QuickActionButton
               icon="calendar"
-              label="Appointments"
+              label={t('navigation.appointments')}
               href="/clinic-admin/appointments"
-              color={colors.secondary.main}
+              color={theme.colors.secondary.default}
             />
             <QuickActionButton
               icon="time"
-              label="Leave Mgmt"
+              label={t('clinicAdmin.dashboard.leaveManagement')}
               href="/clinic-admin/staff/leave"
-              color={colors.warning.main}
+              color={theme.colors.feedback.warning}
             />
             {treatmentSheetsEnabled && (
               <QuickActionButton
                 icon="calendar-number"
-                label="Tx Orders"
+                label={t('clinicAdmin.dashboard.treatmentOrders')}
                 href="/clinic-admin/treatment-sheets/orders"
-                color={colors.info.main}
+                color={theme.colors.feedback.info}
               />
             )}
             <QuickActionButton
               icon="cube"
-              label="Inventory"
+              label={t('navigation.inventory')}
               href="/clinic-admin/inventory"
-              color={colors.info.main}
+              color={theme.colors.feedback.info}
             />
             <QuickActionButton
               icon="card"
-              label="Billing"
+              label={t('navigation.billing')}
               href="/clinic-admin/billing"
-              color={colors.success.main}
+              color={theme.colors.feedback.success}
             />
             <QuickActionButton
               icon="document-text"
-              label="Reports"
+              label={t('navigation.reports')}
               href="/clinic-admin/reports"
-              color={colors.warning.main}
+              color={theme.colors.feedback.warning}
             />
             <QuickActionButton
               icon="cloud-upload"
-              label="Bulk Upload"
+              label={t('clinicAdmin.dashboard.bulkUpload')}
               href="/clinic-admin/bulk-upload"
-              color={colors.secondary.main}
+              color={theme.colors.secondary.default}
             />
             <QuickActionButton
               icon="settings"
-              label="Settings"
+              label={t('navigation.settings')}
               href="/clinic-admin/settings"
-              color={colors.text.secondary}
+              color={theme.colors.text.secondary}
             />
           </View>
         </View>
@@ -347,51 +349,51 @@ export default function ClinicAdminDashboard() {
         {/* Clinic Settings */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Clinic Settings</Text>
+            <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.clinicSettings')}</Text>
             <Link href="/clinic-admin/settings" asChild>
               <Pressable>
-                <Text style={styles.viewAll}>View All</Text>
+                <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
               </Pressable>
             </Link>
           </View>
-          <Text style={styles.sectionSubtitle}>Configure your clinic operations</Text>
+          <Text style={styles.sectionSubtitle}>{t('clinicAdmin.dashboard.configureOperations')}</Text>
           
           <Link href="/clinic-admin/settings/operating-hours" asChild>
             <Pressable style={styles.settingsCard}>
-              <View style={[styles.settingsIcon, { backgroundColor: colors.primary.main + '15' }]}>
-                <Ionicons name="time-outline" size={24} color={colors.primary.main} />
+              <View style={[styles.settingsIcon, { backgroundColor: theme.colors.primary.default + '15' }]}>
+                <Ionicons name="time-outline" size={24} color={theme.colors.primary.default} />
               </View>
               <View style={styles.settingsInfo}>
-                <Text style={styles.settingsTitle}>Operating Hours</Text>
-                <Text style={styles.settingsDescription}>Set clinic open/close times</Text>
+                <Text style={styles.settingsTitle}>{t('clinicAdmin.dashboard.operatingHours')}</Text>
+                <Text style={styles.settingsDescription}>{t('clinicAdmin.dashboard.operatingHoursHint')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.secondary} />
             </Pressable>
           </Link>
 
           <Link href="/clinic-admin/settings/rooms" asChild>
             <Pressable style={styles.settingsCard}>
-              <View style={[styles.settingsIcon, { backgroundColor: colors.info.main + '15' }]}>
-                <Ionicons name="grid-outline" size={24} color={colors.info.main} />
+              <View style={[styles.settingsIcon, { backgroundColor: theme.colors.feedback.info + '15' }]}>
+                <Ionicons name="grid-outline" size={24} color={theme.colors.feedback.info} />
               </View>
               <View style={styles.settingsInfo}>
-                <Text style={styles.settingsTitle}>Rooms & Resources</Text>
-                <Text style={styles.settingsDescription}>{therapyClinic ? 'Manage therapy rooms' : 'Manage consulting rooms'}</Text>
+                <Text style={styles.settingsTitle}>{t('clinicAdmin.dashboard.roomsAndResources')}</Text>
+                <Text style={styles.settingsDescription}>{t(therapyClinic ? 'clinicAdmin.dashboard.roomsHintTherapy' : 'clinicAdmin.dashboard.roomsHintConsulting')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.secondary} />
             </Pressable>
           </Link>
 
           <Link href="/clinic-admin/settings/treatments" asChild>
             <Pressable style={styles.settingsCard}>
-              <View style={[styles.settingsIcon, { backgroundColor: colors.warning.main + '15' }]}>
-                <Ionicons name={therapyClinic ? 'leaf-outline' : 'medical-outline'} size={24} color={colors.warning.main} />
+              <View style={[styles.settingsIcon, { backgroundColor: theme.colors.feedback.warning + '15' }]}>
+                <Ionicons name={therapyClinic ? 'leaf-outline' : 'medical-outline'} size={24} color={theme.colors.feedback.warning} />
               </View>
               <View style={styles.settingsInfo}>
-                <Text style={styles.settingsTitle}>{therapyClinic ? 'Treatments & Services' : 'Services'}</Text>
-                <Text style={styles.settingsDescription}>{therapyClinic ? 'Configure Ayurvedic treatments' : 'Configure consultation services'}</Text>
+                <Text style={styles.settingsTitle}>{t(therapyClinic ? 'clinicAdmin.dashboard.treatmentsAndServices' : 'clinicAdmin.dashboard.services')}</Text>
+                <Text style={styles.settingsDescription}>{t(therapyClinic ? 'clinicAdmin.dashboard.treatmentsHintTherapy' : 'clinicAdmin.dashboard.servicesHint')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.secondary} />
             </Pressable>
           </Link>
         </View>
@@ -399,17 +401,17 @@ export default function ClinicAdminDashboard() {
         {/* Staff Status */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Staff Status</Text>
+            <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.staffStatus')}</Text>
             <Link href="/clinic-admin/staff" asChild>
               <Pressable>
-                <Text style={styles.viewAll}>View All</Text>
+                <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
               </Pressable>
             </Link>
           </View>
           {staffLoading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={colors.primary.main} />
-              <Text style={styles.loadingText}>Loading staff...</Text>
+              <ActivityIndicator size="small" color={theme.colors.primary.default} />
+              <Text style={styles.loadingText}>{t('clinicAdmin.dashboard.loadingStaff')}</Text>
             </View>
           ) : staffMembers.length > 0 ? (
             staffMembers.map((staff) => (
@@ -421,23 +423,23 @@ export default function ClinicAdminDashboard() {
                         styles.staffAvatar,
                         {
                           backgroundColor: staff.is_active
-                            ? colors.success.main + '20'
-                            : colors.warning.main + '20',
+                            ? theme.colors.feedback.success + '20'
+                            : theme.colors.feedback.warning + '20',
                         },
                       ]}
                     >
                       <Ionicons
                         name="person"
                         size={24}
-                        color={staff.is_active ? colors.success.main : colors.warning.main}
+                        color={staff.is_active ? theme.colors.feedback.success : theme.colors.feedback.warning}
                       />
                     </View>
                     <View style={styles.staffDetails}>
                       <Text style={styles.staffName}>{staff.full_name}</Text>
                       <Text style={styles.staffRole}>
-                        {staff.staff_type ? staff.staff_type.charAt(0).toUpperCase() + staff.staff_type.slice(1) : 'Staff'}
+                        {staff.staff_type ? (hasTranslation(`roles.names.${staff.staff_type}`) ? t(`roles.names.${staff.staff_type}`) : staff.staff_type.charAt(0).toUpperCase() + staff.staff_type.slice(1)) : t('common.staff')}
                       </Text>
-                      <Text style={styles.staffAppointments}>{staff.email || 'No email'}</Text>
+                      <Text style={styles.staffAppointments}>{staff.email || t('clinicAdmin.dashboard.noEmail')}</Text>
                     </View>
                   </View>
                   <View
@@ -445,8 +447,8 @@ export default function ClinicAdminDashboard() {
                       styles.statusIndicator,
                       {
                         backgroundColor: staff.is_active
-                          ? colors.success.main + '20'
-                          : colors.warning.main + '20',
+                          ? theme.colors.feedback.success + '20'
+                          : theme.colors.feedback.warning + '20',
                       },
                     ]}
                   >
@@ -455,8 +457,8 @@ export default function ClinicAdminDashboard() {
                         styles.statusDot,
                         {
                           backgroundColor: staff.is_active
-                            ? colors.success.main
-                            : colors.warning.main,
+                            ? theme.colors.feedback.success
+                            : theme.colors.feedback.warning,
                         },
                       ]}
                     />
@@ -465,12 +467,12 @@ export default function ClinicAdminDashboard() {
                         styles.statusText,
                         {
                           color: staff.is_active
-                            ? colors.success.main
-                            : colors.warning.main,
+                            ? theme.colors.feedback.success
+                            : theme.colors.feedback.warning,
                         },
                       ]}
                     >
-                      {staff.is_active ? 'Active' : 'Inactive'}
+                      {staff.is_active ? t('common.active') : t('common.inactive')}
                     </Text>
                   </View>
                 </Pressable>
@@ -478,8 +480,8 @@ export default function ClinicAdminDashboard() {
             ))
           ) : (
             <View style={styles.noAlertsCard}>
-              <Ionicons name="people-outline" size={24} color={colors.text.secondary} />
-              <Text style={styles.noAlertsText}>No staff members found</Text>
+              <Ionicons name="people-outline" size={24} color={theme.colors.text.secondary} />
+              <Text style={styles.noAlertsText}>{t('clinicAdmin.dashboard.noStaff')}</Text>
             </View>
           )}
         </View>
@@ -487,17 +489,17 @@ export default function ClinicAdminDashboard() {
         {/* Inventory Alerts */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Low Stock Alerts</Text>
+            <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.lowStockAlerts')}</Text>
             <Link href="/clinic-admin/inventory/alerts" asChild>
               <Pressable>
-                <Text style={styles.viewAll}>View All</Text>
+                <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
               </Pressable>
             </Link>
           </View>
           {alertsLoading || inventoryLoading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={colors.primary.main} />
-              <Text style={styles.loadingText}>Loading alerts...</Text>
+              <ActivityIndicator size="small" color={theme.colors.primary.default} />
+              <Text style={styles.loadingText}>{t('clinicAdmin.dashboard.loadingAlerts')}</Text>
             </View>
           ) : lowStockItems.length > 0 ? (
             lowStockItems.slice(0, 3).map((item) => {
@@ -510,7 +512,7 @@ export default function ClinicAdminDashboard() {
                       <Ionicons
                         name={isCritical ? 'warning' : 'cube'}
                         size={20}
-                        color={isCritical ? colors.error.main : colors.warning.main}
+                        color={isCritical ? theme.colors.feedback.error : theme.colors.feedback.warning}
                       />
                       <View style={styles.inventoryDetails}>
                         <Text style={styles.inventoryName}>{item.name}</Text>
@@ -524,8 +526,8 @@ export default function ClinicAdminDashboard() {
                         styles.levelBadge,
                         {
                           backgroundColor: isCritical
-                            ? colors.error.main + '20'
-                            : colors.warning.main + '20',
+                            ? theme.colors.feedback.error + '20'
+                            : theme.colors.feedback.warning + '20',
                         },
                       ]}
                     >
@@ -533,11 +535,11 @@ export default function ClinicAdminDashboard() {
                         style={[
                           styles.levelText,
                           {
-                            color: isCritical ? colors.error.main : colors.warning.main,
+                            color: isCritical ? theme.colors.feedback.error : theme.colors.feedback.warning,
                           },
                         ]}
                       >
-                        {isCritical ? 'Critical' : 'Low'}
+                        {isCritical ? t('clinicAdmin.dashboard.critical') : t('clinicAdmin.dashboard.low')}
                       </Text>
                     </View>
                   </Pressable>
@@ -546,15 +548,15 @@ export default function ClinicAdminDashboard() {
             })
           ) : (
             <View style={styles.noAlertsCard}>
-              <Ionicons name="checkmark-circle" size={24} color={colors.success.main} />
-              <Text style={styles.noAlertsText}>All stock levels healthy</Text>
+              <Ionicons name="checkmark-circle" size={24} color={theme.colors.feedback.success} />
+              <Text style={styles.noAlertsText}>{t('clinicAdmin.dashboard.allStockHealthy')}</Text>
             </View>
           )}
           {lowStockItems.length > 3 && (
             <Link href="/clinic-admin/inventory/alerts" asChild>
               <Pressable style={styles.moreAlertsButton}>
                 <Text style={styles.moreAlertsText}>
-                  +{lowStockItems.length - 3} more alerts
+                  {t('clinicAdmin.dashboard.moreAlerts', { count: lowStockItems.length - 3 })}
                 </Text>
               </Pressable>
             </Link>
@@ -563,36 +565,36 @@ export default function ClinicAdminDashboard() {
 
         {/* Inventory Quick Links */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Inventory Management</Text>
-          <Text style={styles.sectionSubtitle}>Manage stock & supplies</Text>
+          <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.inventoryManagement')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('clinicAdmin.dashboard.manageStock')}</Text>
           
           <Link href="/clinic-admin/inventory" asChild>
             <Pressable style={styles.settingsCard}>
-              <View style={[styles.settingsIcon, { backgroundColor: colors.primary.main + '15' }]}>
-                <Ionicons name="cube-outline" size={24} color={colors.primary.main} />
+              <View style={[styles.settingsIcon, { backgroundColor: theme.colors.primary.default + '15' }]}>
+                <Ionicons name="cube-outline" size={24} color={theme.colors.primary.default} />
               </View>
               <View style={styles.settingsInfo}>
-                <Text style={styles.settingsTitle}>Inventory Items</Text>
+                <Text style={styles.settingsTitle}>{t('clinicAdmin.dashboard.inventoryItems')}</Text>
                 <Text style={styles.settingsDescription}>
-                  {inventoryLoading ? 'Loading...' : `${totalItems} items in stock`}
+                  {inventoryLoading ? t('common.loading') : t('clinicAdmin.dashboard.itemsInStock', { count: totalItems })}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.secondary} />
             </Pressable>
           </Link>
 
           <Link href="/clinic-admin/inventory/alerts" asChild>
             <Pressable style={styles.settingsCard}>
-              <View style={[styles.settingsIcon, { backgroundColor: colors.warning.main + '15' }]}>
-                <Ionicons name="notifications-outline" size={24} color={colors.warning.main} />
+              <View style={[styles.settingsIcon, { backgroundColor: theme.colors.feedback.warning + '15' }]}>
+                <Ionicons name="notifications-outline" size={24} color={theme.colors.feedback.warning} />
               </View>
               <View style={styles.settingsInfo}>
-                <Text style={styles.settingsTitle}>Stock Alerts</Text>
+                <Text style={styles.settingsTitle}>{t('clinicAdmin.dashboard.stockAlerts')}</Text>
                 <Text style={styles.settingsDescription}>
-                  {alertsLoading ? 'Loading...' : `${totalAlertCount} active alerts`}
+                  {alertsLoading ? t('common.loading') : t('clinicAdmin.dashboard.activeAlerts', { count: totalAlertCount })}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.secondary} />
             </Pressable>
           </Link>
         </View>
@@ -600,26 +602,26 @@ export default function ClinicAdminDashboard() {
         {/* Billing & Finance */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Billing & Finance</Text>
+            <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.billingAndFinance')}</Text>
             <Link href="/clinic-admin/billing" asChild>
               <Pressable>
-                <Text style={styles.viewAll}>View All</Text>
+                <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
               </Pressable>
             </Link>
           </View>
-          <Text style={styles.sectionSubtitle}>Manage invoices & payments</Text>
+          <Text style={styles.sectionSubtitle}>{t('clinicAdmin.dashboard.manageInvoices')}</Text>
           
           {/* Billing Summary Card */}
           <View style={styles.billingSummaryCard}>
             <View style={styles.billingSummaryHeader}>
-              <View style={[styles.settingsIcon, { backgroundColor: colors.success.main + '15' }]}>
-                <Ionicons name="wallet" size={24} color={colors.success.main} />
+              <View style={[styles.settingsIcon, { backgroundColor: theme.colors.feedback.success + '15' }]}>
+                <Ionicons name="wallet" size={24} color={theme.colors.feedback.success} />
               </View>
               <View style={styles.billingSummaryInfo}>
-                <Text style={styles.billingSummaryLabel}>Outstanding Balance</Text>
+                <Text style={styles.billingSummaryLabel}>{t('clinicAdmin.dashboard.outstandingBalance')}</Text>
                 <Text style={[
                   styles.billingSummaryValue,
-                  billingSummary && billingSummary.outstandingBalance > 0 && { color: colors.warning.main }
+                  billingSummary && billingSummary.outstandingBalance > 0 && { color: theme.colors.feedback.warning }
                 ]}>
                   {billingLoading 
                     ? '...' 
@@ -630,39 +632,39 @@ export default function ClinicAdminDashboard() {
             </View>
             {billingSummary && billingSummary.unpaidInvoices > 0 && (
               <Text style={styles.billingSummarySubtext}>
-                {billingSummary.unpaidInvoices} unpaid invoice{billingSummary.unpaidInvoices !== 1 ? 's' : ''}
+                {t(billingSummary.unpaidInvoices === 1 ? 'clinicAdmin.dashboard.unpaidInvoiceOne' : 'clinicAdmin.dashboard.unpaidInvoiceMany', { count: billingSummary.unpaidInvoices })}
               </Text>
             )}
           </View>
 
           <Link href="/clinic-admin/billing/invoices" asChild>
             <Pressable style={styles.settingsCard}>
-              <View style={[styles.settingsIcon, { backgroundColor: colors.primary.main + '15' }]}>
-                <Ionicons name="document-text-outline" size={24} color={colors.primary.main} />
+              <View style={[styles.settingsIcon, { backgroundColor: theme.colors.primary.default + '15' }]}>
+                <Ionicons name="document-text-outline" size={24} color={theme.colors.primary.default} />
               </View>
               <View style={styles.settingsInfo}>
-                <Text style={styles.settingsTitle}>Invoices</Text>
+                <Text style={styles.settingsTitle}>{t('clinicAdmin.dashboard.invoices')}</Text>
                 <Text style={styles.settingsDescription}>
                   {billingLoading 
-                    ? 'Loading...' 
-                    : `${billingSummary?.totalInvoices || 0} total invoices`
+                    ? t('common.loading') 
+                    : t('clinicAdmin.dashboard.totalInvoices', { count: billingSummary?.totalInvoices || 0 })
                   }
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.secondary} />
             </Pressable>
           </Link>
 
           <Link href="/clinic-admin/billing/payments" asChild>
             <Pressable style={styles.settingsCard}>
-              <View style={[styles.settingsIcon, { backgroundColor: colors.success.main + '15' }]}>
-                <Ionicons name="card-outline" size={24} color={colors.success.main} />
+              <View style={[styles.settingsIcon, { backgroundColor: theme.colors.feedback.success + '15' }]}>
+                <Ionicons name="card-outline" size={24} color={theme.colors.feedback.success} />
               </View>
               <View style={styles.settingsInfo}>
-                <Text style={styles.settingsTitle}>Payments</Text>
-                <Text style={styles.settingsDescription}>View payment history</Text>
+                <Text style={styles.settingsTitle}>{t('clinicAdmin.dashboard.payments')}</Text>
+                <Text style={styles.settingsDescription}>{t('clinicAdmin.dashboard.viewPaymentHistory')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.secondary} />
             </Pressable>
           </Link>
         </View>
@@ -685,10 +687,10 @@ export default function ClinicAdminDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
   },
   scrollView: {
     flex: 1,
@@ -708,12 +710,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: spacing.md,
   },
   viewAll: {
     ...typography.body2,
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
     fontWeight: '600',
   },
   statsGrid: {
@@ -764,7 +766,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
   },
   staffCard: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -772,7 +774,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   staffInfo: {
     flexDirection: 'row',
@@ -791,18 +793,18 @@ const styles = StyleSheet.create({
   },
   staffName: {
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
     marginBottom: 2,
   },
   staffRole: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginBottom: 2,
   },
   staffAppointments: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   statusIndicator: {
     flexDirection: 'row',
@@ -822,7 +824,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   inventoryCard: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -830,7 +832,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   inventoryInfo: {
     flexDirection: 'row',
@@ -843,13 +845,13 @@ const styles = StyleSheet.create({
   },
   inventoryName: {
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
     marginBottom: 2,
   },
   inventoryStock: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   levelBadge: {
     paddingHorizontal: spacing.sm,
@@ -869,7 +871,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   noAlertsCard: {
     flexDirection: 'row',
@@ -877,12 +879,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.lg,
-    backgroundColor: colors.success.main + '10',
+    backgroundColor: theme.colors.feedback.success + '10',
     borderRadius: 12,
   },
   noAlertsText: {
     ...typography.body2,
-    color: colors.success.main,
+    color: theme.colors.feedback.success,
     fontWeight: '600',
   },
   moreAlertsButton: {
@@ -891,43 +893,43 @@ const styles = StyleSheet.create({
   },
   moreAlertsText: {
     ...typography.body2,
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
     fontWeight: '600',
   },
   dashboardLinks: {
     gap: spacing.sm,
   },
   dashboardLink: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   dashboardLinkText: {
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     flex: 1,
     fontWeight: '500',
   },
   sectionSubtitle: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginBottom: spacing.md,
     marginTop: -spacing.sm,
   },
   settingsCard: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   settingsIcon: {
     width: 48,
@@ -942,21 +944,21 @@ const styles = StyleSheet.create({
   },
   settingsTitle: {
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
     marginBottom: 2,
   },
   settingsDescription: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   billingSummaryCard: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   billingSummaryHeader: {
     flexDirection: 'row',
@@ -967,27 +969,27 @@ const styles = StyleSheet.create({
   },
   billingSummaryLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   billingSummaryValue: {
     ...typography.h5,
     fontWeight: '700',
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   billingSummarySubtext: {
     ...typography.caption,
-    color: colors.warning.main,
+    color: theme.colors.feedback.warning,
     marginTop: spacing.xs,
     marginLeft: 48 + spacing.md,
   },
   setupBanner: {
-    backgroundColor: colors.primary.main + '15',
+    backgroundColor: theme.colors.primary.default + '15',
     borderRadius: 12,
     padding: spacing.md,
     marginHorizontal: spacing.md,
     marginTop: spacing.lg,
     borderWidth: 2,
-    borderColor: colors.primary.main,
+    borderColor: theme.colors.primary.default,
   },
   setupBannerContent: {
     flexDirection: 'row',
@@ -999,12 +1001,12 @@ const styles = StyleSheet.create({
   },
   setupBannerTitle: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
     marginBottom: 4,
   },
   setupBannerSubtitle: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
 });

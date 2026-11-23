@@ -6,6 +6,7 @@
  * No standalone list endpoint - access via casesheet or by ID
  */
 
+import type { PrintQuery } from '../../../../core/clinicalPrint/printOptions';
 import { axiosClient } from '../../../../core/api/axiosClient';
 import { isAxiosError } from 'axios';
 import { SessionInstructionsError } from '../../domain/errors/sessionInstructionsError';
@@ -155,10 +156,12 @@ export const syncTreatmentSheetApi = async (
  */
 export const printTreatmentSheetApi = async (
   tenantId: string,
-  treatmentSheetId: string
+  treatmentSheetId: string,
+  query?: PrintQuery
 ): Promise<TreatmentSheetPrintResponse> => {
   const response = await axiosClient.get(
-    `/api/v1/clinic/${tenantId}/treatment-sheets/${treatmentSheetId}/print`
+    `/api/v1/clinic/${tenantId}/treatment-sheets/${treatmentSheetId}/print`,
+    { params: query }
   );
   return response.data;
 };
