@@ -56,6 +56,7 @@ import {
   SectionProgressStatus,
   TreatmentRecommendationDraft,
 } from '../../hooks/useConsultationWorkspace';
+import { useTreatmentsListQuery } from '../../../../treatments/data/repositories/treatments.repository.impl';
 import { TreatmentRecommendationSection } from './TreatmentRecommendationSection';
 import { renderSection } from './sectionRenderer';
 import { toClinicalWorkspaceError } from '../../../application/clinicalWorkspaceError';
@@ -173,6 +174,7 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
         const next: TreatmentRecommendationDraft = {
           ...prev,
           recommendedTherapy: treatmentSheet.recommended_therapy ?? firstRow?.treatment_description ?? prev.recommendedTherapy,
+          recommendedTreatmentId: treatmentSheet.recommended_treatment_id ?? prev.recommendedTreatmentId ?? null,
           notesForAdmin: treatmentSheet.order_notes ?? extra.notesForAdmin ?? prev.notesForAdmin,
           durationDays,
           customDurationDays,
@@ -206,6 +208,11 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
     }
   }, [episodeDetails, remoteTreatmentSheetId, treatmentSheet]);
 
+  const { data: clinicTreatments } = useTreatmentsListQuery(tenantId, { is_active: true, limit: 200 });
+  const treatmentChoices = useMemo(
+    () => (clinicTreatments?.items ?? []).map((treatment) => ({ id: treatment.id, name: treatment.name })),
+    [clinicTreatments],
+  );
   const createRecommendationMutation = useCreateTreatmentRecommendationMutation(tenantId);
   const sendToSchedulingMutation = useSendTreatmentOrderToSchedulingMutation();
 
@@ -278,6 +285,7 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
           episode_id: episodeId,
           appointment_id: appointmentId,
           recommended_therapy: draft.recommendedTherapy.trim(),
+          recommended_treatment_id: draft.recommendedTreatmentId ?? undefined,
           planned_sessions: plannedSessions,
           frequency: frequencyLabel,
           preferred_time_window: startPref,
@@ -295,6 +303,7 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
             frequency: frequencyLabel,
             preferred_time_window: startPref,
             recommended_therapy: draft.recommendedTherapy.trim(),
+            recommended_treatment_id: draft.recommendedTreatmentId ?? undefined,
           },
         });
         treatmentSheetVersionRef.current = (order as any).version ?? treatmentSheetVersionRef.current;
@@ -371,6 +380,7 @@ export const TreatmentRecommendationModule = forwardRef<TreatmentRecommendationM
           onUpdate={updateTreatmentField}
           onSendToAdmin={sendTreatmentToAdmin}
           progress={sectionProgress.status}
+          treatments={treatmentChoices}
         />,
       )}
     </>

@@ -40,6 +40,7 @@ import {
 import { StaffForm } from '../components/StaffForm';
 import { StaffLeaveForm } from '../components/StaffLeaveForm';
 import { LeaveListItem } from '../components/LeaveListItem';
+import { StaffInviteAction } from '../components/StaffInviteAction';
 
 export const StaffDetailScreen: React.FC = () => {
   const router = useRouter();
@@ -287,6 +288,7 @@ export const StaffDetailScreen: React.FC = () => {
                 <Text style={styles.loginText}>Has Login</Text>
               </View>
             )}
+            <StaffInviteAction tenantId={tenantId} staffId={staffId || ''} hasLogin={staff.has_login} />
           </View>
         </View>
 

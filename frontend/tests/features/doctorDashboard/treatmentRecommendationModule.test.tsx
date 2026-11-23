@@ -16,6 +16,7 @@ import {
   sendToSchedulingApi,
   createTreatmentRecommendationApi,
 } from '../../../features/treatmentSheets/data/datasources/treatmentOrders.api';
+import { listTreatmentsApi } from '../../../features/treatments/data/datasources/treatments.api';
 import { treatmentOrderKeys } from '../../../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
 import { treatmentSheetsKeys } from '../../../features/treatmentSheets/data/repositories/treatmentSheets.repository.impl';
 
@@ -45,6 +46,9 @@ jest.mock('../../../features/episodes/presentation/hooks/useEpisodeWorkspaceData
 jest.mock('../../../features/treatmentSheets/data/datasources/treatmentSheets.api', () => ({
   createSimpleTreatmentSheetApi: jest.fn(),
   updateAllTreatmentSheetRowsApi: jest.fn(),
+}));
+jest.mock('../../../features/treatments/data/datasources/treatments.api', () => ({
+  listTreatmentsApi: jest.fn(),
 }));
 jest.mock('../../../features/treatmentSheets/data/datasources/treatmentOrders.api', () => ({
   sendToSchedulingApi: jest.fn(),
@@ -156,6 +160,9 @@ describe('TreatmentRecommendationModule (R3A · T-B.3)', () => {
     (createSimpleTreatmentSheetApi as jest.Mock).mockResolvedValue({ id: 'new-sheet', rows: [], version: 1 });
     (createTreatmentRecommendationApi as jest.Mock).mockResolvedValue({ id: 'new-order', state: 'ORDERED', is_order: true, version: 2 });
     (sendToSchedulingApi as jest.Mock).mockResolvedValue({ id: 'sheet-1', state: 'ORDERED', is_order: true, version: 1 });
+    (listTreatmentsApi as jest.Mock).mockResolvedValue({
+      items: [{ id: 'treatment-abhyanga', name: 'Abhyanga', duration_minutes: 45 }, { id: 'treatment-shirodhara', name: 'Shirodhara', duration_minutes: 60 }],
+    });
   });
 
   it('sendTreatmentToAdmin calls send-to-scheduling and never calls PATCH status when a sheet already exists', async () => {
@@ -226,6 +233,66 @@ describe('TreatmentRecommendationModule (R3A · T-B.3)', () => {
 
     const { getByDisplayValue } = renderModule();
     expect(getByDisplayValue('Abhyanga')).toBeTruthy();
+  });
+
+  describe('DEF_COP_065: the plan is linked to the treatment the doctor picks', () => {
+    const pick = async (utils: ReturnType<typeof renderModule>, name: string) => {
+      const input = utils.getByPlaceholderText('Type to search therapies...');
+      fireEvent(input, 'focus');
+      fireEvent.press(await utils.findByText(name));
+    };
+
+    it('offers the clinic\'s own treatments and sends the picked treatment with the recommendation', async () => {
+      const utils = renderModule();
+      await pick(utils, 'Abhyanga');
+      await act(async () => {
+        await utils.ref.current!.sendTreatmentToAdmin();
+      });
+      expect(createTreatmentRecommendationApi).toHaveBeenCalledWith(
+        'tenant-1',
+        expect.objectContaining({ recommended_therapy: 'Abhyanga', recommended_treatment_id: 'treatment-abhyanga' }),
+      );
+    });
+
+    it('typing the exact name of a clinic treatment links it too', async () => {
+      const utils = renderModule();
+      fireEvent(utils.getByPlaceholderText('Type to search therapies...'), 'focus');
+      await utils.findByText('Abhyanga');                                    // only in the clinic's list: it has loaded
+      fireEvent.changeText(utils.getByPlaceholderText('Type to search therapies...'), 'shirodhara');
+      await act(async () => {
+        await utils.ref.current!.sendTreatmentToAdmin();
+      });
+      expect(createTreatmentRecommendationApi).toHaveBeenCalledWith(
+        'tenant-1',
+        expect.objectContaining({ recommended_treatment_id: 'treatment-shirodhara' }),
+      );
+    });
+
+    it('free text that is not one of the clinic\'s treatments still works and sends no link', async () => {
+      const utils = renderModule();
+      await pick(utils, 'Abhyanga');
+      fireEvent.changeText(utils.getByPlaceholderText('Type to search therapies...'), 'Custom herbal wrap');
+      await act(async () => {
+        await utils.ref.current!.sendTreatmentToAdmin();
+      });
+      const body = (createTreatmentRecommendationApi as jest.Mock).mock.calls[0][1];
+      expect(body.recommended_therapy).toBe('Custom herbal wrap');
+      expect(body.recommended_treatment_id ?? null).toBeNull();
+    });
+
+    it('an already ordered plan keeps its link and sends it again with the re-order', async () => {
+      (useEpisodeWorkspaceData as jest.Mock).mockReturnValue({
+        ...baseWorkspaceData,
+        treatmentSheet: { id: 'sheet-1', status: 'DRAFT', rows: [], duration_days: 7, state: 'DRAFT', recommended_therapy: 'Abhyanga', recommended_treatment_id: 'treatment-abhyanga' },
+        treatmentSheetId: 'sheet-1',
+        hasTreatmentSheet: true,
+      });
+      const utils = renderModule();
+      await act(async () => {
+        await utils.ref.current!.sendTreatmentToAdmin();
+      });
+      expect(sendToSchedulingApi).toHaveBeenCalledWith('sheet-1', expect.any(Number), expect.objectContaining({ recommended_treatment_id: 'treatment-abhyanga' }));
+    });
   });
 
   describe('FR-A4: save-before-transition (unmount-flush, own effect per design §6.4)', () => {

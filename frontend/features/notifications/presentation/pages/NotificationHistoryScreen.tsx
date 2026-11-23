@@ -21,6 +21,7 @@ import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
+import { getInboxNotificationRoute } from '../utils/inboxRoutes';
 import {
   useNotificationHistory,
   useMarkNotificationReadMutation,
@@ -175,13 +176,20 @@ export const NotificationHistoryScreen: React.FC = () => {
     // Navigate to deep link if available
     if (item.deep_link) {
       router.push(item.deep_link as any);
+      return;
+    }
+    // The clinic's own inbox entries (plans, sessions, stock): the screen depends on who is looking.
+    const inboxRoute = getInboxNotificationRoute(item, currentUser?.roles ?? []);
+    if (inboxRoute) {
+      router.push(inboxRoute as any);
     } else if (item.data) {
       const route = getNotificationDeepLink(item.data as any);
-      if (route) {
+      // '/notifications' is "nothing more specific": already here, so do not push the inbox onto itself.
+      if (route && route !== '/notifications') {
         router.push(route as any);
       }
     }
-  }, [router, markReadMutation]);
+  }, [router, markReadMutation, currentUser?.roles]);
 
   const handleMarkRead = useCallback((notificationId: string) => {
     markReadMutation.mutate(notificationId);

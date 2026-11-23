@@ -605,7 +605,8 @@
       "createFailed": "Could not create staff member. Please try again.",
       "updateFailed": "Could not update staff information. Please try again.",
       "deleteFailed": "Could not remove staff member. Please try again.",
-      "inviteFailed": "Could not send invitation. Please try again."
+      "inviteFailed": "Could not send invitation. Please try again.",
+      "alreadyHasLogin": "This staff member can already sign in."
     },
     "dashboard": {
       "loadFailed": "Could not load dashboard data. Pull down to retry.",
@@ -2186,6 +2187,17 @@
       "physiotherapist": "Physiotherapist",
       "dentist": "Dentist",
       "admin": "Admin"
+    },
+    "staffInvite": {
+      "open": "Invite to sign in",
+      "title": "Invite to sign in",
+      "description": "Creates a sign-in for this staff member. A sign-in link is sent to the email you enter, and their access follows their staff type.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name@example.com",
+      "emailInvalid": "Enter a valid email address.",
+      "send": "Send invitation",
+      "sentTitle": "Invitation sent",
+      "sentMessage": "A sign-in link was sent to {{email}}."
     },
     "staffList": {
       "title": "Staff Directory",

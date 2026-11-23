@@ -9,6 +9,7 @@ import {
   getStaffApi,
   createStaffApi,
   updateStaffApi,
+  inviteStaffToSignInApi,
   deleteStaffApi,
   listStaffLeaveApi,
   createStaffLeaveApi,
@@ -141,6 +142,21 @@ export const useUpdateStaffMutation = (tenantId: string, staffId: string) => {
         queryClient.invalidateQueries({ queryKey: staffKeys.lists() }),
         invalidateCanonicalOnboardingState(queryClient, tenantId),
       ]);
+    },
+  });
+};
+
+/**
+ * Hook to invite a staff member who was added without a login to sign in
+ */
+export const useInviteStaffToSignInMutation = (tenantId: string, staffId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<StaffResponse, Error, string>({
+    mutationFn: (email) => inviteStaffToSignInApi(tenantId, staffId, email),
+    onSuccess: async (data) => {
+      queryClient.setQueryData(staffKeys.detail(tenantId, staffId), data);
+      await queryClient.invalidateQueries({ queryKey: staffKeys.lists() });
     },
   });
 };
