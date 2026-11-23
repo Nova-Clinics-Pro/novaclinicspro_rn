@@ -4,6 +4,7 @@ import { ApiSession } from '../../../shared/api';
 import { runDir } from '../../../shared/config';
 import { readRoleIdentities } from '../../../cop/provision-roles';
 import { expect, passedEarlier, readSeed, test } from '../../../cop/fixture';
+import { eventually, inboxText } from '../../../cop/roles';
 
 /**
  * COP journeys and role boundaries with the REAL logins: Receptionist, Doctor, Therapist and Admin.
@@ -294,15 +295,15 @@ test.describe('10 Notifications (inbox)', () => {
 
   test('TC_COP_NTF_002 plan ordered: the front desk receives an inbox notification @known-gap', async () => {
     const w = await world(); const adm = await need('admin'); const rec = await need('receptionist'); test.skip(!J.order, 'blocked: no ordered plan (TC_COP_JRN_005)');
-    const inbox = async (a: ApiSession) => JSON.stringify((await a.get(`/api/v1/notifications/${w.t}/history`)).body);
-    const text = (await inbox(adm)) + (await inbox(rec));
-    expect(text, 'a notification about the ordered plan reached the front desk').toMatch(/treatment|plan|order/i);
+    const text = await eventually(async () => (await inboxText(w, adm)) + (await inboxText(w, rec)), t => /treatment_plan_ordered/.test(t));
+    expect(text, 'a notification about the ordered plan reached the front desk').toMatch(/treatment plan ordered/i);
+    expect(await inboxText(w, rec), 'the receptionist is told as well as the admin').toMatch(/treatment_plan_ordered/);
   });
 
   test('TC_COP_NTF_003 plan scheduled: the Doctor receives an inbox notification @known-gap', async () => {
     const w = await world(); const doc = await need('doctor'); test.skip(!J.scheduled, 'blocked: the plan was not scheduled (TC_COP_JRN_007)');
-    const text = JSON.stringify((await doc.get(`/api/v1/notifications/${w.t}/history`)).body);
-    expect(text, 'a notification about the scheduled plan reached the doctor').toMatch(/treatment|plan|schedul/i);
+    const text = await eventually(() => inboxText(w, doc), t => /treatment_plan_scheduled/.test(t));
+    expect(text, 'a notification about the scheduled plan reached the doctor').toMatch(/treatment plan scheduled/i);
   });
 });
 

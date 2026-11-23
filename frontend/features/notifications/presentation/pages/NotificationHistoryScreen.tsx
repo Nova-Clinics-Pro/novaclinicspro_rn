@@ -29,6 +29,7 @@ import {
 } from '../../data/repositories/push-notifications.repository.impl';
 import { NotificationHistoryItem } from '../../data/datasources/push-notifications.api';
 import { getNotificationDeepLink } from '../../data/models/push.dtos';
+import { getNotificationIcon } from '../utils/notificationIcons';
 
 interface NotificationItemProps {
   item: NotificationHistoryItem;
@@ -57,21 +58,6 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   }, [item.created_at]);
-
-  const getNotificationIcon = (type: string): string => {
-    const iconMap: Record<string, string> = {
-      appointment_new: 'calendar',
-      appointment_updated: 'calendar-outline',
-      appointment_cancelled: 'calendar-clear',
-      appointment_no_show: 'person-remove',
-      schedule_summary: 'today',
-      critical_update: 'warning',
-      leave_approved: 'checkmark-circle',
-      leave_rejected: 'close-circle',
-      default: 'notifications',
-    };
-    return iconMap[type] || iconMap.default;
-  };
 
   const handleSwipeDelete = () => {
     Alert.alert(
