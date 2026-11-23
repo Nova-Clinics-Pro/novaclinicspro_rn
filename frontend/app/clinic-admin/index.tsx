@@ -27,6 +27,7 @@ import { useClinicTheme, type ClinicTheme } from '../../core/theme/useClinicThem
 import { spacing } from '../../core/theme/spacing';
 import { typography } from '../../core/theme/typography';
 import { useAuth } from '../../features/auth/presentation/hooks/useAuth';
+import { canDispense } from '../../features/dispensing/domain/dispensing';
 import { useInventoryItemsListQuery, useInventoryAlertsListQuery } from '../../features/inventory/data/repositories/inventory.repository.impl';
 import { useDailyFinanceSummaryQuery, useSubscriptionSummaryQuery } from '../../features/billing/data/repositories/billing.repository.impl';
 import { useTreatmentOrdersQuery } from '../../features/treatmentSheets/data/repositories/treatmentOrders.repository.impl';
@@ -299,6 +300,14 @@ export default function ClinicAdminDashboard() {
               href="/clinic-admin/appointments"
               color={theme.colors.secondary.default}
             />
+            {canDispense(currentUser?.permissions ?? []) && (
+              <QuickActionButton
+                icon="medkit"
+                label={t('dispensing.title')}
+                href="/clinic-admin/dispensing"
+                color={theme.colors.feedback.success}
+              />
+            )}
             <QuickActionButton
               icon="time"
               label={t('clinicAdmin.dashboard.leaveManagement')}

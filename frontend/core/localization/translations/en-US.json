@@ -2103,6 +2103,53 @@
       "plainHint": "The clinic's header and footer are printed with the document."
     }
   },
+  "dispensing": {
+    "title": "Dispensing",
+    "subtitle": "Signed prescriptions waiting to be handed over.",
+    "emptyQueue": "Nothing is waiting to be dispensed.",
+    "noAccess": "You do not have permission to dispense.",
+    "signedOn": "Signed {{date}}",
+    "by": "by {{doctor}}",
+    "actions": {
+      "dispense": "Dispense",
+      "dispensed": "Dispensed",
+      "viewBill": "View bill",
+      "openQueue": "Ready to dispense"
+    },
+    "screen": {
+      "title": "Dispense medicines",
+      "medicine": "Prescribed medicine",
+      "pickItem": "Stock item",
+      "chooseItem": "Choose a stock item",
+      "searchItems": "Search the clinic's stock",
+      "quantity": "Quantity",
+      "inStock": "{{count}} {{unit}} in stock",
+      "outOfStock": "Out of stock",
+      "price": "Price {{amount}}",
+      "estimate": "Estimated bill",
+      "estimateNote": "The bill is calculated by the server when you dispense. Stock leaves when the bill is paid.",
+      "confirm": "Dispense and create bill",
+      "confirming": "Creating the bill...",
+      "nothingToDispense": "Choose at least one stock item and a quantity.",
+      "moreThanStock": "More than the stock on hand.",
+      "suggested": "Suggested from the medicine name",
+      "loading": "Loading the prescription...",
+      "notSigned": "Only a signed prescription can be dispensed.",
+      "billCreated": "Bill created",
+      "billCreatedBody": "Bill {{number}} was created. Ask the front desk to take the payment; stock leaves when it is paid.",
+      "collectPayment": "Take payment",
+      "done": "Done"
+    },
+    "errors": {
+      "alreadyDispensed": "This prescription has already been dispensed.",
+      "notSigned": "Only a signed prescription can be dispensed.",
+      "notFound": "That prescription was not found.",
+      "invalidLine": "One of the lines cannot be dispensed. Check the stock items and quantities.",
+      "noPermission": "You do not have permission to dispense.",
+      "insufficientStock": "There is not enough stock: {{available}} available, {{requested}} asked for.",
+      "failed": "The prescription could not be dispensed. Please try again."
+    }
+  },
   "reports": {
     "clinic": {
       "title": "Reports",

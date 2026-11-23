@@ -30,6 +30,7 @@ import { useTranslation } from '../../../../core/localization/useTranslation';
 import { classifyApiError } from '../../../../core/api/apiErrorPresentation';
 import { describeApiError } from '../../../../core/localization/apiErrorMessages';
 import { shareOutcome } from '../../domain/shareOutcome';
+import { DispenseAction } from '../../../dispensing/presentation/components/DispenseAction';
 import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 import {
   usePrescriptionDetailQuery,
@@ -242,6 +243,8 @@ export const PrescriptionDetailScreen: React.FC = () => {
               <Text style={styles.actionButtonText}>Share</Text>
             </TouchableOpacity>
           )}
+
+          <DispenseAction prescriptionId={prescriptionId} status={prescription.status} />
 
           <TouchableOpacity
             style={[styles.actionButton, styles.printButton]}
