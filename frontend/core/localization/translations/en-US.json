@@ -2103,6 +2103,202 @@
       "plainHint": "The clinic's header and footer are printed with the document."
     }
   },
+  "reports": {
+    "clinic": {
+      "title": "Reports",
+      "subtitle": "Your clinic at a glance. Every report covers this clinic only.",
+      "emptyAccess": "You do not have access to any report. Ask the clinic owner.",
+      "groups": {
+        "money": "Money",
+        "operations": "Visits and staff",
+        "clinical": "Treatment, stock and feedback"
+      },
+      "reports": {
+        "daily_collection": {
+          "title": "Daily collection",
+          "description": "Money received each day, by payment mode, with the day-end total."
+        },
+        "revenue_by_period": {
+          "title": "Revenue by period",
+          "description": "Billed, collected and still due, by day, week or month, service type or doctor."
+        },
+        "outstanding_dues": {
+          "title": "Outstanding dues",
+          "description": "Unpaid and part-paid bills by patient and how late they are."
+        },
+        "appointments_summary": {
+          "title": "Appointments summary",
+          "description": "Booked, completed, cancelled and no-show appointments, with the no-show rate."
+        },
+        "patient_visits": {
+          "title": "Patient visits",
+          "description": "New and returning patients, and the patients who visit most."
+        },
+        "staff_workload": {
+          "title": "Doctor and therapist workload",
+          "description": "Consultations or sessions done per person, and how much of their available time was booked."
+        },
+        "follow_up_retention": {
+          "title": "Follow-up and retention",
+          "description": "Patients due for follow-up, missed follow-ups, and patients not seen for a long time."
+        },
+        "treatment_plan_progress": {
+          "title": "Treatment plan progress",
+          "description": "Plans ordered, scheduled, in progress, completed and stopped, with the completion rate."
+        },
+        "inventory_status": {
+          "title": "Inventory status",
+          "description": "Stock levels, low and out-of-stock items, and what was used."
+        },
+        "feedback_summary": {
+          "title": "Feedback summary",
+          "description": "Average rating by doctor and therapist, and how many patients answered."
+        }
+      },
+      "screen": {
+        "dateRange": "Date range",
+        "from": "From",
+        "to": "To",
+        "dateFormat": "YYYY-MM-DD",
+        "apply": "Show report",
+        "presets": {
+          "today": "Today",
+          "last7": "Last 7 days",
+          "last30": "Last 30 days",
+          "thisMonth": "This month",
+          "lastMonth": "Last month"
+        },
+        "dimensionLabel": "Show by",
+        "groupByLabel": "Group by",
+        "exportCsv": "Export CSV",
+        "print": "Print",
+        "exportFailed": "The file could not be created. Please try again.",
+        "loading": "Preparing the report...",
+        "retry": "Try again",
+        "empty": "Nothing to show for these dates.",
+        "total": "Total",
+        "back": "Back to reports",
+        "generatedOn": "Generated on {{date}}",
+        "printTitleRange": "{{from}} to {{to}}",
+        "errors": {
+          "REPORT_RANGE_TOO_LONG": "That range is too long. Pick a shorter one.",
+          "REPORT_RANGE_BACKWARDS": "The end date is before the start date.",
+          "REPORT_NOT_ALLOWED": "You do not have access to this report.",
+          "REPORT_NOT_AVAILABLE": "This report is not available yet.",
+          "REPORT_OPTION_INVALID": "That option is not valid for this report.",
+          "REPORT_FAILED": "The report could not be loaded. Please try again.",
+          "dateInvalid": "Enter both dates as YYYY-MM-DD."
+        }
+      },
+      "dimensions": {
+        "period": "Period",
+        "service_type": "Service type",
+        "doctor": "Doctor",
+        "patient": "Patient",
+        "invoice": "Invoice",
+        "summary": "Summary",
+        "top_patients": "Top patients",
+        "therapy": "Therapy",
+        "stock": "Stock levels",
+        "consumption": "Consumption",
+        "due": "Due",
+        "missed": "Missed",
+        "lapsed": "Not seen lately",
+        "therapist": "Therapist"
+      },
+      "groupBy": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "values": {
+        "unassigned": "Not assigned",
+        "other": "Other",
+        "treatment": "Treatment",
+        "inventory": "Medicines and items",
+        "clinical_service": "Clinical service",
+        "consultation": "Consultation",
+        "not_due": "Not due yet",
+        "ok": "In stock",
+        "low": "Low",
+        "out": "Out of stock",
+        "doctor": "Doctor",
+        "therapist": "Therapist",
+        "physiotherapist": "Physiotherapist",
+        "dentist": "Dentist",
+        "unspecified": "Not specified"
+      },
+      "columns": {
+        "date": "Date",
+        "period": "Period",
+        "cash": "Cash",
+        "upi": "UPI",
+        "card": "Card",
+        "net_banking": "Net banking",
+        "insurance": "Insurance",
+        "other": "Other",
+        "total": "Total",
+        "payments": "Payments",
+        "invoices": "Invoices",
+        "billed": "Billed",
+        "collected": "Collected",
+        "due": "Still due",
+        "name": "Name",
+        "service_type": "Service type",
+        "patient": "Patient",
+        "not_due": "Not due",
+        "0-7": "0-7 days late",
+        "8-30": "8-30 days late",
+        "30+": "Over 30 days late",
+        "outstanding": "Outstanding",
+        "invoice_number": "Invoice",
+        "invoice_date": "Invoice date",
+        "due_date": "Due date",
+        "paid": "Paid",
+        "days_past_due": "Days late",
+        "age": "Age",
+        "booked": "Booked",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "no_show": "No-show",
+        "no_show_rate": "No-show rate",
+        "new_patients": "New patients",
+        "returning_patients": "Returning patients",
+        "visits": "Visits",
+        "last_visit_date": "Last visit",
+        "role": "Role",
+        "sessions": "Sessions",
+        "consultations": "Consultations",
+        "available_hours": "Available hours",
+        "booked_hours": "Booked hours",
+        "utilisation": "Utilisation",
+        "plans": "Plans",
+        "status": "Status",
+        "completion_rate": "Completion rate",
+        "therapy": "Therapy",
+        "item": "Item",
+        "category": "Category",
+        "stock": "Stock",
+        "reorder_point": "Reorder at",
+        "stock_status": "Stock status",
+        "consumed": "Used",
+        "unit": "Unit",
+        "phone": "Phone",
+        "days_overdue": "Days overdue",
+        "days_since_visit": "Days since visit",
+        "responses": "Responses",
+        "average_rating": "Average rating",
+        "response_rate": "Response rate",
+        "ordered": "Ordered",
+        "scheduled": "Scheduled",
+        "in_progress": "In progress",
+        "stopped": "Stopped",
+        "received": "Received",
+        "adjusted": "Adjusted",
+        "requests": "Requests sent"
+      }
+    }
+  },
   "clinicAdmin": {
     "dashboard": {
       "fallbackClinicName": "My Clinic",

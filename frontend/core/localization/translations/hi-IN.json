@@ -2100,6 +2100,202 @@
       "plainHint": "दस्तावेज़ के साथ क्लिनिक का हेडर और फुटर भी छपेगा।"
     }
   },
+  "reports": {
+    "clinic": {
+      "title": "रिपोर्ट",
+      "subtitle": "आपका क्लिनिक एक नज़र में। हर रिपोर्ट सिर्फ़ इसी क्लिनिक की है।",
+      "emptyAccess": "आपको किसी रिपोर्ट तक पहुँच नहीं है। क्लिनिक के मालिक से पूछें।",
+      "groups": {
+        "money": "पैसा",
+        "operations": "मरीज़ों की विज़िट और स्टाफ",
+        "clinical": "उपचार, स्टॉक और फ़ीडबैक"
+      },
+      "reports": {
+        "daily_collection": {
+          "title": "दैनिक वसूली",
+          "description": "हर दिन मिला पैसा, भुगतान के तरीके के अनुसार, दिन के अंत के कुल के साथ।"
+        },
+        "revenue_by_period": {
+          "title": "अवधि के अनुसार आय",
+          "description": "बिल किया गया, वसूला गया और बकाया, दिन, सप्ताह या महीने, सेवा प्रकार या डॉक्टर के अनुसार।"
+        },
+        "outstanding_dues": {
+          "title": "बकाया राशि",
+          "description": "बिना चुकाए और आंशिक चुकाए बिल, मरीज़ और देरी के अनुसार।"
+        },
+        "appointments_summary": {
+          "title": "अपॉइंटमेंट सारांश",
+          "description": "बुक, पूरे, रद्द और न आए अपॉइंटमेंट, न आने की दर के साथ।"
+        },
+        "patient_visits": {
+          "title": "मरीज़ों की विज़िट",
+          "description": "नए और दोबारा आने वाले मरीज़, और सबसे ज़्यादा आने वाले मरीज़।"
+        },
+        "staff_workload": {
+          "title": "डॉक्टर और थेरेपिस्ट का कार्यभार",
+          "description": "हर व्यक्ति के किए परामर्श या सत्र, और उनके उपलब्ध समय का कितना हिस्सा बुक रहा।"
+        },
+        "follow_up_retention": {
+          "title": "फ़ॉलो-अप और वापसी",
+          "description": "फ़ॉलो-अप के लिए देय मरीज़, छूटे फ़ॉलो-अप, और काफ़ी समय से न दिखे मरीज़।"
+        },
+        "treatment_plan_progress": {
+          "title": "उपचार योजना की प्रगति",
+          "description": "ऑर्डर, निर्धारित, जारी, पूरी और रोकी गई योजनाएँ, पूर्णता दर के साथ।"
+        },
+        "inventory_status": {
+          "title": "इन्वेंटरी की स्थिति",
+          "description": "स्टॉक का स्तर, कम और खत्म स्टॉक वाली वस्तुएँ, और क्या इस्तेमाल हुआ।"
+        },
+        "feedback_summary": {
+          "title": "फ़ीडबैक सारांश",
+          "description": "डॉक्टर और थेरेपिस्ट के अनुसार औसत रेटिंग, और कितने मरीज़ों ने जवाब दिया।"
+        }
+      },
+      "screen": {
+        "dateRange": "तारीख़ की सीमा",
+        "from": "से",
+        "to": "तक",
+        "dateFormat": "YYYY-MM-DD",
+        "apply": "रिपोर्ट दिखाएँ",
+        "presets": {
+          "today": "आज",
+          "last7": "पिछले 7 दिन",
+          "last30": "पिछले 30 दिन",
+          "thisMonth": "इस महीने",
+          "lastMonth": "पिछला महीना"
+        },
+        "dimensionLabel": "इसके अनुसार देखें",
+        "groupByLabel": "इसके अनुसार समूह",
+        "exportCsv": "CSV निर्यात करें",
+        "print": "प्रिंट करें",
+        "exportFailed": "फ़ाइल नहीं बन सकी। कृपया फिर कोशिश करें।",
+        "loading": "रिपोर्ट तैयार हो रही है...",
+        "retry": "फिर कोशिश करें",
+        "empty": "इन तारीख़ों के लिए दिखाने को कुछ नहीं है।",
+        "total": "कुल",
+        "back": "रिपोर्ट पर वापस",
+        "generatedOn": "{{date}} को बनाई गई",
+        "printTitleRange": "{{from}} से {{to}}",
+        "errors": {
+          "REPORT_RANGE_TOO_LONG": "यह सीमा बहुत लंबी है। छोटी सीमा चुनें।",
+          "REPORT_RANGE_BACKWARDS": "अंतिम तारीख़ शुरुआती तारीख़ से पहले है।",
+          "REPORT_NOT_ALLOWED": "आपको इस रिपोर्ट तक पहुँच नहीं है।",
+          "REPORT_NOT_AVAILABLE": "यह रिपोर्ट अभी उपलब्ध नहीं है।",
+          "REPORT_OPTION_INVALID": "यह विकल्प इस रिपोर्ट के लिए मान्य नहीं है।",
+          "REPORT_FAILED": "रिपोर्ट लोड नहीं हो सकी। कृपया फिर कोशिश करें।",
+          "dateInvalid": "दोनों तारीख़ें YYYY-MM-DD में दर्ज करें।"
+        }
+      },
+      "dimensions": {
+        "period": "अवधि",
+        "service_type": "सेवा प्रकार",
+        "doctor": "डॉक्टर",
+        "patient": "मरीज़",
+        "invoice": "बिल",
+        "summary": "सारांश",
+        "top_patients": "सबसे ज़्यादा आने वाले मरीज़",
+        "therapy": "थेरेपी",
+        "stock": "स्टॉक का स्तर",
+        "consumption": "खपत",
+        "due": "देय",
+        "missed": "छूटे",
+        "lapsed": "हाल में नहीं दिखे",
+        "therapist": "थेरेपिस्ट"
+      },
+      "groupBy": {
+        "day": "दिन",
+        "week": "सप्ताह",
+        "month": "महीना"
+      },
+      "values": {
+        "unassigned": "असाइन नहीं",
+        "other": "अन्य",
+        "treatment": "उपचार",
+        "inventory": "दवाइयाँ और वस्तुएँ",
+        "clinical_service": "क्लिनिकल सेवा",
+        "consultation": "परामर्श",
+        "not_due": "अभी देय नहीं",
+        "ok": "स्टॉक में",
+        "low": "कम",
+        "out": "खत्म",
+        "doctor": "डॉक्टर",
+        "therapist": "थेरेपिस्ट",
+        "physiotherapist": "फ़िज़ियोथेरेपिस्ट",
+        "dentist": "दंत चिकित्सक",
+        "unspecified": "निर्दिष्ट नहीं"
+      },
+      "columns": {
+        "date": "तारीख़",
+        "period": "अवधि",
+        "cash": "नकद",
+        "upi": "यूपीआई",
+        "card": "कार्ड",
+        "net_banking": "नेट बैंकिंग",
+        "insurance": "बीमा",
+        "other": "अन्य",
+        "total": "कुल",
+        "payments": "भुगतान",
+        "invoices": "बिल",
+        "billed": "बिल किया गया",
+        "collected": "वसूला गया",
+        "due": "बकाया",
+        "name": "नाम",
+        "service_type": "सेवा प्रकार",
+        "patient": "मरीज़",
+        "not_due": "देय नहीं",
+        "0-7": "0-7 दिन देरी",
+        "8-30": "8-30 दिन देरी",
+        "30+": "30 दिन से ज़्यादा देरी",
+        "outstanding": "बकाया राशि",
+        "invoice_number": "बिल",
+        "invoice_date": "बिल की तारीख़",
+        "due_date": "देय तारीख़",
+        "paid": "चुकाया",
+        "days_past_due": "देरी के दिन",
+        "age": "उम्र",
+        "booked": "बुक",
+        "completed": "पूरे",
+        "cancelled": "रद्द",
+        "no_show": "न आए",
+        "no_show_rate": "न आने की दर",
+        "new_patients": "नए मरीज़",
+        "returning_patients": "दोबारा आए मरीज़",
+        "visits": "विज़िट",
+        "last_visit_date": "आख़िरी विज़िट",
+        "role": "भूमिका",
+        "sessions": "सत्र",
+        "consultations": "परामर्श",
+        "available_hours": "उपलब्ध घंटे",
+        "booked_hours": "बुक घंटे",
+        "utilisation": "उपयोग",
+        "plans": "योजनाएँ",
+        "status": "स्थिति",
+        "completion_rate": "पूर्णता दर",
+        "therapy": "थेरेपी",
+        "item": "वस्तु",
+        "category": "श्रेणी",
+        "stock": "स्टॉक",
+        "reorder_point": "दोबारा ऑर्डर पर",
+        "stock_status": "स्टॉक की स्थिति",
+        "consumed": "इस्तेमाल",
+        "unit": "इकाई",
+        "phone": "फ़ोन",
+        "days_overdue": "देर के दिन",
+        "days_since_visit": "विज़िट के बाद के दिन",
+        "responses": "जवाब",
+        "average_rating": "औसत रेटिंग",
+        "response_rate": "जवाब की दर",
+        "ordered": "ऑर्डर किए",
+        "scheduled": "निर्धारित",
+        "in_progress": "जारी",
+        "stopped": "रोके गए",
+        "received": "प्राप्त",
+        "adjusted": "समायोजित",
+        "requests": "भेजे गए अनुरोध"
+      }
+    }
+  },
   "clinicAdmin": {
     "dashboard": {
       "fallbackClinicName": "मेरा क्लिनिक",

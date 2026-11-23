@@ -1313,12 +1313,6 @@
     "texts": 20,
     "staticPalette": 0
   },
-  "features/reports/presentation/pages/ReportsHomeScreen.tsx": {
-    "colors": 0,
-    "fontSizes": 2,
-    "texts": 10,
-    "staticPalette": 1
-  },
   "features/rooms/domain/entities/room.entity.ts": {
     "colors": 7,
     "fontSizes": 0,
