@@ -349,7 +349,7 @@ test.describe('05 Therapist', () => {
   test('TC_COP_THR_013 the Therapist applies for leave and sees it requested', async () => {
     const w = await world(); const th = await need('therapist'); const adm = await need('admin'); const d = ymd(workday(far()));
     const r = await th.post(`${w.b}/staff/${w.therapist.id}/leave`, { leave_type: 'CASUAL', start_date: d, end_date: d, reason: 'COP_THR_013' }); expect(ok(r.status), `leave returned ${r.status} ${JSON.stringify(r.body)?.slice(0, 160)}`).toBe(true);
-    try { expect(String(r.body.status).toUpperCase()).toBe('REQUESTED'); } finally { await adm.request('PATCH', `${w.b}/leave/${r.body.id}/cancel`, {}); }
+    try { expect(String(r.body.status).toUpperCase()).toBe('REQUESTED'); } finally { await adm.request('PATCH', `${w.b}/leave/${r.body.id}/cancel?staff_id=${w.therapist.id}`, {}); }
   });
 });
 

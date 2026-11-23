@@ -36,9 +36,21 @@ import {
 // VALIDATION SCHEMA
 // ============================================
 
-const clientSchema = z.object({
+// The server requires a phone for a new client (min 10, max 20 characters) and accepts an update without one, so the form
+// requires it when adding a client and not when editing an existing one (older clients may have no phone on record).
+const PHONE_MIN_LENGTH = 10;
+const PHONE_MAX_LENGTH = 20;
+
+const buildClientSchema = (phoneRequired: boolean) => z.object({
   full_name: z.string().min(1, 'Full name is required').max(255),
-  phone: z.string().max(20).optional().nullable(),
+  phone: phoneRequired
+    ? z
+        .string()
+        .trim()
+        .min(1, 'Phone number is required')
+        .min(PHONE_MIN_LENGTH, `Phone number must be at least ${PHONE_MIN_LENGTH} digits`)
+        .max(PHONE_MAX_LENGTH)
+    : z.string().max(PHONE_MAX_LENGTH).optional().nullable(),
   mobile_code: z.string().max(5).optional(),
   email: z.string().email('Invalid email').optional().nullable().or(z.literal('')),
   gender: z.string().min(1, 'Gender is required'),
@@ -57,7 +69,7 @@ const clientSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-type ClientFormData = z.infer<typeof clientSchema>;
+type ClientFormData = z.infer<ReturnType<typeof buildClientSchema>>;
 
 // ============================================
 // COMPONENT
@@ -85,7 +97,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     watch,
     formState: { errors },
   } = useForm<ClientFormData>({
-    resolver: zodResolver(clientSchema),
+    resolver: zodResolver(buildClientSchema(!isEditing)),
     defaultValues: {
       full_name: initialData?.full_name || '',
       phone: initialData?.phone || '',
@@ -163,7 +175,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
           {/* Phone */}
           <View style={styles.field}>
-            <Text style={styles.label}>Phone (Optional)</Text>
+            <Text style={styles.label}>{isEditing ? 'Phone' : 'Phone *'}</Text>
             <View style={styles.phoneRow}>
               <Controller
                 control={control}
@@ -195,6 +207,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                 )}
               />
             </View>
+            {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
           </View>
 
           {/* Email */}

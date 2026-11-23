@@ -222,7 +222,31 @@ test.describe('01_Owner and 02_Admin settings', () => {
       const ap = await c.api.request('PATCH', `${c.b}/leave/${lv.body.id}/approve`, {});
       why(ap, 'approve leave as the clinic owner');
       expect(ok(ap.status), `approve returned ${ap.status}`).toBe(true);
-    } finally { await c.api.request('PATCH', `${c.b}/leave/${lv.body.id}/cancel`, {}); }
+    } finally { await c.api.request('PATCH', `${c.b}/leave/${lv.body.id}/cancel?staff_id=${c.seed.staff.T1}`, {}); }
+  });
+
+  test('OWNER-LEAVE-TYPE an unknown leave type is a validation error that lists the allowed ones (evidence for DEF_COP_025)', async () => {
+    const c = await sessionFor('owner') as Ctx; const w = when(DAY + 16, 10, 0, 60);
+    const bad = await c.api.post(`${c.b}/staff/${c.seed.staff.T1}/leave`, { leave_type: 'annual', start_date: w.date, end_date: w.date, reason: 'COP_DEF_025' });
+    why(bad, 'leave with an unknown type');
+    expect(bad.status, `an unknown leave type returned ${bad.status}`).toBe(422);
+    expect(JSON.stringify(bad.body), 'the allowed types are listed').toMatch(/SICK/);
+  });
+
+  test('OWNER-HOURS one set of hours per day, and a closed day cannot keep its times (evidence for DEF_COP_024)', async () => {
+    const c = await sessionFor('owner') as Ctx;
+    const hours = list((await c.api.get(`${c.b}/operating-hours?is_active=true&limit=50`)).body);
+    const monday = hours.find((h: any) => Number(h.day_of_week) === 0); expect(monday, 'Monday has hours').toBeTruthy();
+    const again = await c.api.post(`${c.b}/operating-hours`, { day_of_week: 0, is_open: true, open_time: '09:00', close_time: '18:00', status: 'active' });
+    why(again, 'a second set of hours for Monday');
+    if (ok(again.status)) await c.api.request('DELETE', `${c.b}/operating-hours/${again.body.id}`);
+    expect(again.status, `a second set for Monday returned ${again.status}`).toBe(409);
+    const saturday = hours.find((h: any) => Number(h.day_of_week) === 5);
+    const close = await c.api.request('PATCH', `${c.b}/operating-hours/${saturday.id}`, { is_open: false });
+    why(close, 'close Saturday without clearing its times');
+    expect(close.status, `closing a day that still has times returned ${close.status}`).toBe(422);
+    expect(JSON.stringify(close.body), 'it says what to clear').toMatch(/closed day/i);
+    expect((await c.api.get(`${c.b}/operating-hours/${saturday.id}`)).body.is_open, 'Saturday is still open').toBe(true);
   });
 
   test('TC_COP_ADM_016 books, reschedules and cancels an appointment', async () => {
@@ -343,12 +367,16 @@ test.describe('03_Receptionist (front-desk work)', () => {
     await c.api.request('DELETE', `${c.b}/clients/${res.body.id}`);
   });
 
-  test('TC_COP_RCP_003 a patient can be saved without a phone, as the form says @known-gap', async () => {
+  test('TC_COP_RCP_003 a patient cannot be saved without a phone, and the refusal says why', async () => {
+    // owner decision (22 Nov 2026): phone is required; the New Client form marks it required and the server agrees
     asOwner('Receptionist'); const c = await need();
     const res = await c.api.post(`${c.b}/clients`, { full_name: `COP no phone ${Date.now()}`, gender: 'male', date_of_birth: '1990-01-01' });
     why(res, 'patient without phone');
-    expect(ok(res.status), `returned ${res.status}`).toBe(true);
-    if (ok(res.status)) await c.api.request('DELETE', `${c.b}/clients/${res.body.id}`);
+    expect(res.status, `returned ${res.status}`).toBe(422);
+    expect(JSON.stringify(res.body), 'the refusal names the phone').toMatch(/phone/i);
+    const withPhone = await c.api.post(`${c.b}/clients`, { full_name: `COP with phone ${Date.now()}`, gender: 'male', date_of_birth: '1990-01-01', phone: '9100000299' });
+    expect(ok(withPhone.status), `with a phone returned ${withPhone.status}`).toBe(true);
+    if (ok(withPhone.status)) await c.api.request('DELETE', `${c.b}/clients/${withPhone.body.id}`);
   });
 
   test('TC_COP_RCP_007 two therapists on one therapy', async () => {
@@ -431,16 +459,23 @@ test.describe('08_Conflicts_And_Scheduling: booking rules (Past, Break, Weekly o
   test('TC_COP_CNF_006 a booking outside operating hours is accepted with a warning flag; inside hours is clean', async () => {
     asOwner('Receptionist'); const c = await need(); await strict(c);
     // one day per booking: nothing but the time of day can decide the outcome
-    const late = when(DAY + 10, 17, 30, 60); const edge = when(DAY + 11, 18, 0, 30); const inside = when(DAY + 12, 17, 0, 60);
-    const a = await consult(c, 'P-Male', 'D2', 'C-1', late); why(a, '17:30-18:30');
-    const b = await consult(c, 'P-Minor', 'D2', 'C-2', edge); why(b, '18:00');
-    const d = await consult(c, 'P-Female', 'D1', 'C-2', inside); why(d, '17:00-18:00');
+    // the suite reuses its doctors on random far dates, so a date can already hold an earlier run's booking (a correct refusal): try another day
+    const onFreeDay = async (offset: number, hh: number, mm: number, minutes: number, patient: string, doctor: string, room: string) => {
+      let r = await consult(c, patient, doctor, room, when(DAY + offset, hh, mm, minutes));
+      for (let tries = 1; tries <= 4 && !ok(r.status) && /already has an appointment/i.test(JSON.stringify(r.body)); tries++) r = await consult(c, patient, doctor, room, when(DAY + offset + tries * 40, hh, mm, minutes));
+      return r;
+    };
+    const a = await onFreeDay(10, 17, 30, 60, 'P-Male', 'D2', 'C-1'); why(a, '17:30-18:30');
+    const b = await onFreeDay(11, 18, 0, 30, 'P-Minor', 'D2', 'C-2'); why(b, '18:00');
+    const d = await onFreeDay(12, 17, 0, 60, 'P-Female', 'D1', 'C-2'); why(d, '17:00-18:00');
     expect.soft(ok(d.status), `inside hours: ${d.status} ${JSON.stringify(d.body)?.slice(0, 160)}`).toBe(true);
     expect.soft(d.body.is_outside_operating_hours, '17:00-18:00 is not flagged').toBeFalsy();
-    expect.soft(ok(a.status), `17:30-18:30 (warn, accepted): ${a.status}`).toBe(true);
+    expect.soft(ok(a.status), `17:30-18:30 (warn, accepted): ${a.status} ${JSON.stringify(a.body)?.slice(0, 200)}`).toBe(true);
     expect.soft(a.body.is_outside_operating_hours, '17:30-18:30 ends after closing time: should be flagged').toBe(true);
-    expect.soft(ok(b.status), `18:00 (warn, accepted): ${b.status}`).toBe(true);
+    expect.soft(ok(b.status), `18:00 (warn, accepted): ${b.status} ${JSON.stringify(b.body)?.slice(0, 200)}`).toBe(true);
     expect.soft(b.body.is_outside_operating_hours, '18:00 starts at closing time: should be flagged').toBe(true);
+    // leave nothing behind: a booking left on these random dates would clash with a later run's booking of the same doctor
+    for (const made of [a, b, d]) if (ok(made.status) && made.body?.id) await c.api.request('DELETE', `${c.b}/appointments/${made.body.id}`);
   });
 
   test('TC_COP_CNF_007 a booking that overlaps the break is blocked; after the break is allowed', async () => {

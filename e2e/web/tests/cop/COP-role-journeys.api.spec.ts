@@ -198,11 +198,14 @@ test.describe('07 journey: 6b defer and 6c reject', () => {
 });
 
 test.describe('04 Doctor: documents', () => {
-  test('TC_COP_DOC_007 only one case sheet per episode @known-gap', async () => {
+  test('TC_COP_DOC_007 only one case sheet per episode: a second request opens the existing one', async () => {
+    // owner decision (22 Nov 2026): keep the approved find-or-create (R7 FR-CS-1); the database also allows only one live sheet per episode
     const w = await world(); const doc = await need('doctor'); test.skip(!J.cs, 'blocked: no case sheet (TC_COP_DOC_006)');
     const second = await doc.post(`${w.b}/clients/${w.seed.patients['P-Female']}/casesheets`, { clinic_type: 'ayurveda', episode_id: J.ep.id, appointment_id: J.ap.id, data_json: { chief_complaint: 'COP second sheet' } });
     why(second, 'second case sheet for the same episode');
-    expect(refused(second.status), `a second case sheet for the episode returned ${second.status}`).toBe(true);
+    expect(ok(second.status), `the second request returned ${second.status}`).toBe(true);
+    expect(second.body.id, 'the existing sheet comes back, not a new one').toBe(J.cs.id);
+    expect(second.body.data_json?.chief_complaint ?? '', 'the existing sheet is not overwritten').not.toBe('COP second sheet');
   });
 
   test('TC_COP_DOC_011 a non-doctor cannot sign or forge the signer', async () => {
@@ -312,9 +315,10 @@ test.describe('14 Non-functional: signed documents', () => {
     expect(refused(back.status), `moving a signed case sheet back to DRAFT returned ${back.status}`).toBe(true);
   });
 
-  test('TC_COP_NFR_012 one case sheet per episode is enforced by the system @known-gap', async () => {
+  test('TC_COP_NFR_012 one case sheet per episode is enforced by the system', async () => {
     const w = await world(); const doc = await need('doctor'); test.skip(!J.cs, 'blocked: no case sheet (TC_COP_DOC_006)');
     const second = await doc.post(`${w.b}/clients/${w.seed.patients['P-Female']}/casesheets`, { clinic_type: 'ayurveda', episode_id: J.ep.id, appointment_id: J.ap.id, data_json: { chief_complaint: 'COP second sheet (NFR_012)' } }); why(second, 'second case sheet for the same episode');
-    expect(refused(second.status), `a second case sheet for the same episode returned ${second.status}`).toBe(true);
+    expect(ok(second.status), `a second request for the same episode returned ${second.status}`).toBe(true);
+    expect(second.body.id, 'the system hands back the one existing sheet, never a second').toBe(J.cs.id);
   });
 });

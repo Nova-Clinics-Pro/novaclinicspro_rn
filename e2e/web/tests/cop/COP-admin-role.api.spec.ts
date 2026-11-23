@@ -72,7 +72,7 @@ test.describe('Clinic Admin: what the role may and may not do', () => {
       const ap = await c.api.request('PATCH', `${c.b}/leave/${lv.body.id}/approve`, {}); why(ap, 'approve leave as the Admin');
       expect(ok(ap.status), `approve returned ${ap.status}`).toBe(true);
       expect(String(ap.body?.status ?? (await c.api.get(`${c.b}/leaves`)).body?.items?.find((l: any) => l.id === lv.body.id)?.status).toUpperCase()).toBe('APPROVED');
-    } finally { await c.api.request('PATCH', `${c.b}/leave/${lv.body.id}/cancel`, {}); }
+    } finally { await c.api.request('PATCH', `${c.b}/leave/${lv.body.id}/cancel?staff_id=${c.seed.staff.T1}`, {}); }
   });
 
   test('TC_COP_CNF_010 a therapist on approved leave cannot be booked', async () => {
@@ -84,7 +84,7 @@ test.describe('Clinic Admin: what the role may and may not do', () => {
       const a = await c.api.post(`${c.b}/appointments`, { client_id: c.seed.patients['P-Female3'], therapist_ids: [c.seed.staff.T3], room_id: c.seed.rooms['T-2'], treatment_id: c.seed.treatments.COPABH, appointment_start: w.start, appointment_end: w.end, status: 'scheduled', appointment_type: 'SINGLE' });
       why(a, 'book a therapist on approved leave');
       expect(refused(a.status), `booking T3 on leave returned ${a.status}`).toBe(true);
-    } finally { await c.api.request('PATCH', `${c.b}/leave/${lv.body.id}/cancel`, {}); }
+    } finally { await c.api.request('PATCH', `${c.b}/leave/${lv.body.id}/cancel?staff_id=${c.seed.staff.T3}`, {}); }
   });
 
   test('TC_COP_OWN_011 an Admin cannot change role permissions (owner-only)', async () => {
