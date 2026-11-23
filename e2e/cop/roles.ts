@@ -45,6 +45,14 @@ export async function consultAndSign(w: World, patient: string, day: number) {
   for (const st of ['FINAL', 'SIGNED']) await doc.request('PATCH', `${w.b}/casesheets/${cs.body.id}/status`, { status: st });
   return { ap: ap.body, ep: ep.body, cs: cs.body, day: d, patient };
 }
+/** The events behind a notification are handled by the worker (it polls every few seconds), so the inbox is read until it says what is expected. */
+export async function eventually<T>(read: () => Promise<T>, done: (value: T) => boolean, timeoutMs = 45_000, stepMs = 2_000): Promise<T> {
+  const until = Date.now() + timeoutMs; let value = await read();
+  while (!done(value) && Date.now() < until) { await new Promise(r => setTimeout(r, stepMs)); value = await read(); }
+  return value;
+}
+/** A person's notification inbox as text (their own history). */
+export const inboxText = async (w: { t: string }, a: ApiSession) => JSON.stringify((await a.get(`/api/v1/notifications/${w.t}/history?limit=100`)).body);
 export const fetchOrder = async (w: World, id: string) => list((await (await need('admin')).get(`${w.ts}/clinic/${w.t}/treatment-orders`)).body).find(o => o.id === id);
 
 /** A plan with `rows` daily rows, ordered and scheduled (without a time: scheduling with a time answers 500, DEF_COP_029) to the logged-in therapist. */

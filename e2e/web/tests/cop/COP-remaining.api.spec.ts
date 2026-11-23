@@ -2,7 +2,7 @@ import { ApiSession } from '../../../shared/api';
 import { config } from '../../../shared/config';
 import { identityFor } from '../../../shared/identities';
 import { readRoleIdentities } from '../../../cop/provision-roles';
-import { as, book, consultAndSign, expect, far, fetchOrder, list, need, note, ok, readSeed, refused, scheduledPlan, slot, stock, test, ver, why, workday, world, ymd } from '../../../cop/roles';
+import { as, book, consultAndSign, eventually, expect, far, fetchOrder, inboxText, list, need, note, ok, readSeed, refused, scheduledPlan, slot, stock, test, ver, why, workday, world, ymd } from '../../../cop/roles';
 
 /**
  * COP cases that remained after the first runs, executed with the real role logins at API level. Each assertion is the
@@ -228,8 +228,9 @@ test.describe('04 Doctor', () => {
   test('TC_COP_DOC_016 completing the plan rows notifies the therapists and the front desk @known-gap', async () => {
     const w = await world(); const th = await need('therapist'); const adm = await need('admin');
     const p = await scheduledPlan(w, 'P-Female', far(), 2); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
-    const text = JSON.stringify((await th.get(`/api/v1/notifications/${w.t}/history`)).body) + JSON.stringify((await adm.get(`/api/v1/notifications/${w.t}/history`)).body);
-    expect(text, 'an inbox notification about the plan reached the therapist or the front desk').toMatch(/treatment|plan|session/i);
+    const text = await eventually(async () => (await inboxText(w, th)) + (await inboxText(w, adm)), t => /treatment_plan_scheduled/.test(t) && /treatment_plan_ordered/.test(t));
+    expect(text, 'the front desk was told the plan was ordered').toMatch(/treatment plan ordered/i);
+    expect(await inboxText(w, th), 'the therapist was told the plan was scheduled to them').toMatch(/treatment plan scheduled/i);
   });
 
   test('TC_COP_DOC_017 the card says Complete Consultation once the documents are finalized', async () => {
@@ -431,18 +432,31 @@ test.describe('07 journey tail', () => {
 
 test.describe('10 notifications and 11 figures', () => {
   test('TC_COP_NTF_004 the Doctor completing rows notifies therapists and the front desk @known-gap', async () => {
+    // owner routing (23 Nov 2026): the doctor orders the plan -> the front desk is told; the front desk schedules it -> the doctor and the assigned therapists are told
     const w = await world(); const th = await need('therapist'); const rec = await need('receptionist');
-    const text = JSON.stringify((await th.get(`/api/v1/notifications/${w.t}/history`)).body) + JSON.stringify((await rec.get(`/api/v1/notifications/${w.t}/history`)).body);
-    expect(text, 'an inbox notification about the completed rows').toMatch(/treatment|plan|row|session/i);
+    const p = await scheduledPlan(w, 'P-Female', far(), 2); test.skip(!p.scheduled, `blocked: the plan could not be scheduled (${p.scheduleError})`);
+    const therapist = await eventually(() => inboxText(w, th), t => t.includes(p.sheet.id));
+    expect(therapist, 'the assigned therapist is told the plan was scheduled').toMatch(/treatment plan scheduled/i);
+    expect(await eventually(() => inboxText(w, rec), t => /treatment_plan_ordered/.test(t) && t.includes(p.sheet.id)), 'the front desk is told the plan was ordered').toMatch(/treatment plan ordered/i);
   });
   test('TC_COP_NTF_005 a completed session notifies the Doctor and the front desk @known-gap', async () => {
-    const w = await world(); const doc = await need('doctor'); const adm = await need('admin');
-    const text = JSON.stringify((await doc.get(`/api/v1/notifications/${w.t}/history`)).body) + JSON.stringify((await adm.get(`/api/v1/notifications/${w.t}/history`)).body);
-    expect(text, 'an inbox notification about a completed session').toMatch(/session.*complet|completed/i);
+    const w = await world(); const doc = await need('doctor'); const adm = await need('admin'); const th = await need('therapist');
+    const p = await scheduledPlan(w, 'P-Female', far(), 2); test.skip(!p.scheduled, `blocked: the plan could not be scheduled (${p.scheduleError})`);
+    const row = p.order.rows[0]; await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(p.order));
+    const done = await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 5, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: w.seed.inventory['COP Sesame oil'] }] });
+    expect(ok(done.status), `the session completed (${done.status})`).toBe(true);
+    const mine = (t: string) => t.includes(row.id);
+    expect(await eventually(() => inboxText(w, doc), mine), 'the doctor is told a session was completed').toMatch(/treatment session completed/i);
+    expect(await eventually(() => inboxText(w, adm), mine), 'the front desk is told a session was completed').toMatch(/treatment session completed/i);
   });
   test('TC_COP_NTF_006 low stock notifies the Admin @known-gap', async () => {
-    const w = await world(); const adm = await need('admin');
-    expect(JSON.stringify((await adm.get(`/api/v1/notifications/${w.t}/history`)).body), 'a low-stock notification').toMatch(/stock|inventory|reorder/i);
+    const w = await world(); const adm = await need('admin'); const name = `COP NTF_006 item ${Date.now()}`;
+    const made = await adm.post(`${w.b}/inventory`, { name, unit: 'ml', current_stock: '100', reorder_point: 50, location: {} }); expect(ok(made.status), `item created (${made.status})`).toBe(true);
+    try {
+      const down = await adm.post(`${w.b}/inventory/${made.body.id}/adjust-stock`, { quantity: -70, notes: 'COP NTF_006: bring below the reorder point' }); expect(ok(down.status), `stock adjusted (${down.status})`).toBe(true);
+      const text = await eventually(() => inboxText(w, adm), t => t.includes(name));
+      expect(text, 'the admin is told the item is low').toContain(name); expect(text).toMatch(/low stock|out of stock/i);
+    } finally { await adm.request('DELETE', `${w.b}/inventory/${made.body.id}`); }
   });
   test('TC_COP_NTF_007 a notification stays until the user marks it read', async () => {
     const w = await world(); const adm = await need('admin');
