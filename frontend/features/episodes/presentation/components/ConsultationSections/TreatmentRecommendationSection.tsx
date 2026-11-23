@@ -52,6 +52,8 @@ interface TreatmentRecommendationSectionProps {
   ) => void;
   onSendToAdmin: () => void;
   progress: SectionProgressStatus;
+  /** The clinic's own treatments. When given, they are the suggestions and picking one links the plan to it. */
+  treatments?: ReadonlyArray<{ id: string; name: string }>;
 }
 
 const DURATIONS = [7, 14, 21, 30, 45, 60, 'custom'] as const;
@@ -67,6 +69,7 @@ export const TreatmentRecommendationSection: React.FC<TreatmentRecommendationSec
   onUpdate,
   onSendToAdmin,
   progress,
+  treatments,
 }) => {
   const { colors, spacing, typography } = useClinicTheme();
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -88,11 +91,15 @@ export const TreatmentRecommendationSection: React.FC<TreatmentRecommendationSec
     : colors.text.secondary;
 
   // Filter suggestions based on current input
+  const suggestionPool = useMemo<ReadonlyArray<{ id?: string; name: string }>>(
+    () => (treatments && treatments.length > 0 ? treatments : THERAPY_SUGGESTIONS.map(name => ({ name }))),
+    [treatments],
+  );
   const filteredSuggestions = useMemo(() => {
     const q = draft.recommendedTherapy.trim().toLowerCase();
-    if (!q) return THERAPY_SUGGESTIONS;
-    return THERAPY_SUGGESTIONS.filter(t => t.toLowerCase().includes(q));
-  }, [draft.recommendedTherapy]);
+    if (!q) return suggestionPool;
+    return suggestionPool.filter(t => t.name.toLowerCase().includes(q));
+  }, [draft.recommendedTherapy, suggestionPool]);
 
   const handleSend = () => {
     if (!draft.recommendedTherapy.trim()) {
@@ -105,12 +112,16 @@ export const TreatmentRecommendationSection: React.FC<TreatmentRecommendationSec
 
   const handleTherapyChange = (value: string) => {
     onUpdate('recommendedTherapy', value);
+    // Typing the exact name of a clinic treatment links it; any other text is free text with no link.
+    const typed = value.trim().toLowerCase();
+    onUpdate('recommendedTreatmentId', treatments?.find(t => t.name.trim().toLowerCase() === typed)?.id ?? null);
     setShowSuggestions(value.length > 0);
     setValidationError(null);
   };
 
-  const handleSuggestionSelect = (value: string) => {
-    onUpdate('recommendedTherapy', value);
+  const handleSuggestionSelect = (item: { id?: string; name: string }) => {
+    onUpdate('recommendedTherapy', item.name);
+    onUpdate('recommendedTreatmentId', item.id ?? null);
     setShowSuggestions(false);
   };
 
@@ -181,7 +192,7 @@ export const TreatmentRecommendationSection: React.FC<TreatmentRecommendationSec
           >
             {filteredSuggestions.slice(0, 8).map(item => (
                 <TouchableOpacity
-                  key={item}
+                  key={item.id ?? item.name}
                   onPress={() => handleSuggestionSelect(item)}
                   accessibilityRole="button"
                   style={[
@@ -193,7 +204,7 @@ export const TreatmentRecommendationSection: React.FC<TreatmentRecommendationSec
                   ]}
                 >
                   <Ionicons name="medical-outline" size={14} color={colors.text.tertiary} style={{ marginRight: spacing.xs }} />
-                  <Text style={[typography.body2, { color: colors.text.primary, flex: 1 }]}>{item}</Text>
+                  <Text style={[typography.body2, { color: colors.text.primary, flex: 1 }]}>{item.name}</Text>
                 </TouchableOpacity>
             ))}
           </View>

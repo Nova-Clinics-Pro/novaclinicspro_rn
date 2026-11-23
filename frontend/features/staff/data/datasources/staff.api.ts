@@ -34,6 +34,7 @@ const normalizeStaffCreateError = (error: unknown): StaffOperationError => {
   const code = typeof detail === 'object' && detail !== null ? detail.error_code : undefined;
   if (status === 409 && code === 'STAFF_PHONE_EXISTS') return normalizeStaffOperationError('PHONE_EXISTS');
   if (status === 409 && code === 'AUTH_EMAIL_REGISTERED') return normalizeStaffOperationError('AUTH_EMAIL_REGISTERED');
+  if (status === 409 && code === 'STAFF_ALREADY_HAS_LOGIN') return normalizeStaffOperationError('ALREADY_HAS_LOGIN');
   if (status === 409) return normalizeStaffOperationError('EMAIL_EXISTS');
   if (status === 422) return normalizeStaffOperationError('INVALID_DETAILS', error);
   if (status === 429) return normalizeStaffOperationError('RATE_LIMITED');
@@ -97,6 +98,23 @@ export const createStaffApi = async (
 ): Promise<StaffResponse> => {
   try {
     const response = await axiosClient.post(`/api/v1/clinic/${tenantId}/staff`, toStaffApiPayload(payload));
+    return fromStaffApiRecord(response.data);
+  } catch (error) {
+    throw normalizeStaffCreateError(error);
+  }
+};
+
+/**
+ * Invite a staff member who was added without a login to sign in
+ * POST /api/v1/clinic/{tenant_id}/staff/{staff_id}/invite
+ */
+export const inviteStaffToSignInApi = async (
+  tenantId: string,
+  staffId: string,
+  email: string
+): Promise<StaffResponse> => {
+  try {
+    const response = await axiosClient.post(`/api/v1/clinic/${tenantId}/staff/${staffId}/invite`, { email });
     return fromStaffApiRecord(response.data);
   } catch (error) {
     throw normalizeStaffCreateError(error);

@@ -8,6 +8,8 @@ export type StaffOperationFailureKind =
   | 'PHONE_EXISTS'
   /** A sign-in account already exists for the email but is not linked to a staff member here (HTTP 409 with code AUTH_EMAIL_REGISTERED). */
   | 'AUTH_EMAIL_REGISTERED'
+  /** The staff member can already sign in, so there is nothing to invite them to (HTTP 409 with code STAFF_ALREADY_HAS_LOGIN). */
+  | 'ALREADY_HAS_LOGIN'
   /** The server rejected the details as incomplete or invalid (HTTP 422); `cause` carries the field messages. */
   | 'INVALID_DETAILS'
   /** The sign-in provider is temporarily limiting emails (HTTP 429); trying again later works. */

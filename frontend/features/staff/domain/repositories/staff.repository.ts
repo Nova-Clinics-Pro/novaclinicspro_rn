@@ -26,6 +26,7 @@ export interface IStaffRepository {
   getStaff(tenantId: string, staffId: string): Promise<StaffResponse>;
   createStaff(tenantId: string, data: StaffCreate): Promise<StaffResponse>;
   updateStaff(tenantId: string, staffId: string, data: StaffUpdate): Promise<StaffResponse>;
+  inviteStaffToSignIn(tenantId: string, staffId: string, email: string): Promise<StaffResponse>;
   deleteStaff(tenantId: string, staffId: string): Promise<void>;
 
   // Leave management

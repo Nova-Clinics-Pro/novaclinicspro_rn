@@ -40,9 +40,12 @@ test.describe('00 / 01 / 02 setup, owner and admin', () => {
     expect(refused(r.status), `returned ${r.status}`).toBe(true); expect(JSON.stringify(r.body)).toMatch(/exist|registered|already/i);
   });
 
-  test('TC_COP_OWN_007 a staff member without a login can be given a login later @known-gap', async () => {
-    const s = await spec(); const props = Object.keys(s.components.schemas.StaffUpdate.properties);
-    expect(props, 'the staff update accepts a login (requires_login) so a login can be added later').toContain('requires_login');
+  test('TC_COP_OWN_007 a staff member without a login can be given a login later', async () => {
+    // The invite creates a sign-in account and sends an email, so this case checks the contract only; the live invite is a manual step on the Testing project.
+    const s = await spec(); const invite = s.paths['/api/v1/clinic/{tenant_id}/staff/{staff_id}/invite']?.post;
+    expect(invite, 'an invite action exists for a staff member without a login').toBeTruthy();
+    expect(JSON.stringify(invite.requestBody), 'the invite takes an email').toMatch(/StaffInvite/);
+    expect(Object.keys(s.components.schemas.StaffInvite.properties), 'the invite takes an email').toContain('email');
   });
 
   test('TC_COP_OWN_008 changing the staff type re-assigns the role', async () => {
@@ -294,11 +297,11 @@ test.describe('05 Therapist', () => {
     const r = await th.post(`${w.ts}/${p.sheet.id}/rows/${p.order.rows[0].id}/start`, {}, ver(p.order)); why(r, 'start a session'); expect(ok(r.status), `start returned ${r.status}`).toBe(true); expect(r.body.state).toBe('IN_PROGRESS');
   });
 
-  test('TC_COP_THR_007 a session is completed with its consumables prefilled, edited, and notifications sent', async () => {
+  test('TC_COP_THR_007 a session is completed with its consumables prefilled, edited (within the standard quantity), and notifications sent', async () => {
     const w = await world(); const th = await need('therapist'); const p = await scheduledPlan(w, 'P-Female', far(), 2); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
     const row = p.order.rows[0]; await th.post(`${w.ts}/${p.sheet.id}/rows/${row.id}/start`, {}, ver(p.order));
     const pre = list((await th.get(`/api/v1/clinic/treatment-sheets/rows/${row.id}/usables`)).body); expect.soft(pre.length, 'consumables prefilled from the treatment').toBeGreaterThan(0);
-    const done = await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 60, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: w.seed.inventory['COP Sesame oil'] }] });
+    const done = await th.post(`/api/v1/clinic/treatment-sheets/rows/${row.id}/complete`, { materials: [{ material_name: 'COP Sesame oil', quantity_used: 45, unit: 'ml', ml_per_unit: 1, category: 'oil', inventory_item_id: w.seed.inventory['COP Sesame oil'] }] });
     expect.soft(ok(done.status) && done.body.status === 'COMPLETED', `completion returned ${done.status} ${done.body?.status}`).toBe(true);
     const inbox = JSON.stringify((await (await need('doctor')).get(`/api/v1/notifications/${w.t}/history`)).body) + JSON.stringify((await (await need('admin')).get(`/api/v1/notifications/${w.t}/history`)).body);
     expect.soft(inbox, 'the doctor or the front desk got an inbox notification').toMatch(/session|completed|treatment/i);

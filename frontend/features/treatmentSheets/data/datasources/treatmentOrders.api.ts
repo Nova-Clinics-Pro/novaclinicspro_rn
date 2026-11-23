@@ -75,6 +75,8 @@ export interface CreateTreatmentRecommendationRequest {
   episode_id: string;
   appointment_id?: string | null;
   recommended_therapy: string;
+  /** The treatment picked from the clinic's list; lets scheduling use its duration and the therapist see its consumables. */
+  recommended_treatment_id?: string | null;
   planned_sessions: number;
   frequency?: string | null;
   preferred_time_window?: string | null;

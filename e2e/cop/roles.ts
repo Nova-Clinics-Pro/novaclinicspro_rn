@@ -66,7 +66,7 @@ export async function scheduledPlan(w: World, patient: string, day: number, rows
 async function schedulePlanOnce(w: World, patient: string, day: number, rows: number) {
   const c = await consultAndSign(w, patient, day); const doc = await need('doctor'); const adm = await need('admin');
   const mk = await doc.post(`/api/v1/clinic/tenants/${w.t}/treatment-sheets`, { client_id: w.seed.patients[patient], treatment_id: w.seed.treatments.COPABH, start_date: ymd(c.day), duration_days: rows, case_sheet_id: c.cs.id, episode_id: c.ep.id, appointment_id: c.ap.id });
-  await doc.post(`${w.ts}/${mk.body.id}/send-to-scheduling`, { planned_sessions: rows, frequency: 'daily', recommended_therapy: 'Abhyanga' }, ver(mk.body));
+  await doc.post(`${w.ts}/${mk.body.id}/send-to-scheduling`, { planned_sessions: rows, frequency: 'daily', recommended_therapy: 'Abhyanga', recommended_treatment_id: w.seed.treatments.COPABH }, ver(mk.body));
   const o = await fetchOrder(w, mk.body.id); const days: string[] = []; const d = new Date(c.day); while (days.length < o.rows.length) { if (d.getDay() !== 0) days.push(ymd(d)); d.setDate(d.getDate() + 1); }
   const sc = await adm.request('PATCH', `${w.ts}/${mk.body.id}/rows/bulk-schedule`, { assignments: o.rows.map((r: any, i: number) => ({ row_id: r.id, assigned_staff_id: w.therapist.id, therapist_ids: [w.therapist.id], room_id: w.seed.rooms['T-1'], scheduled_date: days[i] })) }, ver(o));
   const sched = await fetchOrder(w, mk.body.id);

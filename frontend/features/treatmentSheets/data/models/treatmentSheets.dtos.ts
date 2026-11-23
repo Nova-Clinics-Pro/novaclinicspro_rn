@@ -111,6 +111,7 @@ export interface TreatmentSheetResponse {
   frequency?: string | null;
   order_notes?: string | null;
   recommended_therapy?: string | null;
+  recommended_treatment_id?: string | null;
   recorded_at: string;
   recorded_by_staff_id: string | null;
   signed_by_staff_id: string | null;

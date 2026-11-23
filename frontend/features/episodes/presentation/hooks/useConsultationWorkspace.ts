@@ -50,6 +50,8 @@ export type SectionKey = CoreSectionKey | SpecialtySectionKey;
 
 export interface TreatmentRecommendationDraft {
   recommendedTherapy: string;
+  /** Set when the doctor picks (or types the exact name of) one of the clinic's treatments; null for free text. */
+  recommendedTreatmentId?: string | null;
   frequency: 'daily' | 'alternate' | '3x_week' | 'custom';
   customFrequency?: string;
   durationDays: 7 | 14 | 21 | 30 | 45 | 60 | 'custom';
