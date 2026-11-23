@@ -9,10 +9,8 @@ import * as caseApi from '../../../features/casesheets/data/datasources/caseshee
 import * as prescriptionApi from '../../../features/prescriptions/data/datasources/prescriptions.api';
 
 jest.mock('../../../core/theme/useClinicTheme', () => ({
-  useClinicTheme: () => ({
-    colors: { primary: { default: '#2563EB', main: '#2563EB', onPrimary: '#fff' }, border: { default: '#ddd', subtle: '#eee' }, text: { primary: '#111', secondary: '#555', link: '#2563EB' }, feedback: { success: '#080', error: '#c00' } },
-    spacing: { sm: 8, md: 16 }, typography: { h5: {}, h6: {}, body1: {}, body2: {}, caption: {}, button: {} },
-  }),
+  useClinicTheme: () => jest.requireActual('../../../core/theme/useClinicTheme').getTheme(),
+  getTheme: jest.requireActual('../../../core/theme/useClinicTheme').getTheme,
 }));
 jest.mock('../../../core/localization/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string, params?: { number?: number }) => key === 'livingDocuments.version' ? `Version ${params?.number}` : ({
@@ -73,7 +71,8 @@ describe('R7 T-FE-E.5 Living Document acceptance', () => {
     await waitFor(() => expect(ui.getByTestId('casesheet-historical-read-only')).toBeTruthy());
     expect(ui.queryByText('Edit')).toBeNull(); expect(ui.queryByText('Save')).toBeNull(); expect(ui.queryByText('Delete')).toBeNull(); expect(ui.queryByText('Archive')).toBeNull();
     fireEvent.press(ui.getByTestId('casesheet-print-v-42'));
-    await waitFor(() => expect(caseApi.printCasesheetVersionApi).toHaveBeenCalledWith(tenant, caseId, 'v-42'));
+    fireEvent.press(await ui.findByTestId('print-paper-plain'));   // the paper is asked before printing
+    await waitFor(() => expect(caseApi.printCasesheetVersionApi).toHaveBeenCalledWith(tenant, caseId, 'v-42', expect.anything()));
     fireEvent.press(ui.getByTestId('casesheet-amend'));
     await waitFor(() => expect(caseApi.amendCasesheetApi).toHaveBeenCalledWith(tenant, caseId));
     expect(caseApi.createCasesheetApi).not.toHaveBeenCalled();
@@ -97,7 +96,8 @@ describe('R7 T-FE-E.5 Living Document acceptance', () => {
     await waitFor(() => expect(ui.getByTestId('prescription-historical-read-only')).toBeTruthy());
     expect(ui.queryByText('Edit')).toBeNull(); expect(ui.queryByText('Save')).toBeNull(); expect(ui.queryByText('Delete')).toBeNull(); expect(ui.queryByText('Archive')).toBeNull();
     fireEvent.press(ui.getByTestId('prescription-print-v-42'));
-    await waitFor(() => expect(prescriptionApi.printPrescriptionVersionApi).toHaveBeenCalledWith(tenant, prescriptionId, 'v-42'));
+    fireEvent.press(await ui.findByTestId('print-paper-plain'));   // the paper is asked before printing
+    await waitFor(() => expect(prescriptionApi.printPrescriptionVersionApi).toHaveBeenCalledWith(tenant, prescriptionId, 'v-42', expect.anything()));
     fireEvent.press(ui.getByTestId('prescription-amend'));
     await waitFor(() => expect(prescriptionApi.amendPrescriptionApi).toHaveBeenCalledWith(tenant, prescriptionId));
     expect(prescriptionApi.createPrescriptionApi).not.toHaveBeenCalled();

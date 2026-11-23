@@ -135,12 +135,21 @@ test.describe('Web UI: print, share and versions', () => {
     const p = await doc.post(`${w.b}/prescriptions`, { client_id: w.seed.patients['P-Male'], episode_id: c.ep.id, appointment_id: c.ap.id, prescription_data: { medications: [{ name: 'COP Tablet X', dosage: '1', frequency: 'bd', duration: '3 days' }] } });
     return { w, doc, c, rx: p.body, client: w.seed.patients['P-Male'] as string };
   };
-  const openPrint = async (page: Page, url: string) => { await open(page, url, 8000); await page.getByText(/^Print$/i).first().click(); await page.waitForTimeout(5000); };
+  /** Print asks which paper first (letterhead or plain); the cases that only need the preview choose plain paper. */
+  const choosePaper = async (page: Page, paper: 'plain' | 'letterhead') => { await page.getByTestId(`print-paper-${paper}`).click(); await page.waitForTimeout(5000); };
+  const openPrintDialog = async (page: Page, url: string) => { await open(page, url, 8000); await page.getByText(/^Print$/i).first().click(); await page.waitForTimeout(1500); };
+  const openPrint = async (page: Page, url: string, paper: 'plain' | 'letterhead' = 'plain') => { await openPrintDialog(page, url); await choosePaper(page, paper); };
 
   test('TC_COP_PRT_001 the user chooses letterhead or plain paper before each print', async ({ page }) => {
-    const r = await rx(); await signIn(page, 'doctor'); await openPrint(page, `/clinic-admin/clients/${r.client}/prescriptions/${r.rx.id}`);
+    const r = await rx(); await signIn(page, 'doctor'); const url = `/clinic-admin/clients/${r.client}/prescriptions/${r.rx.id}`;
+    await openPrintDialog(page, url);
     const body = await text(page);
     expect(body, 'a Letterhead / Plain paper choice is offered').toMatch(/letterhead/i); expect(body).toMatch(/plain/i);
+    await choosePaper(page, 'plain'); const plain = await frameText(page);
+    expect(plain, 'plain paper prints the clinic header').toContain('Ayurveda Clinic'); expect(plain, 'and the footer').toContain('Generated on');
+    await page.locator('[aria-label="Close print preview"]').first().click(); await page.waitForTimeout(1200);
+    await page.getByText(/^Print$/i).first().click(); await page.waitForTimeout(1500); await choosePaper(page, 'letterhead'); const pre = await frameText(page);
+    expect(pre, 'letterhead paper still prints the document').toContain('COP Patient Male'); expect(pre, 'but not the clinic header').not.toContain('Ayurveda Clinic'); expect(pre, 'or the footer').not.toContain('Generated on');
   });
 
   test('TC_COP_PRT_002 the prescription preview shows clinic, patient, doctor with degree right-aligned, medicines and footer', async ({ page }) => {
@@ -176,7 +185,7 @@ test.describe('Web UI: print, share and versions', () => {
     const w = await world(); const p = await scheduledPlan(w, 'P-Female', far(), 3); test.skip(!p.scheduled, 'blocked: the plan could not be scheduled');
     await signIn(page, 'doctor'); await open(page, `/clinic-admin/clients/${w.seed.patients['P-Female']}/treatment-sheets/${p.sheet.id}`, 9000);
     const screen = await text(page); const printBtn = page.locator('[aria-label*="rint" i]').first(); expect(await printBtn.count(), `the treatment sheet screen offers Print (labels on screen: ${(await page.locator('[aria-label]').evaluateAll(e => e.map(x => x.getAttribute('aria-label')))).join(', ').slice(0, 200)})`).toBeGreaterThan(0);
-    await printBtn.click(); await page.waitForTimeout(5000);
+    await printBtn.click(); await page.waitForTimeout(1500); await choosePaper(page, 'plain');
     const t = await frameText(page); note(`treatment sheet preview: ${t.replace(/\s+/g, ' ').slice(0, 300)}`);
     expect(t.length, 'the preview shows the document').toBeGreaterThan(20);
     expect.soft(t, 'rows').toMatch(/Day\s*1|1\b/); expect.soft(t, 'the doctor name').toContain('COP Login Doctor'); expect.soft(t, 'the degree').toContain('BAMS');
@@ -191,7 +200,7 @@ test.describe('Web UI: print, share and versions', () => {
     const print1 = page.locator('[data-testid$="-print-' + (v0[0]?.version_id ?? '') + '"]').first();
     note(`versions on screen: ${(await text(page)).slice(0, 300)}`);
     expect(await print1.count(), 'version history offers Print for version 1').toBeGreaterThan(0);
-    await print1.click(); await page.waitForTimeout(5000);
+    await print1.click(); await page.waitForTimeout(1500); await choosePaper(page, 'plain');
     expect((await frameText(page)) + (await text(page)), 'the printout is labelled').toMatch(/Version 1\s*[-—–]\s*SUPERSEDED/i);
   });
 
@@ -251,7 +260,7 @@ test.describe('Web UI: look, language and states', () => {
 
   test('TC_COP_UIX_011 core screens meet WCAG AA text contrast', async ({ page }) => {
     await signIn(page, 'admin'); const failures: string[] = [];
-    for (const s of SCREENS) { await open(page, s, 5000); const r = await contrast(page); if (r.bad.length) failures.push(`${s}: ${r.bad.length} of ${r.checked} (${r.bad.slice(0, 3).join(', ')})`); }
+    for (const s of SCREENS) { await open(page, s, 5000); const r = await contrast(page); if (r.bad.length) failures.push(`${s}: ${r.bad.length} of ${r.checked} (${r.bad.slice(0, 15).join(', ')})`); }
     expect(failures, `contrast failures: ${failures.join(' || ')}`).toHaveLength(0);
   });
 

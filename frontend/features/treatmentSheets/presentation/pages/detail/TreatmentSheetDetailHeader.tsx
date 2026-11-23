@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useClinicTheme } from '../../../../../core/theme/useClinicTheme';
+import { useTranslation } from '../../../../../core/localization/useTranslation';
 import { spacing } from '../../../../../core/theme/spacing';
 import { TreatmentSheetResponse } from '../../../data/models/treatmentSheets.dtos';
 import {
@@ -37,6 +38,7 @@ export const TreatmentSheetDetailHeader: React.FC<Props> = ({
   onArchive,
 }) => {
   const theme = useClinicTheme();
+  const { t } = useTranslation();
 
   const confirmArchive = () => {
     Alert.alert(
@@ -72,6 +74,8 @@ export const TreatmentSheetDetailHeader: React.FC<Props> = ({
             style={[styles.headerIconButton, { backgroundColor: theme.colors.background.elevated }]}
             onPress={onPrint}
             disabled={isPrinting}
+            accessibilityRole="button"
+            accessibilityLabel={t('print.print')}
           >
             {isPrinting ? (
               <ActivityIndicator size="small" color={theme.colors.primary.default} />
@@ -83,6 +87,8 @@ export const TreatmentSheetDetailHeader: React.FC<Props> = ({
             style={[styles.headerIconButton, { backgroundColor: theme.colors.background.elevated }]}
             onPress={confirmArchive}
             disabled={isArchiving}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.archive')}
           >
             <Ionicons name="archive-outline" size={20} color={theme.colors.feedback.error} />
           </TouchableOpacity>

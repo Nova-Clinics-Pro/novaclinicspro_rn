@@ -98,8 +98,9 @@ describe('Task language violations (R3B · T-0.5, baseline for FR-D1) — ORIGIN
   });
 
   it('app/clinic-admin/index.tsx\'s "Treatment Plan{s} to Schedule" remains the one existing task-oriented precedent, unchanged', () => {
-    const source = read('../../../app/clinic-admin/index.tsx');
-    expect(source).toMatch(/Treatment Plan\{.*\}\s*to Schedule|Treatment Plans? to Schedule/);
+    // The wording now lives in the translations (the screen refers to it by key).
+    const source = read('../../../core/localization/translations/en-US.json');
+    expect(source).toMatch(/Treatment Plans? to Schedule/);
   });
 
   describe('CORRECTION: status badges are already humanized, not raw enum text — confirmed, not assumed', () => {

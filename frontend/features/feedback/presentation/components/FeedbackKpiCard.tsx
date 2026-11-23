@@ -3,10 +3,10 @@
  * Displays a KPI metric with icon and optional trend indicator
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import type { TrendDirection } from '../../data/models/feedback.dtos';
@@ -33,6 +33,8 @@ export const FeedbackKpiCard: React.FC<FeedbackKpiCardProps> = ({
   trendValue,
   testID,
 }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.container} testID={testID}>
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
@@ -63,16 +65,16 @@ export const FeedbackKpiCard: React.FC<FeedbackKpiCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   iconContainer: {
     width: 40,
@@ -86,7 +88,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginBottom: 2,
   },
   valueRow: {
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
   },
   value: {
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '700',
   },
   trendContainer: {
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   },
   subtext: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 });

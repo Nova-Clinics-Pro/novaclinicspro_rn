@@ -9,7 +9,7 @@
  * 4. BUG FIX #1: Reschedule modal with date/time picker directly on list page
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,9 +29,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { parseListDateParam } from '../../domain/appointmentsListRoute';
 import { episodeWorkspaceRoute } from '../../../doctorDashboard/application/consultationRoutes';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
+import { t } from '../../../../core/localization';
+import { getDateLocale } from '../../../../core/localization/dateLocale';
 import { useDebounce } from '../../../../core/hooks/useDebounce';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import {
@@ -78,6 +80,8 @@ const DATE_ITEM_WIDTH = 64;
 const DATE_ITEM_HEIGHT = 80; // Fixed height to prevent jumping
 
 const DateSlider: React.FC<DateSliderProps> = ({ selectedDate, onDateSelect }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const dates = generateDateRange(new Date(), 14);
   const scrollViewRef = useRef<ScrollView>(null);
   const todayIndex = dates.findIndex(d => isToday(d.toISOString()));
@@ -145,7 +149,7 @@ const DateSlider: React.FC<DateSliderProps> = ({ selectedDate, onDateSelect }) =
                 ]}
                 numberOfLines={1}
               >
-                {date.toLocaleDateString('en-IN', { month: 'short' })}
+                {date.toLocaleDateString(getDateLocale(), { month: 'short' })}
               </Text>
               {isTodayDate && (
                 <View style={[styles.todayDot, isSelected && styles.todayDotSelected]} />
@@ -168,6 +172,8 @@ interface SummaryCardProps {
 }
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ summary, selectedDate }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   // Calculate visited count from completed appointments
   // Use both summary.completed and manual count as fallback
   const visitedCount = summary.completed || 0;
@@ -175,27 +181,27 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, selectedDate }) => {
   return (
     <View style={styles.summaryCard}>
       <Text style={styles.summaryTitle}>
-        📊 {formatShortDate(selectedDate.toISOString())} Summary
+        📊 {t('clinicAdmin.appointmentsList.summaryTitle', { date: formatShortDate(selectedDate.toISOString()) })}
       </Text>
       <View style={styles.summaryRow}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{summary.total}</Text>
-          <Text style={styles.summaryLabel}>Total</Text>
+          <Text style={styles.summaryLabel}>{t('clinicAdmin.appointmentsList.total')}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: colors.success.main }]}>{visitedCount}</Text>
-          <Text style={styles.summaryLabel}>Visited</Text>
+          <Text style={[styles.summaryValue, { color: theme.colors.feedback.success }]}>{visitedCount}</Text>
+          <Text style={styles.summaryLabel}>{t('clinicAdmin.appointmentsList.visited')}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: colors.warning.main }]}>{summary.cancelled}</Text>
-          <Text style={styles.summaryLabel}>Cancelled</Text>
+          <Text style={[styles.summaryValue, { color: theme.colors.feedback.warning }]}>{summary.cancelled}</Text>
+          <Text style={styles.summaryLabel}>{t('clinicAdmin.appointmentsList.cancelled')}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: colors.error.main }]}>{summary.no_show}</Text>
-          <Text style={styles.summaryLabel}>No-Show</Text>
+          <Text style={[styles.summaryValue, { color: theme.colors.feedback.error }]}>{summary.no_show}</Text>
+          <Text style={styles.summaryLabel}>{t('clinicAdmin.appointmentsList.noShow')}</Text>
         </View>
       </View>
     </View>
@@ -209,6 +215,8 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ summary, selectedDate }) => {
 // ============================================
 
 export const AppointmentsListScreen: React.FC = () => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
   const { currentUser } = useAuth();
@@ -262,7 +270,7 @@ export const AppointmentsListScreen: React.FC = () => {
       await updateStatusMutation.mutateAsync({ appointmentId, status: newStatus });
       refetch();
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to update status');
+      Alert.alert(t('common.error'), err.message || t('clinicAdmin.appointmentsList.updateFailed'));
     }
   }, [updateStatusMutation, refetch]);
 
@@ -272,7 +280,7 @@ export const AppointmentsListScreen: React.FC = () => {
       await cancelMutation.mutateAsync(appointmentId);
       refetch();
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to cancel appointment');
+      Alert.alert(t('common.error'), err.message || t('clinicAdmin.appointmentsList.cancelFailed'));
     }
   }, [cancelMutation, refetch]);
 
@@ -321,7 +329,7 @@ export const AppointmentsListScreen: React.FC = () => {
 
     // Validate: new time must be in the future
     if (newDateTime <= new Date()) {
-      Alert.alert('Invalid Time', 'Please select a future date and time.');
+      Alert.alert(t('clinicAdmin.appointmentsList.invalidTime'), t('clinicAdmin.appointmentsList.futureTimeRequired'));
       return;
     }
 
@@ -345,9 +353,9 @@ export const AppointmentsListScreen: React.FC = () => {
       setRescheduleModalVisible(false);
       setSelectedAppointmentForReschedule(null);
       refetch();
-      Alert.alert('Success', 'Appointment has been rescheduled.');
+      Alert.alert(t('common.success'), t('clinicAdmin.appointmentsList.rescheduled'));
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to reschedule appointment');
+      Alert.alert(t('common.error'), err.message || t('clinicAdmin.appointmentsList.rescheduleFailed'));
     } finally {
       setIsRescheduling(false);
     }
@@ -402,19 +410,19 @@ export const AppointmentsListScreen: React.FC = () => {
 
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="calendar-outline" size={64} color={colors.text.tertiary} />
+      <Ionicons name="calendar-outline" size={64} color={theme.colors.text.tertiary} />
       <Text style={styles.emptyTitle}>
-        {isSearchMode ? 'No Results Found' : 'No Appointments'}
+        {isSearchMode ? t('clinicAdmin.appointmentsList.noResults') : t('clinicAdmin.appointmentsList.noAppointments')}
       </Text>
       <Text style={styles.emptySubtitle}>
         {isSearchMode
-          ? `No appointments matching "${debouncedQuery}"`
-          : `No appointments scheduled for ${formatShortDate(selectedDate.toISOString())}`}
+          ? t('clinicAdmin.appointmentsList.noMatching', { query: debouncedQuery })
+          : t('clinicAdmin.appointmentsList.noneScheduled', { date: formatShortDate(selectedDate.toISOString()) })}
       </Text>
       {!isSearchMode && (
         <TouchableOpacity style={styles.emptyButton} onPress={handleCreatePress}>
-          <Ionicons name="add" size={20} color={colors.background.default} />
-          <Text style={styles.emptyButtonText}>New Appointment</Text>
+          <Ionicons name="add" size={20} color={theme.colors.background.elevated} />
+          <Text style={styles.emptyButtonText}>{t('clinicAdmin.appointmentsList.newAppointment')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -434,11 +442,11 @@ export const AppointmentsListScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Appointments</Text>
+        <Text style={styles.headerTitle}>{t('clinicAdmin.appointmentsList.title')}</Text>
         <TouchableOpacity style={styles.createButton} onPress={handleCreatePress}>
-          <Ionicons name="add" size={24} color={colors.background.default} />
+          <Ionicons name="add" size={24} color={theme.colors.background.elevated} />
         </TouchableOpacity>
       </View>
 
@@ -451,30 +459,30 @@ export const AppointmentsListScreen: React.FC = () => {
       {/* Search */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color={colors.text.tertiary} />
+          <Ionicons name="search" size={20} color={theme.colors.text.tertiary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name, phone, or status..."
-            placeholderTextColor={colors.text.tertiary}
+            placeholder={t('clinicAdmin.appointmentsList.searchPlaceholder')}
+            placeholderTextColor={theme.colors.text.tertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={colors.text.tertiary} />
+              <Ionicons name="close-circle" size={20} color={theme.colors.text.tertiary} />
             </TouchableOpacity>
           )}
         </View>
         {searchQuery.length > 0 && searchQuery.length < 3 && (
-          <Text style={styles.searchHint}>Type at least 3 characters to search</Text>
+          <Text style={styles.searchHint}>{t('clinicAdmin.appointmentsList.searchHint')}</Text>
         )}
       </View>
 
       {/* Appointments List */}
       {isLoading || isSearching ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary.main} />
+          <ActivityIndicator size="large" color={theme.colors.primary.default} />
           <Text style={styles.loadingText}>
             {isSearching ? 'Searching...' : 'Loading appointments...'}
           </Text>
@@ -514,7 +522,7 @@ export const AppointmentsListScreen: React.FC = () => {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={refetch}
-              colors={[colors.primary.main]}
+              colors={[theme.colors.primary.default]}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -533,24 +541,24 @@ export const AppointmentsListScreen: React.FC = () => {
           <View style={styles.rescheduleModalContent}>
             {/* Modal Header */}
             <View style={styles.rescheduleModalHeader}>
-              <Text style={styles.rescheduleModalTitle}>Reschedule Appointment</Text>
+              <Text style={styles.rescheduleModalTitle}>{t('clinicAdmin.appointmentsList.rescheduleTitle')}</Text>
               <TouchableOpacity
                 onPress={() => setRescheduleModalVisible(false)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="close" size={24} color={colors.text.primary} />
+                <Ionicons name="close" size={24} color={theme.colors.text.primary} />
               </TouchableOpacity>
             </View>
 
             {/* Current Appointment Info */}
             {selectedAppointmentForReschedule && (
               <View style={styles.rescheduleCurrentInfo}>
-                <Text style={styles.rescheduleCurrentLabel}>Current Appointment</Text>
+                <Text style={styles.rescheduleCurrentLabel}>{t('clinicAdmin.appointmentsList.currentAppointment')}</Text>
                 <Text style={styles.rescheduleCurrentValue}>
                   {selectedAppointmentForReschedule.client_name}
                 </Text>
                 <Text style={styles.rescheduleCurrentTime}>
-                  {formatShortDate(selectedAppointmentForReschedule.appointment_start)} at{' '}
+                  {formatShortDate(selectedAppointmentForReschedule.appointment_start)} {t('clinicAdmin.appointmentsList.at')}{' '}
                   {formatTime(selectedAppointmentForReschedule.appointment_start)}
                 </Text>
               </View>
@@ -558,31 +566,31 @@ export const AppointmentsListScreen: React.FC = () => {
 
             {/* New Date Selection */}
             <View style={styles.rescheduleSection}>
-              <Text style={styles.rescheduleSectionTitle}>New Date</Text>
+              <Text style={styles.rescheduleSectionTitle}>{t('clinicAdmin.appointmentsList.newDate')}</Text>
               <TouchableOpacity
                 style={styles.reschedulePickerButton}
                 onPress={() => setShowDatePicker(true)}
               >
-                <Ionicons name="calendar-outline" size={20} color={colors.primary.main} />
+                <Ionicons name="calendar-outline" size={20} color={theme.colors.primary.default} />
                 <Text style={styles.reschedulePickerText}>
                   {formatShortDate(rescheduleDate.toISOString())}
                 </Text>
-                <Ionicons name="chevron-down" size={16} color={colors.text.secondary} />
+                <Ionicons name="chevron-down" size={16} color={theme.colors.text.secondary} />
               </TouchableOpacity>
             </View>
 
             {/* New Time Selection */}
             <View style={styles.rescheduleSection}>
-              <Text style={styles.rescheduleSectionTitle}>New Time</Text>
+              <Text style={styles.rescheduleSectionTitle}>{t('clinicAdmin.appointmentsList.newTime')}</Text>
               <TouchableOpacity
                 style={styles.reschedulePickerButton}
                 onPress={() => setShowTimePicker(true)}
               >
-                <Ionicons name="time-outline" size={20} color={colors.primary.main} />
+                <Ionicons name="time-outline" size={20} color={theme.colors.primary.default} />
                 <Text style={styles.reschedulePickerText}>
                   {rescheduleTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
-                <Ionicons name="chevron-down" size={16} color={colors.text.secondary} />
+                <Ionicons name="chevron-down" size={16} color={theme.colors.text.secondary} />
               </TouchableOpacity>
             </View>
 
@@ -621,7 +629,7 @@ export const AppointmentsListScreen: React.FC = () => {
                 onPress={() => setRescheduleModalVisible(false)}
                 disabled={isRescheduling}
               >
-                <Text style={styles.rescheduleCancelButtonText}>Cancel</Text>
+                <Text style={styles.rescheduleCancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.rescheduleConfirmButton, isRescheduling && styles.rescheduleButtonDisabled]}
@@ -629,9 +637,9 @@ export const AppointmentsListScreen: React.FC = () => {
                 disabled={isRescheduling}
               >
                 {isRescheduling ? (
-                  <ActivityIndicator size="small" color={colors.background.default} />
+                  <ActivityIndicator size="small" color={theme.colors.background.elevated} />
                 ) : (
-                  <Text style={styles.rescheduleConfirmButtonText}>Confirm Reschedule</Text>
+                  <Text style={styles.rescheduleConfirmButtonText}>{t('clinicAdmin.appointmentsList.confirmReschedule')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -646,19 +654,19 @@ export const AppointmentsListScreen: React.FC = () => {
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: theme.colors.border.subtle,
   },
   backButton: {
     padding: spacing.xs,
@@ -666,11 +674,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginLeft: spacing.sm,
   },
   createButton: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     padding: spacing.sm,
     borderRadius: spacing.sm,
   },
@@ -678,9 +686,9 @@ const styles = StyleSheet.create({
   // Date Slider - FIXED LAYOUT
   dateSliderContainer: {
     height: DATE_ITEM_HEIGHT + spacing.md * 2, // Fixed height container
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: theme.colors.border.subtle,
   },
   dateSliderContent: {
     paddingHorizontal: spacing.sm,
@@ -695,65 +703,65 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderRadius: spacing.sm,
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
     marginHorizontal: spacing.xs / 2,
   },
   dateItemSelected: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
   },
   dateItemToday: {
     borderWidth: 2,
-    borderColor: colors.primary.main,
+    borderColor: theme.colors.primary.default,
   },
   dateDayOfWeek: {
     ...typography.caption,
     fontSize: 10,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textTransform: 'uppercase',
     textAlign: 'center',
   },
   dateDay: {
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginVertical: spacing.xs / 2,
     textAlign: 'center',
   },
   dateMonth: {
     ...typography.caption,
     fontSize: 10,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
   },
   dateTextSelected: {
-    color: colors.background.default,
+    color: theme.colors.background.elevated,
   },
   dateTextToday: {
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
   },
   todayDot: {
     width: spacing.xs,
     height: spacing.xs,
     borderRadius: spacing.xs / 2,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     marginTop: spacing.xs / 2,
   },
   todayDotSelected: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
   },
 
   // Summary
   summaryCard: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
     padding: spacing.md,
     borderRadius: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   summaryTitle: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginBottom: spacing.sm,
   },
   summaryRow: {
@@ -767,17 +775,17 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   summaryLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: spacing.xs / 2,
   },
   summaryDivider: {
     width: 1,
     height: spacing.xl,
-    backgroundColor: colors.border.light,
+    backgroundColor: theme.colors.border.subtle,
   },
 
   // Search
@@ -788,35 +796,35 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: spacing.sm,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
     gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     paddingVertical: spacing.sm,
   },
   searchHint: {
     ...typography.caption,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: spacing.xs,
     marginLeft: spacing.sm,
   },
 
   // Appointment Card
   appointmentCard: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: spacing.sm,
     marginBottom: spacing.sm,
     padding: spacing.md,
     paddingLeft: spacing.md + spacing.xs,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -840,7 +848,7 @@ const styles = StyleSheet.create({
   },
   timeText: {
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
   },
   statusBadge: {
@@ -867,12 +875,12 @@ const styles = StyleSheet.create({
   },
   clientName: {
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '500',
   },
   clientPhone: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginLeft: spacing.xs,
   },
   metaRow: {
@@ -883,11 +891,11 @@ const styles = StyleSheet.create({
   },
   metaText: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     flex: 1,
   },
   sessionInfo: {
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
     fontWeight: '500',
   },
   chevronContainer: {
@@ -911,7 +919,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: spacing.md,
   },
 
@@ -924,12 +932,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: spacing.md,
   },
   emptySubtitle: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xl,
@@ -941,12 +949,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     borderRadius: spacing.sm,
   },
   emptyButtonText: {
     ...typography.button,
-    color: colors.background.default,
+    color: theme.colors.background.elevated,
   },
 
   // Error
@@ -958,12 +966,12 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: spacing.md,
   },
   errorText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     marginTop: spacing.sm,
   },
@@ -971,12 +979,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     borderRadius: spacing.sm,
   },
   retryButtonText: {
     ...typography.button,
-    color: colors.background.default,
+    color: theme.colors.background.elevated,
   },
 
   // BUG FIX #1: Reschedule Modal Styles
@@ -986,7 +994,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   rescheduleModalContent: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderTopLeftRadius: spacing.lg,
     borderTopRightRadius: spacing.lg,
     padding: spacing.lg,
@@ -1000,27 +1008,27 @@ const styles = StyleSheet.create({
   },
   rescheduleModalTitle: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   rescheduleCurrentInfo: {
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
     borderRadius: spacing.sm,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
   rescheduleCurrentLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginBottom: spacing.xs,
   },
   rescheduleCurrentValue: {
     ...typography.body1,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   rescheduleCurrentTime: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: spacing.xs / 2,
   },
   rescheduleSection: {
@@ -1029,26 +1037,26 @@ const styles = StyleSheet.create({
   rescheduleSectionTitle: {
     ...typography.body2,
     fontWeight: '600',
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: spacing.sm,
   },
   reschedulePickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
     borderRadius: spacing.sm,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
     gap: spacing.sm,
   },
   reschedulePickerText: {
     flex: 1,
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   iosPickerContainer: {
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
     borderRadius: spacing.sm,
     marginBottom: spacing.md,
     overflow: 'hidden',
@@ -1064,22 +1072,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border.main,
+    borderColor: theme.colors.border.default,
   },
   rescheduleCancelButtonText: {
     ...typography.button,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   rescheduleConfirmButton: {
     flex: 2,
     paddingVertical: spacing.md,
     alignItems: 'center',
     borderRadius: spacing.sm,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
   },
   rescheduleConfirmButtonText: {
     ...typography.button,
-    color: colors.background.default,
+    color: theme.colors.background.elevated,
   },
   rescheduleButtonDisabled: {
     opacity: 0.6,

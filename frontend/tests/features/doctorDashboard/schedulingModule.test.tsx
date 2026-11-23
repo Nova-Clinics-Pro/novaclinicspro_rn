@@ -69,28 +69,8 @@ jest.mock('../../../features/staff/data/datasources/staff.api', () => ({
   listStaffApi: jest.fn().mockResolvedValue({ items: [], total: 0 }),
 }));
 jest.mock('../../../core/theme/useClinicTheme', () => ({
-  useClinicTheme: () => ({
-    colors: {
-      primary: { default: '#2563EB' },
-      surface: { default: '#FFFFFF', elevated: '#FFFFFF', muted: '#F9FAFB', overlay: '#00000080' },
-      border: { default: '#E5E7EB', subtle: '#F3F4F6', strong: '#D1D5DB', focus: '#2563EB' },
-      text: { primary: '#111827', secondary: '#6B7280', tertiary: '#9CA3AF', disabled: '#D1D5DB', inverse: '#FFFFFF', onPrimary: '#FFFFFF', link: '#2563EB' },
-      feedback: {
-        success: '#10B981', successLight: '#ECFDF5', warning: '#F59E0B', warningLight: '#FFFBEB',
-        error: '#EF4444', errorLight: '#FEF2F2', info: '#3B82F6', infoLight: '#EFF6FF',
-      },
-    },
-    spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 },
-    typography: {
-      h6: { fontSize: 16, fontWeight: '600', lineHeight: 22 },
-      body2: { fontSize: 14, fontWeight: '400', lineHeight: 20 },
-      caption: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
-      button: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
-    },
-    radii: { small: 4, medium: 8, large: 16 },
-    borderWidths: { default: 1 },
-    sizes: { touchTarget: 44 },
-  }),
+  useClinicTheme: () => jest.requireActual('../../../core/theme/useClinicTheme').getTheme(),
+  getTheme: jest.requireActual('../../../core/theme/useClinicTheme').getTheme,
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');

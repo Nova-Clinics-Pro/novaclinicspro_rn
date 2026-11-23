@@ -1,0 +1,1766 @@
+{
+  "app/clinic-admin/_layout.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "app/clinic-admin/billing/_layout.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "app/clinic-admin/clients/[clientId]/treatment-sheets/index.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 12,
+    "staticPalette": 1
+  },
+  "app/clinic-admin/inventory/[itemId]/edit.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "app/clinic-admin/inventory/create.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "app/clinic-admin/settings/rooms/[roomId].tsx": {
+    "colors": 33,
+    "fontSizes": 0,
+    "texts": 10,
+    "staticPalette": 0
+  },
+  "app/clinic-admin/settings/treatments/[treatmentId].tsx": {
+    "colors": 40,
+    "fontSizes": 0,
+    "texts": 13,
+    "staticPalette": 0
+  },
+  "app/clinic-admin/settings/treatments/create.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "app/clinic-admin/treatment-sheets/orders.tsx": {
+    "colors": 3,
+    "fontSizes": 2,
+    "texts": 21,
+    "staticPalette": 1
+  },
+  "app/doctor.tsx": {
+    "colors": 2,
+    "fontSizes": 1,
+    "texts": 17,
+    "staticPalette": 1
+  },
+  "app/forgot-password.tsx": {
+    "colors": 0,
+    "fontSizes": 11,
+    "texts": 9,
+    "staticPalette": 0
+  },
+  "app/index.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "app/login.tsx": {
+    "colors": 0,
+    "fontSizes": 10,
+    "texts": 10,
+    "staticPalette": 0
+  },
+  "app/logout.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "app/owner/_layout.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "app/owner/add-clinic.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 28,
+    "staticPalette": 1
+  },
+  "app/owner/index.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 22,
+    "staticPalette": 1
+  },
+  "app/profile.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 17,
+    "staticPalette": 1
+  },
+  "app/register.tsx": {
+    "colors": 0,
+    "fontSizes": 10,
+    "texts": 27,
+    "staticPalette": 0
+  },
+  "app/reset-password.tsx": {
+    "colors": 1,
+    "fontSizes": 17,
+    "texts": 20,
+    "staticPalette": 0
+  },
+  "app/super-admin/billing/_layout.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "app/theme-demo.tsx": {
+    "colors": 2,
+    "fontSizes": 7,
+    "texts": 22,
+    "staticPalette": 0
+  },
+  "core/clinicalPrint/ClinicalPrintPreviewModal.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 3,
+    "staticPalette": 0
+  },
+  "core/clinicalPrint/ClinicalPrintPreviewModal.web.tsx": {
+    "colors": 1,
+    "fontSizes": 1,
+    "texts": 3,
+    "staticPalette": 0
+  },
+  "core/clinicalPrint/html.ts": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "core/components/CapabilityGate.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "core/components/ConfirmationDialog.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "core/components/CrossPlatformDateTimePicker.tsx": {
+    "colors": 3,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "core/components/DateField.tsx": {
+    "colors": 1,
+    "fontSizes": 1,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "core/components/DateStrip.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "core/components/ProtectedRoute.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "core/components/StatCard.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "core/providers/ApiRequestFallbackProvider.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "core/unsavedWork/UnsavedWorkDialogHost.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/adminApplications/presentation/pages/ApplicationDetailScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 20,
+    "texts": 32,
+    "staticPalette": 0
+  },
+  "features/adminApplications/presentation/pages/ApplicationsListScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 15,
+    "texts": 8,
+    "staticPalette": 0
+  },
+  "features/analytics/presentation/components/BreakdownList.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/analytics/presentation/components/KpiStatCard.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/analytics/presentation/components/MetricTrendChart.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/analytics/presentation/components/TimeRangeSelector.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/analytics/presentation/pages/AnalyticsDashboardScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 18,
+    "staticPalette": 1
+  },
+  "features/analytics/presentation/pages/PerformanceAnalyticsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 21,
+    "staticPalette": 1
+  },
+  "features/analytics/presentation/pages/RevenueAnalyticsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 11,
+    "staticPalette": 1
+  },
+  "features/analytics/presentation/pages/UserGrowthAnalyticsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 13,
+    "staticPalette": 1
+  },
+  "features/appointmentRules/data/models/appointmentRules.dtos.ts": {
+    "colors": 10,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/appointmentRules/presentation/pages/AppointmentRulesScreen.tsx": {
+    "colors": 55,
+    "fontSizes": 0,
+    "texts": 18,
+    "staticPalette": 0
+  },
+  "features/appointments/domain/appointmentAccent.ts": {
+    "colors": 2,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/appointments/domain/helpers/status.utils.ts": {
+    "colors": 7,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/appointments/presentation/components/AppointmentForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 21,
+    "staticPalette": 1
+  },
+  "features/appointments/presentation/components/AppointmentRow.tsx": {
+    "colors": 1,
+    "fontSizes": 2,
+    "texts": 6,
+    "staticPalette": 0
+  },
+  "features/appointments/presentation/components/CreateAppointmentSelectionControls.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 25,
+    "staticPalette": 1
+  },
+  "features/appointments/presentation/components/MultiDayTreatmentSection.tsx": {
+    "colors": 7,
+    "fontSizes": 11,
+    "texts": 13,
+    "staticPalette": 0
+  },
+  "features/appointments/presentation/components/PreviewAppointmentsPresentation.tsx": {
+    "colors": 6,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 1
+  },
+  "features/appointments/presentation/pages/AppointmentDetailScreen.tsx": {
+    "colors": 2,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/appointments/presentation/pages/AppointmentsListScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 2,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/appointments/presentation/pages/CreateAppointmentScreen.tsx": {
+    "colors": 3,
+    "fontSizes": 2,
+    "texts": 49,
+    "staticPalette": 1
+  },
+  "features/appointments/presentation/pages/PreviewAppointmentsScreen.tsx": {
+    "colors": 7,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/billing/data/models/billing.dtos.ts": {
+    "colors": 28,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/billing/presentation/components/InvoiceForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 21,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/components/InvoiceListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/components/PaymentForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 7,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/components/PaymentListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/components/SubscriptionSummaryCard.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 10,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/SuperAdminBillingOverviewScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 22,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/TenantBillingOverviewScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 15,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/TenantInvoiceCreateScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/TenantInvoiceDetailScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 22,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/TenantInvoiceEditScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/TenantInvoicesListScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/TenantPaymentDetailScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 19,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/TenantPaymentsListScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 11,
+    "staticPalette": 1
+  },
+  "features/billing/presentation/pages/TenantRecordPaymentScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 8,
+    "staticPalette": 1
+  },
+  "features/bulkUpload/data/models/bulkUpload.dtos.ts": {
+    "colors": 8,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/bulkUpload/presentation/components/BulkUploadStepLayout.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/bulkUpload/presentation/components/ColumnMappingForm.tsx": {
+    "colors": 1,
+    "fontSizes": 1,
+    "texts": 7,
+    "staticPalette": 1
+  },
+  "features/bulkUpload/presentation/components/JobStatusPanel.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/bulkUpload/presentation/components/StagingRowItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 3,
+    "staticPalette": 1
+  },
+  "features/bulkUpload/presentation/pages/BulkUploadFlowScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 25,
+    "staticPalette": 1
+  },
+  "features/bulkUpload/presentation/pages/BulkUploadHomeScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 15,
+    "staticPalette": 1
+  },
+  "features/capabilities/presentation/pages/CapabilitiesSettingsScreen.tsx": {
+    "colors": 16,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 0
+  },
+  "features/casesheets/data/models/casesheets.dtos.ts": {
+    "colors": 4,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/casesheets/domain/entities/casesheet.entity.ts": {
+    "colors": 4,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/casesheets/presentation/components/CasesheetActions.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/components/CasesheetDetailTextSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/components/CaseSheetExtensionsSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/casesheets/presentation/components/CasesheetForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 10,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/components/CasesheetListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 2,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/components/CasesheetStatusBadge.tsx": {
+    "colors": 0,
+    "fontSizes": 3,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/components/ChiefComplaintSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/casesheets/presentation/components/ClinicalNotesSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/casesheets/presentation/components/EmptyCasesheetsState.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/pages/CasesheetDetailScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 1,
+    "texts": 32,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/pages/CasesheetEditScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/pages/CasesheetsListScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/pages/CasesheetStandaloneScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 12,
+    "staticPalette": 1
+  },
+  "features/casesheets/presentation/pages/CreateCasesheetScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 4,
+    "staticPalette": 1
+  },
+  "features/clients/data/models/clients.dtos.ts": {
+    "colors": 3,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/clients/presentation/components/ClientForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 33,
+    "staticPalette": 1
+  },
+  "features/clients/presentation/components/ClientListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/clients/presentation/components/MultiDayTreatmentsSection.tsx": {
+    "colors": 2,
+    "fontSizes": 13,
+    "texts": 9,
+    "staticPalette": 0
+  },
+  "features/clients/presentation/pages/ClientDetailScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 31,
+    "staticPalette": 1
+  },
+  "features/clients/presentation/pages/ClientsListScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/configuredClinicalServices/presentation/pages/ConfiguredClinicalServicesScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/departments/presentation/pages/DepartmentsScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/doctorDashboard/data/models/doctorKpis.dtos.ts": {
+    "colors": 17,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/doctorDashboard/presentation/components/KpiPeriodSelector.tsx": {
+    "colors": 2,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/doctorDashboard/presentation/components/KpiStatCard.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/doctorDashboard/presentation/components/TimeMetricsBars.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 1
+  },
+  "features/doctorDashboard/presentation/components/TodaysMultiDaySessionsWidget.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 10,
+    "staticPalette": 1
+  },
+  "features/doctorDashboard/presentation/components/TreatmentSeriesAttentionWidget.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 8,
+    "staticPalette": 1
+  },
+  "features/episodes/presentation/components/ActiveCaseBanner.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 4,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ClientEpisodesList.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/episodes/presentation/components/ClinicalTimeline.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ConsultationSections/AyurvedicAssessmentSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ConsultationSections/CaseSheetModule.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ConsultationSections/ChiefComplaintSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ConsultationSections/ClinicalServicesSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ConsultationSections/PatientSummarySection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ConsultationSections/PrescriptionModule.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ConsultationSections/PrescriptionSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/ConsultationSections/TreatmentRecommendationSection.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 11,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeBadge.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeCard.tsx": {
+    "colors": 2,
+    "fontSizes": 10,
+    "texts": 9,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeDetailMetadataGrid.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 4,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeDocumentsSection.tsx": {
+    "colors": 2,
+    "fontSizes": 7,
+    "texts": 7,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeForm.tsx": {
+    "colors": 1,
+    "fontSizes": 9,
+    "texts": 7,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeFormModal.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeListItem.tsx": {
+    "colors": 1,
+    "fontSizes": 4,
+    "texts": 3,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeSelector.tsx": {
+    "colors": 0,
+    "fontSizes": 10,
+    "texts": 8,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeSelectorModal.tsx": {
+    "colors": 2,
+    "fontSizes": 2,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeStatusBadge.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeVisitsSection.tsx": {
+    "colors": 1,
+    "fontSizes": 10,
+    "texts": 8,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/EpisodeWorkspaceShared.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/TreatmentPlansSection.tsx": {
+    "colors": 1,
+    "fontSizes": 13,
+    "texts": 15,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/TreatmentPlansTab.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/components/TreatmentSheetsSection.tsx": {
+    "colors": 0,
+    "fontSizes": 5,
+    "texts": 5,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/pages/AllEpisodesScreen.tsx": {
+    "colors": 2,
+    "fontSizes": 14,
+    "texts": 9,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/pages/ConsultationWorkspaceScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/pages/CreateConsultationScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/pages/CreateEpisodeSheet.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 3,
+    "staticPalette": 1
+  },
+  "features/episodes/presentation/pages/EpisodeDetailScreen.tsx": {
+    "colors": 6,
+    "fontSizes": 27,
+    "texts": 17,
+    "staticPalette": 0
+  },
+  "features/episodes/presentation/pages/LinkEpisodeSheet.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 13,
+    "staticPalette": 1
+  },
+  "features/feedback/data/models/feedback.dtos.ts": {
+    "colors": 3,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/feedback/domain/entities/feedback.entity.ts": {
+    "colors": 6,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/feedback/presentation/components/FeedbackListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 4,
+    "staticPalette": 1
+  },
+  "features/feedback/presentation/components/PeriodSelector.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/feedback/presentation/components/StarRatingInput.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/feedback/presentation/pages/ClinicFeedbackSummarySection.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/feedback/presentation/pages/FeedbackFormScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 35,
+    "staticPalette": 1
+  },
+  "features/feedback/presentation/pages/StaffFeedbackListScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 10,
+    "staticPalette": 1
+  },
+  "features/feedback/presentation/pages/StaffFeedbackSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/globalSettings/presentation/pages/SystemSettingsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 15,
+    "staticPalette": 1
+  },
+  "features/globalSettings/presentation/pages/TenantSettingsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 18,
+    "staticPalette": 1
+  },
+  "features/inventory/data/models/inventory.dtos.ts": {
+    "colors": 11,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/inventory/presentation/components/BatchForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 11,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/components/BatchListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/components/InventoryAlertListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/components/InventoryItemForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 39,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/components/InventoryItemListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/inventory/presentation/components/MovementListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/components/StockAdjustmentForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 11,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/pages/InventoryAlertsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 10,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/pages/InventoryBatchesScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 12,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/pages/InventoryItemDetailScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 31,
+    "staticPalette": 1
+  },
+  "features/inventory/presentation/pages/InventoryListScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/inventory/presentation/pages/InventoryStockAdjustScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/localization/presentation/components/LocaleSelect.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/localization/presentation/pages/TenantLocaleSettingsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 7,
+    "staticPalette": 1
+  },
+  "features/localization/presentation/pages/UserLocaleSettingsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 7,
+    "staticPalette": 1
+  },
+  "features/notificationPreferences/presentation/components/NotificationChannelSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/notificationPreferences/presentation/components/NotificationPreferenceItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/notificationPreferences/presentation/pages/NotificationPreferencesScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/notifications/data/datasources/expo-push.service.ts": {
+    "colors": 3,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/notifications/presentation/components/NotificationCategoryBadge.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/notifications/presentation/components/NotificationListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/notifications/presentation/components/NotificationsIconWithBadge.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/notifications/presentation/pages/NotificationDetailScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/notifications/presentation/pages/NotificationHistoryScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 7,
+    "staticPalette": 1
+  },
+  "features/notifications/presentation/pages/NotificationPreferencesScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 28,
+    "staticPalette": 1
+  },
+  "features/notifications/presentation/pages/NotificationsListScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 7,
+    "staticPalette": 1
+  },
+  "features/onboarding/presentation/pages/ImproveApplicationScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 12,
+    "staticPalette": 0
+  },
+  "features/onboarding/presentation/pages/SetupWizardFlow.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/onboarding/presentation/pages/StepDetailScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/onboarding/presentation/pages/steps/BillingSetupScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 9,
+    "staticPalette": 0
+  },
+  "features/onboarding/presentation/pages/steps/OperatingHoursScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 0
+  },
+  "features/onboarding/presentation/pages/steps/PaymentSetupScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 4,
+    "staticPalette": 0
+  },
+  "features/onboarding/presentation/pages/steps/StaffSetupScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 14,
+    "staticPalette": 0
+  },
+  "features/onboarding/presentation/pages/steps/TreatmentRoomsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 10,
+    "staticPalette": 0
+  },
+  "features/onboarding/presentation/renderers/onboardingRendererRegistry.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/operatingHours/presentation/pages/OperatingHoursScreen.tsx": {
+    "colors": 94,
+    "fontSizes": 0,
+    "texts": 26,
+    "staticPalette": 0
+  },
+  "features/owner-dashboard/presentation/components/MetricStatCard.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/owner-dashboard/presentation/components/OwnerClinicCard.tsx": {
+    "colors": 0,
+    "fontSizes": 4,
+    "texts": 4,
+    "staticPalette": 1
+  },
+  "features/prescriptions/data/models/prescriptions.dtos.ts": {
+    "colors": 8,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/prescriptions/domain/entities/prescription.entity.ts": {
+    "colors": 4,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/prescriptions/presentation/components/EmptyPrescriptionsState.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/components/PrescriptionEditingCore.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 4,
+    "staticPalette": 0
+  },
+  "features/prescriptions/presentation/components/PrescriptionForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 26,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/components/PrescriptionListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 3,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/components/PrescriptionShareModal.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 14,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/components/PrescriptionStatusBadge.tsx": {
+    "colors": 0,
+    "fontSizes": 3,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/pages/CreatePrescriptionScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 4,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/pages/PrescriptionDetailScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 19,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/pages/PrescriptionEditScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/pages/PrescriptionsListScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/prescriptions/presentation/pages/PrescriptionStandaloneScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 9,
+    "staticPalette": 1
+  },
+  "features/rbac/domain/entities/rbac-audit.entity.ts": {
+    "colors": 5,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/components/AuditHistoryItem.tsx": {
+    "colors": 9,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/components/EmptyState.tsx": {
+    "colors": 3,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/components/ErrorState.tsx": {
+    "colors": 4,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/components/LoadingState.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/components/PermissionToggle.tsx": {
+    "colors": 6,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/components/RoleListItem.tsx": {
+    "colors": 4,
+    "fontSizes": 0,
+    "texts": 2,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/components/UserRoleCard.tsx": {
+    "colors": 6,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/hooks/useRbacTheme.ts": {
+    "colors": 41,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/rbac/presentation/pages/RbacAuditScreen.tsx": {
+    "colors": 6,
+    "fontSizes": 0,
+    "texts": 7,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/pages/TenantPermissionsScreen.tsx": {
+    "colors": 11,
+    "fontSizes": 0,
+    "texts": 11,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/pages/TenantRbacOverviewScreen.tsx": {
+    "colors": 11,
+    "fontSizes": 0,
+    "texts": 16,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/pages/TenantRolesScreen.tsx": {
+    "colors": 12,
+    "fontSizes": 0,
+    "texts": 17,
+    "staticPalette": 0
+  },
+  "features/rbac/presentation/pages/TenantUserRolesScreen.tsx": {
+    "colors": 18,
+    "fontSizes": 1,
+    "texts": 20,
+    "staticPalette": 0
+  },
+  "features/reports/presentation/pages/ReportsHomeScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 10,
+    "staticPalette": 1
+  },
+  "features/rooms/domain/entities/room.entity.ts": {
+    "colors": 7,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/rooms/presentation/pages/RoomsScreen.tsx": {
+    "colors": 46,
+    "fontSizes": 1,
+    "texts": 12,
+    "staticPalette": 0
+  },
+  "features/staff/data/models/staff.dtos.ts": {
+    "colors": 15,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/staff/presentation/components/LeaveListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/staff/presentation/components/StaffForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 44,
+    "staticPalette": 1
+  },
+  "features/staff/presentation/components/StaffLeaveForm.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 8,
+    "staticPalette": 1
+  },
+  "features/staff/presentation/pages/StaffDetailScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 20,
+    "staticPalette": 1
+  },
+  "features/staff/presentation/pages/StaffLeaveScreen.tsx": {
+    "colors": 8,
+    "fontSizes": 0,
+    "texts": 12,
+    "staticPalette": 1
+  },
+  "features/staff/presentation/pages/StaffListScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/staffDashboards/data/models/staffDashboards.dtos.ts": {
+    "colors": 8,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/staffDashboards/presentation/components/DashboardQuickActions.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/staffDashboards/presentation/components/DashboardStatsRow.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/staffDashboards/presentation/components/EmptyDashboardState.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/staffDashboards/presentation/components/MultiDayTreatmentOverviewWidget.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 9,
+    "staticPalette": 1
+  },
+  "features/staffDashboards/presentation/components/OnLeaveBanner.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/staffDashboards/presentation/components/PausedSeriesWidget.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 16,
+    "staticPalette": 1
+  },
+  "features/staffDashboards/presentation/components/SessionListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/staffDashboards/presentation/components/TodaysMultiDaySessionsAdminWidget.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 11,
+    "staticPalette": 1
+  },
+  "features/staffDashboards/presentation/components/UnscheduledTreatmentSheetsWidget.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 18,
+    "staticPalette": 1
+  },
+  "features/templates/data/models/templates.dtos.ts": {
+    "colors": 7,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/templates/presentation/pages/TemplatesScreen.tsx": {
+    "colors": 42,
+    "fontSizes": 0,
+    "texts": 15,
+    "staticPalette": 0
+  },
+  "features/tenantBranding/data/models/tenantBranding.dtos.ts": {
+    "colors": 18,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/tenantBranding/domain/entities/tenant-branding.entity.ts": {
+    "colors": 3,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/tenantBranding/presentation/components/ColorPaletteSelector.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/tenantBranding/presentation/components/TenantBrandingPreview.tsx": {
+    "colors": 0,
+    "fontSizes": 3,
+    "texts": 7,
+    "staticPalette": 1
+  },
+  "features/tenantBranding/presentation/pages/TenantBrandingSettingsScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 9,
+    "staticPalette": 1
+  },
+  "features/tenants/presentation/pages/CreateTenantScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 8,
+    "texts": 15,
+    "staticPalette": 0
+  },
+  "features/tenants/presentation/pages/TenantDetailScreen.tsx": {
+    "colors": 2,
+    "fontSizes": 21,
+    "texts": 28,
+    "staticPalette": 0
+  },
+  "features/tenants/presentation/pages/TenantsListScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 14,
+    "texts": 9,
+    "staticPalette": 0
+  },
+  "features/therapistDashboard/data/models/therapistDashboard.dtos.ts": {
+    "colors": 5,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/therapistDashboard/domain/entities/therapistDashboard.entity.ts": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/HrSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/LearningSection.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 4,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/LeaveSection.tsx": {
+    "colors": 0,
+    "fontSizes": 3,
+    "texts": 19,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/SessionNonExecutionModal.tsx": {
+    "colors": 1,
+    "fontSizes": 7,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/TherapistDashboardSummary.tsx": {
+    "colors": 4,
+    "fontSizes": 0,
+    "texts": 4,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/TherapistKpiRow.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 2,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/TherapistKpiSection.tsx": {
+    "colors": 0,
+    "fontSizes": 11,
+    "texts": 25,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/TherapistSessionCard.tsx": {
+    "colors": 0,
+    "fontSizes": 6,
+    "texts": 2,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/TreatmentSessionCompleteModal.tsx": {
+    "colors": 2,
+    "fontSizes": 13,
+    "texts": 12,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/WorklistItemCard.tsx": {
+    "colors": 0,
+    "fontSizes": 3,
+    "texts": 3,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/components/WorklistSection.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 3,
+    "staticPalette": 1
+  },
+  "features/therapistDashboard/presentation/pages/TherapistDashboardScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 3,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/treatments/data/models/treatments.dtos.ts": {
+    "colors": 3,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/treatments/presentation/pages/TreatmentsScreen.tsx": {
+    "colors": 35,
+    "fontSizes": 2,
+    "texts": 4,
+    "staticPalette": 0
+  },
+  "features/treatmentSessions/data/models/treatmentSessions.dtos.ts": {
+    "colors": 6,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/treatmentSessions/presentation/components/TreatmentSessionListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/treatmentSessions/presentation/pages/TreatmentSessionDetailScreen.tsx": {
+    "colors": 1,
+    "fontSizes": 2,
+    "texts": 24,
+    "staticPalette": 1
+  },
+  "features/treatmentSessions/presentation/pages/TreatmentSessionsListScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 7,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/data/models/treatmentOrders.dtos.ts": {
+    "colors": 25,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/data/models/treatmentSheets.dtos.ts": {
+    "colors": 12,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/domain/entities/treatmentSheet.entity.ts": {
+    "colors": 9,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/components/CancelSeriesDialog.tsx": {
+    "colors": 1,
+    "fontSizes": 8,
+    "texts": 9,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/components/EmptyTreatmentSheetsState.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/presentation/components/EmptyTreatmentSheetState.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 0,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/presentation/components/PatientScheduleModal.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/presentation/components/PauseSeriesDialog.tsx": {
+    "colors": 1,
+    "fontSizes": 8,
+    "texts": 9,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/components/ProgressBar.tsx": {
+    "colors": 0,
+    "fontSizes": 1,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/components/ScheduleRowModal.tsx": {
+    "colors": 1,
+    "fontSizes": 0,
+    "texts": 6,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/presentation/components/TreatmentSheetActions.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/presentation/components/TreatmentSheetListItem.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 3,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/presentation/components/TreatmentSheetProgress.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 5,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/presentation/components/TreatmentSheetRowItem.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 2,
+    "staticPalette": 1
+  },
+  "features/treatmentSheets/presentation/components/TreatmentSheetStatusBadge.tsx": {
+    "colors": 0,
+    "fontSizes": 3,
+    "texts": 0,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/BulkSchedulePlanScreen.tsx": {
+    "colors": 19,
+    "fontSizes": 16,
+    "texts": 18,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/detail/ClinicalReviewSection.tsx": {
+    "colors": 1,
+    "fontSizes": 7,
+    "texts": 12,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/detail/TreatmentLifecycleActions.tsx": {
+    "colors": 0,
+    "fontSizes": 4,
+    "texts": 6,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/detail/TreatmentRowEditor.tsx": {
+    "colors": 0,
+    "fontSizes": 6,
+    "texts": 7,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/detail/TreatmentRowsSection.tsx": {
+    "colors": 0,
+    "fontSizes": 4,
+    "texts": 4,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/detail/TreatmentScheduleSummary.tsx": {
+    "colors": 0,
+    "fontSizes": 5,
+    "texts": 5,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/detail/TreatmentSheetDetailContent.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 3,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/detail/TreatmentSheetDetailHeader.tsx": {
+    "colors": 0,
+    "fontSizes": 3,
+    "texts": 3,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/detail/TreatmentSheetInfoCard.tsx": {
+    "colors": 0,
+    "fontSizes": 2,
+    "texts": 12,
+    "staticPalette": 0
+  },
+  "features/treatmentSheets/presentation/pages/TreatmentSheetDetailScreen.tsx": {
+    "colors": 0,
+    "fontSizes": 0,
+    "texts": 1,
+    "staticPalette": 0
+  }
+}

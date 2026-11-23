@@ -3,7 +3,8 @@
  * Component to display clinic-wide feedback summary for admin dashboard
  */
 
-import React, { useState, useCallback } from 'react';
+import { t } from '../../../../core/localization';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { StarRatingDisplay } from '../components/StarRatingDisplay';
@@ -24,7 +25,6 @@ import {
   getRatingDistributionPercentages,
   getAmbienceScoreItems,
   formatPercentage,
-  getRatingColor,
 } from '../../domain/entities/feedback.entity';
 import type { KPIPeriod, StaffType } from '../../data/models/feedback.dtos';
 
@@ -39,6 +39,10 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
   onStaffPress,
   testID,
 }) => {
+  const theme = useClinicTheme();
+  const ratingColor = (rating: number) =>
+    rating >= 4 ? theme.colors.feedback.success : rating >= 3 ? theme.colors.feedback.warning : rating > 0 ? theme.colors.feedback.error : theme.colors.text.secondary;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [period, setPeriod] = useState<KPIPeriod>('30d');
 
   // Calculate date range from period
@@ -91,7 +95,7 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
     return (
       <View style={styles.container} testID={testID}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.primary.main} />
+          <ActivityIndicator size="small" color={theme.colors.primary.default} />
           <Text style={styles.loadingText}>Loading feedback summary...</Text>
         </View>
       </View>
@@ -103,10 +107,10 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
     return (
       <View style={styles.container} testID={testID}>
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={24} color={colors.error.main} />
-          <Text style={styles.errorText}>Could not load feedback summary</Text>
+          <Ionicons name="alert-circle-outline" size={24} color={theme.colors.feedback.error} />
+          <Text style={styles.errorText}>{t('clinicAdmin.feedbackSummary.summaryLoadFailed')}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('clinicAdmin.feedbackSummary.retry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -124,10 +128,10 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.titleRow}>
-          <View style={[styles.iconContainer, { backgroundColor: colors.warning[50] }]}>
-            <Ionicons name="chatbubbles" size={20} color={colors.warning.main} />
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.feedback.warningLight }]}>
+            <Ionicons name="chatbubbles" size={20} color={theme.colors.feedback.warning} />
           </View>
-          <Text style={styles.sectionTitle}>Patient Feedback</Text>
+          <Text style={styles.sectionTitle}>{t('clinicAdmin.feedbackSummary.title')}</Text>
         </View>
         <PeriodSelector
           value={period}
@@ -148,11 +152,11 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
           <View style={styles.overallRatingRight}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{data.total_responses || 0}</Text>
-              <Text style={styles.statLabel}>Responses</Text>
+              <Text style={styles.statLabel}>{t('clinicAdmin.feedbackSummary.colResponses')}</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{formatPercentage(data.response_rate)}</Text>
-              <Text style={styles.statLabel}>Response Rate</Text>
+              <Text style={styles.statLabel}>{t('clinicAdmin.feedbackSummary.responseRate')}</Text>
             </View>
           </View>
         </View>
@@ -160,7 +164,7 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
 
       {/* Rating Distribution */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Rating Distribution</Text>
+        <Text style={styles.cardTitle}>{t('clinicAdmin.feedbackSummary.ratingDistribution')}</Text>
         <RatingDistributionBars
           distribution={ratingDistribution}
           testID={`${testID}-distribution`}
@@ -171,34 +175,34 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
       <View style={styles.card} testID={`${testID}-google`}>
         <View style={styles.cardHeader}>
           <Ionicons name="logo-google" size={20} color="#4285F4" />
-          <Text style={styles.cardTitle}>Google Reviews</Text>
+          <Text style={styles.cardTitle}>{t('clinicAdmin.feedbackSummary.googleReviews')}</Text>
         </View>
         <View style={styles.googleStatsRow}>
           <View style={styles.googleStat}>
             <Text style={styles.googleStatValue}>{data.google_review_stats?.prompted || 0}</Text>
-            <Text style={styles.googleStatLabel}>Prompted</Text>
+            <Text style={styles.googleStatLabel}>{t('clinicAdmin.feedbackSummary.prompted')}</Text>
           </View>
           <View style={styles.googleStatDivider} />
           <View style={styles.googleStat}>
             <Text style={styles.googleStatValue}>{data.google_review_stats?.posted || 0}</Text>
-            <Text style={styles.googleStatLabel}>Posted</Text>
+            <Text style={styles.googleStatLabel}>{t('clinicAdmin.feedbackSummary.posted')}</Text>
           </View>
           <View style={styles.googleStatDivider} />
           <View style={styles.googleStat}>
             <Text style={[
               styles.googleStatValue,
-              { color: getRatingColor((data.google_review_stats?.conversion_rate || 0) / 20) }
+              { color: ratingColor((data.google_review_stats?.conversion_rate || 0) / 20) }
             ]}>
               {formatPercentage(data.google_review_stats?.conversion_rate || 0)}
             </Text>
-            <Text style={styles.googleStatLabel}>Conversion</Text>
+            <Text style={styles.googleStatLabel}>{t('clinicAdmin.feedbackSummary.conversion')}</Text>
           </View>
         </View>
       </View>
 
       {/* Staff Performance */}
       <View style={styles.staffSection}>
-        <Text style={styles.cardTitle}>Staff Performance</Text>
+        <Text style={styles.cardTitle}>{t('clinicAdmin.feedbackSummary.staffPerformance')}</Text>
         <StaffPerformanceTable
           doctors={data.staff_performance?.doctors || []}
           therapists={data.staff_performance?.therapists || []}
@@ -209,7 +213,7 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
 
       {/* Ambience Scores */}
       <View style={styles.card} testID={`${testID}-ambience`}>
-        <Text style={styles.cardTitle}>Clinic Ambience Scores</Text>
+        <Text style={styles.cardTitle}>{t('clinicAdmin.feedbackSummary.ambienceScores')}</Text>
         <View style={styles.ambienceGrid}>
           {ambienceItems.map((item) => (
             <View key={item.key} style={styles.ambienceItem}>
@@ -217,16 +221,16 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
                 <Ionicons
                   name={item.icon as any}
                   size={16}
-                  color={getRatingColor(item.score)}
+                  color={ratingColor(item.score)}
                 />
               </View>
               <View style={styles.ambienceContent}>
-                <Text style={styles.ambienceLabel}>{item.label}</Text>
+                <Text style={styles.ambienceLabel}>{t('clinicAdmin.feedbackSummary.ambience_' + item.key)}</Text>
                 <Text style={[
                   styles.ambienceScore,
-                  { color: getRatingColor(item.score) }
+                  { color: ratingColor(item.score) }
                 ]}>
-                  {item.score > 0 ? item.score.toFixed(1) : 'N/A'}
+                  {item.score > 0 ? item.score.toFixed(1) : t('clinicAdmin.feedbackSummary.notAvailable')}
                 </Text>
               </View>
             </View>
@@ -237,7 +241,7 @@ export const ClinicFeedbackSummarySection: React.FC<ClinicFeedbackSummarySection
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     gap: spacing.md,
   },
@@ -250,7 +254,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   errorContainer: {
     alignItems: 'center',
@@ -259,7 +263,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   retryButton: {
     paddingVertical: spacing.xs,
@@ -267,7 +271,7 @@ const styles = StyleSheet.create({
   },
   retryText: {
     ...typography.button,
-    color: colors.primary.main,
+    color: theme.colors.primary.default,
   },
   sectionHeader: {
     gap: spacing.sm,
@@ -286,14 +290,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   card: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -303,15 +307,15 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     ...typography.subtitle1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: spacing.sm,
   },
   overallCard: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   overallRatingRow: {
     flexDirection: 'row',
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
   },
   overallRatingValue: {
     ...typography.h2,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '700',
   },
   overallRatingRight: {
@@ -335,12 +339,12 @@ const styles = StyleSheet.create({
   },
   statValue: {
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '700',
   },
   statLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   googleStatsRow: {
     flexDirection: 'row',
@@ -353,17 +357,17 @@ const styles = StyleSheet.create({
   },
   googleStatValue: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '700',
   },
   googleStatLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   googleStatDivider: {
     width: 1,
     height: 32,
-    backgroundColor: colors.border.light,
+    backgroundColor: theme.colors.border.subtle,
   },
   staffSection: {
     gap: spacing.sm,
@@ -384,7 +388,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: colors.grey[100],
+    backgroundColor: theme.colors.background.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -393,7 +397,7 @@ const styles = StyleSheet.create({
   },
   ambienceLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   ambienceScore: {
     ...typography.body2,

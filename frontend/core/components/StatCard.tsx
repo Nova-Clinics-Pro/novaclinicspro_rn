@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../theme/useClinicTheme';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
@@ -25,6 +25,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   trend,
   onPress,
 }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const Container = onPress ? TouchableOpacity : View;
 
   return (
@@ -44,15 +46,15 @@ export const StatCard: React.FC<StatCardProps> = ({
             <Ionicons
               name={trend.isPositive ? 'trending-up' : 'trending-down'}
               size={14}
-              color={trend.isPositive ? colors.success.main : colors.error.main}
+              color={trend.isPositive ? theme.colors.feedback.success : theme.colors.feedback.error}
             />
             <Text
               style={[
                 styles.trendText,
                 {
                   color: trend.isPositive
-                    ? colors.success.main
-                    : colors.error.main,
+                    ? theme.colors.feedback.success
+                    : theme.colors.feedback.error,
                 },
               ]}
             >
@@ -65,10 +67,10 @@ export const StatCard: React.FC<StatCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     padding: spacing.md,
     flexDirection: 'row',
@@ -79,7 +81,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   iconContainer: {
     width: 48,
@@ -94,12 +96,12 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginBottom: 4,
   },
   value: {
     ...typography.h4,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   trendContainer: {

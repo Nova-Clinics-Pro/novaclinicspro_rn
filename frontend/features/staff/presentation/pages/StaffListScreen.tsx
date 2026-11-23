@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
@@ -62,6 +62,8 @@ const MIN_SEARCH_LENGTH = 3;
 const DEBOUNCE_DELAY = 300;
 
 export const StaffListScreen: React.FC = () => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const { currentUser } = useAuth();
   const tenantId = currentUser?.tenantId || '';
@@ -169,19 +171,19 @@ export const StaffListScreen: React.FC = () => {
   const handleDeleteStaff = useCallback(
     async (staffId: string) => {
       Alert.alert(
-        'Delete Staff',
-        'Are you sure you want to delete this staff member?',
+        t('clinicAdmin.staffList.deleteTitle'),
+        t('clinicAdmin.staffList.deleteConfirm'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               try {
                 await deleteMutation.mutateAsync(staffId);
-                Alert.alert('Success', 'Staff member deleted');
+                Alert.alert(t('common.success'), t('clinicAdmin.staffList.deleted'));
               } catch {
-                Alert.alert('Error', 'Failed to delete staff');
+                Alert.alert(t('common.error'), t('clinicAdmin.staffList.deleteFailed'));
               }
             },
           },
@@ -195,24 +197,24 @@ export const StaffListScreen: React.FC = () => {
     <View style={styles.header}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={colors.text.tertiary} />
+        <Ionicons name="search" size={20} color={theme.colors.text.tertiary} />
         <TextInput
           style={styles.searchInput}
-          placeholder={`Search staff... (min ${MIN_SEARCH_LENGTH} chars)`}
-          placeholderTextColor={colors.text.tertiary}
+          placeholder={t('clinicAdmin.staffList.searchPlaceholder', { min: MIN_SEARCH_LENGTH })}
+          placeholderTextColor={theme.colors.text.tertiary}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={20} color={colors.text.tertiary} />
+            <Ionicons name="close-circle" size={20} color={theme.colors.text.tertiary} />
           </TouchableOpacity>
         )}
       </View>
 
       {/* Status Filters */}
       <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>Status</Text>
+        <Text style={styles.filterLabel}>{t('clinicAdmin.staffList.status')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.filterRow}>
             {STATUS_FILTERS.map((status) => (
@@ -230,7 +232,7 @@ export const StaffListScreen: React.FC = () => {
                     selectedStatus === status && styles.filterChipTextSelected,
                   ]}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {t(`common.${status}`)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -240,7 +242,7 @@ export const StaffListScreen: React.FC = () => {
 
       {/* Type Filters */}
       <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>Staff Type</Text>
+        <Text style={styles.filterLabel}>{t('clinicAdmin.staffList.staffType')}</Text>
         <FlatList
           horizontal
           data={STAFF_TYPE_FILTERS}
@@ -260,7 +262,7 @@ export const StaffListScreen: React.FC = () => {
                   selectedType === item && styles.filterChipTextSelected,
                 ]}
               >
-                {item === 'all' ? 'All' : getStaffTypeLabel(item as StaffType)}
+                {item === 'all' ? t('clinicAdmin.common.all') : getStaffTypeLabel(item as StaffType)}
               </Text>
             </TouchableOpacity>
           )}
@@ -272,12 +274,12 @@ export const StaffListScreen: React.FC = () => {
 
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="people-outline" size={64} color={colors.text.tertiary} />
-      <Text style={styles.emptyTitle}>No Staff Found</Text>
+      <Ionicons name="people-outline" size={64} color={theme.colors.text.tertiary} />
+      <Text style={styles.emptyTitle}>{t('clinicAdmin.staffList.emptyTitle')}</Text>
       <Text style={styles.emptySubtitle}>
         {searchQuery
-          ? 'Try adjusting your search or filters'
-          : 'Add your first staff member to get started'}
+          ? t('clinicAdmin.staffList.emptyFiltered')
+          : t('clinicAdmin.staffList.emptyFirst')}
       </Text>
 
     </View>
@@ -300,12 +302,12 @@ export const StaffListScreen: React.FC = () => {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
         <View style={styles.titleContainer}>
-          <Text style={styles.pageTitle}>Staff Directory</Text>
+          <Text style={styles.pageTitle}>{t('clinicAdmin.staffList.title')}</Text>
           <Text style={styles.pageSubtitle}>
-            {staffData?.total || 0} staff members
+            {t('clinicAdmin.staffList.count', { count: staffData?.total || 0 })}
           </Text>
         </View>
         <TouchableOpacity
@@ -315,14 +317,14 @@ export const StaffListScreen: React.FC = () => {
             setShowAddModal(true);
           }}
         >
-          <Ionicons name="add" size={24} color={colors.background.default} />
+          <Ionicons name="add" size={24} color={theme.colors.background.elevated} />
         </TouchableOpacity>
       </View>
 
       {/* Main Content */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary.main} />
+          <ActivityIndicator size="large" color={theme.colors.primary.default} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       ) : (
@@ -339,7 +341,7 @@ export const StaffListScreen: React.FC = () => {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={refetch}
-              colors={[colors.primary.main]}
+              colors={[theme.colors.primary.default]}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -356,14 +358,14 @@ export const StaffListScreen: React.FC = () => {
         <SafeAreaView style={styles.modalContainer} edges={['top']}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowAddModal(false)}>
-              <Ionicons name="close" size={24} color={colors.text.primary} />
+              <Ionicons name="close" size={24} color={theme.colors.text.primary} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Add New Staff</Text>
+            <Text style={styles.modalTitle}>{t('clinicAdmin.staffList.addNew')}</Text>
             <View style={{ width: 24 }} />
           </View>
           {createError ? (
             <View style={styles.createErrorBanner} accessibilityRole="alert">
-              <Ionicons name="alert-circle" size={20} color={colors.error.main} />
+              <Ionicons name="alert-circle" size={20} color={theme.colors.feedback.error} />
               <Text style={styles.createErrorText}>{createError}</Text>
             </View>
           ) : null}
@@ -378,10 +380,10 @@ export const StaffListScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
   },
   pageHeader: {
     flexDirection: 'row',
@@ -389,8 +391,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    backgroundColor: colors.background.default,
+    borderBottomColor: theme.colors.border.subtle,
+    backgroundColor: theme.colors.background.elevated,
   },
   backButton: {
     padding: spacing.xs,
@@ -401,14 +403,14 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     ...typography.h5,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   pageSubtitle: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   addButton: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     padding: spacing.sm,
     borderRadius: 8,
   },
@@ -418,26 +420,26 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 8,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   searchInput: {
     flex: 1,
     paddingVertical: spacing.sm,
     marginLeft: spacing.sm,
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   filterSection: {
     marginBottom: spacing.sm,
   },
   filterLabel: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginBottom: spacing.xs,
     fontWeight: '600',
   },
@@ -452,20 +454,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 20,
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   filterChipSelected: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
+    borderColor: theme.colors.primary.default,
   },
   filterChipText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   filterChipTextSelected: {
-    color: colors.background.default,
+    color: theme.colors.background.elevated,
     fontWeight: '600',
   },
   listContent: {
@@ -479,7 +481,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: spacing.md,
   },
   emptyContainer: {
@@ -490,12 +492,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: spacing.md,
   },
   emptySubtitle: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xl,
@@ -507,12 +509,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     borderRadius: 8,
   },
   emptyButtonText: {
     ...typography.button,
-    color: colors.background.default,
+    color: theme.colors.background.elevated,
   },
   errorContainer: {
     flex: 1,
@@ -522,12 +524,12 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: spacing.md,
   },
   errorText: {
     ...typography.body2,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     marginTop: spacing.sm,
   },
@@ -535,16 +537,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     borderRadius: 8,
   },
   retryButtonText: {
     ...typography.button,
-    color: colors.background.default,
+    color: theme.colors.background.elevated,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
   },
   createErrorBanner: {
     flexDirection: 'row',
@@ -555,12 +557,12 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.error.main,
-    backgroundColor: colors.error[50],
+    borderColor: theme.colors.feedback.error,
+    backgroundColor: theme.colors.feedback.errorLight,
   },
   createErrorText: {
     flex: 1,
-    color: colors.error.dark,
+    color: theme.colors.feedback.error,
     fontSize: 14,
   },
   modalHeader: {
@@ -570,12 +572,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    backgroundColor: colors.background.default,
+    borderBottomColor: theme.colors.border.subtle,
+    backgroundColor: theme.colors.background.elevated,
   },
   modalTitle: {
     ...typography.h6,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
 });
 

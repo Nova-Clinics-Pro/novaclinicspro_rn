@@ -22,9 +22,9 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
 }));
 jest.mock('../../../core/localization/useTranslation', () => ({
-  // The doctor card's button label now comes from translations (Start / Continue / Complete Consultation).
+  // Real English translations, so labels read as users see them.
   useTranslation: () => ({
-    t: (key: string) => (key === 'appointments.consultationAction.start' ? 'Start Consultation' : key),
+    t: jest.requireActual('../../../core/localization').t,
   }),
 }));
 jest.mock('../../../core/hooks/useFeatures', () => ({
@@ -36,19 +36,8 @@ jest.mock('../../../core/hooks/useFeatures', () => ({
   hasMultiDayAppointments: () => false,
 }));
 jest.mock('../../../core/theme/useClinicTheme', () => ({
-  useClinicTheme: () => ({
-    colors: {
-      primary: { default: '#2563EB', main: '#2563EB', onPrimary: '#FFFFFF' },
-      secondary: { default: '#7C3AED' },
-      background: { default: '#F9FAFB' },
-      text: { primary: '#111827', secondary: '#6B7280', onPrimary: '#FFFFFF' },
-      feedback: { success: '#10B981', warning: '#F59E0B', error: '#EF4444', info: '#3B82F6' },
-      success: { main: '#10B981' },
-      grey: { 50: '#F9FAFB', 400: '#9CA3AF' },
-    },
-    spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
-    typography: { body1: { fontSize: 16 }, body2: { fontSize: 14 }, caption: { fontSize: 12 } },
-  }),
+  useClinicTheme: () => jest.requireActual('../../../core/theme/useClinicTheme').getTheme(),
+  getTheme: jest.requireActual('../../../core/theme/useClinicTheme').getTheme,
 }));
 jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({
   useAuth: () => ({ currentUser: { tenantId: 'tenant-1' } }),

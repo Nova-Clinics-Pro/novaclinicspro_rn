@@ -31,6 +31,10 @@ import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { ClinicalPrintPreviewModal } from '../../../../core/clinicalPrint/ClinicalPrintPreviewModal';
 import { buildCasesheetPrintHtml } from '../../../../core/clinicalPrint/adapters';
+import { printQuery } from '../../../../core/clinicalPrint/printOptions';
+import { usePrintOptions } from '../../../../core/clinicalPrint/usePrintOptions';
+import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
+import { CaseSheetVersionPanel } from '../components/CaseSheetVersionPanel';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { CasesheetOperationError } from '../../domain/errors/casesheetOperationError';
 import {
@@ -134,15 +138,20 @@ export const CasesheetDetailScreen: React.FC = () => {
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [printHtmlContent, setPrintHtmlContent] = useState<string>('');
 
+  const { askForPrintOptions, printOptionsDialog } = usePrintOptions();
+  const clinicTheme = useClinicTheme();
+
   const handlePrint = useCallback(async () => {
+    const options = await askForPrintOptions();   // letterhead or plain paper, before every print
+    if (!options) return;
     try {
-      const result: any = await printMutation.mutateAsync();
-      setPrintHtmlContent(buildCasesheetPrintHtml(result));
+      const result: any = await printMutation.mutateAsync(printQuery(options));
+      setPrintHtmlContent(buildCasesheetPrintHtml(result, { paper: options.paper, accent: clinicTheme.colors.primary.default }));
       setShowPrintPreview(true);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to print casesheet.');
     }
-  }, [printMutation]);
+  }, [askForPrintOptions, printMutation, clinicTheme]);
 
   const handleArchive = useCallback(async () => {
     try {
@@ -550,6 +559,15 @@ export const CasesheetDetailScreen: React.FC = () => {
         {/* Extensions */}
         {renderExtensions()}
 
+        {/* Version history: every signed version, each printable (a superseded one prints labelled as such) */}
+        <CaseSheetVersionPanel
+          tenantId={tenantId}
+          casesheetId={casesheetId}
+          signed={casesheet.status === 'SIGNED'}
+          canAmend={(currentUser?.permissions ?? []).includes('casesheet.amend')}
+          onAmended={refetch}
+        />
+
         {/* Footer Branding */}
         {renderBrandingFooter()}
 
@@ -607,6 +625,7 @@ export const CasesheetDetailScreen: React.FC = () => {
         {renderContent()}
       </View>
       {renderCreateTreatmentSheetModal()}
+      {printOptionsDialog}
       <ClinicalPrintPreviewModal
         visible={showPrintPreview}
         html={printHtmlContent}

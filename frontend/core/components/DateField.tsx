@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Platform, StyleProp, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../theme/useClinicTheme';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 import CrossPlatformDateTimePicker from './CrossPlatformDateTimePicker';
@@ -60,6 +60,8 @@ export const DateField: React.FC<DateFieldProps> = ({
   value, onChange, onBlur, placeholder = 'YYYY-MM-DD', maximumDate, minimumDate, accessibilityLabel, testID,
   disabled = false, error = false, style, boxStyle,
 }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const box = [styles.wrapper, error && styles.error, disabled && styles.disabled, boxStyle];
   const [picking, setPicking] = useState(false);
 
@@ -93,7 +95,7 @@ export const DateField: React.FC<DateFieldProps> = ({
           onPress={() => setPicking(open => !open)}
           testID={testID ? `${testID}-calendar` : undefined}
         >
-          <Ionicons name="calendar-outline" size={20} color={colors.text.secondary} />
+          <Ionicons name="calendar-outline" size={20} color={theme.colors.text.secondary} />
         </TouchableOpacity>
         <TextInput
           style={styles.input}
@@ -101,7 +103,7 @@ export const DateField: React.FC<DateFieldProps> = ({
           onChangeText={text => onChange(formatDateTyping(text))}
           onBlur={onBlur}
           placeholder={placeholder}
-          placeholderTextColor={colors.text.tertiary}
+          placeholderTextColor={theme.colors.text.tertiary}
           keyboardType="numeric"
           maxLength={10}
           editable={!disabled}
@@ -131,22 +133,22 @@ export const DateField: React.FC<DateFieldProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   wrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
     borderRadius: 8,
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
   },
-  error: { borderColor: colors.error.main },
+  error: { borderColor: theme.colors.feedback.error },
   disabled: { opacity: 0.6 },
-  input: { flex: 1, paddingVertical: spacing.md, ...typography.body1, color: colors.text.primary },
+  input: { flex: 1, paddingVertical: spacing.md, ...typography.body1, color: theme.colors.text.primary },
   done: { alignSelf: 'flex-end', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  doneText: { ...typography.button, color: colors.primary.main },
+  doneText: { ...typography.button, color: theme.colors.primary.default },
 });
 
 // A real DOM <input> takes CSS (not React Native) style values.

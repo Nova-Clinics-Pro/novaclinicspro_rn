@@ -19,4 +19,6 @@ export const sizes = {
   iconSmall: 16,
   iconMedium: 24,
   iconLarge: 32,
+  /** Height kept free at the top of a page printed on pre-printed letterhead paper, in millimetres (matches the server's print setting). */
+  printLetterheadSpaceMm: 40,
 };

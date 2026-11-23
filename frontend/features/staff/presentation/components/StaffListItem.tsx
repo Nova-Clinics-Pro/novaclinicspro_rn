@@ -3,7 +3,7 @@
  * Displays a single staff member in a list
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import {
@@ -26,6 +26,8 @@ interface StaffListItemProps {
 }
 
 export const StaffListItem: React.FC<StaffListItemProps> = ({ staff, onPress }) => {
+  const theme = useClinicTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const typeColor = getStaffTypeColor(staff.staff_type);
 
   return (
@@ -42,7 +44,7 @@ export const StaffListItem: React.FC<StaffListItemProps> = ({ staff, onPress }) 
           <Text style={styles.name}>{staff.full_name}</Text>
           <View style={styles.metaRow}>
             <View style={[styles.typeBadge, { backgroundColor: typeColor + '15' }]}>
-              <Text style={[styles.typeText, { color: typeColor }]}>
+              <Text style={[styles.typeText, { color: theme.colors.text.primary }]}>
                 {getStaffTypeLabel(staff.staff_type)}
               </Text>
             </View>
@@ -52,7 +54,7 @@ export const StaffListItem: React.FC<StaffListItemProps> = ({ staff, onPress }) 
           </View>
           {!!staff.phone && (
             <View style={styles.contactRow}>
-              <Ionicons name="call-outline" size={14} color={colors.text.secondary} />
+              <Ionicons name="call-outline" size={14} color={theme.colors.text.secondary} />
               <Text style={styles.contactText}>{staff.phone}</Text>
             </View>
           )}
@@ -63,8 +65,8 @@ export const StaffListItem: React.FC<StaffListItemProps> = ({ staff, onPress }) 
               styles.statusDot,
               {
                 backgroundColor: staff.is_active
-                  ? colors.success.main
-                  : colors.text.disabled,
+                  ? theme.colors.feedback.success
+                  : theme.colors.text.disabled,
               },
             ]}
           />
@@ -72,14 +74,14 @@ export const StaffListItem: React.FC<StaffListItemProps> = ({ staff, onPress }) 
             <Ionicons
               name="key-outline"
               size={16}
-              color={colors.primary.main}
+              color={theme.colors.primary.default}
               style={styles.loginIcon}
             />
           )}
           <Ionicons
             name="chevron-forward"
             size={20}
-            color={colors.text.secondary}
+            color={theme.colors.text.secondary}
           />
         </View>
       </View>
@@ -87,13 +89,13 @@ export const StaffListItem: React.FC<StaffListItemProps> = ({ staff, onPress }) 
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border.light,
+    borderColor: theme.colors.border.subtle,
   },
   content: {
     flexDirection: 'row',
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
   },
   name: {
     ...typography.body1,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -134,7 +136,7 @@ const styles = StyleSheet.create({
   },
   designation: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   contactRow: {
     flexDirection: 'row',
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
   },
   contactText: {
     ...typography.caption,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   rightSection: {
     flexDirection: 'row',

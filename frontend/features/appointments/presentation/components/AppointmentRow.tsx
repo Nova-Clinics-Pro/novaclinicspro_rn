@@ -25,7 +25,7 @@
  * even though it is now the only value.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -36,8 +36,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useClinicTheme } from '../../../../core/theme/useClinicTheme';
-import { colors } from '../../../../core/theme/colors';
+import { useClinicTheme, type ClinicTheme } from '../../../../core/theme/useClinicTheme';
 import { spacing } from '../../../../core/theme/spacing';
 import { typography } from '../../../../core/theme/typography';
 import { useTranslation } from '../../../../core/localization/useTranslation';
@@ -80,16 +79,19 @@ interface StatusBadgeProps {
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+  const { t } = useTranslation();
+  const theme = useClinicTheme();
+  const fullStyles = useMemo(() => makeFullStyles(theme), [theme]);
   const statusColor = getStatusColor(status);
   const statusLabel = getStatusLabel(status);
 
   return (
     <View
       style={[fullStyles.statusBadge, { backgroundColor: statusColor + '15' }]}
-      accessibilityLabel={`Status: ${statusLabel}`}
+      accessibilityLabel={t('clinicAdmin.appointmentActions.statusAria', { status: statusLabel })}
     >
       <View style={[fullStyles.statusDot, { backgroundColor: statusColor }]} />
-      <Text style={[fullStyles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+      <Text style={[fullStyles.statusText, { color: theme.colors.text.primary }]}>{statusLabel}</Text>
     </View>
   );
 };
@@ -112,7 +114,11 @@ const QuickActionIconButton: React.FC<QuickActionIconButtonProps> = ({
   onPress,
   testId,
   disabled = false,
-}) => (
+}) => {
+  const theme = useClinicTheme();
+  const fullStyles = useMemo(() => makeFullStyles(theme), [theme]);
+  const { t } = useTranslation();
+  return (
   <TouchableOpacity
     style={[
       fullStyles.quickActionIconBtn,
@@ -122,17 +128,18 @@ const QuickActionIconButton: React.FC<QuickActionIconButtonProps> = ({
     onPress={onPress}
     disabled={disabled}
     accessibilityLabel={label}
-    accessibilityHint={disabled ? 'Available at appointment start time' : `Tap to ${label.toLowerCase()}`}
+    accessibilityHint={disabled ? t('clinicAdmin.appointmentActions.unavailableHint') : t('clinicAdmin.appointmentActions.tapTo', { action: label.toLowerCase() })}
     accessibilityRole="button"
     accessibilityState={{ disabled }}
     data-testid={testId}
   >
-    <Ionicons name={icon} size={20} color={disabled ? colors.grey[400] : color} />
-    <Text style={[fullStyles.quickActionTooltip, { color: disabled ? colors.grey[400] : color }]} numberOfLines={2}>
+    <Ionicons name={icon} size={20} color={disabled ? theme.colors.border.strong : color} />
+    <Text style={[fullStyles.quickActionTooltip, { color: disabled ? theme.colors.text.secondary : color }]} numberOfLines={2}>
       {label}
     </Text>
   </TouchableOpacity>
-);
+  );
+};
 
 interface CompleteTickIconProps {
   onPress: () => void;
@@ -140,6 +147,8 @@ interface CompleteTickIconProps {
 }
 
 const CompleteTickIcon: React.FC<CompleteTickIconProps> = ({ onPress, disabled }) => {
+  const theme = useClinicTheme();
+  const fullStyles = useMemo(() => makeFullStyles(theme), [theme]);
   const [isPressed, setIsPressed] = useState(false);
 
   return (
@@ -158,7 +167,7 @@ const CompleteTickIcon: React.FC<CompleteTickIconProps> = ({ onPress, disabled }
       accessibilityRole="button"
       data-testid="action-complete-tick"
     >
-      <Ionicons name="checkmark-circle" size={28} color={isPressed ? colors.success.main : colors.success.main} />
+      <Ionicons name="checkmark-circle" size={28} color={isPressed ? theme.colors.feedback.success : theme.colors.feedback.success} />
     </TouchableOpacity>
   );
 };
@@ -200,6 +209,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
   const { currentUser } = useAuth();
   const features = useFeatures();
   const theme = useClinicTheme();
+  const fullStyles = useMemo(() => makeFullStyles(theme), [theme]);
   const { colors: themeColors, spacing: themeSpacing, typography: themeTypography } = theme;
   const onPrimaryColor = themeColors.text.onPrimary;
   const statusColor = getStatusColor(appointment.status);
@@ -296,7 +306,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
         onPress={onPress ? handlePress : undefined}
         activeOpacity={onPress ? 0.7 : 1}
         accessibilityRole={onPress ? 'button' : 'none'}
-        accessibilityLabel={`Appointment for ${clientName} at ${timeDisplay}`}
+        accessibilityLabel={t('clinicAdmin.appointmentActions.ariaAppointmentFor', { client: clientName ?? '', time: timeDisplay })}
       >
         <View style={fullStyles.content}>
           {/* Top Row: Date + Status */}
@@ -334,7 +344,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
                     {!!(dayNumber && totalDays) && (
                       <Text style={fullStyles.dayNumberText}>
                         {' '}
-                        • Day {dayNumber}/{totalDays}
+                        {t('clinicAdmin.appointmentsList.day', { number: `${dayNumber}/${totalDays}` })}
                       </Text>
                     )}
                   </>
@@ -419,16 +429,16 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
               {['scheduled', 'confirmed'].includes(status) && (
                 <QuickActionIconButton
                   icon="calendar-outline"
-                  label="Reschedule"
+                  label={t('clinicAdmin.appointmentActions.reschedule')}
                   color={themeColors.primary.default}
                   onPress={() => {
                     if (onReschedule) {
                       Alert.alert(
-                        'Reschedule',
-                        'Open reschedule options for this appointment?',
+                        t('clinicAdmin.appointmentActions.reschedule'),
+                        t('clinicAdmin.appointmentActions.rescheduleConfirm'),
                         [
-                          { text: 'Cancel', style: 'cancel' },
-                          { text: 'Yes', onPress: () => onReschedule(appointment.id) },
+                          { text: t('common.cancel'), style: 'cancel' },
+                          { text: t('common.yes'), onPress: () => onReschedule(appointment.id) },
                         ]
                       );
                     } else {
@@ -442,16 +452,16 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
               {canRecordVisit && onStatusUpdate && (
                 <QuickActionIconButton
                   icon="clipboard-outline"
-                  label="Record Visit"
+                  label={t('clinicAdmin.appointmentActions.recordVisit')}
                   color={themeColors.feedback.success}
                   disabled={!isAtOrAfterStartTime}
                   onPress={() => {
                     Alert.alert(
-                      'Record Visit',
-                      'Mark this appointment as completed?',
+                      t('clinicAdmin.appointmentActions.recordVisit'),
+                      t('clinicAdmin.appointmentActions.recordVisitConfirm'),
                       [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Yes', onPress: () => onStatusUpdate(appointment.id, 'COMPLETED'), style: 'default' },
+                        { text: t('common.cancel'), style: 'cancel' },
+                        { text: t('common.yes'), onPress: () => onStatusUpdate(appointment.id, 'COMPLETED'), style: 'default' },
                       ]
                     );
                   }}
@@ -462,16 +472,16 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
               {['scheduled', 'confirmed'].includes(status) && onStatusUpdate && (
                 <QuickActionIconButton
                   icon="person-remove-outline"
-                  label="No-Show"
+                  label={t('clinicAdmin.appointmentActions.noShow')}
                   color={themeColors.feedback.warning}
                   disabled={!isAtOrAfterStartTime}
                   onPress={() => {
                     Alert.alert(
-                      'Mark as No-Show',
-                      'Are you sure the patient did not show up?',
+                      t('clinicAdmin.appointmentActions.noShowTitle'),
+                      t('clinicAdmin.appointmentActions.noShowConfirm'),
                       [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Yes', onPress: () => onStatusUpdate(appointment.id, 'NO_SHOW') },
+                        { text: t('common.cancel'), style: 'cancel' },
+                        { text: t('common.yes'), onPress: () => onStatusUpdate(appointment.id, 'NO_SHOW') },
                       ]
                     );
                   }}
@@ -482,15 +492,15 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
               {['scheduled', 'confirmed'].includes(status) && onCancel && mayCancel && (
                 <QuickActionIconButton
                   icon="close-circle-outline"
-                  label="Cancel"
+                  label={t('clinicAdmin.appointmentActions.cancel')}
                   color={themeColors.feedback.error}
                   onPress={() => {
                     Alert.alert(
-                      'Cancel Appointment',
-                      'Are you sure you want to cancel this appointment?',
+                      t('clinicAdmin.appointmentActions.cancelTitle'),
+                      t('clinicAdmin.appointmentActions.cancelConfirm'),
                       [
-                        { text: 'No', style: 'cancel' },
-                        { text: 'Yes, Cancel', style: 'destructive', onPress: () => onCancel(appointment.id) },
+                        { text: t('common.no'), style: 'cancel' },
+                        { text: t('clinicAdmin.appointmentActions.yesCancel'), style: 'destructive', onPress: () => onCancel(appointment.id) },
                       ]
                     );
                   }}
@@ -501,7 +511,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
               {!!(isMultiDayAppointment && appointment.treatment_sheet_id) && (
                 <QuickActionIconButton
                   icon="calendar-number-outline"
-                  label="Schedule"
+                  label={t('clinicAdmin.appointmentActions.schedule')}
                   color={themeColors.feedback.info}
                   onPress={() => {
                     router.push(`/clinic-admin/treatment-sheets/${appointment.treatment_sheet_id}` as any);
@@ -517,18 +527,18 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
               {canComplete && (onComplete || onStatusUpdate) && (
                 <QuickActionIconButton
                   icon="checkmark-circle-outline"
-                  label="Complete"
+                  label={t('clinicAdmin.appointmentActions.complete')}
                   color={themeColors.feedback.success}
                   onPress={() => {
                     if (onComplete) {
                       onComplete(appointment.id);
                     } else {
                       Alert.alert(
-                        'Mark as Complete',
+                        t('clinicAdmin.appointmentActions.markComplete'),
                         'Mark this appointment as completed?',
                         [
-                          { text: 'Cancel', style: 'cancel' },
-                          { text: 'Yes', onPress: () => onStatusUpdate!(appointment.id, 'COMPLETED') },
+                          { text: t('common.cancel'), style: 'cancel' },
+                          { text: t('common.yes'), onPress: () => onStatusUpdate!(appointment.id, 'COMPLETED') },
                         ]
                       );
                     }
@@ -589,10 +599,10 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
   );
 };
 
-const fullStyles = StyleSheet.create({
+const makeFullStyles = (theme: ClinicTheme) => StyleSheet.create({
   container: {
     flexDirection: 'column',
-    backgroundColor: colors.background.default,
+    backgroundColor: theme.colors.background.elevated,
     borderRadius: 12,
     marginBottom: spacing.sm,
     borderLeftWidth: 4,
@@ -607,10 +617,10 @@ const fullStyles = StyleSheet.create({
   content: { flex: 1, padding: spacing.md },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs / 2 },
   dateContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dateText: { ...typography.body2, fontWeight: '600', color: colors.primary.main },
+  dateText: { ...typography.body2, fontWeight: '600', color: theme.colors.primary.default },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  timeText: { ...typography.caption, color: colors.text.secondary },
-  timeEndText: { color: colors.text.tertiary },
+  timeText: { ...typography.caption, color: theme.colors.text.secondary },
+  timeEndText: { color: theme.colors.text.tertiary },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -621,11 +631,11 @@ const fullStyles = StyleSheet.create({
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { ...typography.caption, fontWeight: '600', textTransform: 'capitalize' },
-  clientName: { ...typography.body1, fontWeight: '600', color: colors.text.primary, marginBottom: spacing.xs },
+  clientName: { ...typography.body1, fontWeight: '600', color: theme.colors.text.primary, marginBottom: spacing.xs },
   viewEpisodeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary.main + '10',
+    backgroundColor: theme.colors.primary.default + '10',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 8,
@@ -633,27 +643,27 @@ const fullStyles = StyleSheet.create({
     alignSelf: 'flex-start',
     gap: spacing.xs / 2,
   },
-  viewEpisodeText: { ...typography.caption, color: colors.primary.main, fontWeight: '600', flex: 1 },
+  viewEpisodeText: { ...typography.caption, color: theme.colors.primary.default, fontWeight: '600', flex: 1 },
   episodeBadgeContainer: { marginBottom: spacing.xs },
   detailsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   detailItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs / 2 },
-  detailText: { ...typography.caption, color: colors.text.secondary, maxWidth: 120 },
+  detailText: { ...typography.caption, color: theme.colors.text.secondary, maxWidth: 120 },
   seriesBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs / 2,
     marginTop: spacing.xs,
-    backgroundColor: colors.primary.main + '10',
+    backgroundColor: theme.colors.primary.default + '10',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,
     borderRadius: 8,
     alignSelf: 'flex-start',
   },
-  seriesText: { ...typography.caption, color: colors.primary.main, fontWeight: '500' },
+  seriesText: { ...typography.caption, color: theme.colors.primary.default, fontWeight: '500' },
   navigationArrow: { paddingHorizontal: spacing.sm, paddingVertical: spacing.md, justifyContent: 'center', alignItems: 'center' },
   rightActionsContainer: { flexDirection: 'row', alignItems: 'center', paddingRight: spacing.xs },
-  completeTickButton: { padding: spacing.sm, borderRadius: 20, backgroundColor: colors.success.main + '15', marginRight: spacing.xs },
-  completeTickButtonPressed: { backgroundColor: colors.success.main + '30', transform: [{ scale: 0.95 }] },
+  completeTickButton: { padding: spacing.sm, borderRadius: 20, backgroundColor: theme.colors.feedback.success + '15', marginRight: spacing.xs },
+  completeTickButtonPressed: { backgroundColor: theme.colors.feedback.success + '30', transform: [{ scale: 0.95 }] },
   completeTickButtonDisabled: { opacity: 0.5 },
   quickActionsRow: {
     flexDirection: 'row',
@@ -662,7 +672,7 @@ const fullStyles = StyleSheet.create({
     paddingBottom: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border.light,
+    borderTopColor: theme.colors.border.subtle,
     gap: spacing.xs,
   },
   quickActionIconBtn: {
@@ -676,7 +686,7 @@ const fullStyles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 64,
   },
-  quickActionIconBtnDisabled: { opacity: 0.6, backgroundColor: colors.grey[50] },
+  quickActionIconBtnDisabled: { opacity: 0.6, backgroundColor: theme.colors.background.muted },
   quickActionTooltip: { ...typography.caption, fontWeight: '600', fontSize: 11, marginTop: 4, textAlign: 'center', lineHeight: 14 },
   quickActionBtn: {
     flexDirection: 'row',
@@ -685,39 +695,39 @@ const fullStyles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: 8,
     borderWidth: 1,
-    backgroundColor: colors.background.paper,
+    backgroundColor: theme.colors.background.default,
     marginRight: spacing.xs,
     marginBottom: spacing.xs,
   },
   quickActionText: { ...typography.caption, fontWeight: '600' },
   viewAllEpisodesLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginTop: spacing.xs },
-  viewAllEpisodesText: { fontSize: 13, color: colors.primary.main, fontWeight: '500' },
+  viewAllEpisodesText: { fontSize: 13, color: theme.colors.primary.default, fontWeight: '500' },
   multiDayIndicator: {
     marginBottom: spacing.xs,
-    backgroundColor: colors.primary.main + '08',
+    backgroundColor: theme.colors.primary.default + '08',
     borderRadius: 8,
     padding: spacing.sm,
     borderLeftWidth: 3,
-    borderLeftColor: colors.primary.main,
+    borderLeftColor: theme.colors.primary.default,
   },
   multiDayBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs / 2, marginBottom: spacing.xs / 2 },
-  blueDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary.main },
-  multiDayText: { ...typography.body2, fontWeight: '600', color: colors.primary.main, flex: 1 },
-  dayNumberText: { ...typography.caption, fontWeight: '600', color: colors.primary.main },
+  blueDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.primary.default },
+  multiDayText: { ...typography.body2, fontWeight: '600', color: theme.colors.primary.default, flex: 1 },
+  dayNumberText: { ...typography.caption, fontWeight: '600', color: theme.colors.primary.default },
   progressContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  progressBar: { flex: 1, height: 4, backgroundColor: colors.grey[200], borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: colors.primary.main, borderRadius: 2 },
-  progressText: { ...typography.caption, color: colors.primary.main, fontWeight: '600', minWidth: 35, textAlign: 'right' },
+  progressBar: { flex: 1, height: 4, backgroundColor: theme.colors.border.subtle, borderRadius: 2, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: theme.colors.primary.default, borderRadius: 2 },
+  progressText: { ...typography.caption, color: theme.colors.primary.default, fontWeight: '600', minWidth: 35, textAlign: 'right' },
   doctorActionsContainer: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border.light,
+    borderTopColor: theme.colors.border.subtle,
     gap: spacing.sm,
   },
   startConsultationBtn: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.default,
     borderRadius: 10,
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,
@@ -728,14 +738,14 @@ const fullStyles = StyleSheet.create({
   startConsultationBtnLoading: { opacity: 0.75 },
   startConsultationText: { ...typography.body2, fontWeight: '700' },
   secondaryLinksRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  secondaryLink: { ...typography.caption, color: colors.primary.main, fontWeight: '600' },
-  secondaryLinkSep: { ...typography.caption, color: colors.text.secondary },
+  secondaryLink: { ...typography.caption, color: theme.colors.primary.default, fontWeight: '600' },
+  secondaryLinkSep: { ...typography.caption, color: theme.colors.text.secondary },
   terminalStatusRow: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border.light,
+    borderTopColor: theme.colors.border.subtle,
     alignItems: 'flex-start',
   },
 });
