@@ -59,14 +59,21 @@ test.describe('00 / 01 / 02 setup, owner and admin', () => {
     expect(await roles(), 'restored to Receptionist').toContain('Receptionist');
   });
 
-  test('TC_COP_OWN_016 the appointment export matches the list for the same period', async () => {
+  test('TC_COP_OWN_016 the appointments report and its CSV match the appointment list for the same period', async () => {
+    // Retargeted 23 Nov 2026 (owner decision): the clinic's own appointments summary (DEF_COP_036) replaces the older visit-based export.
     const w = await world(); const owner = await need('owner'); const d = ymd(workday(far()));
     for (const [p, h] of [['P-Male', 9], ['P-Minor', 10]] as const) await book(w, 'receptionist', { client_id: w.seed.patients[p], doctor_id: w.doctor.id, room_id: w.seed.rooms['C-1'], appointment_start: slot(new Date(d), h, 0).start, appointment_end: slot(new Date(d), h, 0).end });
     const listed = list((await owner.get(`${w.b}/appointments?date=${d}&limit=100`)).body).length;
-    const exp = await owner.text(`${w.b}/appointments-history/export?start_date=${d}&end_date=${d}`);
-    expect(ok(exp.status), `export returned ${exp.status}`).toBe(true);
-    const rows = exp.text.trim().split('\n').filter(Boolean).length - 1; // minus the header row
-    expect(rows, `export rows (${rows}) = appointments listed (${listed})`).toBe(listed);
+    const report = `${w.b}/reports/appointments_summary?start_date=${d}&end_date=${d}&group_by=day`;
+    const json = await owner.get(report);
+    expect(ok(json.status), `report returned ${json.status}`).toBe(true);
+    expect(Number(json.body.totals.booked), `report booked (${json.body.totals.booked}) = appointments listed (${listed})`).toBe(listed);
+    const exp = await owner.text(`${report}&format=csv`);
+    expect(ok(exp.status), `CSV returned ${exp.status}`).toBe(true);
+    const lines = exp.text.trim().split('\n').filter(Boolean);
+    const header = lines[0].split(','); const totals = lines[lines.length - 1].split(',');
+    expect(Number(totals[header.indexOf('Booked')]), `CSV total booked = appointments listed (${listed})`).toBe(listed);
+    expect(lines.length - 2, 'one CSV row for the one day (header and totals row excluded)').toBe(1);
   });
 
   test('TC_COP_ADM_005 an Admin creates a therapy treatment with consumables', async () => {
