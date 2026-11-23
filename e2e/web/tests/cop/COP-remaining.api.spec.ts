@@ -11,13 +11,11 @@ import { as, book, consultAndSign, eventually, expect, far, fetchOrder, inboxTex
 const spec = async () => (await fetch(`${config.apiBaseUrl}/openapi.json`)).json() as Promise<any>;
 
 test.describe('00 / 01 / 02 setup, owner and admin', () => {
-  test('TC_COP_SET_003 role accounts exist in each clinic', async () => {
+  test('TC_COP_SET_003 role accounts exist in the Ayurveda clinic', async () => {
     const w = await world(); const owner = await need('owner');
     const have = list((await owner.get(`${w.b}/staff?limit=500&has_login=true`)).body).map(s => s.staff_type);
     for (const role of ['admin', 'receptionist', 'doctor', 'therapist']) expect.soft(have, `Ayurveda clinic has a ${role} with a login`).toContain(role);
-    const g = new ApiSession(identityFor('WEB', 'general') as any); await g.signIn(); await g.reconcileTenantClaim();
-    const gt = (await g.get('/api/v1/auth/me')).body.tenant_id; const gHave = list((await g.get(`/api/v1/clinic/${gt}/staff?limit=500&has_login=true`)).body).map(s => s.staff_type);
-    for (const role of ['admin', 'receptionist', 'doctor', 'therapist']) expect.soft(gHave, `General clinic has a ${role} with a login`).toContain(role);
+    // Owner decision 23 Nov 2026 (DEF_COP_033): role logins are provisioned in the Ayurveda clinic only; the General clinic is a fixture without them.
   });
 
   test('TC_COP_OWN_002 the overview figures equal the underlying lists', async () => {
