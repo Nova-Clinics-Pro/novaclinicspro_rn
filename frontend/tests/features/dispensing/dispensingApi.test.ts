@@ -1,4 +1,4 @@
-import { dispensePrescriptionApi, getDispensingStatusApi, getReadyToDispenseApi } from '../../../features/dispensing/data/datasources/dispensing.api';
+import { dispensePrescriptionApi, getDispensingStatusApi, getDispensingStockApi, getReadyToDispenseApi } from '../../../features/dispensing/data/datasources/dispensing.api';
 import { DispensingError } from '../../../features/dispensing/domain/dispensingError';
 import { dispensingErrorMessage } from '../../../features/dispensing/domain/dispensingErrorMessage';
 import { changeLanguage, t } from '../../../core/localization/i18n';
@@ -20,6 +20,13 @@ describe('the dispensing calls', () => {
     get.mockResolvedValueOnce({ data: { prescription_id: 'rx1', dispensed: false } });
     expect((await getDispensingStatusApi('t1', 'rx1')).dispensed).toBe(false);
     expect(get).toHaveBeenLastCalledWith('/api/v1/clinic/t1/dispensing/prescriptions/rx1');
+  });
+
+  it('reads the stock a dispenser can pick from (not the inventory screens, which the front desk cannot open)', async () => {
+    get.mockResolvedValueOnce({ data: { items: [{ id: 'a', name: 'COP Tablet X', unit: 'pcs', current_stock: '3', price: 40, gst_percentage: 5 }] } });
+    const items = await getDispensingStockApi('t1');
+    expect(get).toHaveBeenCalledWith('/api/v1/clinic/t1/dispensing/stock');
+    expect(items[0].name).toBe('COP Tablet X');
   });
 
   it('dispenses with the lines and returns the bill', async () => {

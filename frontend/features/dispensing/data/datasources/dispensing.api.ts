@@ -1,7 +1,7 @@
 import { axiosClient } from '../../../../core/api/axiosClient';
 import { DispensingError } from '../../domain/dispensingError';
 import type { DispenseLine } from '../../domain/dispensing';
-import type { DispensedBill, DispensingStatus, ReadyToDispenseItem } from '../models/dispensing.dtos';
+import type { DispensableItem, DispensedBill, DispensingStatus, ReadyToDispenseItem } from '../models/dispensing.dtos';
 
 const base = (tenantId: string) => `/api/v1/clinic/${tenantId}`;
 
@@ -21,6 +21,10 @@ export const getReadyToDispenseApi = async (tenantId: string): Promise<ReadyToDi
   const response = await axiosClient.get<{ items: ReadyToDispenseItem[] }>(`${base(tenantId)}/dispensing/ready`);
   return response.data.items;
 };
+
+/** The stock items a dispenser can pick from: name, unit, stock on hand and price. */
+export const getDispensingStockApi = async (tenantId: string): Promise<DispensableItem[]> =>
+  (await axiosClient.get<{ items: DispensableItem[] }>(`${base(tenantId)}/dispensing/stock`)).data.items;
 
 /** Whether one prescription was dispensed, with its bill. */
 export const getDispensingStatusApi = async (tenantId: string, prescriptionId: string): Promise<DispensingStatus> =>

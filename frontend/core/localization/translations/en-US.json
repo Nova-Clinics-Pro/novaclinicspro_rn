@@ -2134,6 +2134,7 @@
       "moreThanStock": "More than the stock on hand.",
       "suggested": "Suggested from the medicine name",
       "loading": "Loading the prescription...",
+            "stockFailed": "The clinic's stock could not be loaded, so nothing can be dispensed yet. Please try again.",
       "notSigned": "Only a signed prescription can be dispensed.",
       "billCreated": "Bill created",
       "billCreatedBody": "Bill {{number}} was created. Ask the front desk to take the payment; stock leaves when it is paid.",

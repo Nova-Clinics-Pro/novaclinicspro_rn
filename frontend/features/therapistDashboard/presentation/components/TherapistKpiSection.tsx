@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
+import { sizes } from '../../../../core/theme/sizes';
 import { useGetTherapistKpis } from '../../domain/usecases/get-therapist-kpis.usecase';
 import { KpiQueryParams } from '../../../staffDashboards/data/models/staffDashboards.dtos';
 
@@ -289,6 +290,8 @@ const styles = StyleSheet.create({
     paddingRight: spacing.xs,
   },
   periodButton: {
+    minHeight: sizes.touchTarget,
+    justifyContent: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 20,

@@ -13,15 +13,13 @@ import { getDateLocale } from '../../../../core/localization/dateLocale';
 import { t } from '../../../../core/localization';
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
 import { usePrescriptionDetailQuery } from '../../../prescriptions/data/repositories/prescriptions.repository.impl';
-import { useInventoryItemsListQuery } from '../../../inventory/data/repositories/inventory.repository.impl';
-import { useDispenseMutation, useDispensingStatusQuery } from '../../data/repositories/dispensing.repository.impl';
+import { useDispenseMutation, useDispensingStatusQuery, useDispensingStockQuery } from '../../data/repositories/dispensing.repository.impl';
 import {
   billEstimate, canDispense, dispenseLinesFrom, exceedsStock, suggestInventoryItem, type DispenseRow, type StockItem,
 } from '../../domain/dispensing';
 import { dispensingErrorMessage } from '../../domain/dispensingErrorMessage';
 
 const PICK_LIMIT = 6;
-const STOCK_LIST_LIMIT = 500;
 const COLLECT_PERMISSION = 'invoice.collect_payment';
 
 export const DispenseScreen: React.FC = () => {
@@ -35,13 +33,11 @@ export const DispenseScreen: React.FC = () => {
   const locale = getDateLocale();
 
   const prescription = usePrescriptionDetailQuery(tenantId, prescriptionId || '');
-  const stock = useInventoryItemsListQuery(tenantId, { is_active: true, limit: STOCK_LIST_LIMIT });
+  const stock = useDispensingStockQuery(tenantId);
   const status = useDispensingStatusQuery(tenantId, prescriptionId || '');
   const dispense = useDispenseMutation(tenantId, prescriptionId || '');
 
-  const items: StockItem[] = useMemo(() => (stock.data?.items ?? []).map((item) => ({
-    id: item.id, name: item.name, current_stock: item.current_stock, price: item.price, gst_percentage: item.gst_percentage, unit: item.unit,
-  })), [stock.data]);
+  const items: StockItem[] = useMemo(() => stock.data ?? [], [stock.data]);
   const medications = useMemo(() => prescription.data?.prescription_data?.medications ?? [], [prescription.data]);
 
   const [chosen, setChosen] = useState<Record<number, { itemId: string | null; quantity: string } | undefined>>({});
@@ -49,6 +45,9 @@ export const DispenseScreen: React.FC = () => {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [bill, setBill] = useState<{ id: string; number: string } | null>(null);
+
+  // The form is only offered once the clinic's stock is known: without it every medicine would silently have no item to pick.
+  const ready = prescription.data?.status === 'SIGNED' && !!stock.data;
 
   const rows: DispenseRow[] = medications.map((medication, index) => {
     const mine = chosen[index];
@@ -114,8 +113,16 @@ export const DispenseScreen: React.FC = () => {
       </View>
       {(prescription.isLoading || stock.isLoading) && <View style={styles.center}><ActivityIndicator color={theme.colors.primary.default} /><Text style={styles.message}>{t('dispensing.screen.loading')}</Text></View>}
       {prescription.data && prescription.data.status !== 'SIGNED' && <Text style={styles.error} testID="dispense-not-signed">{t('dispensing.screen.notSigned')}</Text>}
+      {stock.isError && (
+        <View style={styles.center}>
+          <Text style={styles.error} accessibilityRole="alert" testID="dispense-stock-error">{t('dispensing.screen.stockFailed')}</Text>
+          <TouchableOpacity style={styles.secondary} onPress={() => stock.refetch()} accessibilityRole="button" testID="dispense-stock-retry">
+            <Text style={styles.secondaryText}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <ScrollView contentContainerStyle={styles.body}>
-        {prescription.data?.status === 'SIGNED' && medications.map((medication, index) => {
+        {ready && medications.map((medication, index) => {
           const row = rows[index];
           const item = itemById(row.itemId);
           const suggested = !chosen[index] && !!item;
@@ -152,7 +159,7 @@ export const DispenseScreen: React.FC = () => {
             </View>
           );
         })}
-        {prescription.data?.status === 'SIGNED' && (
+        {ready && (
           <View style={styles.card}>
             <Text style={styles.label}>{t('dispensing.screen.estimate')}</Text>
             <Text style={styles.total} testID="dispense-estimate">{money(estimate)}</Text>

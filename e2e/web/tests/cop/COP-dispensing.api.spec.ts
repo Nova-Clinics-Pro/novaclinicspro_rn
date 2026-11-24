@@ -65,4 +65,16 @@ test.describe('13 dispensing (DEF_COP_003)', () => {
     const other = await adm.get('/api/v1/clinic/00000000-0000-0000-0000-000000000000/dispensing/ready');
     expect(other.status, "another clinic's queue is refused").toBe(403);
   });
+
+  test('TC_COP_DSP_005 the front desk can pick from the stock without opening the inventory screens, and sees nothing about buying', async () => {
+    const w = await world();
+    const desk = await need('receptionist');
+    expect((await desk.get(`${w.b}/inventory?limit=5`)).status, 'the front desk cannot open the inventory list').toBe(403);
+    const stockList = await desk.get(`${w.b}/dispensing/stock`);
+    expect(stockList.status, 'but can read the stock it may dispense').toBe(200);
+    const item = stockList.body.items.find((i: any) => i.name === TABLET);
+    expect(item, 'the stock item is there').toBeTruthy();
+    expect(Object.keys(item).sort(), 'with only what is needed to pick and price it').toEqual(['current_stock', 'gst_percentage', 'id', 'name', 'price', 'unit']);
+    for (const who of ['doctor', 'therapist'] as const) expect((await (await need(who)).get(`${w.b}/dispensing/stock`)).status, `${who} may not`).toBe(403);
+  });
 });

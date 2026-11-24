@@ -28,6 +28,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
+import { sizes } from '../../../../core/theme/sizes';
 import { typography } from '../../../../core/theme/typography';
 
 import { useAuth } from '../../../auth/presentation/hooks/useAuth';
@@ -934,6 +935,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   startSessionBtn: {
+    minHeight: sizes.touchTarget,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -983,6 +985,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   instructionsToggle: {
+    minHeight: sizes.touchTarget,
     marginHorizontal: spacing.md,
     marginTop: -spacing.sm,
     borderWidth: 1,

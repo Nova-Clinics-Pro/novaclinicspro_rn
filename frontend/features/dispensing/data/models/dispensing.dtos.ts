@@ -17,6 +17,16 @@ export interface DispensingStatus {
   invoice_status: string | null;
 }
 
+/** One stock item a dispenser can pick (the same fields the dispense screen needs to suggest, check and price it). */
+export interface DispensableItem {
+  id: string;
+  name: string;
+  unit: string | null;
+  current_stock: string;
+  price: number | null;
+  gst_percentage: number | null;
+}
+
 export interface DispensedBill {
   id: string;
   invoice_number: string;

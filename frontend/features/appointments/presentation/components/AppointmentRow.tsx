@@ -574,6 +574,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
               onPress={() => router.push(`/clinic-admin/clients/${appointment.client_id}` as any)}
               accessibilityRole="button"
               accessibilityLabel="View Patient History"
+              style={fullStyles.linkTouch}
             >
               <Text style={fullStyles.secondaryLink}>View Patient History</Text>
             </TouchableOpacity>
@@ -582,6 +583,7 @@ const FullAppointmentRow: React.FC<FullAppointmentRowProps> = ({
               onPress={() => router.push(`/clinic-admin/clients/${appointment.client_id}/episodes` as any)}
               accessibilityRole="button"
               accessibilityLabel="View Cases"
+              style={fullStyles.linkTouch}
             >
               <Text style={fullStyles.secondaryLink}>View Cases</Text>
             </TouchableOpacity>
@@ -738,6 +740,7 @@ const makeFullStyles = (theme: ClinicTheme) => StyleSheet.create({
   startConsultationBtnLoading: { opacity: 0.75 },
   startConsultationText: { ...typography.body2, fontWeight: '700' },
   secondaryLinksRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  linkTouch: { minHeight: theme.sizes.touchTarget, justifyContent: 'center', paddingHorizontal: spacing.xs },
   secondaryLink: { ...typography.caption, color: theme.colors.primary.default, fontWeight: '600' },
   secondaryLinkSep: { ...typography.caption, color: theme.colors.text.secondary },
   terminalStatusRow: {
