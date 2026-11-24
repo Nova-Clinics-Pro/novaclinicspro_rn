@@ -805,6 +805,7 @@ const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    minHeight: theme.sizes.touchTarget,
     ...typography.body1,
     color: theme.colors.text.primary,
     paddingVertical: spacing.sm,

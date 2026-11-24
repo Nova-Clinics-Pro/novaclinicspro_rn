@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../core/theme/colors';
 import { spacing } from '../../../../core/theme/spacing';
+import { sizes } from '../../../../core/theme/sizes';
 import { typography } from '../../../../core/theme/typography';
 import CrossPlatformDateTimePicker, {
   DateTimePickerEvent,
@@ -479,6 +480,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   applyButton: {
+    minHeight: sizes.touchTarget,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary.main,
@@ -486,7 +488,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     gap: 4,
-    minHeight: 36,
     flexShrink: 0,
   },
   applyButtonText: {

@@ -206,15 +206,69 @@ export async function resetPreferencesApi(
  * Get notification history
  * GET /notifications/{tenant_id}/history
  */
+/** What the server returns for one page of the inbox (`GET /notifications/{tenant}/history`). */
+interface ServerNotification {
+  id: string;
+  notification_type: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
+interface ServerHistoryPage {
+  notifications: ServerNotification[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
+const DEFAULT_PAGE_SIZE = 20;
+/** The most entries the server returns in one page. */
+const MAX_PAGE_SIZE = 100;
+
+/**
+ * Get notification history.
+ * The server pages with limit/offset and says `notifications` / `has_more`; the screen works with pages, `items` and `is_read`, so the
+ * answer is translated here, at the edge. The unread count is the server's own count of unread entries.
+ * GET /notifications/{tenant_id}/history
+ */
 export async function getNotificationHistoryApi(
   tenantId: string,
   params?: NotificationHistoryParams
 ): Promise<NotificationHistoryResponse> {
-  const response = await axiosClient.get<NotificationHistoryResponse>(
-    `${BASE_PATH}/${tenantId}/history`,
-    { params }
-  );
-  return response.data;
+  const pageSize = Math.min(params?.page_size ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+  const page = params?.page ?? 1;
+  const query: Record<string, string | number | boolean> = { limit: pageSize, offset: (page - 1) * pageSize };
+  if (params?.unread_only) query.is_read = false;
+  if (params?.notification_type) query.notification_type = params.notification_type;
+  const url = `${BASE_PATH}/${tenantId}/history`;
+  const [entries, unread] = await Promise.all([
+    axiosClient.get<ServerHistoryPage>(url, { params: query }),
+    axiosClient.get<ServerHistoryPage>(url, { params: { limit: 1, offset: 0, is_read: false } }),
+  ]);
+  const body = entries.data;
+  return {
+    items: body.notifications.map((entry) => ({
+      id: entry.id,
+      tenant_id: tenantId,
+      user_id: '',
+      title: entry.title,
+      body: entry.body,
+      notification_type: entry.notification_type,
+      data: entry.data,
+      is_read: entry.read_at !== null,
+      read_at: entry.read_at,
+      created_at: entry.created_at,
+    })),
+    total: body.total,
+    page,
+    page_size: pageSize,
+    has_next: body.has_more,
+    has_prev: page > 1,
+    unread_count: unread.data.total,
+  };
 }
 
 /**

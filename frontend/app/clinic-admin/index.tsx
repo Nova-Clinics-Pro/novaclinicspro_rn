@@ -360,7 +360,7 @@ export default function ClinicAdminDashboard() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.clinicSettings')}</Text>
             <Link href="/clinic-admin/settings" asChild>
-              <Pressable>
+              <Pressable style={styles.viewAllButton}>
                 <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
               </Pressable>
             </Link>
@@ -412,7 +412,7 @@ export default function ClinicAdminDashboard() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.staffStatus')}</Text>
             <Link href="/clinic-admin/staff" asChild>
-              <Pressable>
+              <Pressable style={styles.viewAllButton}>
                 <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
               </Pressable>
             </Link>
@@ -500,7 +500,7 @@ export default function ClinicAdminDashboard() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.lowStockAlerts')}</Text>
             <Link href="/clinic-admin/inventory/alerts" asChild>
-              <Pressable>
+              <Pressable style={styles.viewAllButton}>
                 <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
               </Pressable>
             </Link>
@@ -613,7 +613,7 @@ export default function ClinicAdminDashboard() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('clinicAdmin.dashboard.billingAndFinance')}</Text>
             <Link href="/clinic-admin/billing" asChild>
-              <Pressable>
+              <Pressable style={styles.viewAllButton}>
                 <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
               </Pressable>
             </Link>
@@ -721,6 +721,11 @@ const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
     ...typography.h5,
     color: theme.colors.text.primary,
     marginBottom: spacing.md,
+  },
+  viewAllButton: {
+    minHeight: theme.sizes.touchTarget,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
   viewAll: {
     ...typography.body2,
@@ -898,6 +903,8 @@ const makeStyles = (theme: ClinicTheme) => StyleSheet.create({
   },
   moreAlertsButton: {
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: theme.sizes.touchTarget,
     paddingVertical: spacing.sm,
   },
   moreAlertsText: {

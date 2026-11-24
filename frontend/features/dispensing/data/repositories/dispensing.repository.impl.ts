@@ -1,18 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { dispensePrescriptionApi, getDispensingStatusApi, getReadyToDispenseApi } from '../datasources/dispensing.api';
-import type { DispensedBill, DispensingStatus, ReadyToDispenseItem } from '../models/dispensing.dtos';
+import { dispensePrescriptionApi, getDispensingStatusApi, getDispensingStockApi, getReadyToDispenseApi } from '../datasources/dispensing.api';
+import type { DispensableItem, DispensedBill, DispensingStatus, ReadyToDispenseItem } from '../models/dispensing.dtos';
 import type { DispenseLine } from '../../domain/dispensing';
 import type { DispensingError } from '../../domain/dispensingError';
 
 export const dispensingKeys = {
   all: ['dispensing'] as const,
   ready: (tenantId: string) => [...dispensingKeys.all, 'ready', tenantId] as const,
+  stock: (tenantId: string) => [...dispensingKeys.all, 'stock', tenantId] as const,
   status: (tenantId: string, prescriptionId: string) => [...dispensingKeys.all, 'status', tenantId, prescriptionId] as const,
 };
 
 /** The queue of signed prescriptions waiting to be dispensed. */
 export const useReadyToDispenseQuery = (tenantId: string, enabled = true) =>
   useQuery<ReadyToDispenseItem[], Error>({ queryKey: dispensingKeys.ready(tenantId), queryFn: () => getReadyToDispenseApi(tenantId), enabled: !!tenantId && enabled });
+
+/** The stock a dispenser can pick from. */
+export const useDispensingStockQuery = (tenantId: string, enabled = true) =>
+  useQuery<DispensableItem[], Error>({ queryKey: dispensingKeys.stock(tenantId), queryFn: () => getDispensingStockApi(tenantId), enabled: !!tenantId && enabled });
 
 /** Whether one prescription has been dispensed. */
 export const useDispensingStatusQuery = (tenantId: string, prescriptionId: string, enabled = true) =>

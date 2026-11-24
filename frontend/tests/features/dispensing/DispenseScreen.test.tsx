@@ -17,9 +17,9 @@ jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('../../../features/auth/presentation/hooks/useAuth', () => ({ useAuth: () => ({ currentUser: { tenantId: 't1', permissions: mockPermissions } }) }));
 jest.mock('../../../features/prescriptions/data/repositories/prescriptions.repository.impl', () => ({ usePrescriptionDetailQuery: () => mockPrescription }));
-jest.mock('../../../features/inventory/data/repositories/inventory.repository.impl', () => ({ useInventoryItemsListQuery: () => mockStock }));
 jest.mock('../../../features/dispensing/data/repositories/dispensing.repository.impl', () => ({
   useDispensingStatusQuery: () => mockStatus,
+  useDispensingStockQuery: () => mockStock,
   useReadyToDispenseQuery: () => mockQueue,
   useDispenseMutation: () => ({ mutateAsync: mockDispense, isPending: false }),
 }));
@@ -32,12 +32,12 @@ describe('the dispense screen', () => {
     changeLanguage('en-US'); mockPush.mockClear(); mockReplace.mockClear(); mockDispense.mockReset();
     mockPermissions = ['prescription.dispense', 'invoice.collect_payment', 'invoice.read'];
     mockPrescription = signed([{ name: 'COP Tablet X' }, { name: 'Sesame oil' }]);
-    mockStock = { data: { items: [item('a', 'COP Tablet X', '10', 20), item('b', 'Sesame oil', '500', 2), item('c', 'Sesame oil (Kerala)', '5', 3)] }, isLoading: false };
+    mockStock = { data: [item('a', 'COP Tablet X', '10', 20), item('b', 'Sesame oil', '500', 2), item('c', 'Sesame oil (Kerala)', '5', 3)], isLoading: false };
     mockStatus = { data: { dispensed: false } };
   });
 
   it('suggests the stock item of an exact name, leaves an ambiguous one for the person, and sends only what was chosen', async () => {
-    mockStock = { data: { items: [item('a', 'COP Tablet X', '10', 20), item('b', 'Sesame', '500', 2), item('c', 'Sesame oil (Kerala)', '5', 3)] }, isLoading: false };
+    mockStock = { data: [item('a', 'COP Tablet X', '10', 20), item('b', 'Sesame', '500', 2), item('c', 'Sesame oil (Kerala)', '5', 3)], isLoading: false };
     const view = render(<DispenseScreen />);
     expect(view.getByTestId('dispense-pick-0').findByProps({ children: 'COP Tablet X' })).toBeTruthy();         // exact name: suggested
     expect(view.getByTestId('dispense-pick-1').findByProps({ children: 'Choose a stock item' })).toBeTruthy();   // two items fit: left to the person
@@ -115,6 +115,16 @@ describe('the dispense screen', () => {
     const view = render(<DispenseScreen />);
     expect(view.getByTestId('dispense-not-signed')).toBeTruthy();
     expect(view.queryByTestId('dispense-confirm')).toBeNull();
+  });
+
+  it('when the stock cannot be loaded it says so with a retry and offers no form that could not suggest anything', () => {
+    const refetch = jest.fn();
+    mockStock = { data: undefined, isLoading: false, isError: true, refetch };
+    const view = render(<DispenseScreen />);
+    expect(view.getByTestId('dispense-stock-error')).toBeTruthy();
+    expect(view.queryByTestId('dispense-confirm')).toBeNull();
+    fireEvent.press(view.getByTestId('dispense-stock-retry'));
+    expect(refetch).toHaveBeenCalled();
   });
 
   it('is available in Hindi', () => {
