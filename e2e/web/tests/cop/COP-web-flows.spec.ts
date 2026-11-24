@@ -56,7 +56,7 @@ test.describe('WS12 real-use checks in the web app', () => {
     expect(await page.getByTestId(`queue-item-${id}`).count(), 'and it has left the queue').toBe(0);
   });
 
-  test('TC_COP_NTF_009 tapping a plan notification in the inbox opens the plan\'s scheduling screen for the front desk', async ({ page }) => {
+  test('TC_COP_NTF_011 tapping a plan notification in the inbox opens the plan\'s scheduling screen for the front desk', async ({ page }) => {
     const w = await world(); const doc = await need('doctor'); const adm = await need('admin');
     const c = await consultAndSign(w, 'P-Female3', far());
     const mk = await doc.post(`/api/v1/clinic/tenants/${w.t}/treatment-sheets`, { client_id: w.seed.patients['P-Female3'], treatment_id: w.seed.treatments.COPABH, start_date: c.day.toISOString().slice(0, 10), duration_days: 2, case_sheet_id: c.cs.id, episode_id: c.ep.id, appointment_id: c.ap.id });
@@ -105,7 +105,7 @@ const SCREENS: Record<string, string[]> = {
 };
 
 test.describe('WS12 accessibility audit (UIX_010)', () => {
-  test('TC_COP_UIX_010 controls on the core screens have names for a screen reader and are at least 44 px', async ({ page }) => {
+  test('TC_COP_UIX_012 controls on the core screens have names for a screen reader and are at least 44 px', async ({ page }) => {
     const problems: string[] = []; let checked = 0;
     for (const [role, routes] of Object.entries(SCREENS) as [Role, string[]][]) {
       await signIn(page, role);
