@@ -31,7 +31,6 @@ import { classifyApiError } from '../../../../core/api/apiErrorPresentation';
 import { describeApiError } from '../../../../core/localization/apiErrorMessages';
 import { shareOutcome } from '../../domain/shareOutcome';
 import { DispenseAction } from '../../../dispensing/presentation/components/DispenseAction';
-import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
 import {
   usePrescriptionDetailQuery,
   useUpdatePrescriptionMutation,
@@ -49,6 +48,11 @@ import {
 } from '../../data/models/prescriptions.dtos';
 import { PrescriptionStatusBadge } from '../components/PrescriptionStatusBadge';
 import { PrescriptionShareModal } from '../components/PrescriptionShareModal';
+import { isSharingEnabled } from '../../domain/sharingSwitch';
+import { PrescriptionOperationError } from '../../domain/errors/prescriptionOperationError';
+import { AllergyStatusBanner } from '../../../clients/presentation/components/AllergyStatusBanner';
+import { useClientAllergiesQuery } from '../../../clients/data/repositories/clientAllergies.repository.impl';
+import { allergyAlertsFrom } from '../../../clients/domain/clientAllergies';
 import { EmptyPrescriptionsState } from '../components/EmptyPrescriptionsState';
 
 export const PrescriptionDetailScreen: React.FC = () => {
@@ -73,19 +77,30 @@ export const PrescriptionDetailScreen: React.FC = () => {
     isRefetching,
   } = usePrescriptionDetailQuery(tenantId, prescriptionId);
 
+  const allergies = useClientAllergiesQuery(tenantId, prescription?.client_id ?? '');
   const updateMutation = useUpdatePrescriptionMutation(tenantId, prescriptionId);
   const deleteMutation = useDeletePrescriptionMutation(tenantId, prescriptionId);
   const shareMutation = useSharePrescriptionMutation(tenantId, prescriptionId);
   const printMutation = usePrescriptionPrintMutation(tenantId, prescriptionId);
 
-  const handleStatusTransition = useCallback(async (newStatus: string) => {
+  const handleStatusTransition = useCallback(async (newStatus: string, acknowledgeAllergyAlerts = false) => {
     try {
-      await updateMutation.mutateAsync({ status: newStatus as any });
+      await updateMutation.mutateAsync({ status: newStatus as any, ...(acknowledgeAllergyAlerts ? { acknowledge_allergy_alerts: true } : {}) });
       Alert.alert('Success', `Prescription ${newStatus.toLowerCase()} successfully.`);
     } catch (err: any) {
+      // A medicine that matches an allergy of the patient stops the signing until the doctor confirms it.
+      const alerts = err instanceof PrescriptionOperationError && err.kind === 'ALLERGY_ALERT' ? err.alerts ?? [] : allergyAlertsFrom(err);
+      if (alerts) {
+        const lines = alerts.map((alert) => t('allergyAlert.line', { medicine: alert.medicine, substance: alert.substance ?? '', severity: t(`clientAllergies.severities.${alert.severity ?? 'moderate'}`) }));
+        Alert.alert(t('allergyAlert.title'), [t('allergyAlert.intro'), ...lines].join('\n'), [
+          { text: t('allergyAlert.dontSign'), style: 'cancel' },
+          { text: t('allergyAlert.signAnyway'), style: 'destructive', onPress: () => handleStatusTransition(newStatus, true) },
+        ]);
+        return;
+      }
       Alert.alert('Error', err.message || 'Failed to update prescription status.');
     }
-  }, [updateMutation]);
+  }, [updateMutation, t]);
 
   const handleDelete = useCallback(() => {
     Alert.alert(
@@ -187,6 +202,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
 
     return (
       <View style={styles.actionsContainer}>
+        {!!prescription.client_id && <AllergyStatusBanner allergies={allergies.data} testID="prescription-allergy-banner" />}
         <Text style={styles.actionsTitle}>Actions</Text>
         <View style={styles.actionsRow}>
           {/* Status Transitions */}
@@ -234,7 +250,7 @@ export const PrescriptionDetailScreen: React.FC = () => {
           )}
 
           {/* Share Button */}
-          {isShareable && (
+          {isShareable && isSharingEnabled() && (
             <TouchableOpacity
               style={[styles.actionButton, styles.shareButton]}
               onPress={() => setShowShareModal(true)}

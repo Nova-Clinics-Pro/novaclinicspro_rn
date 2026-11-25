@@ -1,4 +1,4 @@
-import { consultAndSign, expect, far, list, need, ok, stock, test, world, ymd } from '../../../cop/roles';
+import { consultAndSign, ensureStock, expect, far, list, need, ok, stock, test, world, ymd } from '../../../cop/roles';
 
 /**
  * WS11 (DEF_COP_003): the dispensing queue and who may dispense. They need migration 20261125_000001 (the prescription.dispense
@@ -15,7 +15,7 @@ const TABLET = 'COP Tablet X (below reorder point)';
 
 test.describe('13 dispensing (DEF_COP_003)', () => {
   test('TC_COP_DSP_001 a signed prescription is in the queue until it is dispensed, then it shows its bill, and stock leaves when it is paid', async () => {
-    const w = await world(); const adm = await need('admin'); const id = await signedPrescription(w, 'P-Male');
+    const w = await world(); const adm = await need('admin'); await ensureStock(w, TABLET); const id = await signedPrescription(w, 'P-Male');
     const queue = await adm.get(`${w.b}/dispensing/ready`);
     expect(ok(queue.status), `queue ${queue.status}`).toBe(true);
     const mine = queue.body.items.find((item: any) => item.prescription_id === id);

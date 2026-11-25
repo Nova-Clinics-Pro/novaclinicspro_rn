@@ -34,6 +34,8 @@ import {
   formatPhone,
 } from '../../data/models/clients.dtos';
 import { ClientForm } from '../components/ClientForm';
+import { AllergyPanel } from '../components/AllergyPanel';
+import { ALLERGY_MANAGE_PERMISSION } from '../../domain/clientAllergies';
 import { useEpisodesQuery } from '../../../episodes/data/repositories/episodes.repository.impl';
 import { MultiDayTreatmentsSection } from '../components/MultiDayTreatmentsSection';
 
@@ -307,15 +309,6 @@ export const ClientDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {!!client.allergies && (
-              <View style={styles.infoRow}>
-                <Ionicons name="warning-outline" size={20} color={colors.warning.main} />
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Allergies</Text>
-                  <Text style={styles.infoValue}>{client.allergies}</Text>
-                </View>
-              </View>
-            )}
             {!!client.medical_history && (
               <View style={styles.infoRow}>
                 <Ionicons name="document-text-outline" size={20} color={colors.text.secondary} />
@@ -325,12 +318,17 @@ export const ClientDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
-            {!client.blood_group && !client.allergies && !client.medical_history && (
+            {!client.blood_group && !client.medical_history && (
               <View style={styles.emptyInfo}>
                 <Text style={styles.emptyInfoText}>No medical information recorded</Text>
               </View>
             )}
           </View>
+        </View>
+
+        {/* Allergies: stored and checked against prescriptions (WS14) */}
+        <View style={styles.section}>
+          <AllergyPanel tenantId={tenantId} clientId={clientId || ''} canManage={(currentUser?.permissions ?? []).includes(ALLERGY_MANAGE_PERMISSION)} />
         </View>
 
         {/* Emergency Contact */}

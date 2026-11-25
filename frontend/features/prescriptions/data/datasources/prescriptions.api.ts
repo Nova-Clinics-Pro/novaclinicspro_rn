@@ -6,6 +6,7 @@
  * Prescriptions are TENANT-SCOPED - can filter by client_id
  */
 
+import { allergyAlertsFrom } from '../../../clients/domain/clientAllergies';
 import type { PrintQuery } from '../../../../core/clinicalPrint/printOptions';
 import { axiosClient } from '../../../../core/api/axiosClient';
 import { isAxiosError } from 'axios';
@@ -129,6 +130,9 @@ export const normalizePrescriptionCreateError = (error: unknown): PrescriptionOp
 export const normalizePrescriptionUpdateError = (error: unknown): PrescriptionOperationError => {
   const facts = prescriptionErrorFacts(error);
   if (facts.status === 403) return new PrescriptionOperationError('PERMISSION_DENIED');
+  // A medicine that matches an allergy of the patient also answers 409; it is not "already finalized" and must reach the doctor as an alert.
+  const alerts = allergyAlertsFrom(error);
+  if (facts.status === 409 && alerts) return new PrescriptionOperationError('ALLERGY_ALERT', undefined, alerts);
   if (facts.status === 409) return new PrescriptionOperationError('FINALIZED');
   return new PrescriptionOperationError('SAVE_FAILED');
 };

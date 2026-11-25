@@ -62,7 +62,6 @@ const buildClientSchema = (phoneRequired: boolean) => z.object({
   pincode: z.string().max(10).optional().nullable(),
   occupation: z.string().optional().nullable(),
   blood_group: z.string().optional().nullable(),
-  allergies: z.string().optional().nullable(),
   medical_history: z.string().optional().nullable(),
   emergency_contact_name: z.string().optional().nullable(),
   emergency_contact_phone: z.string().max(20).optional().nullable(),
@@ -112,7 +111,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
       pincode: initialData?.pincode || '',
       occupation: initialData?.occupation || '',
       blood_group: initialData?.blood_group || '',
-      allergies: initialData?.allergies || '',
       medical_history: initialData?.medical_history || '',
       emergency_contact_name: initialData?.emergency_contact_name || '',
       emergency_contact_phone: initialData?.emergency_contact_phone || '',
@@ -359,28 +357,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                     </TouchableOpacity>
                   ))}
                 </View>
-              )}
-            />
-          </View>
-
-          {/* Allergies */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Allergies (Optional)</Text>
-            <Controller
-              control={control}
-              name="allergies"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, styles.multilineInput]}
-                  value={value || ''}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  placeholder="List any known allergies"
-                  placeholderTextColor={colors.text.tertiary}
-                  multiline
-                  numberOfLines={2}
-                  textAlignVertical="top"
-                />
               )}
             />
           </View>

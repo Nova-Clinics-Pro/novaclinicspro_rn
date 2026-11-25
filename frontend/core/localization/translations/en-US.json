@@ -2580,5 +2580,46 @@
       "ambience_scheduling_ease": "Scheduling",
       "ambience_value_for_money": "Value"
     }
+  },
+  "clientAllergies": {
+    "title": "Allergies",
+    "status": {
+      "unknown": "Not recorded",
+      "none_known": "No known allergies",
+      "has_allergies": "Allergic to"
+    },
+    "unknownHint": "Nobody has recorded this patient's allergies yet. Ask the patient before prescribing.",
+    "confirmNone": "Confirm: no known allergies",
+    "add": "Add an allergy",
+    "substance": "Allergic to (medicine, food or other)",
+    "reaction": "Reaction (optional)",
+    "severity": "Severity",
+    "severities": {
+      "mild": "Mild",
+      "moderate": "Moderate",
+      "severe": "Severe"
+    },
+    "save": "Save",
+    "resolve": "Mark resolved",
+    "reactivate": "Make active again",
+    "resolvedHeading": "Resolved",
+    "loadFailed": "The allergies could not be loaded.",
+    "retry": "Try again",
+    "matchNote": "Prescriptions are checked against these by medicine name only. A related medicine with another name is not caught.",
+    "errors": {
+      "INVALID_ALLERGY": "Say what the patient is allergic to.",
+      "ALLERGY_ALREADY_RECORDED": "That allergy is already recorded.",
+      "ALLERGIES_RECORDED": "This patient has an active allergy, so 'no known allergies' cannot be confirmed.",
+      "CLIENT_NOT_FOUND": "This patient was not found.",
+      "ALLERGY_NOT_FOUND": "This allergy was not found.",
+      "ALLERGY_FAILED": "The allergy could not be saved. Please try again."
+    }
+  },
+  "allergyAlert": {
+    "title": "Allergy alert",
+    "intro": "A medicine on this prescription matches an allergy of the patient:",
+    "line": "{{medicine}}: allergic to {{substance}} ({{severity}})",
+    "signAnyway": "Sign anyway",
+    "dontSign": "Do not sign"
   }
 }

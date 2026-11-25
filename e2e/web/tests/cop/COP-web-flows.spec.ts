@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { readRoleIdentities } from '../../../cop/provision-roles';
 import { expect, test } from '../../../cop/fixture';
 import { identityFor } from '../../../shared/identities';
-import { consultAndSign, eventually, far, need, note, ok, world } from '../../../cop/roles';
+import { consultAndSign, ensureStock, eventually, far, need, note, ok, world } from '../../../cop/roles';
 
 /**
  * WS12: real-use checks in the web app (Chromium against the running web app, signed in through the login screen with the real role logins)
@@ -32,16 +32,19 @@ const TABLET = 'COP Tablet X (below reorder point)';
 test.describe('WS12 real-use checks in the web app', () => {
   test('TC_COP_DSP_004 a signed prescription is dispensed through the screen: queue, quantity, bill created, then it leaves the queue', async ({ page }) => {
     const w = await world(); const doc = await need('doctor'); const adm = await need('admin');
+    await ensureStock(w, 'COP Tablet X (below reorder point)');
     const c = await consultAndSign(w, 'P-Male', far());
     const rx = await doc.post(`${w.b}/prescriptions`, { client_id: w.seed.patients['P-Male'], episode_id: c.ep.id, appointment_id: c.ap.id, prescription_data: { medications: [{ name: 'COP Tablet X', dosage: '1', frequency: 'bd', duration: '3 days' }] } });
     expect(ok(rx.status), `prescription ${rx.status}`).toBe(true); const id = rx.body.id as string;
     expect(ok((await doc.request('PATCH', `${w.b}/prescriptions/${id}`, { status: 'SIGNED' })).status)).toBe(true);
 
+    // The queue is oldest first and the screen lists it in a virtualised list, so on a clinic with a long backlog a new prescription is far down
+    // and not drawn yet: the case checks the queue through the API and opens the prescription's own dispense screen in the browser.
+    const front = await need('receptionist');
+    const queue = (await front.get(`${w.b}/dispensing/ready`)).body.items as Array<{ prescription_id: string }>;
+    expect(queue.some((item) => item.prescription_id === id), 'the signed prescription is in the Ready to dispense list').toBe(true);
     await signIn(page, 'receptionist');
-    await open(page, '/clinic-admin/dispensing', 6000);
-    const entry = page.getByTestId(`queue-item-${id}`);
-    expect(await entry.count(), 'the signed prescription is in the Ready to dispense list').toBe(1);
-    await entry.click(); await page.waitForTimeout(4000);
+    await open(page, `/clinic-admin/dispensing/${id}`, 6000);
     const pick = page.getByTestId('dispense-pick-0');
     await expect(pick, 'the stock item was suggested from the medicine name').toContainText('COP Tablet X', { timeout: 45_000 });
     await page.getByTestId('dispense-quantity-0').fill('1');
@@ -52,8 +55,8 @@ test.describe('WS12 real-use checks in the web app', () => {
     expect(await page.getByTestId('dispense-collect').count(), 'the front desk is offered Take payment').toBe(1);
     const status = (await adm.get(`${w.b}/dispensing/prescriptions/${id}`)).body;
     expect(status.dispensed, 'the server shows it as dispensed with a bill').toBe(true);
-    await page.getByTestId('dispense-done').click(); await page.waitForTimeout(4000);
-    expect(await page.getByTestId(`queue-item-${id}`).count(), 'and it has left the queue').toBe(0);
+    const after = (await front.get(`${w.b}/dispensing/ready`)).body.items as Array<{ prescription_id: string }>;
+    expect(after.some((item) => item.prescription_id === id), 'and it has left the queue').toBe(false);
   });
 
   test('TC_COP_NTF_011 tapping a plan notification in the inbox opens the plan\'s scheduling screen for the front desk', async ({ page }) => {

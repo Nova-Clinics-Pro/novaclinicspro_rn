@@ -24,7 +24,6 @@ export interface Client {
   country: string | null;
   occupation: string | null;
   bloodGroup: string | null;
-  allergies: string | null;
   medicalHistory: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
