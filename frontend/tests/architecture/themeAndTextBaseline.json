@@ -584,7 +584,7 @@
   "features/clients/presentation/components/ClientForm.tsx": {
     "colors": 0,
     "fontSizes": 0,
-    "texts": 33,
+    "texts": 31,
     "staticPalette": 1
   },
   "features/clients/presentation/components/ClientListItem.tsx": {
@@ -602,7 +602,7 @@
   "features/clients/presentation/pages/ClientDetailScreen.tsx": {
     "colors": 1,
     "fontSizes": 0,
-    "texts": 31,
+    "texts": 30,
     "staticPalette": 1
   },
   "features/clients/presentation/pages/ClientsListScreen.tsx": {

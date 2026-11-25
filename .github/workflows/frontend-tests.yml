@@ -1,0 +1,41 @@
+name: Frontend Tests
+
+# WS14: the frontend's unit/component tests and the production type check run on every push and pull request. Until now only the
+# duplicate-definition guard ran in CI, so the ~3,200 tests protected nothing on a pull request.
+# The browser (Playwright) suite under e2e/ needs a seeded test clinic and is not part of this workflow.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Type check (production config)
+        run: yarn typecheck:production
+
+      - name: Commercial Platform boundary check
+        run: yarn check:cp-boundaries
+
+      - name: Unit and component tests
+        run: yarn test:ci --forceExit

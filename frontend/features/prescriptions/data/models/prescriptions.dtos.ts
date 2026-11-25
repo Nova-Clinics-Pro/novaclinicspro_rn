@@ -70,6 +70,8 @@ export interface PrescriptionUpdateRequest {
   status?: PrescriptionStatus;
   signed_by_staff_id?: string;
   is_active?: boolean;
+  /** Sign although a medicine matches an allergy of the patient (the doctor has seen the alert). */
+  acknowledge_allergy_alerts?: boolean;
 }
 
 /** Share prescription request */

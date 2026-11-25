@@ -25,7 +25,6 @@ export interface ClientCreate {
   country?: string | null;
   occupation?: string | null;
   blood_group?: string | null;
-  allergies?: string | null;
   medical_history?: string | null;
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
@@ -52,7 +51,6 @@ export interface ClientUpdate {
   country?: string | null;
   occupation?: string | null;
   blood_group?: string | null;
-  allergies?: string | null;
   medical_history?: string | null;
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
@@ -95,7 +93,6 @@ export interface ClientResponse {
   country: string | null;
   occupation: string | null;
   blood_group: string | null;
-  allergies: string | null;
   medical_history: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;

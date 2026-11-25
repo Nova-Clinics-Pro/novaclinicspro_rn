@@ -3,6 +3,7 @@
 
     python3 cop/db_read.py column tenant_appointments appointment_start
     python3 cop/db_read.py row    tenant_appointments <id> appointment_start,appointment_end
+    python3 cop/db_read.py rows   tenant_audit_logs entity_id=eq.<id> action,entity_type
 
 Only HTTP GET against the Testing project's PostgREST endpoint; refuses any other project. The service-role key is read from the
 backend's .env-testing at run time and is never printed or passed on: this helper is called by the specs as its own process, so
@@ -33,5 +34,8 @@ if sys.argv[1] == "column":
 elif sys.argv[1] == "row":
     rows = get(base + sys.argv[2] + "?" + urllib.parse.urlencode({"id": "eq." + sys.argv[3], "select": sys.argv[4]}))
     print(json.dumps(rows[0] if rows else None))
+elif sys.argv[1] == "rows":
+    key_name, _, key_value = sys.argv[3].partition("=")
+    print(json.dumps(get(base + sys.argv[2] + "?" + urllib.parse.urlencode({key_name: key_value, "select": sys.argv[4], "limit": "50"}))))
 else:
-    sys.exit("usage: column <table> <col> | row <table> <id> <cols>")
+    sys.exit("usage: column <table> <col> | row <table> <id> <cols> | rows <table> <column=filter> <cols>")

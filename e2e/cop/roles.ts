@@ -72,6 +72,15 @@ async function schedulePlanOnce(w: World, patient: string, day: number, rows: nu
   const sched = await fetchOrder(w, mk.body.id);
   return { ...c, sheet: mk.body, order: sched, days, scheduled: ok(sc.status), scheduleError: ok(sc.status) ? '' : `${sc.status} ${JSON.stringify(sc.body).slice(0, 200)}` };
 }
+/**
+ * Runs repeat on the same clinic and each dispensing, once paid, takes stock away. Top the item up before a case that needs some on the shelf,
+ * but only to `target`: "COP Tablet X (below reorder point)" is a fixture that other cases (SET_006, ADM_012) need to stay below its reorder point.
+ */
+export const ensureStock = async (w: World, name: string, minimum = 5, target = 10) => {
+  const adm = await need('admin');
+  const item = list((await adm.get(`${w.b}/inventory?limit=500`)).body).find(i => i.name === name);
+  if (item && Number(item.current_stock) < minimum) await adm.post(`${w.b}/inventory/${item.id}/adjust-stock`, { quantity: String(target - Number(item.current_stock)), notes: 'COP restock before a dispensing case' });
+};
 export const stock = async (w: World, name: string) => Number(list((await (await need('admin')).get(`${w.b}/inventory?limit=500`)).body).find(i => i.name === name)?.current_stock);
 
 export { expect, readSeed, test };

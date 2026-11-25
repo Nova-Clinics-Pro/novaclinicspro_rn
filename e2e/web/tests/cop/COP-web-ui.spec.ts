@@ -204,13 +204,12 @@ test.describe('Web UI: print, share and versions', () => {
     expect((await frameText(page)) + (await text(page)), 'the printout is labelled').toMatch(/Version 1\s*[-—–]\s*SUPERSEDED/i);
   });
 
-  test('TC_COP_PRT_011 sharing a prescription by SMS says it was recorded but not sent', async ({ page }) => {
+  test('TC_COP_PRT_011 sharing is switched off until a provider is chosen: no Share button, and the server refuses', async ({ page }) => {
     const r = await rx(); await r.doc.request('PATCH', `${r.w.b}/prescriptions/${r.rx.id}`, { status: 'SIGNED' });
-    const seen = watch(page); await signIn(page, 'doctor'); await open(page, `/clinic-admin/clients/${r.client}/prescriptions/${r.rx.id}`, 8000);
-    await page.getByText(/^Share$/).first().click(); await page.waitForTimeout(2500); await page.getByText('SMS', { exact: true }).first().click(); await page.waitForTimeout(800); const ph = page.locator('input:visible').first(); if (await ph.count() && !(await ph.inputValue())) await ph.fill('+919100000201');
-    await page.getByText(/^Share$/).last().click(); await page.waitForTimeout(5000);
-    const body = (await text(page)) + ' || ' + seen.filter(m => m.startsWith('dialog')).join(' || '); note(`after share: ${body.slice(-400)}`);
-    expect(body, `an honest outcome is shown (screen after share: ${body.slice(-260)})`).toMatch(/recorded.{0,40}(not sent|not set up|nothing was sent)|nothing was sent/i); expect(body, 'no false success').not.toMatch(/sent successfully|has been sent|(?<!nothing )was sent/i);
+    await signIn(page, 'doctor'); await open(page, `/clinic-admin/clients/${r.client}/prescriptions/${r.rx.id}`, 8000);
+    const screen = await text(page); expect(screen, 'the signed prescription is on screen').toMatch(/Print/); expect(screen, 'no Share button is offered').not.toMatch(/(^|\s)Share(\s|$)/);
+    const res = await (await need('receptionist')).post(`${r.w.b}/prescriptions/${r.rx.id}/share`, { channel: 'SMS', recipient_phone: '+919100000201' });
+    expect(res.status, 'and the server refuses a share').toBe(403); expect(res.body?.detail?.error_code).toBe('SHARING_NOT_ENABLED');
   });
 
   test('TC_COP_PRT_012 a case sheet prints in Hindi with translated labels', async ({ page }) => {
